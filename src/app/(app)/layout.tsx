@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/layout/sidebar";
 import { UserMenu } from "@/components/layout/user-menu";
+import { BackButton } from "@/components/back-button";
 
 export default async function AppLayout({
   children,
@@ -41,6 +42,7 @@ export default async function AppLayout({
       <div className="flex min-h-dvh flex-col">
         {/* Topo */}
         <header className="flex h-14 items-center justify-between border-b bg-card px-4">
+          <BackButton />
           <span className="font-heading text-lg font-semibold tracking-wide md:hidden">
             SISTENGE
           </span>

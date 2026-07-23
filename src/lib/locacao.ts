@@ -21,17 +21,26 @@ export const STATUS_CONTRATO: Record<
 };
 
 /**
- * Número de períodos de cobrança entre duas datas (inclusivo), arredondado
- * para cima. Ex.: cadência semanal, 8 dias → 2 semanas.
- * Aproximação: mensal = 30 dias. Refinar se necessário em fase futura.
+ * Número de períodos de cobrança entre duas datas (inclusivo).
+ * Sem pró-rata: arredonda para cima (período iniciado = período cheio).
+ * Com pró-rata: proporcional aos dias (períodos fracionados).
+ * Ex.: cadência semanal, 8 dias → 2 (cheio) ou ~1,14 (pró-rata).
+ * Aproximação: mensal = 30 dias.
  */
 export function periodosEntre(
   cadencia: Cadencia,
   inicio: Date,
   fim: Date,
+  prorata = false,
 ): number {
   const dias = Math.max(1, differenceInCalendarDays(fim, inicio) + 1);
-  return Math.ceil(dias / CADENCIA[cadencia].dias);
+  const bruto = dias / CADENCIA[cadencia].dias;
+  return prorata ? bruto : Math.ceil(bruto);
+}
+
+/** Quantos períodos de cobrança cabem em um mês (30 dias) para a cadência. */
+export function periodosPorMes(cadencia: Cadencia): number {
+  return 30 / CADENCIA[cadencia].dias;
 }
 
 /** Custo estimado de uma linha: quantidade × valor por período × períodos. */

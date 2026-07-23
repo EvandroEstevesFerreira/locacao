@@ -19,6 +19,7 @@ type Contrato = {
   data_fim_prevista: string | null;
   status: StatusContrato;
   observacoes: string | null;
+  cobranca_prorata?: boolean;
 };
 
 const selectClasses =
@@ -146,6 +147,22 @@ export function ContratoForm({
           </select>
         </div>
       </div>
+
+      <label className="flex items-start gap-2 border border-border p-3 text-sm">
+        <input
+          type="checkbox"
+          name="cobranca_prorata"
+          defaultChecked={contrato?.cobranca_prorata ?? false}
+          className="mt-0.5 size-4"
+        />
+        <span>
+          <span className="font-medium">Cobrança pró-rata</span>
+          <span className="block text-xs text-muted-foreground">
+            Cobra períodos proporcionais aos dias usados, em vez de período cheio
+            (ex.: meia semana = metade do valor).
+          </span>
+        </span>
+      </label>
 
       <div className="space-y-2">
         <Label htmlFor="observacoes">Observações</Label>

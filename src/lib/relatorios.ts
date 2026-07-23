@@ -5,6 +5,7 @@ import {
   formatarBRL,
   formatarData,
   periodosEntre,
+  periodosPorMes,
   type Cadencia,
 } from "@/lib/locacao";
 
@@ -83,7 +84,7 @@ async function itensAbertos(
   const { data } = await supabase
     .from("item_locado")
     .select(
-      "quantidade, valor_unitario_periodo, data_retirada, data_devolucao_prevista, contrato:contrato_id(numero, cadencia, obra_id, obra:obra_id(codigo,nome)), item:item_id(descricao)",
+      "quantidade, valor_unitario_periodo, data_retirada, data_devolucao_prevista, contrato:contrato_id(numero, cadencia, cobranca_prorata, data_fim_prevista, obra_id, obra:obra_id(codigo,nome)), item:item_id(descricao)",
     )
     .eq("status", "em_aberto")
     .order("data_retirada");
@@ -98,27 +99,54 @@ async function itensAbertos(
       const contrato = l.contrato as {
         numero: string;
         cadencia: Cadencia;
+        cobranca_prorata?: boolean;
+        data_fim_prevista?: string | null;
         obra: { codigo: string; nome: string } | null;
       } | null;
       const item = l.item as { descricao: string } | null;
+      const qtd = Number(l.quantidade);
+      const valor = Number(l.valor_unitario_periodo);
+      const prorata = !!contrato?.cobranca_prorata;
+      const retirada = dataDeISO(l.data_retirada as string);
+
+      // Custo acumulado até hoje.
       const periodos = contrato
-        ? periodosEntre(contrato.cadencia, dataDeISO(l.data_retirada as string), hoje)
+        ? periodosEntre(contrato.cadencia, retirada, hoje, prorata)
         : 0;
-      const custo = calcularCusto(
-        Number(l.quantidade),
-        Number(l.valor_unitario_periodo),
-        periodos,
-      );
+      const custo = calcularCusto(qtd, valor, periodos);
+
+      // Custo por mês (normalizado pela cadência).
+      const custoMensal = contrato
+        ? qtd * valor * periodosPorMes(contrato.cadencia)
+        : null;
+
+      // Custo total previsto até o fim da locação (devol. prevista do item ou
+      // fim previsto do contrato).
+      const fimISO =
+        (l.data_devolucao_prevista as string | null) ??
+        contrato?.data_fim_prevista ??
+        null;
+      const custoAteFim =
+        contrato && fimISO
+          ? calcularCusto(
+              qtd,
+              valor,
+              periodosEntre(contrato.cadencia, retirada, dataDeISO(fimISO), prorata),
+            )
+          : null;
+
       return {
         obra: contrato?.obra
           ? `${contrato.obra.codigo} — ${contrato.obra.nome}`
           : "—",
         contrato: contrato?.numero ?? "—",
         item: item?.descricao ?? "—",
-        quantidade: Number(l.quantidade),
+        quantidade: qtd,
         retirada: l.data_retirada as string,
         devolucao: (l.data_devolucao_prevista as string | null) ?? null,
+        custoMensal,
         custo,
+        custoAteFim,
       };
     });
 
@@ -131,7 +159,9 @@ async function itensAbertos(
       { key: "quantidade", label: "Qtd.", tipo: "numero" },
       { key: "retirada", label: "Retirada", tipo: "data" },
       { key: "devolucao", label: "Devol. prevista", tipo: "data" },
-      { key: "custo", label: "Custo estimado", tipo: "moeda" },
+      { key: "custoMensal", label: "Custo/mês", tipo: "moeda" },
+      { key: "custo", label: "Custo até hoje", tipo: "moeda" },
+      { key: "custoAteFim", label: "Custo até o fim", tipo: "moeda" },
     ],
     linhas,
   };
