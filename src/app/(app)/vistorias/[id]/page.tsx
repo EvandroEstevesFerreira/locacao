@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, FileDown } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeOperar } from "@/lib/auth";
 import { formatarBRL, formatarData } from "@/lib/locacao";
@@ -107,6 +107,19 @@ export default async function VistoriaDetalhePage({
             : undefined
         }
       >
+        <Button
+          variant="secondary"
+          render={
+            <a
+              href={`/api/vistorias/${vistoria.id}/pdf`}
+              target="_blank"
+              rel="noopener noreferrer"
+            />
+          }
+        >
+          <FileDown className="size-4" />
+          Gerar PDF
+        </Button>
         {podeEditar ? (
           <form action={excluirVistoria}>
             <input type="hidden" name="id" value={vistoria.id} />
