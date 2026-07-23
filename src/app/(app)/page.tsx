@@ -94,22 +94,28 @@ export default async function HomePage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-      <PageHeader titulo="Início" descricao="Visão geral das locações." />
+      <PageHeader
+        eyebrow={`Painel · ${formatarData(hojeStr)}`}
+        titulo="Início"
+        descricao="Visão geral das locações ativas, custos e devoluções."
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {kpis.map((k) => {
           const Icon = k.icon;
           return (
             <Link key={k.label} href={k.href} className="group">
-              <Card className="transition-colors group-hover:border-primary/40">
+              <Card className="transition-colors group-hover:border-primary/50">
                 <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                  <CardTitle className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                     {k.label}
                   </CardTitle>
-                  <Icon className="size-4 text-muted-foreground" />
+                  <Icon className="size-4 text-primary" strokeWidth={1.5} />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-semibold">{k.valor}</div>
+                  <div className="font-heading text-5xl leading-none font-semibold">
+                    {k.valor}
+                  </div>
                 </CardContent>
               </Card>
             </Link>

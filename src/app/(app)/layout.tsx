@@ -27,8 +27,11 @@ export default async function AppLayout({
     <div className="grid min-h-dvh grid-rows-[auto_1fr] md:grid-cols-[240px_1fr] md:grid-rows-1">
       {/* Barra lateral (desktop) */}
       <aside className="hidden border-r bg-card md:flex md:flex-col">
-        <div className="flex h-14 items-center border-b px-4">
-          <span className="text-lg font-semibold">Loca</span>
+        <div className="border-b px-4 py-4">
+          <div className="font-heading text-xl leading-none font-semibold tracking-wide">
+            SISTENGE
+          </div>
+          <div className="eyebrow mt-1.5">Locações de obra</div>
         </div>
         <div className="flex-1 overflow-y-auto">
           <Sidebar isMaster={perfil?.papel === "master"} />
@@ -38,7 +41,9 @@ export default async function AppLayout({
       <div className="flex min-h-dvh flex-col">
         {/* Topo */}
         <header className="flex h-14 items-center justify-between border-b bg-card px-4">
-          <span className="text-base font-semibold md:hidden">Loca</span>
+          <span className="font-heading text-lg font-semibold tracking-wide md:hidden">
+            SISTENGE
+          </span>
           <div className="ml-auto">
             <UserMenu
               nome={perfil?.nome ?? ""}
