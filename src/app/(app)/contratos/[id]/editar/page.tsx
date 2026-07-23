@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentPerfil, podeEditarCadastros } from "@/lib/auth";
+import { getCurrentPerfil, podeOperar } from "@/lib/auth";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { ContratoForm } from "../../contrato-form";
@@ -13,7 +13,7 @@ export default async function EditarContratoPage({
   params: Promise<{ id: string }>;
 }) {
   const perfil = await getCurrentPerfil();
-  if (!podeEditarCadastros(perfil?.papel)) redirect("/contratos");
+  if (!podeOperar(perfil?.papel)) redirect("/contratos");
 
   const { id } = await params;
   const supabase = await createClient();

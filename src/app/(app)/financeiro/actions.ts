@@ -4,11 +4,11 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentPerfil, type Papel } from "@/lib/auth";
-
-function podeFinanceiro(papel: Papel | undefined) {
-  return papel === "admin" || papel === "financeiro" || papel === "gestor";
-}
+import {
+  getCurrentPerfil,
+  podeGerenciarFinanceiro,
+  podeExcluirCritico,
+} from "@/lib/auth";
 
 export type LancamentoFormState = { error?: string };
 
@@ -34,7 +34,7 @@ export async function salvarLancamento(
 ): Promise<LancamentoFormState> {
   const perfil = await getCurrentPerfil();
   if (!perfil?.org_id) return { error: "Sessão inválida." };
-  if (!podeFinanceiro(perfil.papel)) return { error: "Sem permissão." };
+  if (!podeGerenciarFinanceiro(perfil.papel)) return { error: "Sem permissão." };
 
   const parsed = schema.safeParse({
     obra_id: formData.get("obra_id"),
@@ -79,7 +79,7 @@ export async function salvarLancamento(
 
 export async function alternarPago(formData: FormData) {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !podeFinanceiro(perfil.papel)) return;
+  if (!perfil?.org_id || !podeGerenciarFinanceiro(perfil.papel)) return;
   const id = (formData.get("id") as string | null)?.trim();
   const novo = formData.get("novo_status") as string | null;
   if (!id || !["pendente", "pago"].includes(novo ?? "")) return;
@@ -99,7 +99,7 @@ export async function alternarPago(formData: FormData) {
 export async function excluirLancamento(formData: FormData) {
   const perfil = await getCurrentPerfil();
   if (!perfil?.org_id) return;
-  if (perfil.papel !== "admin" && perfil.papel !== "financeiro") return;
+  if (!podeExcluirCritico(perfil.papel)) return;
   const id = (formData.get("id") as string | null)?.trim();
   if (!id) return;
   const supabase = await createClient();

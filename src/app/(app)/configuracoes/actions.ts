@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentPerfil } from "@/lib/auth";
+import { getCurrentPerfil, podeConfigurarSistema } from "@/lib/auth";
 
 export type ConfigFormState = { error?: string; ok?: boolean };
 
@@ -18,8 +18,8 @@ export async function salvarConfigAlerta(
   formData: FormData,
 ): Promise<ConfigFormState> {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || perfil.papel !== "admin") {
-    return { error: "Apenas administradores podem alterar as configurações." };
+  if (!perfil?.org_id || !podeConfigurarSistema(perfil.papel)) {
+    return { error: "Apenas o Master pode alterar as configurações." };
   }
 
   const destinatarios = String(formData.get("destinatarios") ?? "")

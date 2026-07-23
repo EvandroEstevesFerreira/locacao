@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Users, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentPerfil } from "@/lib/auth";
+import { getCurrentPerfil, podeConfigurarSistema } from "@/lib/auth";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,7 +18,7 @@ export const metadata = { title: "Configurações — Loca" };
 
 export default async function ConfiguracoesPage() {
   const perfil = await getCurrentPerfil();
-  if (perfil?.papel !== "admin") redirect("/");
+  if (!perfil || !podeConfigurarSistema(perfil.papel)) redirect("/");
 
   const supabase = await createClient();
   const { data } = await supabase

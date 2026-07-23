@@ -1,13 +1,11 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentPerfil } from "@/lib/auth";
+import { getCurrentPerfil, podeOperar } from "@/lib/auth";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { VistoriaForm } from "../vistoria-form";
 
 export const metadata = { title: "Nova vistoria — Loca" };
-
-const PODE = ["admin", "gestor", "operacional"];
 
 type ContratoRow = {
   id: string;
@@ -21,7 +19,7 @@ export default async function NovaVistoriaPage({
   searchParams: Promise<{ contrato?: string }>;
 }) {
   const perfil = await getCurrentPerfil();
-  if (!PODE.includes(perfil?.papel ?? "")) redirect("/vistorias");
+  if (!podeOperar(perfil?.papel)) redirect("/vistorias");
 
   const { contrato } = await searchParams;
   const supabase = await createClient();

@@ -1,23 +1,23 @@
 import { createClient } from "@/lib/supabase/server";
+import type { Perfil } from "@/lib/permissoes";
 
-export type Papel =
-  | "admin"
-  | "gestor"
-  | "financeiro"
-  | "operacional"
-  | "visualizador";
-
-export type Perfil = {
-  id: string;
-  org_id: string | null;
-  nome: string | null;
-  email: string | null;
-  papel: Papel;
-};
+// Re-exporta os tipos e helpers puros para quem já importa de "@/lib/auth".
+// (A lógica de permissão vive em "@/lib/permissoes", sem dependência de servidor.)
+export type { Papel, Perfil } from "@/lib/permissoes";
+export {
+  PAPEIS,
+  PAPEL_INFO,
+  podeEditarCadastros,
+  podeOperar,
+  podeGerenciarFinanceiro,
+  podeGerenciarUsuarios,
+  podeConfigurarSistema,
+  podeExcluirCritico,
+} from "@/lib/permissoes";
 
 /**
  * Retorna o perfil do usuário autenticado (ou null se não houver sessão).
- * Usado em server actions e páginas para obter org_id e papel.
+ * Server-only: usa cookies via o client de servidor do Supabase.
  */
 export async function getCurrentPerfil(): Promise<Perfil | null> {
   const supabase = await createClient();
@@ -33,14 +33,4 @@ export async function getCurrentPerfil(): Promise<Perfil | null> {
     .single();
 
   return (data as Perfil) ?? null;
-}
-
-/** Papéis com permissão de escrita nos cadastros (obras, fornecedores, itens). */
-export function podeEditarCadastros(papel: Papel | undefined): boolean {
-  return papel === "admin" || papel === "gestor";
-}
-
-/** Papéis com permissão de gerir o financeiro. */
-export function podeGerenciarFinanceiro(papel: Papel | undefined): boolean {
-  return papel === "admin" || papel === "financeiro" || papel === "gestor";
 }

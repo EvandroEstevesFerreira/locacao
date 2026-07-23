@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Pencil, Camera, ChevronRight, AlertTriangle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentPerfil, podeEditarCadastros } from "@/lib/auth";
+import { getCurrentPerfil, podeOperar, podeExcluirCritico } from "@/lib/auth";
 import {
   CADENCIA,
   STATUS_CONTRATO,
@@ -73,8 +73,11 @@ export default async function ContratoDetalhePage({
   params: Promise<{ id: string }>;
 }) {
   const perfil = await getCurrentPerfil();
-  const podeEditar = podeEditarCadastros(perfil?.papel);
-  const podeMovimentar = podeEditar || perfil?.papel === "operacional";
+  // Operar (operador incluso) cobre editar contrato, itens e movimentação;
+  // excluir o contrato inteiro é exclusivo do master.
+  const podeEditar = podeOperar(perfil?.papel);
+  const podeMovimentar = podeEditar;
+  const podeExcluir = podeExcluirCritico(perfil?.papel);
 
   const { id } = await params;
   const supabase = await createClient();
@@ -159,12 +162,18 @@ export default async function ContratoDetalhePage({
               <Pencil className="size-4" />
               Editar
             </Button>
-            <form action={excluirContrato}>
-              <input type="hidden" name="id" value={contrato.id} />
-              <Button variant="outline" type="submit" className="text-destructive">
-                Excluir
-              </Button>
-            </form>
+            {podeExcluir ? (
+              <form action={excluirContrato}>
+                <input type="hidden" name="id" value={contrato.id} />
+                <Button
+                  variant="outline"
+                  type="submit"
+                  className="text-destructive"
+                >
+                  Excluir
+                </Button>
+              </form>
+            ) : null}
           </>
         ) : null}
       </PageHeader>

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ClipboardCheck, Plus, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentPerfil } from "@/lib/auth";
+import { getCurrentPerfil, podeOperar } from "@/lib/auth";
 import { formatarData } from "@/lib/locacao";
 import { TIPO_VISTORIA, type TipoVistoria } from "@/lib/vistoria";
 import { PageHeader } from "@/components/page-header";
@@ -19,8 +19,6 @@ import {
 
 export const metadata = { title: "Vistorias — Loca" };
 
-const PODE = ["admin", "gestor", "operacional"];
-
 type Row = {
   id: string;
   tipo: TipoVistoria;
@@ -32,7 +30,7 @@ type Row = {
 
 export default async function VistoriasPage() {
   const perfil = await getCurrentPerfil();
-  const podeEditar = PODE.includes(perfil?.papel ?? "");
+  const podeEditar = podeOperar(perfil?.papel);
 
   const supabase = await createClient();
   const { data } = await supabase

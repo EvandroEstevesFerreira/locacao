@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentPerfil } from "@/lib/auth";
+import { getCurrentPerfil, podeGerenciarUsuarios } from "@/lib/auth";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { UsuarioForm } from "../usuario-form";
@@ -13,7 +13,7 @@ export default async function EditarUsuarioPage({
   params: Promise<{ id: string }>;
 }) {
   const perfil = await getCurrentPerfil();
-  if (perfil?.papel !== "admin") redirect("/");
+  if (!podeGerenciarUsuarios(perfil?.papel)) redirect("/");
 
   const { id } = await params;
   const supabase = await createClient();
@@ -38,6 +38,8 @@ export default async function EditarUsuarioPage({
           <UsuarioForm
             usuario={{
               id: usuario.id,
+              nome: usuario.nome ?? "",
+              email: usuario.email ?? "",
               papel: usuario.papel,
               ativo: usuario.ativo,
             }}
