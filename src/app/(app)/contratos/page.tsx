@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { FileText, Plus, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentPerfil, podeEditarCadastros } from "@/lib/auth";
+import { getCurrentPerfil, podeOperar } from "@/lib/auth";
 import {
   CADENCIA,
   STATUS_CONTRATO,
@@ -37,7 +37,7 @@ type Row = {
 
 export default async function ContratosPage() {
   const perfil = await getCurrentPerfil();
-  const podeEditar = podeEditarCadastros(perfil?.papel);
+  const podeEditar = podeOperar(perfil?.papel);
 
   const supabase = await createClient();
   const { data } = await supabase

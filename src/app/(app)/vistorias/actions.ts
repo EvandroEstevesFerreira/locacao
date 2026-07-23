@@ -4,9 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentPerfil } from "@/lib/auth";
-
-const PODE = ["admin", "gestor", "operacional"];
+import { getCurrentPerfil, podeOperar } from "@/lib/auth";
 
 export type VistoriaFormState = { error?: string };
 
@@ -29,7 +27,7 @@ export async function salvarVistoria(
 ): Promise<VistoriaFormState> {
   const perfil = await getCurrentPerfil();
   if (!perfil?.org_id) return { error: "Sessão inválida." };
-  if (!PODE.includes(perfil.papel)) return { error: "Sem permissão." };
+  if (!podeOperar(perfil.papel)) return { error: "Sem permissão." };
 
   const parsed = vistoriaSchema.safeParse({
     contrato_id: formData.get("contrato_id"),
@@ -72,7 +70,7 @@ export async function salvarVistoria(
 
 export async function excluirVistoria(formData: FormData) {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !PODE.includes(perfil.papel)) return;
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
   const id = (formData.get("id") as string | null)?.trim();
   if (!id) return;
   const supabase = await createClient();
@@ -92,7 +90,7 @@ export async function excluirVistoria(formData: FormData) {
 /** Registra no banco uma foto já enviada ao storage pelo cliente. */
 export async function registrarFoto(vistoriaId: string, path: string) {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !PODE.includes(perfil.papel)) return;
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
   const supabase = await createClient();
   await supabase
     .from("vistoria_foto")
@@ -102,7 +100,7 @@ export async function registrarFoto(vistoriaId: string, path: string) {
 
 export async function excluirFoto(formData: FormData) {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !PODE.includes(perfil.papel)) return;
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
   const id = (formData.get("id") as string | null)?.trim();
   const path = (formData.get("path") as string | null)?.trim();
   const vistoriaId = (formData.get("vistoria_id") as string | null)?.trim();
@@ -127,7 +125,7 @@ export async function adicionarAvaria(
 ): Promise<AvariaFormState> {
   const perfil = await getCurrentPerfil();
   if (!perfil?.org_id) return { error: "Sessão inválida." };
-  if (!PODE.includes(perfil.papel)) return { error: "Sem permissão." };
+  if (!podeOperar(perfil.papel)) return { error: "Sem permissão." };
 
   const parsed = avariaSchema.safeParse({
     vistoria_id: formData.get("vistoria_id"),
@@ -152,7 +150,7 @@ export async function adicionarAvaria(
 
 export async function atualizarStatusAvaria(formData: FormData) {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !PODE.includes(perfil.papel)) return;
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
   const id = (formData.get("id") as string | null)?.trim();
   const status = formData.get("status") as string | null;
   const vistoriaId = (formData.get("vistoria_id") as string | null)?.trim();
@@ -164,7 +162,7 @@ export async function atualizarStatusAvaria(formData: FormData) {
 
 export async function excluirAvaria(formData: FormData) {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !PODE.includes(perfil.papel)) return;
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
   const id = (formData.get("id") as string | null)?.trim();
   const vistoriaId = (formData.get("vistoria_id") as string | null)?.trim();
   if (!id) return;

@@ -31,7 +31,7 @@ export default async function AppLayout({
           <span className="text-lg font-semibold">Loca</span>
         </div>
         <div className="flex-1 overflow-y-auto">
-          <Sidebar />
+          <Sidebar isMaster={perfil?.papel === "master"} />
         </div>
       </aside>
 
@@ -43,7 +43,7 @@ export default async function AppLayout({
             <UserMenu
               nome={perfil?.nome ?? ""}
               email={perfil?.email ?? user.email ?? ""}
-              papel={perfil?.papel ?? "visualizador"}
+              papel={perfil?.papel ?? "gestor"}
             />
           </div>
         </header>
@@ -53,7 +53,7 @@ export default async function AppLayout({
         {/* Navegação inferior (mobile) */}
         <nav className="border-t bg-card md:hidden">
           <div className="overflow-x-auto">
-            <Sidebar />
+            <Sidebar isMaster={perfil?.papel === "master"} />
           </div>
         </nav>
       </div>

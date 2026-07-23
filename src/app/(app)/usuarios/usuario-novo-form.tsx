@@ -2,8 +2,8 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
-import { salvarUsuario, type UsuarioFormState } from "./actions";
-import { PAPEIS, PAPEL_INFO, type Papel } from "@/lib/permissoes";
+import { criarUsuario, type UsuarioFormState } from "./actions";
+import { PAPEIS, PAPEL_INFO } from "@/lib/permissoes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,28 +11,26 @@ import { Label } from "@/components/ui/label";
 const selectClasses =
   "flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
-export function UsuarioForm({
-  usuario,
+export function UsuarioNovoForm({
   obras,
-  obrasDoUsuario,
 }: {
-  usuario: { id: string; nome: string; email: string; papel: Papel; ativo: boolean };
   obras: { id: string; codigo: string; nome: string }[];
-  obrasDoUsuario: string[];
 }) {
   const [state, formAction, isPending] = useActionState<
     UsuarioFormState,
     FormData
-  >(salvarUsuario, {});
+  >(criarUsuario, {});
 
   return (
     <form action={formAction} className="space-y-5">
-      <input type="hidden" name="id" value={usuario.id} />
-
       <div className="space-y-2">
         <Label htmlFor="nome">Nome</Label>
-        <Input id="nome" name="nome" defaultValue={usuario.nome} required maxLength={120} />
-        <p className="text-xs text-muted-foreground">{usuario.email}</p>
+        <Input id="nome" name="nome" required maxLength={120} />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="email">E-mail</Label>
+        <Input id="email" name="email" type="email" required />
       </div>
 
       <div className="space-y-2">
@@ -40,7 +38,7 @@ export function UsuarioForm({
         <select
           id="papel"
           name="papel"
-          defaultValue={usuario.papel}
+          defaultValue="operador"
           className={selectClasses}
         >
           {PAPEIS.map((p) => (
@@ -51,25 +49,19 @@ export function UsuarioForm({
         </select>
       </div>
 
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          name="ativo"
-          defaultChecked={usuario.ativo}
-          className="size-4"
-        />
-        Usuário ativo
-      </label>
-
       <div className="space-y-2">
-        <Label htmlFor="nova_senha">Redefinir senha (opcional)</Label>
+        <Label htmlFor="senha">Senha temporária</Label>
         <Input
-          id="nova_senha"
-          name="nova_senha"
+          id="senha"
+          name="senha"
           type="text"
+          required
           minLength={8}
-          placeholder="Deixe em branco para manter a senha atual"
+          placeholder="Ao menos 8 caracteres"
         />
+        <p className="text-xs text-muted-foreground">
+          O usuário entra com esta senha e pode trocá-la depois.
+        </p>
       </div>
 
       <div className="space-y-2">
@@ -90,7 +82,6 @@ export function UsuarioForm({
                   type="checkbox"
                   name="obras"
                   value={o.id}
-                  defaultChecked={obrasDoUsuario.includes(o.id)}
                   className="size-4"
                 />
                 <span>
@@ -108,9 +99,13 @@ export function UsuarioForm({
 
       <div className="flex gap-2">
         <Button type="submit" disabled={isPending}>
-          {isPending ? "Salvando…" : "Salvar"}
+          {isPending ? "Criando…" : "Criar usuário"}
         </Button>
-        <Button type="button" variant="outline" render={<Link href="/usuarios" />}>
+        <Button
+          type="button"
+          variant="outline"
+          render={<Link href="/usuarios" />}
+        >
           Cancelar
         </Button>
       </div>

@@ -1,8 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Pencil } from "lucide-react";
+import { Pencil, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentPerfil } from "@/lib/auth";
+import {
+  getCurrentPerfil,
+  podeGerenciarUsuarios,
+  PAPEL_INFO,
+  type Papel,
+} from "@/lib/auth";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,17 +23,9 @@ import {
 
 export const metadata = { title: "Usuários — Loca" };
 
-const PAPEL_LABEL: Record<string, string> = {
-  admin: "Administrador",
-  gestor: "Gestor",
-  financeiro: "Financeiro",
-  operacional: "Operacional",
-  visualizador: "Visualizador",
-};
-
 export default async function UsuariosPage() {
   const perfil = await getCurrentPerfil();
-  if (perfil?.papel !== "admin") redirect("/");
+  if (!podeGerenciarUsuarios(perfil?.papel)) redirect("/");
 
   const supabase = await createClient();
   const { data: usuarios } = await supabase
@@ -40,8 +37,13 @@ export default async function UsuariosPage() {
     <div className="mx-auto max-w-4xl space-y-6">
       <PageHeader
         titulo="Usuários"
-        descricao="Papéis e acesso por obra dos usuários da organização."
-      />
+        descricao="Perfis e acesso por obra dos usuários da organização."
+      >
+        <Button render={<Link href="/usuarios/novo" />}>
+          <Plus className="size-4" />
+          Novo usuário
+        </Button>
+      </PageHeader>
 
       <Card>
         <CardContent className="p-0">
@@ -50,7 +52,7 @@ export default async function UsuariosPage() {
               <TableRow>
                 <TableHead>Nome</TableHead>
                 <TableHead>E-mail</TableHead>
-                <TableHead>Papel</TableHead>
+                <TableHead>Perfil</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-16 text-right">Ações</TableHead>
               </TableRow>
@@ -62,7 +64,9 @@ export default async function UsuariosPage() {
                   <TableCell className="text-muted-foreground">
                     {u.email}
                   </TableCell>
-                  <TableCell>{PAPEL_LABEL[u.papel] ?? u.papel}</TableCell>
+                  <TableCell>
+                    {PAPEL_INFO[u.papel as Papel]?.label ?? u.papel}
+                  </TableCell>
                   <TableCell>
                     <Badge variant={u.ativo ? "default" : "outline"}>
                       {u.ativo ? "Ativo" : "Inativo"}
@@ -84,12 +88,6 @@ export default async function UsuariosPage() {
           </Table>
         </CardContent>
       </Card>
-
-      <p className="text-sm text-muted-foreground">
-        Para convidar novos usuários, cadastre-os no painel do Supabase
-        (Authentication → Users) — eles aparecerão aqui automaticamente. O
-        convite por e-mail dentro do app entra numa fase futura.
-      </p>
     </div>
   );
 }

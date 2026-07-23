@@ -5,12 +5,13 @@ import { usePathname } from "next/navigation";
 import { NAV_ITEMS } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 
-export function Sidebar() {
+export function Sidebar({ isMaster = false }: { isMaster?: boolean }) {
   const pathname = usePathname();
+  const itens = NAV_ITEMS.filter((item) => !item.apenasMaster || isMaster);
 
   return (
     <nav className="flex flex-col gap-1 p-3">
-      {NAV_ITEMS.map((item) => {
+      {itens.map((item) => {
         const disponivel = item.implementado;
         const ativo =
           item.href === "/"

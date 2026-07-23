@@ -12,11 +12,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const PAPEL_LABEL: Record<string, string> = {
-  admin: "Administrador",
+  master: "Master",
+  administrador: "Administrador",
   gestor: "Gestor",
-  financeiro: "Financeiro",
-  operacional: "Operacional",
-  visualizador: "Visualizador",
+  operador: "Operador",
 };
 
 export function UserMenu({

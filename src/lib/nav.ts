@@ -17,6 +17,8 @@ export type NavItem = {
   icon: LucideIcon;
   /** Se a rota já está implementada. Itens não implementados aparecem "em breve". */
   implementado: boolean;
+  /** Visível apenas para o perfil master (ex.: Configurações). */
+  apenasMaster?: boolean;
 };
 
 /** Navegação principal do app. */
@@ -49,5 +51,6 @@ export const NAV_ITEMS: NavItem[] = [
     href: "/configuracoes",
     icon: Settings,
     implementado: true,
+    apenasMaster: true,
   },
 ];

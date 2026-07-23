@@ -2,7 +2,7 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { AlertTriangle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentPerfil } from "@/lib/auth";
+import { getCurrentPerfil, podeOperar } from "@/lib/auth";
 import { formatarBRL, formatarData } from "@/lib/locacao";
 import {
   STATUS_AVARIA,
@@ -32,7 +32,6 @@ import {
 
 export const metadata = { title: "Vistoria — Loca" };
 
-const PODE = ["admin", "gestor", "operacional"];
 const selectClasses =
   "h-8 rounded-md border border-input bg-transparent px-2 text-xs outline-none";
 
@@ -42,7 +41,7 @@ export default async function VistoriaDetalhePage({
   params: Promise<{ id: string }>;
 }) {
   const perfil = await getCurrentPerfil();
-  const podeEditar = PODE.includes(perfil?.papel ?? "");
+  const podeEditar = podeOperar(perfil?.papel);
   const { id } = await params;
 
   const supabase = await createClient();

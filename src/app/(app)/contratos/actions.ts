@@ -4,7 +4,11 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentPerfil, podeEditarCadastros } from "@/lib/auth";
+import {
+  getCurrentPerfil,
+  podeOperar,
+  podeExcluirCritico,
+} from "@/lib/auth";
 
 export type ContratoFormState = { error?: string };
 
@@ -30,7 +34,7 @@ export async function salvarContrato(
 ): Promise<ContratoFormState> {
   const perfil = await getCurrentPerfil();
   if (!perfil?.org_id) return { error: "Sessão inválida." };
-  if (!podeEditarCadastros(perfil.papel)) {
+  if (!podeOperar(perfil.papel)) {
     return { error: "Você não tem permissão para editar contratos." };
   }
 
@@ -85,7 +89,7 @@ export async function salvarContrato(
 
 export async function excluirContrato(formData: FormData) {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !podeEditarCadastros(perfil.papel)) return;
+  if (!perfil?.org_id || !podeExcluirCritico(perfil.papel)) return;
   const id = (formData.get("id") as string | null)?.trim();
   if (!id) return;
   const supabase = await createClient();
@@ -111,7 +115,7 @@ export async function adicionarItemLocado(
 ): Promise<ItemLocadoFormState> {
   const perfil = await getCurrentPerfil();
   if (!perfil?.org_id) return { error: "Sessão inválida." };
-  if (!podeEditarCadastros(perfil.papel)) return { error: "Sem permissão." };
+  if (!podeOperar(perfil.papel)) return { error: "Sem permissão." };
 
   const parsed = itemLocadoSchema.safeParse({
     contrato_id: formData.get("contrato_id"),
@@ -143,7 +147,7 @@ export async function adicionarItemLocado(
 
 export async function excluirItemLocado(formData: FormData) {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !podeEditarCadastros(perfil.papel)) return;
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
   const id = (formData.get("id") as string | null)?.trim();
   const contratoId = (formData.get("contrato_id") as string | null)?.trim();
   if (!id) return;
@@ -167,8 +171,7 @@ export async function registrarDevolucao(
 ): Promise<DevolucaoFormState> {
   const perfil = await getCurrentPerfil();
   if (!perfil?.org_id) return { error: "Sessão inválida." };
-  const papel = perfil.papel;
-  if (!["admin", "gestor", "operacional"].includes(papel)) {
+  if (!podeOperar(perfil.papel)) {
     return { error: "Sem permissão para registrar devolução." };
   }
 
@@ -245,7 +248,7 @@ export async function registrarDevolucao(
 export async function criarRelatorioRetirada(formData: FormData) {
   const perfil = await getCurrentPerfil();
   if (!perfil?.org_id) return;
-  if (!["admin", "gestor", "operacional"].includes(perfil.papel)) return;
+  if (!podeOperar(perfil.papel)) return;
 
   const contratoId = (formData.get("contrato_id") as string | null)?.trim();
   if (!contratoId) return;
