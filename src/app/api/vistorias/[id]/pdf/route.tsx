@@ -30,7 +30,7 @@ export async function GET(
   const { data: vistoria } = await supabase
     .from("vistoria")
     .select(
-      "id, tipo, data, responsavel, observacoes, contrato:contrato_id(numero, obra:obra_id(codigo,nome))",
+      "id, tipo, data, responsavel, observacoes, assinatura_empresa_nome, assinatura_empresa_img, assinatura_retirante_nome, assinatura_retirante_img, contrato:contrato_id(numero, obra:obra_id(codigo,nome))",
     )
     .eq("id", id)
     .single();
@@ -108,6 +108,13 @@ export async function GET(
       status: STATUS_AVARIA[a.status as StatusAvaria].label,
     })),
     fotos: dataUris,
+    empresaNome: (vistoria.assinatura_empresa_nome as string | null) ?? undefined,
+    empresaImg: (vistoria.assinatura_empresa_img as string | null) ?? undefined,
+    retiranteNome:
+      (vistoria.assinatura_retirante_nome as string | null) ?? undefined,
+    retiranteImg:
+      (vistoria.assinatura_retirante_img as string | null) ?? undefined,
+    empresaAssinado: !!vistoria.assinatura_empresa_img,
     geradoEm: formatarData(new Date().toISOString().slice(0, 10)),
   };
 
