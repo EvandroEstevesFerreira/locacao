@@ -24,6 +24,7 @@ import { ConfirmDelete } from "@/components/confirm-delete";
 import { FotoUploader } from "../foto-uploader";
 import { AddAvariaForm } from "../add-avaria-form";
 import { RelatorioForm } from "../relatorio-form";
+import { FotoLegenda } from "../foto-legenda";
 import {
   atualizarStatusAvaria,
   excluirAvaria,
@@ -62,7 +63,7 @@ export default async function VistoriaDetalhePage({
 
   const { data: fotos } = await supabase
     .from("vistoria_foto")
-    .select("id, path")
+    .select("id, path, legenda")
     .eq("vistoria_id", id)
     .order("created_at");
 
@@ -208,6 +209,17 @@ export default async function VistoriaDetalhePage({
                           mensagem="Remover esta foto?"
                         />
                       </div>
+                    ) : null}
+                    {podeEditar ? (
+                      <FotoLegenda
+                        fotoId={f.id}
+                        vistoriaId={vistoria.id}
+                        defaultValue={f.legenda ?? ""}
+                      />
+                    ) : f.legenda ? (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {f.legenda}
+                      </p>
                     ) : null}
                   </div>
                 );

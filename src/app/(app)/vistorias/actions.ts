@@ -171,6 +171,23 @@ export async function excluirAvaria(formData: FormData) {
   if (vistoriaId) revalidatePath(`/vistorias/${vistoriaId}`);
 }
 
+/** Salva/atualiza a legenda de uma foto da vistoria. */
+export async function salvarLegendaFoto(
+  fotoId: string,
+  vistoriaId: string,
+  legenda: string,
+) {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
+  if (!fotoId) return;
+  const supabase = await createClient();
+  await supabase
+    .from("vistoria_foto")
+    .update({ legenda: legenda.trim() || null })
+    .eq("id", fotoId);
+  if (vistoriaId) revalidatePath(`/vistorias/${vistoriaId}`);
+}
+
 // ---------------------------------------------------------------------------
 // Observações + assinaturas (representante da empresa e quem retira).
 // Assinatura = nome (sempre) + imagem desenhada opcional (data URI PNG).

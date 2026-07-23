@@ -96,6 +96,7 @@ const vStyles = StyleSheet.create({
   fotoGrid: { flexDirection: "row", flexWrap: "wrap" },
   fotoBox: { width: "48%", marginRight: "2%", marginBottom: 10 },
   foto: { width: "100%", height: 200, objectFit: "cover", border: "1 solid #cfcfd2" },
+  fotoLegenda: { fontSize: 8, color: "#5d5d60", marginTop: 2 },
   aviso: {
     border: "1 solid #b45309",
     backgroundColor: "#fef3c7",
@@ -123,7 +124,7 @@ export type VistoriaPdf = {
   contexto?: string;
   observacoes?: string;
   avarias: { descricao: string; custo: string; status: string }[];
-  fotos: string[];
+  fotos: { src: string; legenda?: string }[];
   empresaNome?: string;
   empresaImg?: string;
   retiranteNome?: string;
@@ -193,10 +194,13 @@ export function DocumentoVistoria({ v }: { v: VistoriaPdf }) {
         <Text style={vStyles.h3}>Fotos ({v.fotos.length})</Text>
         {v.fotos.length > 0 ? (
           <View style={vStyles.fotoGrid}>
-            {v.fotos.map((src, i) => (
+            {v.fotos.map((f, i) => (
               <View key={i} style={vStyles.fotoBox} wrap={false}>
                 {/* eslint-disable-next-line jsx-a11y/alt-text */}
-                <Image style={vStyles.foto} src={src} />
+                <Image style={vStyles.foto} src={f.src} />
+                {f.legenda ? (
+                  <Text style={vStyles.fotoLegenda}>{f.legenda}</Text>
+                ) : null}
               </View>
             ))}
           </View>
