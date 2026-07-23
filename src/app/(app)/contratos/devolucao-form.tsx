@@ -22,10 +22,10 @@ export function DevolucaoForm({
   >(registrarDevolucao, {});
 
   return (
-    <form action={formAction} className="flex flex-wrap items-end gap-2">
-      <input type="hidden" name="item_locado_id" value={itemLocadoId} />
-      <input type="hidden" name="contrato_id" value={contratoId} />
-      <div className="w-24">
+    <div className="min-w-[300px]">
+      <form action={formAction} className="flex items-center gap-2">
+        <input type="hidden" name="item_locado_id" value={itemLocadoId} />
+        <input type="hidden" name="contrato_id" value={contratoId} />
         <label className="text-xs text-muted-foreground">Qtd.</label>
         <Input
           name="quantidade"
@@ -34,25 +34,28 @@ export function DevolucaoForm({
           min="0.01"
           max={saldo}
           defaultValue={saldo}
-          className="h-8"
+          className="h-8 w-16"
         />
-      </div>
-      <div className="w-40">
         <label className="text-xs text-muted-foreground">Data</label>
-        <Input name="data" type="date" defaultValue={hoje()} className="h-8" />
-      </div>
-      <Button
-        type="submit"
-        size="sm"
-        variant="outline"
-        disabled={isPending}
-        title="Registra a devolução e abre o relatório fotográfico para anexar as fotos"
-      >
-        {isPending ? "…" : "Devolver"}
-      </Button>
+        <Input
+          name="data"
+          type="date"
+          defaultValue={hoje()}
+          className="h-8 w-36"
+        />
+        <Button
+          type="submit"
+          size="sm"
+          variant="outline"
+          disabled={isPending}
+          title="Registra a devolução e abre o relatório fotográfico para anexar as fotos"
+        >
+          {isPending ? "…" : "Devolver"}
+        </Button>
+      </form>
       {state.error ? (
-        <p className="w-full text-xs text-destructive">{state.error}</p>
+        <p className="mt-1 text-xs text-destructive">{state.error}</p>
       ) : null}
-    </form>
+    </div>
   );
 }

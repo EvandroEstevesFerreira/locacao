@@ -62,6 +62,7 @@ export async function salvarContrato(
     data_fim_prevista: nuloSeVazio(parsed.data.data_fim_prevista),
     status: parsed.data.status,
     observacoes: nuloSeVazio(parsed.data.observacoes),
+    cobranca_prorata: formData.get("cobranca_prorata") === "on",
   };
 
   const supabase = await createClient();
@@ -284,4 +285,34 @@ export async function criarRelatorioRetirada(formData: FormData) {
 
   revalidatePath(`/contratos/${contratoId}`);
   if (vistoriaId) redirect(`/vistorias/${vistoriaId}`);
+}
+
+// ---------------------------------------------------------------------------
+// Anexo do contrato original (arquivo no Storage, bucket "contratos").
+// ---------------------------------------------------------------------------
+export async function salvarAnexoContrato(contratoId: string, path: string) {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
+  if (!contratoId || !path) return;
+  const supabase = await createClient();
+  await supabase
+    .from("contrato_locacao")
+    .update({ anexo_path: path })
+    .eq("id", contratoId);
+  revalidatePath(`/contratos/${contratoId}`);
+}
+
+export async function removerAnexoContrato(formData: FormData) {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
+  const contratoId = (formData.get("contrato_id") as string | null)?.trim();
+  const path = (formData.get("path") as string | null)?.trim();
+  if (!contratoId) return;
+  const supabase = await createClient();
+  if (path) await supabase.storage.from("contratos").remove([path]);
+  await supabase
+    .from("contrato_locacao")
+    .update({ anexo_path: null })
+    .eq("id", contratoId);
+  revalidatePath(`/contratos/${contratoId}`);
 }

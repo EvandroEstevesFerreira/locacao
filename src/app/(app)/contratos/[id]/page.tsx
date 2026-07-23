@@ -1,6 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Pencil, Camera, ChevronRight, AlertTriangle } from "lucide-react";
+import {
+  Pencil,
+  Camera,
+  ChevronRight,
+  AlertTriangle,
+  Paperclip,
+  Download,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeOperar, podeExcluirCritico } from "@/lib/auth";
 import {
@@ -35,10 +42,12 @@ import {
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { AddItemLocadoForm } from "../add-item-locado-form";
 import { DevolucaoForm } from "../devolucao-form";
+import { AnexoUploader } from "../anexo-uploader";
 import {
   excluirContrato,
   excluirItemLocado,
   criarRelatorioRetirada,
+  removerAnexoContrato,
 } from "../actions";
 
 export const metadata = { title: "Contrato — Loca" };
@@ -85,7 +94,7 @@ export default async function ContratoDetalhePage({
   const { data: contrato } = await supabase
     .from("contrato_locacao")
     .select(
-      "id, numero, cadencia, data_inicio, data_fim_prevista, status, observacoes, obra:obra_id(codigo,nome), fornecedor:fornecedor_id(nome), vistoria_retirada:vistoria_retirada_id(id, vistoria_foto(count))",
+      "id, numero, cadencia, cobranca_prorata, anexo_path, data_inicio, data_fim_prevista, status, observacoes, obra:obra_id(codigo,nome), fornecedor:fornecedor_id(nome), vistoria_retirada:vistoria_retirada_id(id, vistoria_foto(count))",
     )
     .eq("id", id)
     .single();
@@ -100,6 +109,12 @@ export default async function ContratoDetalhePage({
     vistoria_foto: { count: number }[];
   } | null;
 
+  const anexoPath = (contrato.anexo_path as string | null) ?? null;
+  const anexoUrl = anexoPath
+    ? (await supabase.storage.from("contratos").createSignedUrl(anexoPath, 600))
+        .data?.signedUrl ?? null
+    : null;
+
   const { data: linhasRaw } = await supabase
     .from("item_locado")
     .select(
@@ -110,6 +125,7 @@ export default async function ContratoDetalhePage({
 
   const linhas = (linhasRaw ?? []) as unknown as Linha[];
   const hoje = new Date();
+  const prorata = !!contrato.cobranca_prorata;
 
   const linhasCalc = linhas.map((l) => {
     const devolvido = (l.movimentacao ?? [])
@@ -117,7 +133,7 @@ export default async function ContratoDetalhePage({
       .reduce((s, m) => s + Number(m.quantidade), 0);
     const saldo = Number(l.quantidade) - devolvido;
     const fim = l.data_devolucao ? dataDeISO(l.data_devolucao) : hoje;
-    const periodos = periodosEntre(cadencia, dataDeISO(l.data_retirada), fim);
+    const periodos = periodosEntre(cadencia, dataDeISO(l.data_retirada), fim, prorata);
     const custo = calcularCusto(
       Number(l.quantidade),
       Number(l.valor_unitario_periodo),
@@ -200,6 +216,58 @@ export default async function ContratoDetalhePage({
         </CardContent>
       </Card>
 
+      {/* Contrato de locação (original) */}
+      <Card>
+        <CardHeader className="flex-row items-center justify-between space-y-0">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Paperclip className="size-4" /> Contrato de locação (original)
+            </CardTitle>
+            <CardDescription>
+              Arquivo do contrato assinado com o fornecedor (PDF ou imagem).
+            </CardDescription>
+          </div>
+          <div className="flex items-center gap-2">
+            {anexoUrl ? (
+              <>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  render={
+                    <a href={anexoUrl} target="_blank" rel="noopener noreferrer" />
+                  }
+                >
+                  <Download className="size-4" /> Abrir
+                </Button>
+                {podeEditar ? (
+                  <form action={removerAnexoContrato}>
+                    <input type="hidden" name="contrato_id" value={contrato.id} />
+                    <input type="hidden" name="path" value={anexoPath ?? ""} />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      type="submit"
+                      className="text-destructive"
+                    >
+                      Remover
+                    </Button>
+                  </form>
+                ) : null}
+              </>
+            ) : (
+              <span className="text-sm text-muted-foreground">Nenhum arquivo</span>
+            )}
+            {podeEditar ? (
+              <AnexoUploader
+                contratoId={contrato.id}
+                orgId={perfil?.org_id ?? ""}
+                tem={!!anexoUrl}
+              />
+            ) : null}
+          </div>
+        </CardHeader>
+      </Card>
+
       {/* Relatório fotográfico de retirada */}
       <Card>
         <CardHeader className="flex-row items-center justify-between space-y-0">
@@ -242,6 +310,25 @@ export default async function ContratoDetalhePage({
           )}
         </CardHeader>
       </Card>
+
+      {/* Adicionar item (antes da lista) */}
+      {podeEditar ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Adicionar item</CardTitle>
+            <CardDescription>
+              Inclua um item locado neste contrato.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <AddItemLocadoForm
+              key={linhasCalc.length}
+              contratoId={contrato.id}
+              itens={itens ?? []}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
 
       {/* Itens locados */}
       <Card>
@@ -327,17 +414,6 @@ export default async function ContratoDetalhePage({
               Nenhum item locado neste contrato.
             </p>
           )}
-
-          {podeEditar ? (
-            <div className="rounded-md border bg-muted/30 p-4">
-              <p className="mb-3 text-sm font-medium">Adicionar item</p>
-              <AddItemLocadoForm
-                key={linhasCalc.length}
-                contratoId={contrato.id}
-                itens={itens ?? []}
-              />
-            </div>
-          ) : null}
         </CardContent>
       </Card>
 
