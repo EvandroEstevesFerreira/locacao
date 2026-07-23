@@ -3,6 +3,7 @@ import {
   Page,
   View,
   Text,
+  Image,
   StyleSheet,
 } from "@react-pdf/renderer";
 import { formatarValor, type Relatorio } from "@/lib/relatorios";
@@ -64,6 +65,123 @@ export function DocumentoRelatorio({
             Nenhum registro para os filtros selecionados.
           </Text>
         ) : null}
+      </Page>
+    </Document>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Relatório de Vistoria (retirada/devolução) — dados + fotos
+// ═══════════════════════════════════════════════════════════════════════════
+
+const ACENTO = "#5980a6";
+
+const vStyles = StyleSheet.create({
+  page: { padding: 32, fontSize: 10, fontFamily: "Helvetica", color: "#1d1f20" },
+  eyebrow: { fontSize: 8, color: ACENTO, letterSpacing: 1, marginBottom: 3 },
+  titulo: { fontSize: 20, marginBottom: 2 },
+  sub: { fontSize: 10, color: "#5d5d60", marginBottom: 16 },
+  frame: { border: "1 solid #cfcfd2", padding: 12, marginBottom: 12 },
+  infoRow: { flexDirection: "row", flexWrap: "wrap" },
+  infoCell: { width: "25%", marginBottom: 8 },
+  infoLabel: { fontSize: 7, color: "#8a8a8d", textTransform: "uppercase", marginBottom: 2 },
+  infoValor: { fontSize: 11 },
+  h3: { fontSize: 13, marginBottom: 6 },
+  linha: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    borderBottom: "1 solid #ededf0",
+    paddingVertical: 4,
+  },
+  fotoGrid: { flexDirection: "row", flexWrap: "wrap" },
+  fotoBox: { width: "48%", marginRight: "2%", marginBottom: 10 },
+  foto: { width: "100%", height: 200, objectFit: "cover", border: "1 solid #cfcfd2" },
+  rodape: { position: "absolute", bottom: 20, left: 32, right: 32, fontSize: 8, color: "#8a8a8d", textAlign: "center" },
+});
+
+export type VistoriaPdf = {
+  contratoLinha?: string;
+  tipoLabel: string;
+  data: string;
+  responsavel: string;
+  avariasCusto: string;
+  contexto?: string;
+  observacoes?: string;
+  avarias: { descricao: string; custo: string; status: string }[];
+  fotos: string[];
+  geradoEm: string;
+};
+
+export function DocumentoVistoria({ v }: { v: VistoriaPdf }) {
+  return (
+    <Document>
+      <Page size="A4" style={vStyles.page}>
+        <Text style={vStyles.eyebrow}>SISTENGE · LOCAÇÕES DE OBRA</Text>
+        <Text style={vStyles.titulo}>Relatório de vistoria</Text>
+        <Text style={vStyles.sub}>
+          {v.contratoLinha ?? "—"}
+          {v.contexto ? ` · ${v.contexto}` : ""}
+        </Text>
+
+        <View style={vStyles.frame}>
+          <View style={vStyles.infoRow}>
+            <View style={vStyles.infoCell}>
+              <Text style={vStyles.infoLabel}>Tipo</Text>
+              <Text style={vStyles.infoValor}>{v.tipoLabel}</Text>
+            </View>
+            <View style={vStyles.infoCell}>
+              <Text style={vStyles.infoLabel}>Data</Text>
+              <Text style={vStyles.infoValor}>{v.data}</Text>
+            </View>
+            <View style={vStyles.infoCell}>
+              <Text style={vStyles.infoLabel}>Responsável</Text>
+              <Text style={vStyles.infoValor}>{v.responsavel}</Text>
+            </View>
+            <View style={vStyles.infoCell}>
+              <Text style={vStyles.infoLabel}>Avarias (custo est.)</Text>
+              <Text style={vStyles.infoValor}>{v.avariasCusto}</Text>
+            </View>
+          </View>
+          {v.observacoes ? (
+            <Text style={{ fontSize: 10, color: "#5d5d60", marginTop: 4 }}>
+              {v.observacoes}
+            </Text>
+          ) : null}
+        </View>
+
+        {v.avarias.length > 0 ? (
+          <View style={vStyles.frame}>
+            <Text style={vStyles.h3}>Avarias</Text>
+            {v.avarias.map((a, i) => (
+              <View key={i} style={vStyles.linha}>
+                <Text>
+                  {a.descricao} · {a.custo}
+                </Text>
+                <Text style={{ color: "#5d5d60" }}>{a.status}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+
+        <Text style={vStyles.h3}>Fotos ({v.fotos.length})</Text>
+        {v.fotos.length > 0 ? (
+          <View style={vStyles.fotoGrid}>
+            {v.fotos.map((src, i) => (
+              <View key={i} style={vStyles.fotoBox} wrap={false}>
+                {/* eslint-disable-next-line jsx-a11y/alt-text */}
+                <Image style={vStyles.foto} src={src} />
+              </View>
+            ))}
+          </View>
+        ) : (
+          <Text style={{ color: "#8a8a8d" }}>
+            Nenhuma foto anexada a esta vistoria.
+          </Text>
+        )}
+
+        <Text style={vStyles.rodape} fixed>
+          Gerado pelo Loca em {v.geradoEm} · Sistenge — controle de locações
+        </Text>
       </Page>
     </Document>
   );
