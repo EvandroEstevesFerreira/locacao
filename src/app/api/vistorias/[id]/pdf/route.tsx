@@ -67,18 +67,22 @@ export async function GET(
     : undefined;
 
   // Fotos → URLs assinadas → bytes → data URIs (embutidas no PDF)
-  const { data: fotos } = await supabase
+  const { data: fotosRows } = await supabase
     .from("vistoria_foto")
-    .select("path")
+    .select("path, legenda")
     .eq("vistoria_id", id)
     .order("created_at");
-  const paths = (fotos ?? []).map((f) => f.path);
+  const rows = fotosRows ?? [];
+  const legendaPorPath = new Map<string, string | undefined>(
+    rows.map((f) => [f.path as string, (f.legenda as string | null) ?? undefined]),
+  );
+  const paths = rows.map((f) => f.path as string);
   const assinadas = paths.length
     ? (await supabase.storage.from("vistorias").createSignedUrls(paths, 600))
         .data ?? []
     : [];
 
-  const dataUris: string[] = [];
+  const fotosPdf: { src: string; legenda?: string }[] = [];
   for (const s of assinadas) {
     if (!s.signedUrl) continue;
     try {
@@ -86,7 +90,10 @@ export async function GET(
       if (!resp.ok) continue;
       const contentType = resp.headers.get("content-type") ?? "image/jpeg";
       const b64 = Buffer.from(await resp.arrayBuffer()).toString("base64");
-      dataUris.push(`data:${contentType};base64,${b64}`);
+      fotosPdf.push({
+        src: `data:${contentType};base64,${b64}`,
+        legenda: legendaPorPath.get(s.path ?? ""),
+      });
     } catch {
       // Ignora foto que falhar ao baixar; o relatório sai com as demais.
     }
@@ -107,7 +114,7 @@ export async function GET(
       custo: formatarBRL(Number(a.custo_estimado)),
       status: STATUS_AVARIA[a.status as StatusAvaria].label,
     })),
-    fotos: dataUris,
+    fotos: fotosPdf,
     empresaNome: (vistoria.assinatura_empresa_nome as string | null) ?? undefined,
     empresaImg: (vistoria.assinatura_empresa_img as string | null) ?? undefined,
     retiranteNome:
