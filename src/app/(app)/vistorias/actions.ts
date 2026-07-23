@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeOperar } from "@/lib/auth";
 
-export type VistoriaFormState = { error?: string };
+export type VistoriaFormState = { error?: string; ok?: boolean };
 
 const vistoriaSchema = z.object({
   contrato_id: z.string().uuid("Selecione o contrato."),
@@ -169,4 +169,50 @@ export async function excluirAvaria(formData: FormData) {
   const supabase = await createClient();
   await supabase.from("avaria").delete().eq("id", id);
   if (vistoriaId) revalidatePath(`/vistorias/${vistoriaId}`);
+}
+
+// ---------------------------------------------------------------------------
+// Observações + assinaturas (representante da empresa e quem retira).
+// Assinatura = nome (sempre) + imagem desenhada opcional (data URI PNG).
+// ---------------------------------------------------------------------------
+function assinaturaValida(img: string) {
+  return img === "" || img.startsWith("data:image/");
+}
+
+export async function salvarRelatorioVistoria(
+  _prev: VistoriaFormState,
+  formData: FormData,
+): Promise<VistoriaFormState> {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id) return { error: "Sessão inválida." };
+  if (!podeOperar(perfil.papel)) return { error: "Sem permissão." };
+
+  const id = String(formData.get("id") ?? "").trim();
+  if (!id) return { error: "Vistoria inválida." };
+
+  const empresaImg = String(formData.get("assinatura_empresa_img") ?? "").trim();
+  const retiranteImg = String(formData.get("assinatura_retirante_img") ?? "").trim();
+  if (!assinaturaValida(empresaImg) || !assinaturaValida(retiranteImg)) {
+    return { error: "Assinatura inválida." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("vistoria")
+    .update({
+      observacoes: nuloSeVazio(String(formData.get("observacoes") ?? "")),
+      assinatura_empresa_nome: nuloSeVazio(
+        String(formData.get("assinatura_empresa_nome") ?? ""),
+      ),
+      assinatura_empresa_img: empresaImg || null,
+      assinatura_retirante_nome: nuloSeVazio(
+        String(formData.get("assinatura_retirante_nome") ?? ""),
+      ),
+      assinatura_retirante_img: retiranteImg || null,
+    })
+    .eq("id", id);
+  if (error) return { error: "Não foi possível salvar. Tente novamente." };
+
+  revalidatePath(`/vistorias/${id}`);
+  return { ok: true };
 }

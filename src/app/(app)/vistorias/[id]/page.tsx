@@ -23,6 +23,7 @@ import {
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { FotoUploader } from "../foto-uploader";
 import { AddAvariaForm } from "../add-avaria-form";
+import { RelatorioForm } from "../relatorio-form";
 import {
   atualizarStatusAvaria,
   excluirAvaria,
@@ -48,7 +49,7 @@ export default async function VistoriaDetalhePage({
   const { data: vistoria } = await supabase
     .from("vistoria")
     .select(
-      "id, tipo, data, responsavel, observacoes, contrato:contrato_id(numero, obra:obra_id(codigo,nome))",
+      "id, tipo, data, responsavel, observacoes, assinatura_empresa_nome, assinatura_empresa_img, assinatura_retirante_nome, assinatura_retirante_img, contrato:contrato_id(numero, obra:obra_id(codigo,nome))",
     )
     .eq("id", id)
     .single();
@@ -96,6 +97,8 @@ export default async function VistoriaDetalhePage({
     : null;
 
   const semFotos = (fotos?.length ?? 0) === 0;
+  const empresaImg = (vistoria.assinatura_empresa_img as string | null) ?? null;
+  const empresaAssinado = !!empresaImg;
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -135,9 +138,17 @@ export default async function VistoriaDetalhePage({
       ) : null}
 
       {semFotos ? (
-        <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+        <div className="flex items-center gap-2 border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
           <AlertTriangle className="size-4 shrink-0" />
           Relatório pendente: adicione ao menos uma foto para concluí-lo.
+        </div>
+      ) : null}
+
+      {!empresaAssinado ? (
+        <div className="flex items-center gap-2 border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-700">
+          <AlertTriangle className="size-4 shrink-0" />
+          Relatório <strong>não assinado</strong> pelo representante da empresa.
+          A assinatura é opcional, mas recomendada antes de finalizar.
         </div>
       ) : null}
 
@@ -155,11 +166,6 @@ export default async function VistoriaDetalhePage({
             label="Avarias (custo est.)"
             valor={formatarBRL(totalAvarias)}
           />
-          {vistoria.observacoes ? (
-            <p className="text-sm text-muted-foreground sm:col-span-4">
-              {vistoria.observacoes}
-            </p>
-          ) : null}
         </CardContent>
       </Card>
 
@@ -279,6 +285,77 @@ export default async function VistoriaDetalhePage({
           {podeEditar ? <AddAvariaForm key={avarias?.length ?? 0} vistoriaId={vistoria.id} /> : null}
         </CardContent>
       </Card>
+
+      {/* Observações e assinaturas */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Observações e assinaturas</CardTitle>
+          <CardDescription>
+            Observações e as duas assinaturas (representante e quem retira).
+            Entram no PDF do relatório.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {podeEditar ? (
+            <RelatorioForm
+              vistoriaId={vistoria.id}
+              usuarioNome={perfil?.nome ?? ""}
+              defaults={{
+                observacoes: vistoria.observacoes ?? "",
+                empresaNome:
+                  (vistoria.assinatura_empresa_nome as string | null) ?? "",
+                empresaImg: empresaImg ?? "",
+                retiranteNome:
+                  (vistoria.assinatura_retirante_nome as string | null) ?? "",
+                retiranteImg:
+                  (vistoria.assinatura_retirante_img as string | null) ?? "",
+              }}
+            />
+          ) : (
+            <div className="space-y-4 text-sm">
+              <p className="text-muted-foreground">
+                {vistoria.observacoes || "Sem observações."}
+              </p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <AssinaturaRO
+                  label="Representante Sistenge"
+                  nome={
+                    (vistoria.assinatura_empresa_nome as string | null) ?? "—"
+                  }
+                  assinado={empresaAssinado}
+                />
+                <AssinaturaRO
+                  label="Quem retira / recebe"
+                  nome={
+                    (vistoria.assinatura_retirante_nome as string | null) ?? "—"
+                  }
+                  assinado={!!vistoria.assinatura_retirante_img}
+                />
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function AssinaturaRO({
+  label,
+  nome,
+  assinado,
+}: {
+  label: string;
+  nome: string;
+  assinado: boolean;
+}) {
+  return (
+    <div className="border border-border p-3">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="font-medium">{nome}</p>
+      <p className="mt-1 text-xs text-muted-foreground">
+        {assinado ? "Assinatura registrada" : "Sem assinatura"}
+      </p>
     </div>
   );
 }
