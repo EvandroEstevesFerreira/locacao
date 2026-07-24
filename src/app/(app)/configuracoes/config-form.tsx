@@ -13,7 +13,7 @@ export function ConfigAlertaForm({
 }: {
   config: {
     ativo: boolean;
-    dias_antecedencia: number;
+    dias_alerta: number[];
     destinatarios: string[];
   };
 }) {
@@ -39,18 +39,19 @@ export function ConfigAlertaForm({
       </label>
 
       <div className="space-y-2">
-        <Label htmlFor="dias_antecedencia">Antecedência (dias)</Label>
+        <Label htmlFor="dias_alerta">Prazos de aviso (dias antes)</Label>
         <Input
-          id="dias_antecedencia"
-          name="dias_antecedencia"
-          type="number"
-          min={0}
-          max={90}
-          defaultValue={config.dias_antecedencia}
-          className="max-w-32"
+          id="dias_alerta"
+          name="dias_alerta"
+          type="text"
+          inputMode="numeric"
+          defaultValue={(config.dias_alerta ?? [3]).join(", ")}
+          placeholder="ex.: 30, 15, 3"
+          className="max-w-48"
         />
         <p className="text-xs text-muted-foreground">
-          Quantos dias antes do vencimento o aviso deve ser disparado.
+          Um ou mais prazos, separados por vírgula. É enviado um aviso ao
+          atingir cada marco (ex.: 30, 15 e 3 dias antes do vencimento).
         </p>
       </div>
 

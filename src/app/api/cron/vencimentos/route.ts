@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { addDays, format } from "date-fns";
+import { addDays, differenceInCalendarDays, format } from "date-fns";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   emailConfigurado,
@@ -30,11 +30,12 @@ export async function GET(request: Request) {
   }
 
   const supabase = createAdminClient();
-  const hoje = format(new Date(), "yyyy-MM-dd");
+  const agora = new Date();
+  const hoje = format(agora, "yyyy-MM-dd");
 
   const { data: configs } = await supabase
     .from("config_alerta")
-    .select("org_id, dias_antecedencia, destinatarios")
+    .select("org_id, dias_alerta, destinatarios")
     .eq("ativo", true);
 
   const resumo: { org: string; enviados: number }[] = [];
@@ -43,7 +44,25 @@ export async function GET(request: Request) {
     const destinatarios = (cfg.destinatarios ?? []).filter(Boolean);
     if (destinatarios.length === 0) continue;
 
-    const limite = format(addDays(new Date(), cfg.dias_antecedencia), "yyyy-MM-dd");
+    // Prazos configurados (maior → menor). Sem prazos válidos, pula.
+    const prazos = Array.from(
+      new Set(
+        ((cfg.dias_alerta ?? []) as unknown[]).map((n) => Number(n)),
+      ),
+    )
+      .filter((n) => Number.isFinite(n) && n >= 0)
+      .sort((a, b) => b - a);
+    if (prazos.length === 0) continue;
+    const maxPrazo = prazos[0];
+
+    // Marco atual = menor prazo >= dias restantes (escalona 30 → 15 → 3).
+    const marcoDe = (diasRestantes: number) => {
+      const elegiveis = prazos.filter((p) => p >= diasRestantes);
+      return elegiveis.length ? Math.min(...elegiveis) : null;
+    };
+
+    // Janela de busca: do dia de hoje até o maior prazo à frente.
+    const limite = format(addDays(agora, maxPrazo), "yyyy-MM-dd");
 
     // Candidatos: devoluções, fins de contrato e pagamentos dentro da janela.
     const [devolucoes, contratos, pagamentos] = await Promise.all([
@@ -75,14 +94,15 @@ export async function GET(request: Request) {
       tipo: string;
       referencia_id: string;
       data_referencia: string;
+      dias: number; // marco (prazo) que este aviso representa
       linha: LinhaAlerta;
     };
-    const candidatos: Cand[] = [];
+    const brutos: Omit<Cand, "dias">[] = [];
 
     for (const d of devolucoes.data ?? []) {
       const item = d.item as unknown as { descricao: string } | null;
       const contrato = d.contrato as unknown as { numero: string } | null;
-      candidatos.push({
+      brutos.push({
         tipo: "devolucao",
         referencia_id: d.id,
         data_referencia: d.data_devolucao_prevista!,
@@ -94,7 +114,7 @@ export async function GET(request: Request) {
       });
     }
     for (const c of contratos.data ?? []) {
-      candidatos.push({
+      brutos.push({
         tipo: "contrato_fim",
         referencia_id: c.id,
         data_referencia: c.data_fim_prevista!,
@@ -106,7 +126,7 @@ export async function GET(request: Request) {
       });
     }
     for (const p of pagamentos.data ?? []) {
-      candidatos.push({
+      brutos.push({
         tipo: "pagamento",
         referencia_id: p.id,
         data_referencia: p.vencimento,
@@ -118,23 +138,39 @@ export async function GET(request: Request) {
       });
     }
 
+    // Anexa o marco (dias) a cada candidato; descarta o que não está
+    // dentro de nenhum prazo configurado.
+    const candidatos: Cand[] = [];
+    for (const b of brutos) {
+      const diasRestantes = differenceInCalendarDays(
+        new Date(`${b.data_referencia}T00:00:00`),
+        agora,
+      );
+      const marco = marcoDe(diasRestantes);
+      if (marco === null) continue;
+      candidatos.push({ ...b, dias: marco });
+    }
     if (candidatos.length === 0) continue;
 
-    // Remove os que já foram notificados (mesma referência + data).
+    // Remove os que já foram notificados (mesma referência + data + marco).
     const ids = candidatos.map((c) => c.referencia_id);
     const { data: jaEnviados } = await supabase
       .from("notificacao_log")
-      .select("tipo, referencia_id, data_referencia")
+      .select("tipo, referencia_id, data_referencia, dias")
       .eq("org_id", cfg.org_id)
       .in("referencia_id", ids);
-    const chave = (t: string, r: string, d: string) => `${t}:${r}:${d}`;
+    const chave = (t: string, r: string, d: string, dias: number | null) =>
+      `${t}:${r}:${d}:${dias}`;
     const enviadosSet = new Set(
       (jaEnviados ?? []).map((e) =>
-        chave(e.tipo, e.referencia_id, e.data_referencia),
+        chave(e.tipo, e.referencia_id, e.data_referencia, e.dias),
       ),
     );
     const novos = candidatos.filter(
-      (c) => !enviadosSet.has(chave(c.tipo, c.referencia_id, c.data_referencia)),
+      (c) =>
+        !enviadosSet.has(
+          chave(c.tipo, c.referencia_id, c.data_referencia, c.dias),
+        ),
     );
     if (novos.length === 0) continue;
 
@@ -156,6 +192,7 @@ export async function GET(request: Request) {
         tipo: c.tipo,
         referencia_id: c.referencia_id,
         data_referencia: c.data_referencia,
+        dias: c.dias,
         destinatarios,
       })),
     );
