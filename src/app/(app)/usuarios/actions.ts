@@ -5,7 +5,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getCurrentPerfil, PAPEIS } from "@/lib/auth";
+import { getCurrentPerfil, PAPEIS, PAPEL_INFO, type Papel } from "@/lib/auth";
+import {
+  enviarEmail,
+  emailConfigurado,
+  montarEmailNovoUsuario,
+  montarEmailSenhaRedefinida,
+} from "@/lib/email";
 
 export type UsuarioFormState = { error?: string };
 
@@ -103,6 +109,24 @@ export async function criarUsuario(
 
   await sincronizarObras(admin, uid, obrasDoForm(formData));
 
+  // E-mail de boas-vindas com os dados de acesso (best-effort).
+  if (emailConfigurado()) {
+    try {
+      await enviarEmail(
+        [parsed.data.email],
+        "Loca — seu acesso foi criado",
+        montarEmailNovoUsuario(
+          parsed.data.nome,
+          parsed.data.email,
+          parsed.data.senha,
+          PAPEL_INFO[parsed.data.papel as Papel]?.label ?? parsed.data.papel,
+        ),
+      );
+    } catch (e) {
+      console.error("Falha ao enviar e-mail de novo usuário:", e);
+    }
+  }
+
   revalidatePath("/usuarios");
   redirect("/usuarios");
 }
@@ -158,6 +182,26 @@ export async function salvarUsuario(
         error:
           "Perfil salvo, mas a senha não pôde ser redefinida (falta SUPABASE_SERVICE_ROLE_KEY).",
       };
+    }
+
+    // E-mail avisando a nova senha (best-effort).
+    if (emailConfigurado()) {
+      try {
+        const { data: u } = await supabase
+          .from("perfil")
+          .select("email")
+          .eq("id", parsed.data.id)
+          .single();
+        if (u?.email) {
+          await enviarEmail(
+            [u.email],
+            "Loca — sua senha foi redefinida",
+            montarEmailSenhaRedefinida(parsed.data.nome, u.email, novaSenha),
+          );
+        }
+      } catch (e) {
+        console.error("Falha ao enviar e-mail de redefinição:", e);
+      }
     }
   }
 
