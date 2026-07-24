@@ -6,7 +6,12 @@ import {
   Image,
   StyleSheet,
 } from "@react-pdf/renderer";
-import { expandirLinhas, formatarValor, type Relatorio } from "@/lib/relatorios";
+import {
+  expandirLinhas,
+  dadosGrafico,
+  formatarValor,
+  type Relatorio,
+} from "@/lib/relatorios";
 
 const styles = StyleSheet.create({
   page: { padding: 28, fontSize: 9, fontFamily: "Helvetica" },
@@ -24,6 +29,12 @@ const styles = StyleSheet.create({
   rowSubtotal: { backgroundColor: "#f2f2f3" },
   rowTotal: { borderTop: "1 solid #BE3A31", backgroundColor: "#f7e9e8" },
   cellForte: { fontFamily: "Helvetica-Bold" },
+  grafico: { marginBottom: 14 },
+  gRow: { flexDirection: "row", alignItems: "center", marginBottom: 3 },
+  gLabel: { width: "32%", fontSize: 8, paddingRight: 4 },
+  gTrack: { flex: 1, height: 8, backgroundColor: "#eee" },
+  gBar: { height: 8, backgroundColor: "#BE3A31" },
+  gValor: { width: "18%", fontSize: 8, textAlign: "right", paddingLeft: 4 },
 });
 
 export function DocumentoRelatorio({
@@ -36,6 +47,8 @@ export function DocumentoRelatorio({
   const larguras = relatorio.colunas.map((c) =>
     c.tipo === "texto" ? 2 : 1,
   );
+  const grafico = dadosGrafico(relatorio);
+  const maxGrafico = grafico.reduce((m, g) => Math.max(m, g.valor), 0);
 
   return (
     <Document>
@@ -44,6 +57,25 @@ export function DocumentoRelatorio({
         <Text style={styles.sub}>
           Loca — controle de locações{periodo ? ` · ${periodo}` : ""}
         </Text>
+
+        {grafico.length > 0 ? (
+          <View style={styles.grafico}>
+            {grafico.map((g, i) => (
+              <View key={i} style={styles.gRow} wrap={false}>
+                <Text style={styles.gLabel}>{g.label}</Text>
+                <View style={styles.gTrack}>
+                  <View
+                    style={[
+                      styles.gBar,
+                      { width: `${maxGrafico > 0 ? (g.valor / maxGrafico) * 100 : 0}%` },
+                    ]}
+                  />
+                </View>
+                <Text style={styles.gValor}>{formatarValor("moeda", g.valor)}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
 
         <View style={styles.header}>
           {relatorio.colunas.map((c, i) => (
