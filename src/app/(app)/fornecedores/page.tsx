@@ -34,6 +34,7 @@ export default async function FornecedoresPage() {
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <PageHeader
+        eyebrow="Locadores"
         titulo="Fornecedores"
         descricao="Locadoras e fornecedores de quem a organização aluga."
       >

@@ -36,6 +36,7 @@ export default async function ConfiguracoesPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <PageHeader
+        eyebrow="Preferências"
         titulo="Configurações"
         descricao="Usuários e avisos automáticos de vencimento."
       />

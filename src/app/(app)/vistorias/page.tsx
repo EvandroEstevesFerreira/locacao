@@ -46,6 +46,7 @@ export default async function VistoriasPage() {
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <PageHeader
+        eyebrow="Retirada e devolução"
         titulo="Vistorias"
         descricao="Registros de retirada e devolução com fotos e avarias."
       >

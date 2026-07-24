@@ -42,7 +42,11 @@ export default async function ObrasPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-      <PageHeader titulo="Obras" descricao="Obras e contratos da organização.">
+      <PageHeader
+        eyebrow="Canteiros"
+        titulo="Obras"
+        descricao="Obras e contratos da organização."
+      >
         {podeEditar ? (
           <Button render={<Link href="/obras/nova" />}>
             <Plus className="size-4" />

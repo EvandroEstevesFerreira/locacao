@@ -71,6 +71,7 @@ export default async function FinanceiroPage({
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <PageHeader
+        eyebrow="Contas a pagar"
         titulo="Financeiro"
         descricao="Contas a pagar das locações, por obra e vencimento."
       >

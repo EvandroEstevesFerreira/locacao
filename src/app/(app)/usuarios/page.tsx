@@ -36,6 +36,7 @@ export default async function UsuariosPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <PageHeader
+        eyebrow="Equipe"
         titulo="Usuários"
         descricao="Perfis e acesso por obra dos usuários da organização."
       >
