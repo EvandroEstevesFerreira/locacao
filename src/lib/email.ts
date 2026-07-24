@@ -1,4 +1,9 @@
 import { Resend } from "resend";
+import {
+  expandirLinhas,
+  formatarValor,
+  type Relatorio,
+} from "@/lib/relatorios";
 
 export function emailConfigurado() {
   return Boolean(process.env.RESEND_API_KEY && process.env.EMAIL_FROM);
@@ -127,11 +132,66 @@ export function montarEmailSenhaRedefinida(
   );
 }
 
+/** Monta o HTML de um relatório (tabela com subtotais/total) para e-mail. */
+export function montarEmailRelatorio(
+  orgNome: string,
+  relatorio: Relatorio,
+  periodoLabel?: string,
+): string {
+  const th = relatorio.colunas
+    .map(
+      (c) =>
+        `<th style="padding:6px 8px;text-align:${
+          c.tipo === "moeda" || c.tipo === "numero" ? "right" : "left"
+        };border-bottom:2px solid #d4d4d7;font-size:12px;">${c.label}</th>`,
+    )
+    .join("");
+
+  const primeira = relatorio.colunas[0]?.key;
+  const corpo = expandirLinhas(relatorio)
+    .map((lr) => {
+      const forte = lr.tipo !== "dado";
+      const bg =
+        lr.tipo === "total" ? "#f7e9e8" : lr.tipo === "subtotal" ? "#f2f2f3" : "#fff";
+      const tds = relatorio.colunas
+        .map((c) => {
+          let conteudo = "";
+          if (lr.tipo === "dado") conteudo = formatarValor(c.tipo, lr.valores[c.key]);
+          else if (c.key in lr.valores)
+            conteudo = formatarValor("moeda", lr.valores[c.key]);
+          else if (c.key === primeira)
+            conteudo = lr.tipo === "total" ? lr.rotulo : `Subtotal — ${lr.rotulo}`;
+          const dir = c.tipo === "moeda" || c.tipo === "numero" ? "right" : "left";
+          return `<td style="padding:6px 8px;text-align:${dir};border-bottom:1px solid #eee;font-size:12px;${
+            forte ? "font-weight:bold;" : ""
+          }">${conteudo}</td>`;
+        })
+        .join("");
+      return `<tr style="background:${bg};">${tds}</tr>`;
+    })
+    .join("");
+
+  const vazio =
+    relatorio.linhas.length === 0
+      ? `<p style="font-size:13px;color:#5d5d60;">Sem registros no período.</p>`
+      : `<table style="border-collapse:collapse;width:100%;margin-top:8px;"><thead><tr>${th}</tr></thead><tbody>${corpo}</tbody></table>`;
+
+  return layoutEmail(
+    `${relatorio.titulo}${periodoLabel ? ` · ${periodoLabel}` : ""}`,
+    `<p style="font-size:14px;">Resumo automático — <strong>${orgNome}</strong>.</p>
+     ${vazio}
+     <p style="font-size:12px;color:#5d5d60;margin-top:12px;">O PDF completo está anexado a este e-mail.</p>`,
+  );
+}
+
+export type AnexoEmail = { filename: string; content: string | Buffer };
+
 /** Envia um e-mail via Resend. Lança se não configurado. */
 export async function enviarEmail(
   destinatarios: string[],
   assunto: string,
   html: string,
+  anexos?: AnexoEmail[],
 ) {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.EMAIL_FROM;
@@ -144,5 +204,6 @@ export async function enviarEmail(
     to: destinatarios,
     subject: assunto,
     html,
+    ...(anexos && anexos.length ? { attachments: anexos } : {}),
   });
 }

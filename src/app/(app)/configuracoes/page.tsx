@@ -13,6 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ConfigAlertaForm } from "./config-form";
+import { ConfigRelatorioForm } from "./config-relatorio-form";
 
 export const metadata = { title: "Configurações — Loca" };
 
@@ -21,11 +22,18 @@ export default async function ConfiguracoesPage() {
   if (!perfil || !podeConfigurarSistema(perfil.papel)) redirect("/");
 
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("config_alerta")
-    .select("ativo, dias_alerta, destinatarios")
-    .eq("org_id", perfil.org_id)
-    .maybeSingle();
+  const [{ data }, { data: dataRel }] = await Promise.all([
+    supabase
+      .from("config_alerta")
+      .select("ativo, dias_alerta, destinatarios")
+      .eq("org_id", perfil.org_id)
+      .maybeSingle(),
+    supabase
+      .from("config_relatorio_email")
+      .select("ativo, tipo, frequencia, dia, destinatarios")
+      .eq("org_id", perfil.org_id)
+      .maybeSingle(),
+  ]);
 
   const config = {
     ativo: data?.ativo ?? true,
@@ -34,6 +42,14 @@ export default async function ConfiguracoesPage() {
         ? data.dias_alerta
         : [3],
     destinatarios: (data?.destinatarios ?? []) as string[],
+  };
+
+  const configRel = {
+    ativo: dataRel?.ativo ?? false,
+    tipo: dataRel?.tipo ?? "custo_por_obra",
+    frequencia: dataRel?.frequencia ?? "mensal",
+    dia: dataRel?.dia ?? 1,
+    destinatarios: (dataRel?.destinatarios ?? []) as string[],
   };
 
   return (
@@ -72,6 +88,20 @@ export default async function ConfiguracoesPage() {
         </CardHeader>
         <CardContent>
           <ConfigAlertaForm config={config} />
+        </CardContent>
+      </Card>
+
+      {/* Relatório por e-mail */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Relatório por e-mail</CardTitle>
+          <CardDescription>
+            Envio automático de um relatório (com PDF anexo) por e-mail, semanal
+            ou mensalmente, para os destinatários escolhidos.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ConfigRelatorioForm config={configRel} />
         </CardContent>
       </Card>
     </div>
