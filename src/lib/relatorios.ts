@@ -55,13 +55,80 @@ export type Relatorio = {
   titulo: string;
   colunas: Coluna[];
   linhas: Record<string, string | number | null>[];
+  agruparPor?: string; // key de coluna para subtotais (ex.: "obra")
 };
 
 export type FiltrosRelatorio = {
   obra_id?: string;
+  fornecedor_id?: string;
+  status?: "pago" | "pendente";
   inicio?: string;
   fim?: string;
 };
+
+export type LinhaRelatorio =
+  | { tipo: "dado"; valores: Record<string, string | number | null> }
+  | { tipo: "subtotal"; rotulo: string; valores: Record<string, number> }
+  | { tipo: "total"; rotulo: string; valores: Record<string, number> };
+
+/**
+ * Expande as linhas cruas de um relatório inserindo subtotais por grupo
+ * (quando `agruparPor` está definido) e um total geral. Soma apenas colunas
+ * de tipo "moeda". Puro — sem I/O.
+ */
+export function expandirLinhas(relatorio: Relatorio): LinhaRelatorio[] {
+  const moedaKeys = relatorio.colunas
+    .filter((c) => c.tipo === "moeda")
+    .map((c) => c.key);
+  const dados = relatorio.linhas;
+  if (dados.length === 0) return [];
+
+  const somar = (linhas: Record<string, string | number | null>[]) => {
+    const acc: Record<string, number> = {};
+    for (const k of moedaKeys) {
+      acc[k] = linhas.reduce((s, l) => s + Number(l[k] ?? 0), 0);
+    }
+    return acc;
+  };
+
+  const out: LinhaRelatorio[] = [];
+
+  if (relatorio.agruparPor && moedaKeys.length > 0) {
+    const chave = relatorio.agruparPor;
+    const ordenadas = [...dados].sort((a, b) =>
+      String(a[chave] ?? "").localeCompare(String(b[chave] ?? "")),
+    );
+    let grupoAtual: string | null = null;
+    let bucket: Record<string, string | number | null>[] = [];
+    const flush = () => {
+      if (bucket.length === 0) return;
+      out.push({
+        tipo: "subtotal",
+        rotulo: String(grupoAtual ?? ""),
+        valores: somar(bucket),
+      });
+      bucket = [];
+    };
+    for (const l of ordenadas) {
+      const g = String(l[chave] ?? "");
+      if (grupoAtual === null) grupoAtual = g;
+      if (g !== grupoAtual) {
+        flush();
+        grupoAtual = g;
+      }
+      out.push({ tipo: "dado", valores: l });
+      bucket.push(l);
+    }
+    flush();
+  } else {
+    for (const l of dados) out.push({ tipo: "dado", valores: l });
+  }
+
+  if (moedaKeys.length > 0) {
+    out.push({ tipo: "total", rotulo: "TOTAL GERAL", valores: somar(dados) });
+  }
+  return out;
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type DB = SupabaseClient<any, any, any>;
@@ -84,17 +151,19 @@ async function itensAbertos(
   const { data } = await supabase
     .from("item_locado")
     .select(
-      "quantidade, valor_unitario_periodo, data_retirada, data_devolucao_prevista, contrato:contrato_id(numero, cadencia, cobranca_prorata, data_fim_prevista, obra_id, obra:obra_id(codigo,nome)), item:item_id(descricao)",
+      "quantidade, valor_unitario_periodo, data_retirada, data_devolucao_prevista, contrato:contrato_id(numero, cadencia, cobranca_prorata, data_fim_prevista, obra_id, fornecedor_id, obra:obra_id(codigo,nome), fornecedor:fornecedor_id(nome)), item:item_id(descricao)",
     )
     .eq("status", "em_aberto")
     .order("data_retirada");
 
   const linhas = (data ?? [])
-    .filter(
-      (l: Record<string, unknown>) =>
-        !filtros.obra_id ||
-        (l.contrato as { obra_id?: string })?.obra_id === filtros.obra_id,
-    )
+    .filter((l: Record<string, unknown>) => {
+      const c = l.contrato as { obra_id?: string; fornecedor_id?: string } | null;
+      if (filtros.obra_id && c?.obra_id !== filtros.obra_id) return false;
+      if (filtros.fornecedor_id && c?.fornecedor_id !== filtros.fornecedor_id)
+        return false;
+      return true;
+    })
     .map((l: Record<string, unknown>) => {
       const contrato = l.contrato as {
         numero: string;
@@ -102,6 +171,7 @@ async function itensAbertos(
         cobranca_prorata?: boolean;
         data_fim_prevista?: string | null;
         obra: { codigo: string; nome: string } | null;
+        fornecedor: { nome: string } | null;
       } | null;
       const item = l.item as { descricao: string } | null;
       const qtd = Number(l.quantidade);
@@ -140,6 +210,7 @@ async function itensAbertos(
           ? `${contrato.obra.codigo} — ${contrato.obra.nome}`
           : "—",
         contrato: contrato?.numero ?? "—",
+        fornecedor: contrato?.fornecedor?.nome ?? "—",
         item: item?.descricao ?? "—",
         quantidade: qtd,
         retirada: l.data_retirada as string,
@@ -152,9 +223,11 @@ async function itensAbertos(
 
   return {
     titulo: "Itens em aberto",
+    agruparPor: "obra",
     colunas: [
       { key: "obra", label: "Obra", tipo: "texto" },
       { key: "contrato", label: "Contrato", tipo: "texto" },
+      { key: "fornecedor", label: "Fornecedor", tipo: "texto" },
       { key: "item", label: "Item", tipo: "texto" },
       { key: "quantidade", label: "Qtd.", tipo: "numero" },
       { key: "retirada", label: "Retirada", tipo: "data" },
@@ -173,29 +246,42 @@ async function contasPagar(
 ): Promise<Relatorio> {
   let q = supabase
     .from("lancamento_financeiro")
-    .select("descricao, competencia, vencimento, valor, status, obra:obra_id(codigo,nome)")
+    .select(
+      "descricao, competencia, vencimento, valor, status, obra:obra_id(codigo,nome), contrato:contrato_id(fornecedor_id, fornecedor:fornecedor_id(nome))",
+    )
     .order("vencimento");
   if (filtros.obra_id) q = q.eq("obra_id", filtros.obra_id);
+  if (filtros.status) q = q.eq("status", filtros.status);
   if (filtros.inicio) q = q.gte("vencimento", filtros.inicio);
   if (filtros.fim) q = q.lte("vencimento", filtros.fim);
   const { data } = await q;
 
-  const linhas = (data ?? []).map((l: Record<string, unknown>) => {
-    const obra = l.obra as { codigo: string; nome: string } | null;
-    return {
-      obra: obra ? `${obra.codigo} — ${obra.nome}` : "—",
-      descricao: l.descricao as string,
-      competencia: l.competencia as string,
-      vencimento: l.vencimento as string,
-      valor: Number(l.valor),
-      status: l.status === "pago" ? "Pago" : "Pendente",
-    };
-  });
+  const linhas = (data ?? [])
+    .filter((l: Record<string, unknown>) => {
+      if (!filtros.fornecedor_id) return true;
+      const c = l.contrato as { fornecedor_id?: string } | null;
+      return c?.fornecedor_id === filtros.fornecedor_id;
+    })
+    .map((l: Record<string, unknown>) => {
+      const obra = l.obra as { codigo: string; nome: string } | null;
+      const contrato = l.contrato as { fornecedor: { nome: string } | null } | null;
+      return {
+        obra: obra ? `${obra.codigo} — ${obra.nome}` : "—",
+        fornecedor: contrato?.fornecedor?.nome ?? "—",
+        descricao: l.descricao as string,
+        competencia: l.competencia as string,
+        vencimento: l.vencimento as string,
+        valor: Number(l.valor),
+        status: l.status === "pago" ? "Pago" : "Pendente",
+      };
+    });
 
   return {
     titulo: "Contas a pagar",
+    agruparPor: "obra",
     colunas: [
       { key: "obra", label: "Obra", tipo: "texto" },
+      { key: "fornecedor", label: "Fornecedor", tipo: "texto" },
       { key: "descricao", label: "Descrição", tipo: "texto" },
       { key: "competencia", label: "Competência", tipo: "data" },
       { key: "vencimento", label: "Vencimento", tipo: "data" },
@@ -212,8 +298,11 @@ async function custoPorObra(
 ): Promise<Relatorio> {
   let q = supabase
     .from("lancamento_financeiro")
-    .select("valor, status, obra:obra_id(codigo,nome)");
+    .select(
+      "valor, status, obra:obra_id(codigo,nome), contrato:contrato_id(fornecedor_id)",
+    );
   if (filtros.obra_id) q = q.eq("obra_id", filtros.obra_id);
+  if (filtros.status) q = q.eq("status", filtros.status);
   if (filtros.inicio) q = q.gte("vencimento", filtros.inicio);
   if (filtros.fim) q = q.lte("vencimento", filtros.fim);
   const { data } = await q;
@@ -223,6 +312,10 @@ async function custoPorObra(
     { obra: string; total: number; pendente: number; pago: number }
   >();
   for (const l of (data ?? []) as Record<string, unknown>[]) {
+    if (filtros.fornecedor_id) {
+      const c = l.contrato as { fornecedor_id?: string } | null;
+      if (c?.fornecedor_id !== filtros.fornecedor_id) continue;
+    }
     const obra = l.obra as { codigo: string; nome: string } | null;
     const nome = obra ? `${obra.codigo} — ${obra.nome}` : "—";
     const atual = mapa.get(nome) ?? { obra: nome, total: 0, pendente: 0, pago: 0 };

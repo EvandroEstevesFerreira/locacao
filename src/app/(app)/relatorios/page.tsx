@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   TIPOS_RELATORIO,
   gerarRelatorio,
+  expandirLinhas,
   formatarValor,
   type TipoRelatorio,
 } from "@/lib/relatorios";
@@ -29,6 +30,8 @@ export default async function RelatoriosPage({
   searchParams: Promise<{
     tipo?: string;
     obra?: string;
+    fornecedor?: string;
+    status?: string;
     inicio?: string;
     fim?: string;
   }>;
@@ -40,13 +43,15 @@ export default async function RelatoriosPage({
   const meta = TIPOS_RELATORIO.find((t) => t.valor === tipo)!;
 
   const supabase = await createClient();
-  const { data: obras } = await supabase
-    .from("obra")
-    .select("id, codigo, nome")
-    .order("codigo");
+  const [{ data: obras }, { data: fornecedores }] = await Promise.all([
+    supabase.from("obra").select("id, codigo, nome").order("codigo"),
+    supabase.from("fornecedor").select("id, nome").order("nome"),
+  ]);
 
   const relatorio = await gerarRelatorio(supabase, tipo, {
     obra_id: sp.obra || undefined,
+    fornecedor_id: sp.fornecedor || undefined,
+    status: sp.status === "pago" || sp.status === "pendente" ? sp.status : undefined,
     inicio: sp.inicio || undefined,
     fim: sp.fim || undefined,
   });
@@ -54,6 +59,8 @@ export default async function RelatoriosPage({
   const qs = new URLSearchParams();
   qs.set("tipo", tipo);
   if (sp.obra) qs.set("obra", sp.obra);
+  if (sp.fornecedor) qs.set("fornecedor", sp.fornecedor);
+  if (sp.status) qs.set("status", sp.status);
   if (sp.inicio) qs.set("inicio", sp.inicio);
   if (sp.fim) qs.set("fim", sp.fim);
   const query = qs.toString();
@@ -89,6 +96,29 @@ export default async function RelatoriosPage({
                     {o.codigo} — {o.nome}
                   </option>
                 ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-muted-foreground">Fornecedor</label>
+              <select
+                name="fornecedor"
+                defaultValue={sp.fornecedor ?? ""}
+                className={selectClasses}
+              >
+                <option value="">Todos</option>
+                {(fornecedores ?? []).map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-muted-foreground">Status</label>
+              <select name="status" defaultValue={sp.status ?? ""} className={selectClasses}>
+                <option value="">Todos</option>
+                <option value="pendente">Pendente</option>
+                <option value="pago">Pago</option>
               </select>
             </div>
             <div className="flex flex-col gap-1">
@@ -162,20 +192,44 @@ export default async function RelatoriosPage({
                   </TableCell>
                 </TableRow>
               ) : (
-                relatorio.linhas.map((linha, idx) => (
-                  <TableRow key={idx}>
-                    {relatorio.colunas.map((c) => (
-                      <TableCell
-                        key={c.key}
-                        className={
-                          c.tipo === "moeda" || c.tipo === "numero" ? "text-right" : ""
-                        }
-                      >
-                        {formatarValor(c.tipo, linha[c.key])}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
+                expandirLinhas(relatorio).map((lr, idx) => {
+                  const dir = (t: string) => t === "moeda" || t === "numero";
+                  if (lr.tipo === "dado") {
+                    return (
+                      <TableRow key={idx}>
+                        {relatorio.colunas.map((c) => (
+                          <TableCell
+                            key={c.key}
+                            className={dir(c.tipo) ? "text-right" : ""}
+                          >
+                            {formatarValor(c.tipo, lr.valores[c.key])}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    );
+                  }
+                  const primeira = relatorio.colunas[0].key;
+                  return (
+                    <TableRow key={idx} className="bg-muted font-medium">
+                      {relatorio.colunas.map((c) => {
+                        let conteudo = "";
+                        if (c.key in lr.valores)
+                          conteudo = formatarValor("moeda", lr.valores[c.key]);
+                        else if (c.key === primeira)
+                          conteudo =
+                            lr.tipo === "total" ? lr.rotulo : `Subtotal — ${lr.rotulo}`;
+                        return (
+                          <TableCell
+                            key={c.key}
+                            className={dir(c.tipo) ? "text-right" : ""}
+                          >
+                            {conteudo}
+                          </TableCell>
+                        );
+                      })}
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>

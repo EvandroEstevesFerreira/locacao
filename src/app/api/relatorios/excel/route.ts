@@ -5,6 +5,7 @@ import { dataDeISO } from "@/lib/locacao";
 import {
   TIPOS_RELATORIO,
   gerarRelatorio,
+  expandirLinhas,
   type TipoRelatorio,
 } from "@/lib/relatorios";
 
@@ -24,8 +25,11 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Relatório inválido." }, { status: 400 });
   }
 
+  const statusParam = url.searchParams.get("status");
   const relatorio = await gerarRelatorio(supabase, tipo, {
     obra_id: url.searchParams.get("obra") ?? undefined,
+    fornecedor_id: url.searchParams.get("fornecedor") ?? undefined,
+    status: statusParam === "pago" || statusParam === "pendente" ? statusParam : undefined,
     inicio: url.searchParams.get("inicio") ?? undefined,
     fim: url.searchParams.get("fim") ?? undefined,
   });
@@ -39,16 +43,37 @@ export async function GET(request: Request) {
   }));
   ws.getRow(1).font = { bold: true };
 
-  for (const linha of relatorio.linhas) {
+  const primeira = relatorio.colunas[0].key;
+  for (const lr of expandirLinhas(relatorio)) {
     const row: Record<string, string | number | Date | null> = {};
-    for (const c of relatorio.colunas) {
-      const v = linha[c.key];
-      if (v === null || v === undefined || v === "") row[c.key] = null;
-      else if (c.tipo === "data") row[c.key] = dataDeISO(String(v));
-      else if (c.tipo === "moeda" || c.tipo === "numero") row[c.key] = Number(v);
-      else row[c.key] = String(v);
+    if (lr.tipo === "dado") {
+      for (const c of relatorio.colunas) {
+        const v = lr.valores[c.key];
+        if (v === null || v === undefined || v === "") row[c.key] = null;
+        else if (c.tipo === "data") row[c.key] = dataDeISO(String(v));
+        else if (c.tipo === "moeda" || c.tipo === "numero") row[c.key] = Number(v);
+        else row[c.key] = String(v);
+      }
+      ws.addRow(row);
+    } else {
+      for (const c of relatorio.colunas) {
+        if (c.key in lr.valores) row[c.key] = Number(lr.valores[c.key]);
+        else if (c.key === primeira)
+          row[c.key] = lr.tipo === "total" ? lr.rotulo : `Subtotal — ${lr.rotulo}`;
+        else row[c.key] = null;
+      }
+      const r = ws.addRow(row);
+      r.font = { bold: true };
+      if (lr.tipo === "total") {
+        r.eachCell((cell) => {
+          cell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: "FFF7E9E8" },
+          };
+        });
+      }
     }
-    ws.addRow(row);
   }
 
   relatorio.colunas.forEach((c, i) => {
