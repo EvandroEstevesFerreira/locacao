@@ -75,6 +75,12 @@ export default async function FinanceiroPage({
         titulo="Financeiro"
         descricao="Contas a pagar das locações, por obra e vencimento."
       >
+        <Button
+          variant="secondary"
+          render={<Link href="/financeiro/fluxo" />}
+        >
+          Fluxo de caixa
+        </Button>
         {podeEditar ? (
           <Button render={<Link href="/financeiro/novo" />}>
             <Plus className="size-4" />
