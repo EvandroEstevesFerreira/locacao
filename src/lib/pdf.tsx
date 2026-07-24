@@ -74,7 +74,7 @@ export function DocumentoRelatorio({
 // Relatório de Vistoria (retirada/devolução) — dados + fotos
 // ═══════════════════════════════════════════════════════════════════════════
 
-const ACENTO = "#5980a6";
+const ACENTO = "#BE3A31";
 
 const vStyles = StyleSheet.create({
   page: { padding: 32, fontSize: 10, fontFamily: "Helvetica", color: "#1d1f20" },
