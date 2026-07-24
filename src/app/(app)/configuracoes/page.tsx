@@ -23,14 +23,17 @@ export default async function ConfiguracoesPage() {
   const supabase = await createClient();
   const { data } = await supabase
     .from("config_alerta")
-    .select("ativo, dias_antecedencia, destinatarios")
+    .select("ativo, dias_alerta, destinatarios")
     .eq("org_id", perfil.org_id)
     .maybeSingle();
 
-  const config = data ?? {
-    ativo: true,
-    dias_antecedencia: 3,
-    destinatarios: [] as string[],
+  const config = {
+    ativo: data?.ativo ?? true,
+    dias_alerta:
+      data?.dias_alerta && data.dias_alerta.length > 0
+        ? data.dias_alerta
+        : [3],
+    destinatarios: (data?.destinatarios ?? []) as string[],
   };
 
   return (

@@ -9,7 +9,10 @@ export type ConfigFormState = { error?: string; ok?: boolean };
 
 const schema = z.object({
   ativo: z.boolean(),
-  dias_antecedencia: z.coerce.number().int().min(0).max(90),
+  dias_alerta: z
+    .array(z.number().int().min(0).max(365))
+    .min(1, "Informe ao menos um prazo de aviso.")
+    .max(6),
   destinatarios: z.array(z.string().email()),
 });
 
@@ -27,9 +30,23 @@ export async function salvarConfigAlerta(
     .map((s) => s.trim())
     .filter(Boolean);
 
+  // Prazos: aceita "30, 15, 3" (vírgula, ponto-e-vírgula ou espaço).
+  // Remove duplicados e ordena do maior para o menor.
+  const diasAlerta = Array.from(
+    new Set(
+      String(formData.get("dias_alerta") ?? "")
+        .split(/[\s,;]+/)
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .map(Number),
+    ),
+  )
+    .filter((n) => Number.isFinite(n))
+    .sort((a, b) => b - a);
+
   const parsed = schema.safeParse({
     ativo: formData.get("ativo") === "on" || formData.get("ativo") === "true",
-    dias_antecedencia: formData.get("dias_antecedencia"),
+    dias_alerta: diasAlerta,
     destinatarios,
   });
   if (!parsed.success) {
@@ -38,7 +55,10 @@ export async function salvarConfigAlerta(
       error:
         msg?.path[0] === "destinatarios"
           ? "Há um e-mail inválido na lista de destinatários."
-          : (msg?.message ?? "Dados inválidos."),
+          : msg?.path[0] === "dias_alerta"
+            ? (msg?.message ??
+              "Prazos inválidos. Use números entre 0 e 365, ex.: 30, 15, 3.")
+            : (msg?.message ?? "Dados inválidos."),
     };
   }
 
@@ -46,7 +66,9 @@ export async function salvarConfigAlerta(
   const { error } = await supabase.from("config_alerta").upsert({
     org_id: perfil.org_id,
     ativo: parsed.data.ativo,
-    dias_antecedencia: parsed.data.dias_antecedencia,
+    dias_alerta: parsed.data.dias_alerta,
+    // mantém a coluna legada em sincronia (maior prazo)
+    dias_antecedencia: Math.max(...parsed.data.dias_alerta),
     destinatarios: parsed.data.destinatarios,
     updated_at: new Date().toISOString(),
   });
