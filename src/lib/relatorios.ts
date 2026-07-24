@@ -246,29 +246,42 @@ async function contasPagar(
 ): Promise<Relatorio> {
   let q = supabase
     .from("lancamento_financeiro")
-    .select("descricao, competencia, vencimento, valor, status, obra:obra_id(codigo,nome)")
+    .select(
+      "descricao, competencia, vencimento, valor, status, obra:obra_id(codigo,nome), contrato:contrato_id(fornecedor_id, fornecedor:fornecedor_id(nome))",
+    )
     .order("vencimento");
   if (filtros.obra_id) q = q.eq("obra_id", filtros.obra_id);
+  if (filtros.status) q = q.eq("status", filtros.status);
   if (filtros.inicio) q = q.gte("vencimento", filtros.inicio);
   if (filtros.fim) q = q.lte("vencimento", filtros.fim);
   const { data } = await q;
 
-  const linhas = (data ?? []).map((l: Record<string, unknown>) => {
-    const obra = l.obra as { codigo: string; nome: string } | null;
-    return {
-      obra: obra ? `${obra.codigo} — ${obra.nome}` : "—",
-      descricao: l.descricao as string,
-      competencia: l.competencia as string,
-      vencimento: l.vencimento as string,
-      valor: Number(l.valor),
-      status: l.status === "pago" ? "Pago" : "Pendente",
-    };
-  });
+  const linhas = (data ?? [])
+    .filter((l: Record<string, unknown>) => {
+      if (!filtros.fornecedor_id) return true;
+      const c = l.contrato as { fornecedor_id?: string } | null;
+      return c?.fornecedor_id === filtros.fornecedor_id;
+    })
+    .map((l: Record<string, unknown>) => {
+      const obra = l.obra as { codigo: string; nome: string } | null;
+      const contrato = l.contrato as { fornecedor: { nome: string } | null } | null;
+      return {
+        obra: obra ? `${obra.codigo} — ${obra.nome}` : "—",
+        fornecedor: contrato?.fornecedor?.nome ?? "—",
+        descricao: l.descricao as string,
+        competencia: l.competencia as string,
+        vencimento: l.vencimento as string,
+        valor: Number(l.valor),
+        status: l.status === "pago" ? "Pago" : "Pendente",
+      };
+    });
 
   return {
     titulo: "Contas a pagar",
+    agruparPor: "obra",
     colunas: [
       { key: "obra", label: "Obra", tipo: "texto" },
+      { key: "fornecedor", label: "Fornecedor", tipo: "texto" },
       { key: "descricao", label: "Descrição", tipo: "texto" },
       { key: "competencia", label: "Competência", tipo: "data" },
       { key: "vencimento", label: "Vencimento", tipo: "data" },
@@ -285,8 +298,11 @@ async function custoPorObra(
 ): Promise<Relatorio> {
   let q = supabase
     .from("lancamento_financeiro")
-    .select("valor, status, obra:obra_id(codigo,nome)");
+    .select(
+      "valor, status, obra:obra_id(codigo,nome), contrato:contrato_id(fornecedor_id)",
+    );
   if (filtros.obra_id) q = q.eq("obra_id", filtros.obra_id);
+  if (filtros.status) q = q.eq("status", filtros.status);
   if (filtros.inicio) q = q.gte("vencimento", filtros.inicio);
   if (filtros.fim) q = q.lte("vencimento", filtros.fim);
   const { data } = await q;
@@ -296,6 +312,10 @@ async function custoPorObra(
     { obra: string; total: number; pendente: number; pago: number }
   >();
   for (const l of (data ?? []) as Record<string, unknown>[]) {
+    if (filtros.fornecedor_id) {
+      const c = l.contrato as { fornecedor_id?: string } | null;
+      if (c?.fornecedor_id !== filtros.fornecedor_id) continue;
+    }
     const obra = l.obra as { codigo: string; nome: string } | null;
     const nome = obra ? `${obra.codigo} — ${obra.nome}` : "—";
     const atual = mapa.get(nome) ?? { obra: nome, total: 0, pendente: 0, pago: 0 };
