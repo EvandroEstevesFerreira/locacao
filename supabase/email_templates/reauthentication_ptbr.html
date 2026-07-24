@@ -1,0 +1,31 @@
+<!-- ===========================================================================
+     Loca — Template "Reauthentication" (PT-BR, marca Sistenge)
+     Supabase → Authentication → Emails → "Reauthentication".
+     Assunto sugerido: Seu código de verificação — Loca
+     Variável: {{ .Token }} (código de 6 dígitos) — NÃO há link neste template.
+     =========================================================================== -->
+<div style="font-family:Arial,Helvetica,sans-serif;color:#1d1f20;background:#f2f2f3;margin:0;padding:24px;">
+  <div style="max-width:520px;margin:0 auto;background:#fff;border:1px solid #d4d4d7;">
+    <div style="border-bottom:3px solid #BE3A31;padding:16px 24px;">
+      <div style="font-size:18px;font-weight:bold;letter-spacing:1px;">SISTENGE</div>
+      <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#BE3A31;">Locações de obra</div>
+    </div>
+    <div style="padding:24px;">
+      <h2 style="margin:0 0 12px;font-size:18px;">Código de verificação</h2>
+      <p style="font-size:14px;margin:0 0 8px;">
+        Use o código abaixo para confirmar a operação na sua conta do <strong>Loca</strong>.
+        Ele expira em poucos minutos.
+      </p>
+      <div style="margin:16px 0;padding:14px 18px;background:#f2f2f3;border:1px solid #d4d4d7;
+                  font-size:28px;font-weight:bold;letter-spacing:6px;text-align:center;color:#BE3A31;">
+        {{ .Token }}
+      </div>
+      <p style="font-size:13px;color:#5d5d60;margin-top:16px;">
+        Se você não solicitou este código, ignore este e-mail e considere trocar sua senha.
+      </p>
+      <p style="color:#888;font-size:12px;margin-top:24px;border-top:1px solid #eee;padding-top:12px;">
+        Enviado automaticamente pelo Loca — controle de locações da Sistenge.
+      </p>
+    </div>
+  </div>
+</div>
