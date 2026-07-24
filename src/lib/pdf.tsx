@@ -6,7 +6,7 @@ import {
   Image,
   StyleSheet,
 } from "@react-pdf/renderer";
-import { formatarValor, type Relatorio } from "@/lib/relatorios";
+import { expandirLinhas, formatarValor, type Relatorio } from "@/lib/relatorios";
 
 const styles = StyleSheet.create({
   page: { padding: 28, fontSize: 9, fontFamily: "Helvetica" },
@@ -21,6 +21,9 @@ const styles = StyleSheet.create({
   },
   cell: { paddingHorizontal: 4 },
   hcell: { paddingHorizontal: 4, fontFamily: "Helvetica-Bold" },
+  rowSubtotal: { backgroundColor: "#f2f2f3" },
+  rowTotal: { borderTop: "1 solid #BE3A31", backgroundColor: "#f7e9e8" },
+  cellForte: { fontFamily: "Helvetica-Bold" },
 });
 
 export function DocumentoRelatorio({
@@ -50,15 +53,43 @@ export function DocumentoRelatorio({
           ))}
         </View>
 
-        {relatorio.linhas.map((linha, idx) => (
-          <View key={idx} style={styles.row} wrap={false}>
-            {relatorio.colunas.map((c, i) => (
-              <Text key={c.key} style={[styles.cell, { flex: larguras[i] }]}>
-                {formatarValor(c.tipo, linha[c.key])}
-              </Text>
-            ))}
-          </View>
-        ))}
+        {expandirLinhas(relatorio).map((lr, idx) => {
+          if (lr.tipo === "dado") {
+            return (
+              <View key={idx} style={styles.row} wrap={false}>
+                {relatorio.colunas.map((c, i) => (
+                  <Text key={c.key} style={[styles.cell, { flex: larguras[i] }]}>
+                    {formatarValor(c.tipo, lr.valores[c.key])}
+                  </Text>
+                ))}
+              </View>
+            );
+          }
+          const primeira = relatorio.colunas[0].key;
+          return (
+            <View
+              key={idx}
+              style={[styles.row, lr.tipo === "total" ? styles.rowTotal : styles.rowSubtotal]}
+              wrap={false}
+            >
+              {relatorio.colunas.map((c, i) => {
+                let conteudo = "";
+                if (c.key in lr.valores)
+                  conteudo = formatarValor("moeda", lr.valores[c.key]);
+                else if (c.key === primeira)
+                  conteudo = lr.tipo === "total" ? lr.rotulo : `Subtotal — ${lr.rotulo}`;
+                return (
+                  <Text
+                    key={c.key}
+                    style={[styles.cell, styles.cellForte, { flex: larguras[i] }]}
+                  >
+                    {conteudo}
+                  </Text>
+                );
+              })}
+            </View>
+          );
+        })}
 
         {relatorio.linhas.length === 0 ? (
           <Text style={{ marginTop: 12, color: "#666" }}>

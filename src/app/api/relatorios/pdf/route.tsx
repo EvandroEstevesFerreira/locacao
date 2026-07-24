@@ -27,8 +27,11 @@ export async function GET(request: Request) {
 
   const inicio = url.searchParams.get("inicio") ?? undefined;
   const fim = url.searchParams.get("fim") ?? undefined;
+  const statusParam = url.searchParams.get("status");
   const relatorio = await gerarRelatorio(supabase, tipo, {
     obra_id: url.searchParams.get("obra") ?? undefined,
+    fornecedor_id: url.searchParams.get("fornecedor") ?? undefined,
+    status: statusParam === "pago" || statusParam === "pendente" ? statusParam : undefined,
     inicio,
     fim,
   });
