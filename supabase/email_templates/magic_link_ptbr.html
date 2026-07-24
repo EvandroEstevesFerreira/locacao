@@ -1,0 +1,35 @@
+<!-- ===========================================================================
+     Loca — Template "Magic Link" (PT-BR, marca Sistenge)
+     Supabase → Authentication → Emails → "Magic Link".
+     Assunto sugerido: Seu link de acesso — Loca
+     Variável: {{ .ConfirmationURL }}
+     =========================================================================== -->
+<div style="font-family:Arial,Helvetica,sans-serif;color:#1d1f20;background:#f2f2f3;margin:0;padding:24px;">
+  <div style="max-width:520px;margin:0 auto;background:#fff;border:1px solid #d4d4d7;">
+    <div style="border-bottom:3px solid #BE3A31;padding:16px 24px;">
+      <div style="font-size:18px;font-weight:bold;letter-spacing:1px;">SISTENGE</div>
+      <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#BE3A31;">Locações de obra</div>
+    </div>
+    <div style="padding:24px;">
+      <h2 style="margin:0 0 12px;font-size:18px;">Seu link de acesso</h2>
+      <p style="font-size:14px;margin:0 0 8px;">
+        Use o botão abaixo para entrar no <strong>Loca</strong> sem senha.
+        Por segurança, o link expira em pouco tempo e só pode ser usado uma vez.
+      </p>
+      <a href="{{ .ConfirmationURL }}"
+         style="display:inline-block;margin-top:16px;background:#BE3A31;color:#fff;text-decoration:none;padding:10px 18px;font-weight:bold;">
+        Entrar no Loca
+      </a>
+      <p style="font-size:12px;color:#5d5d60;margin-top:20px;">
+        Se o botão não funcionar, copie e cole este endereço no navegador:<br>
+        <a href="{{ .ConfirmationURL }}" style="color:#BE3A31;word-break:break-all;">{{ .ConfirmationURL }}</a>
+      </p>
+      <p style="font-size:13px;color:#5d5d60;margin-top:16px;">
+        Se você não solicitou este acesso, ignore este e-mail.
+      </p>
+      <p style="color:#888;font-size:12px;margin-top:24px;border-top:1px solid #eee;padding-top:12px;">
+        Enviado automaticamente pelo Loca — controle de locações da Sistenge.
+      </p>
+    </div>
+  </div>
+</div>
