@@ -55,13 +55,80 @@ export type Relatorio = {
   titulo: string;
   colunas: Coluna[];
   linhas: Record<string, string | number | null>[];
+  agruparPor?: string; // key de coluna para subtotais (ex.: "obra")
 };
 
 export type FiltrosRelatorio = {
   obra_id?: string;
+  fornecedor_id?: string;
+  status?: "pago" | "pendente";
   inicio?: string;
   fim?: string;
 };
+
+export type LinhaRelatorio =
+  | { tipo: "dado"; valores: Record<string, string | number | null> }
+  | { tipo: "subtotal"; rotulo: string; valores: Record<string, number> }
+  | { tipo: "total"; rotulo: string; valores: Record<string, number> };
+
+/**
+ * Expande as linhas cruas de um relatório inserindo subtotais por grupo
+ * (quando `agruparPor` está definido) e um total geral. Soma apenas colunas
+ * de tipo "moeda". Puro — sem I/O.
+ */
+export function expandirLinhas(relatorio: Relatorio): LinhaRelatorio[] {
+  const moedaKeys = relatorio.colunas
+    .filter((c) => c.tipo === "moeda")
+    .map((c) => c.key);
+  const dados = relatorio.linhas;
+  if (dados.length === 0) return [];
+
+  const somar = (linhas: Record<string, string | number | null>[]) => {
+    const acc: Record<string, number> = {};
+    for (const k of moedaKeys) {
+      acc[k] = linhas.reduce((s, l) => s + Number(l[k] ?? 0), 0);
+    }
+    return acc;
+  };
+
+  const out: LinhaRelatorio[] = [];
+
+  if (relatorio.agruparPor && moedaKeys.length > 0) {
+    const chave = relatorio.agruparPor;
+    const ordenadas = [...dados].sort((a, b) =>
+      String(a[chave] ?? "").localeCompare(String(b[chave] ?? "")),
+    );
+    let grupoAtual: string | null = null;
+    let bucket: Record<string, string | number | null>[] = [];
+    const flush = () => {
+      if (bucket.length === 0) return;
+      out.push({
+        tipo: "subtotal",
+        rotulo: String(grupoAtual ?? ""),
+        valores: somar(bucket),
+      });
+      bucket = [];
+    };
+    for (const l of ordenadas) {
+      const g = String(l[chave] ?? "");
+      if (grupoAtual === null) grupoAtual = g;
+      if (g !== grupoAtual) {
+        flush();
+        grupoAtual = g;
+      }
+      out.push({ tipo: "dado", valores: l });
+      bucket.push(l);
+    }
+    flush();
+  } else {
+    for (const l of dados) out.push({ tipo: "dado", valores: l });
+  }
+
+  if (moedaKeys.length > 0) {
+    out.push({ tipo: "total", rotulo: "TOTAL GERAL", valores: somar(dados) });
+  }
+  return out;
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type DB = SupabaseClient<any, any, any>;
