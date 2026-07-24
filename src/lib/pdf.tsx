@@ -127,8 +127,10 @@ export type VistoriaPdf = {
   fotos: { src: string; legenda?: string }[];
   empresaNome?: string;
   empresaImg?: string;
+  empresaEm?: string;
   retiranteNome?: string;
   retiranteImg?: string;
+  retiranteEm?: string;
   empresaAssinado: boolean;
   geradoEm: string;
 };
@@ -223,6 +225,9 @@ export function DocumentoVistoria({ v }: { v: VistoriaPdf }) {
               <View style={vStyles.assLinha}>
                 <Text style={vStyles.assNome}>{v.empresaNome || "—"}</Text>
                 <Text style={vStyles.assRole}>Representante Sistenge</Text>
+                {v.empresaEm ? (
+                  <Text style={vStyles.assRole}>Assinado em {v.empresaEm}</Text>
+                ) : null}
               </View>
             </View>
             <View style={vStyles.assCol}>
@@ -235,6 +240,9 @@ export function DocumentoVistoria({ v }: { v: VistoriaPdf }) {
               <View style={vStyles.assLinha}>
                 <Text style={vStyles.assNome}>{v.retiranteNome || "—"}</Text>
                 <Text style={vStyles.assRole}>Quem retira / recebe</Text>
+                {v.retiranteEm ? (
+                  <Text style={vStyles.assRole}>Assinado em {v.retiranteEm}</Text>
+                ) : null}
               </View>
             </View>
           </View>

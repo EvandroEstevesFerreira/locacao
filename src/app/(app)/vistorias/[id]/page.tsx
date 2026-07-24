@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { AlertTriangle, FileDown } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeOperar } from "@/lib/auth";
-import { formatarBRL, formatarData } from "@/lib/locacao";
+import { formatarBRL, formatarData, formatarDataHora } from "@/lib/locacao";
 import {
   STATUS_AVARIA,
   TIPO_VISTORIA,
@@ -50,7 +50,7 @@ export default async function VistoriaDetalhePage({
   const { data: vistoria } = await supabase
     .from("vistoria")
     .select(
-      "id, tipo, data, responsavel, observacoes, assinatura_empresa_nome, assinatura_empresa_img, assinatura_retirante_nome, assinatura_retirante_img, contrato:contrato_id(numero, obra:obra_id(codigo,nome))",
+      "id, tipo, data, responsavel, observacoes, assinatura_empresa_nome, assinatura_empresa_img, assinatura_empresa_em, assinatura_retirante_nome, assinatura_retirante_img, assinatura_retirante_em, contrato:contrato_id(numero, obra:obra_id(codigo,nome))",
     )
     .eq("id", id)
     .single();
@@ -318,10 +318,16 @@ export default async function VistoriaDetalhePage({
                 empresaNome:
                   (vistoria.assinatura_empresa_nome as string | null) ?? "",
                 empresaImg: empresaImg ?? "",
+                empresaEm: vistoria.assinatura_empresa_em
+                  ? formatarDataHora(vistoria.assinatura_empresa_em as string)
+                  : "",
                 retiranteNome:
                   (vistoria.assinatura_retirante_nome as string | null) ?? "",
                 retiranteImg:
                   (vistoria.assinatura_retirante_img as string | null) ?? "",
+                retiranteEm: vistoria.assinatura_retirante_em
+                  ? formatarDataHora(vistoria.assinatura_retirante_em as string)
+                  : "",
               }}
             />
           ) : (
@@ -336,6 +342,11 @@ export default async function VistoriaDetalhePage({
                     (vistoria.assinatura_empresa_nome as string | null) ?? "—"
                   }
                   assinado={empresaAssinado}
+                  em={
+                    vistoria.assinatura_empresa_em
+                      ? formatarDataHora(vistoria.assinatura_empresa_em as string)
+                      : null
+                  }
                 />
                 <AssinaturaRO
                   label="Quem retira / recebe"
@@ -343,6 +354,13 @@ export default async function VistoriaDetalhePage({
                     (vistoria.assinatura_retirante_nome as string | null) ?? "—"
                   }
                   assinado={!!vistoria.assinatura_retirante_img}
+                  em={
+                    vistoria.assinatura_retirante_em
+                      ? formatarDataHora(
+                          vistoria.assinatura_retirante_em as string,
+                        )
+                      : null
+                  }
                 />
               </div>
             </div>
@@ -357,10 +375,12 @@ function AssinaturaRO({
   label,
   nome,
   assinado,
+  em,
 }: {
   label: string;
   nome: string;
   assinado: boolean;
+  em?: string | null;
 }) {
   return (
     <div className="border border-border p-3">
@@ -368,6 +388,7 @@ function AssinaturaRO({
       <p className="font-medium">{nome}</p>
       <p className="mt-1 text-xs text-muted-foreground">
         {assinado ? "Assinatura registrada" : "Sem assinatura"}
+        {assinado && em ? ` · ${em}` : ""}
       </p>
     </div>
   );

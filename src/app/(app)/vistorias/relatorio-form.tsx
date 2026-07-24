@@ -12,8 +12,10 @@ export type RelatorioDefaults = {
   observacoes: string;
   empresaNome: string;
   empresaImg: string;
+  empresaEm?: string;
   retiranteNome: string;
   retiranteImg: string;
+  retiranteEm?: string;
 };
 
 export function RelatorioForm({
@@ -58,6 +60,11 @@ export function RelatorioForm({
             defaultValue={defaults.empresaImg}
             label="Assinatura (opcional)"
           />
+          {defaults.empresaEm ? (
+            <p className="text-xs text-muted-foreground">
+              Assinado em {defaults.empresaEm}
+            </p>
+          ) : null}
         </div>
         <div className="space-y-2">
           <Label>Quem retira / recebe</Label>
@@ -71,6 +78,11 @@ export function RelatorioForm({
             defaultValue={defaults.retiranteImg}
             label="Assinatura (opcional)"
           />
+          {defaults.retiranteEm ? (
+            <p className="text-xs text-muted-foreground">
+              Assinado em {defaults.retiranteEm}
+            </p>
+          ) : null}
         </div>
       </div>
 
