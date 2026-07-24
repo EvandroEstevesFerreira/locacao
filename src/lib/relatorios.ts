@@ -151,17 +151,19 @@ async function itensAbertos(
   const { data } = await supabase
     .from("item_locado")
     .select(
-      "quantidade, valor_unitario_periodo, data_retirada, data_devolucao_prevista, contrato:contrato_id(numero, cadencia, cobranca_prorata, data_fim_prevista, obra_id, obra:obra_id(codigo,nome)), item:item_id(descricao)",
+      "quantidade, valor_unitario_periodo, data_retirada, data_devolucao_prevista, contrato:contrato_id(numero, cadencia, cobranca_prorata, data_fim_prevista, obra_id, fornecedor_id, obra:obra_id(codigo,nome), fornecedor:fornecedor_id(nome)), item:item_id(descricao)",
     )
     .eq("status", "em_aberto")
     .order("data_retirada");
 
   const linhas = (data ?? [])
-    .filter(
-      (l: Record<string, unknown>) =>
-        !filtros.obra_id ||
-        (l.contrato as { obra_id?: string })?.obra_id === filtros.obra_id,
-    )
+    .filter((l: Record<string, unknown>) => {
+      const c = l.contrato as { obra_id?: string; fornecedor_id?: string } | null;
+      if (filtros.obra_id && c?.obra_id !== filtros.obra_id) return false;
+      if (filtros.fornecedor_id && c?.fornecedor_id !== filtros.fornecedor_id)
+        return false;
+      return true;
+    })
     .map((l: Record<string, unknown>) => {
       const contrato = l.contrato as {
         numero: string;
@@ -169,6 +171,7 @@ async function itensAbertos(
         cobranca_prorata?: boolean;
         data_fim_prevista?: string | null;
         obra: { codigo: string; nome: string } | null;
+        fornecedor: { nome: string } | null;
       } | null;
       const item = l.item as { descricao: string } | null;
       const qtd = Number(l.quantidade);
@@ -207,6 +210,7 @@ async function itensAbertos(
           ? `${contrato.obra.codigo} — ${contrato.obra.nome}`
           : "—",
         contrato: contrato?.numero ?? "—",
+        fornecedor: contrato?.fornecedor?.nome ?? "—",
         item: item?.descricao ?? "—",
         quantidade: qtd,
         retirada: l.data_retirada as string,
@@ -219,9 +223,11 @@ async function itensAbertos(
 
   return {
     titulo: "Itens em aberto",
+    agruparPor: "obra",
     colunas: [
       { key: "obra", label: "Obra", tipo: "texto" },
       { key: "contrato", label: "Contrato", tipo: "texto" },
+      { key: "fornecedor", label: "Fornecedor", tipo: "texto" },
       { key: "item", label: "Item", tipo: "texto" },
       { key: "quantidade", label: "Qtd.", tipo: "numero" },
       { key: "retirada", label: "Retirada", tipo: "data" },
