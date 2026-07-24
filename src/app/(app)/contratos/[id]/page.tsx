@@ -168,7 +168,10 @@ export default async function ContratoDetalhePage({
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-      <PageHeader titulo={`Contrato ${contrato.numero}`}>
+      <PageHeader
+        eyebrow="Contrato de locação"
+        titulo={`Contrato ${contrato.numero}`}
+      >
         {podeEditar ? (
           <>
             <Button
@@ -198,7 +201,17 @@ export default async function ContratoDetalhePage({
         <CardContent className="grid gap-4 pt-6 sm:grid-cols-2 lg:grid-cols-4">
           <Info label="Obra" valor={obra ? `${obra.codigo} — ${obra.nome}` : "—"} />
           <Info label="Fornecedor" valor={fornecedor?.nome ?? "—"} />
-          <Info label="Cadência" valor={CADENCIA[cadencia].label} />
+          <div>
+            <p className="text-xs text-muted-foreground">Cadência</p>
+            <p className="flex items-center gap-2 font-medium">
+              {CADENCIA[cadencia].label}
+              {prorata ? (
+                <Badge variant="outline" className="text-primary">
+                  Pró-rata
+                </Badge>
+              ) : null}
+            </p>
+          </div>
           <div>
             <p className="text-xs text-muted-foreground">Status</p>
             <Badge variant={statusC.variant}>{statusC.label}</Badge>

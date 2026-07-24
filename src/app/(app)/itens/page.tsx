@@ -45,6 +45,7 @@ export default async function ItensPage() {
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <PageHeader
+        eyebrow="Catálogo"
         titulo="Itens"
         descricao="Catálogo de equipamentos e materiais que a organização aluga."
       >

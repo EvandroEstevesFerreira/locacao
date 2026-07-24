@@ -61,6 +61,7 @@ export default async function RelatoriosPage({
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <PageHeader
+        eyebrow="Análise"
         titulo="Relatórios"
         descricao="Gere relatórios com filtros e exporte em PDF ou Excel."
       />

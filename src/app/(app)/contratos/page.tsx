@@ -53,6 +53,7 @@ export default async function ContratosPage() {
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <PageHeader
+        eyebrow="Locação"
         titulo="Contratos"
         descricao="Contratos de locação por obra e fornecedor."
       >

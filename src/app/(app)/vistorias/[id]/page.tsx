@@ -104,6 +104,7 @@ export default async function VistoriaDetalhePage({
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <PageHeader
+        eyebrow="Relatório de vistoria"
         titulo="Vistoria"
         descricao={
           contrato
