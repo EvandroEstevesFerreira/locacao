@@ -50,7 +50,7 @@ export function montarEmailVencimentos(
 // Comunicações de acesso (novo usuário / redefinição de senha)
 // ---------------------------------------------------------------------------
 
-const ACENTO = "#5980a6";
+const ACENTO = "#BE3A31";
 
 function layoutEmail(titulo: string, corpo: string): string {
   return `<!doctype html>
