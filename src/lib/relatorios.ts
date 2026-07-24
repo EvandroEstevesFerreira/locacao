@@ -82,7 +82,20 @@ export type Relatorio = {
   colunas: Coluna[];
   linhas: Record<string, string | number | null>[];
   agruparPor?: string; // key de coluna para subtotais (ex.: "obra")
+  grafico?: { labelKey: string; valorKey: string }; // barras (agregados)
 };
+
+/** Dados prontos para um gráfico de barras a partir de `relatorio.grafico`. */
+export function dadosGrafico(
+  relatorio: Relatorio,
+): { label: string; valor: number }[] {
+  if (!relatorio.grafico) return [];
+  const { labelKey, valorKey } = relatorio.grafico;
+  return relatorio.linhas.map((l) => ({
+    label: String(l[labelKey] ?? "—"),
+    valor: Number(l[valorKey] ?? 0),
+  }));
+}
 
 export type FiltrosRelatorio = {
   obra_id?: string;
@@ -125,6 +138,7 @@ async function custoPorFornecedor(
 
   return {
     titulo: "Custo por fornecedor",
+    grafico: { labelKey: "fornecedor", valorKey: "total" },
     colunas: [
       { key: "fornecedor", label: "Fornecedor", tipo: "texto" },
       { key: "total", label: "Total", tipo: "moeda" },
@@ -552,6 +566,7 @@ async function custoPorObra(
 
   return {
     titulo: "Custo por obra",
+    grafico: { labelKey: "obra", valorKey: "total" },
     colunas: [
       { key: "obra", label: "Obra", tipo: "texto" },
       { key: "total", label: "Total", tipo: "moeda" },

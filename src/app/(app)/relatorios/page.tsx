@@ -4,6 +4,7 @@ import {
   TIPOS_RELATORIO,
   gerarRelatorio,
   expandirLinhas,
+  dadosGrafico,
   formatarValor,
   type TipoRelatorio,
 } from "@/lib/relatorios";
@@ -64,6 +65,9 @@ export default async function RelatoriosPage({
   if (sp.inicio) qs.set("inicio", sp.inicio);
   if (sp.fim) qs.set("fim", sp.fim);
   const query = qs.toString();
+
+  const grafico = dadosGrafico(relatorio);
+  const maxGrafico = grafico.reduce((m, g) => Math.max(m, g.valor), 0);
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -164,6 +168,33 @@ export default async function RelatoriosPage({
           Exportar Excel
         </Button>
       </div>
+
+      {/* Gráfico (relatórios agregados) */}
+      {grafico.length > 0 ? (
+        <Card>
+          <CardContent className="space-y-3 pt-6">
+            <p className="text-xs tracking-wide text-muted-foreground uppercase">
+              {relatorio.titulo} — visão em barras
+            </p>
+            {grafico.map((g, i) => (
+              <div key={i}>
+                <div className="mb-1 flex justify-between text-sm">
+                  <span>{g.label}</span>
+                  <span className="font-medium">{formatarValor("moeda", g.valor)}</span>
+                </div>
+                <div className="h-3 border border-border bg-muted">
+                  <div
+                    className="h-full bg-primary"
+                    style={{
+                      width: `${maxGrafico > 0 ? (g.valor / maxGrafico) * 100 : 0}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      ) : null}
 
       {/* Prévia */}
       <Card>
