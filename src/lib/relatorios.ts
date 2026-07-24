@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { differenceInCalendarDays } from "date-fns";
 import {
   calcularCusto,
   dataDeISO,
@@ -9,7 +10,13 @@ import {
   type Cadencia,
 } from "@/lib/locacao";
 
-export type TipoRelatorio = "itens_abertos" | "contas_pagar" | "custo_por_obra";
+export type TipoRelatorio =
+  | "itens_abertos"
+  | "contas_pagar"
+  | "custo_por_obra"
+  | "ociosidade"
+  | "custo_por_fornecedor"
+  | "avarias";
 
 export const TIPOS_RELATORIO: {
   valor: TipoRelatorio;
@@ -33,6 +40,25 @@ export const TIPOS_RELATORIO: {
     valor: "custo_por_obra",
     label: "Custo por obra",
     descricao: "Total de contas a pagar agrupado por obra.",
+    usaPeriodo: true,
+  },
+  {
+    valor: "custo_por_fornecedor",
+    label: "Custo por fornecedor",
+    descricao: "Total de contas a pagar agrupado por fornecedor.",
+    usaPeriodo: true,
+  },
+  {
+    valor: "ociosidade",
+    label: "Ociosidade",
+    descricao:
+      "Itens ainda em aberto atrasados ou sem previsão de devolução (risco de custo parado).",
+    usaPeriodo: false,
+  },
+  {
+    valor: "avarias",
+    label: "Avarias",
+    descricao: "Avarias registradas em vistorias, com custo estimado e situação.",
     usaPeriodo: true,
   },
 ];
@@ -65,6 +91,200 @@ export type FiltrosRelatorio = {
   inicio?: string;
   fim?: string;
 };
+
+async function custoPorFornecedor(
+  supabase: DB,
+  filtros: FiltrosRelatorio,
+): Promise<Relatorio> {
+  let q = supabase
+    .from("lancamento_financeiro")
+    .select(
+      "valor, status, contrato:contrato_id(fornecedor_id, fornecedor:fornecedor_id(nome))",
+    );
+  if (filtros.obra_id) q = q.eq("obra_id", filtros.obra_id);
+  if (filtros.status) q = q.eq("status", filtros.status);
+  if (filtros.inicio) q = q.gte("vencimento", filtros.inicio);
+  if (filtros.fim) q = q.lte("vencimento", filtros.fim);
+  const { data } = await q;
+
+  const mapa = new Map<
+    string,
+    { fornecedor: string; total: number; pendente: number; pago: number }
+  >();
+  for (const l of (data ?? []) as Record<string, unknown>[]) {
+    const c = l.contrato as { fornecedor_id?: string; fornecedor: { nome: string } | null } | null;
+    if (filtros.fornecedor_id && c?.fornecedor_id !== filtros.fornecedor_id) continue;
+    const nome = c?.fornecedor?.nome ?? "Sem fornecedor";
+    const atual = mapa.get(nome) ?? { fornecedor: nome, total: 0, pendente: 0, pago: 0 };
+    const v = Number(l.valor);
+    atual.total += v;
+    if (l.status === "pago") atual.pago += v;
+    else atual.pendente += v;
+    mapa.set(nome, atual);
+  }
+
+  return {
+    titulo: "Custo por fornecedor",
+    colunas: [
+      { key: "fornecedor", label: "Fornecedor", tipo: "texto" },
+      { key: "total", label: "Total", tipo: "moeda" },
+      { key: "pendente", label: "Pendente", tipo: "moeda" },
+      { key: "pago", label: "Pago", tipo: "moeda" },
+    ],
+    linhas: Array.from(mapa.values()),
+  };
+}
+
+async function ociosidade(
+  supabase: DB,
+  filtros: FiltrosRelatorio,
+): Promise<Relatorio> {
+  const hoje = new Date();
+  const hojeStr = hoje.toISOString().slice(0, 10);
+  const { data } = await supabase
+    .from("item_locado")
+    .select(
+      "quantidade, valor_unitario_periodo, data_retirada, data_devolucao_prevista, contrato:contrato_id(numero, cadencia, cobranca_prorata, obra_id, fornecedor_id, obra:obra_id(codigo,nome), fornecedor:fornecedor_id(nome)), item:item_id(descricao)",
+    )
+    .eq("status", "em_aberto")
+    .order("data_devolucao_prevista");
+
+  const linhas = (data ?? [])
+    .filter((l: Record<string, unknown>) => {
+      const c = l.contrato as { obra_id?: string; fornecedor_id?: string } | null;
+      if (filtros.obra_id && c?.obra_id !== filtros.obra_id) return false;
+      if (filtros.fornecedor_id && c?.fornecedor_id !== filtros.fornecedor_id)
+        return false;
+      const dv = l.data_devolucao_prevista as string | null;
+      // Ocioso = atrasado (devolução prevista já passou) ou sem previsão.
+      return dv === null || dv < hojeStr;
+    })
+    .map((l: Record<string, unknown>) => {
+      const contrato = l.contrato as {
+        numero: string;
+        cadencia: Cadencia;
+        cobranca_prorata?: boolean;
+        obra: { codigo: string; nome: string } | null;
+        fornecedor: { nome: string } | null;
+      } | null;
+      const item = l.item as { descricao: string } | null;
+      const qtd = Number(l.quantidade);
+      const valor = Number(l.valor_unitario_periodo);
+      const prorata = !!contrato?.cobranca_prorata;
+      const retirada = dataDeISO(l.data_retirada as string);
+      const custoMensal = contrato
+        ? qtd * valor * periodosPorMes(contrato.cadencia)
+        : null;
+      const custo = contrato
+        ? calcularCusto(qtd, valor, periodosEntre(contrato.cadencia, retirada, hoje, prorata))
+        : null;
+      const dv = l.data_devolucao_prevista as string | null;
+      const atraso =
+        dv === null
+          ? "sem previsão"
+          : `${differenceInCalendarDays(hoje, dataDeISO(dv))} dias`;
+      return {
+        obra: contrato?.obra
+          ? `${contrato.obra.codigo} — ${contrato.obra.nome}`
+          : "—",
+        contrato: contrato?.numero ?? "—",
+        fornecedor: contrato?.fornecedor?.nome ?? "—",
+        item: item?.descricao ?? "—",
+        quantidade: qtd,
+        retirada: l.data_retirada as string,
+        devolucao: dv,
+        atraso,
+        custoMensal,
+        custo,
+      };
+    });
+
+  return {
+    titulo: "Ociosidade",
+    agruparPor: "obra",
+    colunas: [
+      { key: "obra", label: "Obra", tipo: "texto" },
+      { key: "contrato", label: "Contrato", tipo: "texto" },
+      { key: "fornecedor", label: "Fornecedor", tipo: "texto" },
+      { key: "item", label: "Item", tipo: "texto" },
+      { key: "quantidade", label: "Qtd.", tipo: "numero" },
+      { key: "retirada", label: "Retirada", tipo: "data" },
+      { key: "devolucao", label: "Devol. prevista", tipo: "data" },
+      { key: "atraso", label: "Atraso", tipo: "texto" },
+      { key: "custoMensal", label: "Custo/mês", tipo: "moeda" },
+      { key: "custo", label: "Custo até hoje", tipo: "moeda" },
+    ],
+    linhas,
+  };
+}
+
+async function avarias(
+  supabase: DB,
+  filtros: FiltrosRelatorio,
+): Promise<Relatorio> {
+  const { data } = await supabase
+    .from("avaria")
+    .select(
+      "descricao, custo_estimado, status, vistoria:vistoria_id(data, contrato:contrato_id(numero, obra_id, fornecedor_id, obra:obra_id(codigo,nome), fornecedor:fornecedor_id(nome)))",
+    )
+    .order("created_at", { ascending: false });
+
+  const situacaoLabel: Record<string, string> = {
+    aberta: "Aberta",
+    cobrada: "Cobrada",
+    resolvida: "Resolvida",
+  };
+
+  const linhas = (data ?? [])
+    .filter((a: Record<string, unknown>) => {
+      const v = a.vistoria as {
+        data?: string;
+        contrato?: { obra_id?: string; fornecedor_id?: string } | null;
+      } | null;
+      const c = v?.contrato ?? null;
+      if (filtros.obra_id && c?.obra_id !== filtros.obra_id) return false;
+      if (filtros.fornecedor_id && c?.fornecedor_id !== filtros.fornecedor_id)
+        return false;
+      if (filtros.inicio && (v?.data ?? "") < filtros.inicio) return false;
+      if (filtros.fim && (v?.data ?? "") > filtros.fim) return false;
+      return true;
+    })
+    .map((a: Record<string, unknown>) => {
+      const v = a.vistoria as {
+        data?: string;
+        contrato?: {
+          numero?: string;
+          obra: { codigo: string; nome: string } | null;
+          fornecedor: { nome: string } | null;
+        } | null;
+      } | null;
+      const c = v?.contrato ?? null;
+      return {
+        data: v?.data ?? null,
+        obra: c?.obra ? `${c.obra.codigo} — ${c.obra.nome}` : "—",
+        contrato: c?.numero ?? "—",
+        fornecedor: c?.fornecedor?.nome ?? "—",
+        descricao: a.descricao as string,
+        custo: Number(a.custo_estimado),
+        situacao: situacaoLabel[a.status as string] ?? String(a.status),
+      };
+    });
+
+  return {
+    titulo: "Avarias",
+    agruparPor: "obra",
+    colunas: [
+      { key: "data", label: "Data", tipo: "data" },
+      { key: "obra", label: "Obra", tipo: "texto" },
+      { key: "contrato", label: "Contrato", tipo: "texto" },
+      { key: "fornecedor", label: "Fornecedor", tipo: "texto" },
+      { key: "descricao", label: "Descrição", tipo: "texto" },
+      { key: "custo", label: "Custo estimado", tipo: "moeda" },
+      { key: "situacao", label: "Situação", tipo: "texto" },
+    ],
+    linhas,
+  };
+}
 
 export type LinhaRelatorio =
   | { tipo: "dado"; valores: Record<string, string | number | null> }
@@ -140,7 +360,11 @@ export async function gerarRelatorio(
 ): Promise<Relatorio> {
   if (tipo === "itens_abertos") return itensAbertos(supabase, filtros);
   if (tipo === "contas_pagar") return contasPagar(supabase, filtros);
-  return custoPorObra(supabase, filtros);
+  if (tipo === "custo_por_obra") return custoPorObra(supabase, filtros);
+  if (tipo === "custo_por_fornecedor")
+    return custoPorFornecedor(supabase, filtros);
+  if (tipo === "ociosidade") return ociosidade(supabase, filtros);
+  return avarias(supabase, filtros);
 }
 
 async function itensAbertos(
