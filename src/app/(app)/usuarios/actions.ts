@@ -132,6 +132,27 @@ export async function criarUsuario(
 }
 
 // ---------------------------------------------------------------------------
+// Excluir usuário (auth + perfil em cascata). Só master; nunca a si mesmo.
+// ---------------------------------------------------------------------------
+export async function excluirUsuario(formData: FormData) {
+  const master = await exigirMaster();
+  if (!master) return;
+  const id = String(formData.get("id") ?? "").trim();
+  if (!id || id === master.id) return; // não permite excluir a si mesmo
+
+  try {
+    const admin = createAdminClient();
+    await admin.auth.admin.deleteUser(id); // cascata remove perfil e vínculos
+  } catch (e) {
+    console.error("Falha ao excluir usuário:", e);
+    return;
+  }
+
+  revalidatePath("/usuarios");
+  redirect("/usuarios");
+}
+
+// ---------------------------------------------------------------------------
 // Editar usuário — papel, nome, ativo, obras e (opcional) redefinir senha.
 // ---------------------------------------------------------------------------
 const editarSchema = z.object({

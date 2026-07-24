@@ -10,6 +10,7 @@ import {
   type StatusContrato,
 } from "@/lib/locacao";
 import { PageHeader } from "@/components/page-header";
+import { ObraFilter } from "@/components/obra-filter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -35,17 +36,29 @@ type Row = {
   fornecedor: { nome: string } | null;
 };
 
-export default async function ContratosPage() {
+export default async function ContratosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ obra?: string }>;
+}) {
   const perfil = await getCurrentPerfil();
   const podeEditar = podeOperar(perfil?.papel);
+  const { obra } = await searchParams;
 
   const supabase = await createClient();
-  const { data } = await supabase
+  let q = supabase
     .from("contrato_locacao")
     .select(
       "id, numero, cadencia, data_inicio, data_fim_prevista, status, obra:obra_id(codigo,nome), fornecedor:fornecedor_id(nome)",
     )
     .order("created_at", { ascending: false });
+  if (obra) q = q.eq("obra_id", obra);
+  const { data } = await q;
+
+  const { data: obrasData } = await supabase
+    .from("obra")
+    .select("id, codigo, nome")
+    .order("codigo");
 
   const contratos = (data ?? []) as unknown as Row[];
   const tem = contratos.length > 0;
@@ -64,6 +77,12 @@ export default async function ContratosPage() {
           </Button>
         ) : null}
       </PageHeader>
+
+      <ObraFilter
+        obras={obrasData ?? []}
+        value={obra}
+        basePath="/contratos"
+      />
 
       {tem ? (
         <Card>
