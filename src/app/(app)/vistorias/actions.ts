@@ -214,6 +214,23 @@ export async function salvarRelatorioVistoria(
   }
 
   const supabase = await createClient();
+
+  // Carimba a data/hora de cada assinatura: agora quando ela surge ou muda;
+  // mantém a anterior se não mudou; limpa quando a assinatura é removida.
+  const { data: atual } = await supabase
+    .from("vistoria")
+    .select(
+      "assinatura_empresa_img, assinatura_empresa_em, assinatura_retirante_img, assinatura_retirante_em",
+    )
+    .eq("id", id)
+    .single();
+  const agora = new Date().toISOString();
+  const carimbo = (
+    novoImg: string,
+    imgAntigo: string | null,
+    emAntigo: string | null,
+  ) => (novoImg ? (novoImg === imgAntigo ? (emAntigo ?? agora) : agora) : null);
+
   const { error } = await supabase
     .from("vistoria")
     .update({
@@ -222,10 +239,20 @@ export async function salvarRelatorioVistoria(
         String(formData.get("assinatura_empresa_nome") ?? ""),
       ),
       assinatura_empresa_img: empresaImg || null,
+      assinatura_empresa_em: carimbo(
+        empresaImg,
+        (atual?.assinatura_empresa_img as string | null) ?? null,
+        (atual?.assinatura_empresa_em as string | null) ?? null,
+      ),
       assinatura_retirante_nome: nuloSeVazio(
         String(formData.get("assinatura_retirante_nome") ?? ""),
       ),
       assinatura_retirante_img: retiranteImg || null,
+      assinatura_retirante_em: carimbo(
+        retiranteImg,
+        (atual?.assinatura_retirante_img as string | null) ?? null,
+        (atual?.assinatura_retirante_em as string | null) ?? null,
+      ),
     })
     .eq("id", id);
   if (error) return { error: "Não foi possível salvar. Tente novamente." };

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { createClient } from "@/lib/supabase/server";
-import { formatarBRL, formatarData } from "@/lib/locacao";
+import { formatarBRL, formatarData, formatarDataHora } from "@/lib/locacao";
 import {
   STATUS_AVARIA,
   TIPO_VISTORIA,
@@ -30,7 +30,7 @@ export async function GET(
   const { data: vistoria } = await supabase
     .from("vistoria")
     .select(
-      "id, tipo, data, responsavel, observacoes, assinatura_empresa_nome, assinatura_empresa_img, assinatura_retirante_nome, assinatura_retirante_img, contrato:contrato_id(numero, obra:obra_id(codigo,nome))",
+      "id, tipo, data, responsavel, observacoes, assinatura_empresa_nome, assinatura_empresa_img, assinatura_empresa_em, assinatura_retirante_nome, assinatura_retirante_img, assinatura_retirante_em, contrato:contrato_id(numero, obra:obra_id(codigo,nome))",
     )
     .eq("id", id)
     .single();
@@ -117,10 +117,16 @@ export async function GET(
     fotos: fotosPdf,
     empresaNome: (vistoria.assinatura_empresa_nome as string | null) ?? undefined,
     empresaImg: (vistoria.assinatura_empresa_img as string | null) ?? undefined,
+    empresaEm: vistoria.assinatura_empresa_em
+      ? formatarDataHora(vistoria.assinatura_empresa_em as string)
+      : undefined,
     retiranteNome:
       (vistoria.assinatura_retirante_nome as string | null) ?? undefined,
     retiranteImg:
       (vistoria.assinatura_retirante_img as string | null) ?? undefined,
+    retiranteEm: vistoria.assinatura_retirante_em
+      ? formatarDataHora(vistoria.assinatura_retirante_em as string)
+      : undefined,
     empresaAssinado: !!vistoria.assinatura_empresa_img,
     geradoEm: formatarData(new Date().toISOString().slice(0, 10)),
   };

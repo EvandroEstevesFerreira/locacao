@@ -70,3 +70,13 @@ export function formatarData(iso: string | null): string {
   const d = dataDeISO(iso);
   return d.toLocaleDateString("pt-BR");
 }
+
+/** Formata um timestamp ISO como data + hora no fuso de São Paulo. */
+export function formatarDataHora(iso: string | null): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    dateStyle: "short",
+    timeStyle: "short",
+  });
+}
