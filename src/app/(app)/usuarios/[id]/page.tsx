@@ -2,8 +2,16 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeGerenciarUsuarios } from "@/lib/auth";
 import { PageHeader } from "@/components/page-header";
-import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { UsuarioForm } from "../usuario-form";
+import { excluirUsuario } from "../actions";
 
 export const metadata = { title: "Editar usuário — Loca" };
 
@@ -48,6 +56,27 @@ export default async function EditarUsuarioPage({
           />
         </CardContent>
       </Card>
+
+      {usuario.id !== perfil?.id ? (
+        <Card className="border-destructive/40">
+          <CardHeader>
+            <CardTitle className="text-base text-destructive">
+              Excluir usuário
+            </CardTitle>
+            <CardDescription>
+              Remove o acesso desta pessoa em definitivo. Não pode ser desfeito.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form action={excluirUsuario}>
+              <input type="hidden" name="id" value={usuario.id} />
+              <Button type="submit" variant="outline" className="text-destructive">
+                Excluir {usuario.nome ?? usuario.email ?? "usuário"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { LogOut } from "lucide-react";
+import Link from "next/link";
+import { LogOut, UserRound } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -52,6 +53,10 @@ export function UserMenu({
           </span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        <DropdownMenuItem render={<Link href="/perfil" />}>
+          <UserRound className="size-4" />
+          Meu perfil
+        </DropdownMenuItem>
         <form action="/auth/signout" method="post">
           <DropdownMenuItem
             variant="destructive"

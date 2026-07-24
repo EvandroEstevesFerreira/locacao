@@ -1,5 +1,8 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
+import { LogOut, UserRound } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { PAPEL_INFO, type Papel } from "@/lib/permissoes";
 import { Sidebar } from "@/components/layout/sidebar";
 import { UserMenu } from "@/components/layout/user-menu";
 import { BackButton } from "@/components/back-button";
@@ -36,6 +39,42 @@ export default async function AppLayout({
         </div>
         <div className="flex-1 overflow-y-auto">
           <Sidebar isMaster={perfil?.papel === "master"} />
+        </div>
+        {/* Rodapé: usuário logado + perfil + sair */}
+        <div className="border-t p-3">
+          <Link
+            href="/perfil"
+            className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted"
+          >
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+              {(perfil?.nome ?? perfil?.email ?? "?").slice(0, 1).toUpperCase()}
+            </span>
+            <span className="min-w-0 leading-tight">
+              <span className="block truncate text-sm font-medium">
+                {perfil?.nome ?? perfil?.email ?? "Usuário"}
+              </span>
+              <span className="block text-xs text-primary">
+                {PAPEL_INFO[(perfil?.papel ?? "gestor") as Papel]?.label ??
+                  perfil?.papel}
+              </span>
+            </span>
+          </Link>
+          <div className="mt-1 flex items-center gap-1">
+            <Link
+              href="/perfil"
+              className="flex flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-muted"
+            >
+              <UserRound className="size-4" /> Meu perfil
+            </Link>
+            <form action="/auth/signout" method="post" className="flex-1">
+              <button
+                type="submit"
+                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-destructive hover:bg-destructive/10"
+              >
+                <LogOut className="size-4" /> Sair
+              </button>
+            </form>
+          </div>
         </div>
       </aside>
 

@@ -5,6 +5,7 @@ import { getCurrentPerfil, podeOperar } from "@/lib/auth";
 import { formatarData } from "@/lib/locacao";
 import { TIPO_VISTORIA, type TipoVistoria } from "@/lib/vistoria";
 import { PageHeader } from "@/components/page-header";
+import { ObraFilter } from "@/components/obra-filter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -28,17 +29,29 @@ type Row = {
   avaria: { count: number }[];
 };
 
-export default async function VistoriasPage() {
+export default async function VistoriasPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ obra?: string }>;
+}) {
   const perfil = await getCurrentPerfil();
   const podeEditar = podeOperar(perfil?.papel);
+  const { obra } = await searchParams;
 
   const supabase = await createClient();
-  const { data } = await supabase
+  let q = supabase
     .from("vistoria")
     .select(
-      "id, tipo, data, contrato:contrato_id(numero, obra:obra_id(codigo)), vistoria_foto(count), avaria(count)",
+      "id, tipo, data, contrato:contrato_id!inner(numero, obra_id, obra:obra_id(codigo)), vistoria_foto(count), avaria(count)",
     )
     .order("data", { ascending: false });
+  if (obra) q = q.eq("contrato.obra_id", obra);
+  const { data } = await q;
+
+  const { data: obrasData } = await supabase
+    .from("obra")
+    .select("id, codigo, nome")
+    .order("codigo");
 
   const vistorias = (data ?? []) as unknown as Row[];
   const tem = vistorias.length > 0;
@@ -57,6 +70,8 @@ export default async function VistoriasPage() {
           </Button>
         ) : null}
       </PageHeader>
+
+      <ObraFilter obras={obrasData ?? []} value={obra} basePath="/vistorias" />
 
       {tem ? (
         <Card>
