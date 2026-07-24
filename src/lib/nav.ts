@@ -7,6 +7,7 @@ import {
   ClipboardCheck,
   Wallet,
   BarChart3,
+  Building2,
   Settings,
   type LucideIcon,
 } from "lucide-react";
@@ -33,6 +34,7 @@ export const NAV_ITEMS: NavItem[] = [
   },
   { label: "Itens", href: "/itens", icon: Package, implementado: true },
   { label: "Contratos", href: "/contratos", icon: FileText, implementado: true },
+  { label: "Imóveis", href: "/imoveis", icon: Building2, implementado: true },
   {
     label: "Vistorias",
     href: "/vistorias",
