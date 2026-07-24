@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import { SistengeLogo } from "@/components/sistenge-logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,7 +14,6 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 
 export function LoginForm() {
@@ -42,8 +43,8 @@ export function LoginForm() {
 
   return (
     <Card className="w-full max-w-sm">
-      <CardHeader className="space-y-1 text-center">
-        <CardTitle className="text-2xl font-semibold">Loca</CardTitle>
+      <CardHeader className="space-y-3 text-center">
+        <SistengeLogo className="mx-auto h-9 w-auto" />
         <CardDescription>
           Controle de locações de materiais e equipamentos em obra
         </CardDescription>
@@ -63,7 +64,15 @@ export function LoginForm() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="senha">Senha</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="senha">Senha</Label>
+              <Link
+                href="/auth/recuperar"
+                className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+              >
+                Esqueci minha senha
+              </Link>
+            </div>
             <Input
               id="senha"
               type="password"
