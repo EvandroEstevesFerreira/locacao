@@ -114,6 +114,10 @@ export async function salvarContratoImovel(
     valor_aluguel: num(formData.get("valor_aluguel")) ?? 0,
     valor_condominio: num(formData.get("valor_condominio")) ?? 0,
     valor_iptu: num(formData.get("valor_iptu")) ?? 0,
+    seguro_fianca: num(formData.get("seguro_fianca")) ?? 0,
+    seguro_fianca_mensal:
+      formData.get("seguro_fianca_mensal") === "on" ||
+      formData.get("seguro_fianca_mensal") === "true",
     dia_vencimento: num(formData.get("dia_vencimento")),
     indice_reajuste: txt(formData.get("indice_reajuste")),
     data_reajuste: txt(formData.get("data_reajuste")),
