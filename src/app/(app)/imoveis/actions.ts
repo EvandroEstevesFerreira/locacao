@@ -56,6 +56,14 @@ export async function salvarImovel(
     imobiliaria_nome: txt(formData.get("imobiliaria_nome")),
     imobiliaria_telefone: txt(formData.get("imobiliaria_telefone")),
     imobiliaria_email: txt(formData.get("imobiliaria_email")),
+    banco: txt(formData.get("banco")),
+    agencia: txt(formData.get("agencia")),
+    conta: txt(formData.get("conta")),
+    tipo_conta: ["corrente", "poupanca"].includes(String(formData.get("tipo_conta")))
+      ? String(formData.get("tipo_conta"))
+      : null,
+    titular_conta: txt(formData.get("titular_conta")),
+    pix_chave: txt(formData.get("pix_chave")),
     observacoes: txt(formData.get("observacoes")),
   };
 
