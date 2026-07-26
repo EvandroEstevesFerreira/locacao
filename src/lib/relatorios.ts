@@ -1,6 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { differenceInCalendarDays } from "date-fns";
 import {
+  tipoImovelLabel,
+  tipoConsumoLabel,
+  STATUS_CAUCAO_INFO,
+  type StatusCaucao,
+} from "@/lib/imoveis";
+import {
   calcularCusto,
   dataDeISO,
   formatarBRL,
@@ -16,7 +22,13 @@ export type TipoRelatorio =
   | "custo_por_obra"
   | "ociosidade"
   | "custo_por_fornecedor"
-  | "avarias";
+  | "avarias"
+  | "imoveis_custo"
+  | "imoveis_contratos_vencer"
+  | "imoveis_sem_contrato"
+  | "imoveis_consumo"
+  | "imoveis_reparos"
+  | "imoveis_caucao";
 
 export const TIPOS_RELATORIO: {
   valor: TipoRelatorio;
@@ -60,6 +72,42 @@ export const TIPOS_RELATORIO: {
     label: "Avarias",
     descricao: "Avarias registradas em vistorias, com custo estimado e situação.",
     usaPeriodo: true,
+  },
+  {
+    valor: "imoveis_custo",
+    label: "Imóveis — custo mensal",
+    descricao: "Aluguel + condomínio (contrato vigente) por imóvel.",
+    usaPeriodo: false,
+  },
+  {
+    valor: "imoveis_contratos_vencer",
+    label: "Imóveis — contratos a vencer",
+    descricao: "Contratos de imóvel vigentes com data de término.",
+    usaPeriodo: true,
+  },
+  {
+    valor: "imoveis_sem_contrato",
+    label: "Imóveis — sem contrato",
+    descricao: "Imóveis ativos sem contrato vigente.",
+    usaPeriodo: false,
+  },
+  {
+    valor: "imoveis_consumo",
+    label: "Imóveis — consumo",
+    descricao: "Contas de consumo (água, luz, gás...) por imóvel e mês.",
+    usaPeriodo: true,
+  },
+  {
+    valor: "imoveis_reparos",
+    label: "Imóveis — reparos",
+    descricao: "Reparos realizados por imóvel, com custo e executor.",
+    usaPeriodo: true,
+  },
+  {
+    valor: "imoveis_caucao",
+    label: "Imóveis — caução",
+    descricao: "Cauções por imóvel, com valor e situação.",
+    usaPeriodo: false,
   },
 ];
 
@@ -300,6 +348,226 @@ async function avarias(
   };
 }
 
+// ===========================================================================
+// Relatórios do módulo Imóveis (Fase 6)
+// ===========================================================================
+type Vig = { valor_aluguel: number; valor_condominio: number; vigente: boolean };
+
+async function imoveisCusto(supabase: DB, filtros: FiltrosRelatorio): Promise<Relatorio> {
+  const { data } = await supabase
+    .from("imovel")
+    .select("apelido, tipo, obra_id, obra:obra_id(codigo), contrato_imovel(valor_aluguel, valor_condominio, vigente)")
+    .order("apelido");
+  const linhas = (data ?? [])
+    .filter((i: Record<string, unknown>) => !filtros.obra_id || i.obra_id === filtros.obra_id)
+    .map((i: Record<string, unknown>) => {
+      const obra = i.obra as { codigo: string } | null;
+      const vig = ((i.contrato_imovel as Vig[]) ?? []).find((c) => c.vigente);
+      const aluguel = vig ? Number(vig.valor_aluguel) : 0;
+      const cond = vig ? Number(vig.valor_condominio) : 0;
+      return {
+        imovel: i.apelido as string,
+        tipo: tipoImovelLabel(i.tipo as string),
+        obra: obra?.codigo ?? "—",
+        aluguel,
+        condominio: cond,
+        total: aluguel + cond,
+      };
+    });
+  return {
+    titulo: "Imóveis — custo mensal",
+    grafico: { labelKey: "imovel", valorKey: "total" },
+    colunas: [
+      { key: "imovel", label: "Imóvel", tipo: "texto" },
+      { key: "tipo", label: "Tipo", tipo: "texto" },
+      { key: "obra", label: "Obra", tipo: "texto" },
+      { key: "aluguel", label: "Aluguel", tipo: "moeda" },
+      { key: "condominio", label: "Condomínio", tipo: "moeda" },
+      { key: "total", label: "Total/mês", tipo: "moeda" },
+    ],
+    linhas,
+  };
+}
+
+async function imoveisContratosVencer(supabase: DB, filtros: FiltrosRelatorio): Promise<Relatorio> {
+  const { data } = await supabase
+    .from("contrato_imovel")
+    .select("data_inicio, data_fim, valor_aluguel, imovel:imovel_id(apelido, obra_id, obra:obra_id(codigo))")
+    .eq("vigente", true)
+    .not("data_fim", "is", null)
+    .order("data_fim");
+  const linhas = (data ?? [])
+    .filter((c: Record<string, unknown>) => {
+      const imv = c.imovel as { obra_id?: string } | null;
+      if (filtros.obra_id && imv?.obra_id !== filtros.obra_id) return false;
+      const fim = c.data_fim as string;
+      if (filtros.inicio && fim < filtros.inicio) return false;
+      if (filtros.fim && fim > filtros.fim) return false;
+      return true;
+    })
+    .map((c: Record<string, unknown>) => {
+      const imv = c.imovel as { apelido: string; obra: { codigo: string } | null } | null;
+      return {
+        imovel: imv?.apelido ?? "—",
+        obra: imv?.obra?.codigo ?? "—",
+        inicio: (c.data_inicio as string | null) ?? null,
+        fim: c.data_fim as string,
+        aluguel: Number(c.valor_aluguel),
+      };
+    });
+  return {
+    titulo: "Imóveis — contratos a vencer",
+    colunas: [
+      { key: "imovel", label: "Imóvel", tipo: "texto" },
+      { key: "obra", label: "Obra", tipo: "texto" },
+      { key: "inicio", label: "Início", tipo: "data" },
+      { key: "fim", label: "Fim", tipo: "data" },
+      { key: "aluguel", label: "Aluguel", tipo: "moeda" },
+    ],
+    linhas,
+  };
+}
+
+async function imoveisSemContrato(supabase: DB, filtros: FiltrosRelatorio): Promise<Relatorio> {
+  const { data } = await supabase
+    .from("imovel")
+    .select("apelido, tipo, obra_id, obra:obra_id(codigo), contrato_imovel(vigente)")
+    .eq("status", "ativo")
+    .order("apelido");
+  const linhas = (data ?? [])
+    .filter((i: Record<string, unknown>) => {
+      if (filtros.obra_id && i.obra_id !== filtros.obra_id) return false;
+      const cts = (i.contrato_imovel as { vigente: boolean }[]) ?? [];
+      return !cts.some((c) => c.vigente);
+    })
+    .map((i: Record<string, unknown>) => {
+      const obra = i.obra as { codigo: string } | null;
+      return {
+        imovel: i.apelido as string,
+        tipo: tipoImovelLabel(i.tipo as string),
+        obra: obra?.codigo ?? "—",
+      };
+    });
+  return {
+    titulo: "Imóveis — sem contrato",
+    colunas: [
+      { key: "imovel", label: "Imóvel", tipo: "texto" },
+      { key: "tipo", label: "Tipo", tipo: "texto" },
+      { key: "obra", label: "Obra", tipo: "texto" },
+    ],
+    linhas,
+  };
+}
+
+async function imoveisConsumo(supabase: DB, filtros: FiltrosRelatorio): Promise<Relatorio> {
+  const { data } = await supabase
+    .from("conta_consumo")
+    .select("tipo, competencia, valor, pago, imovel:imovel_id(apelido, obra_id, obra:obra_id(codigo))")
+    .order("competencia", { ascending: false });
+  const linhas = (data ?? [])
+    .filter((c: Record<string, unknown>) => {
+      const imv = c.imovel as { obra_id?: string } | null;
+      if (filtros.obra_id && imv?.obra_id !== filtros.obra_id) return false;
+      const comp = c.competencia as string;
+      if (filtros.inicio && comp < filtros.inicio) return false;
+      if (filtros.fim && comp > filtros.fim) return false;
+      return true;
+    })
+    .map((c: Record<string, unknown>) => {
+      const imv = c.imovel as { apelido: string } | null;
+      return {
+        imovel: imv?.apelido ?? "—",
+        competencia: c.competencia as string,
+        tipo: tipoConsumoLabel(c.tipo as string),
+        valor: Number(c.valor),
+        status: c.pago ? "Pago" : "Pendente",
+      };
+    });
+  return {
+    titulo: "Imóveis — consumo",
+    agruparPor: "imovel",
+    colunas: [
+      { key: "imovel", label: "Imóvel", tipo: "texto" },
+      { key: "competencia", label: "Competência", tipo: "data" },
+      { key: "tipo", label: "Tipo", tipo: "texto" },
+      { key: "valor", label: "Valor", tipo: "moeda" },
+      { key: "status", label: "Status", tipo: "texto" },
+    ],
+    linhas,
+  };
+}
+
+async function imoveisReparos(supabase: DB, filtros: FiltrosRelatorio): Promise<Relatorio> {
+  const { data } = await supabase
+    .from("reparo_imovel")
+    .select("data, descricao, valor, executor, imovel:imovel_id(apelido, obra_id, obra:obra_id(codigo))")
+    .order("data", { ascending: false });
+  const linhas = (data ?? [])
+    .filter((r: Record<string, unknown>) => {
+      const imv = r.imovel as { obra_id?: string } | null;
+      if (filtros.obra_id && imv?.obra_id !== filtros.obra_id) return false;
+      const d = r.data as string;
+      if (filtros.inicio && d < filtros.inicio) return false;
+      if (filtros.fim && d > filtros.fim) return false;
+      return true;
+    })
+    .map((r: Record<string, unknown>) => {
+      const imv = r.imovel as { apelido: string } | null;
+      return {
+        imovel: imv?.apelido ?? "—",
+        data: r.data as string,
+        descricao: r.descricao as string,
+        executor: (r.executor as string | null) ?? "—",
+        valor: Number(r.valor),
+      };
+    });
+  return {
+    titulo: "Imóveis — reparos",
+    agruparPor: "imovel",
+    colunas: [
+      { key: "imovel", label: "Imóvel", tipo: "texto" },
+      { key: "data", label: "Data", tipo: "data" },
+      { key: "descricao", label: "Descrição", tipo: "texto" },
+      { key: "executor", label: "Executor", tipo: "texto" },
+      { key: "valor", label: "Valor", tipo: "moeda" },
+    ],
+    linhas,
+  };
+}
+
+async function imoveisCaucao(supabase: DB, filtros: FiltrosRelatorio): Promise<Relatorio> {
+  const { data } = await supabase
+    .from("contrato_imovel")
+    .select("caucao_valor, caucao_status, imovel:imovel_id(apelido, obra_id, obra:obra_id(codigo))")
+    .eq("vigente", true)
+    .not("caucao_valor", "is", null);
+  const linhas = (data ?? [])
+    .filter((c: Record<string, unknown>) => {
+      const imv = c.imovel as { obra_id?: string } | null;
+      return !filtros.obra_id || imv?.obra_id === filtros.obra_id;
+    })
+    .map((c: Record<string, unknown>) => {
+      const imv = c.imovel as { apelido: string; obra: { codigo: string } | null } | null;
+      const status = c.caucao_status as string | null;
+      return {
+        imovel: imv?.apelido ?? "—",
+        obra: imv?.obra?.codigo ?? "—",
+        valor: Number(c.caucao_valor),
+        situacao: status ? STATUS_CAUCAO_INFO[status as StatusCaucao] : "—",
+      };
+    });
+  return {
+    titulo: "Imóveis — caução",
+    colunas: [
+      { key: "imovel", label: "Imóvel", tipo: "texto" },
+      { key: "obra", label: "Obra", tipo: "texto" },
+      { key: "valor", label: "Valor da caução", tipo: "moeda" },
+      { key: "situacao", label: "Situação", tipo: "texto" },
+    ],
+    linhas,
+  };
+}
+
 export type LinhaRelatorio =
   | { tipo: "dado"; valores: Record<string, string | number | null> }
   | { tipo: "subtotal"; rotulo: string; valores: Record<string, number> }
@@ -378,7 +646,14 @@ export async function gerarRelatorio(
   if (tipo === "custo_por_fornecedor")
     return custoPorFornecedor(supabase, filtros);
   if (tipo === "ociosidade") return ociosidade(supabase, filtros);
-  return avarias(supabase, filtros);
+  if (tipo === "avarias") return avarias(supabase, filtros);
+  if (tipo === "imoveis_custo") return imoveisCusto(supabase, filtros);
+  if (tipo === "imoveis_contratos_vencer")
+    return imoveisContratosVencer(supabase, filtros);
+  if (tipo === "imoveis_sem_contrato") return imoveisSemContrato(supabase, filtros);
+  if (tipo === "imoveis_consumo") return imoveisConsumo(supabase, filtros);
+  if (tipo === "imoveis_reparos") return imoveisReparos(supabase, filtros);
+  return imoveisCaucao(supabase, filtros);
 }
 
 async function itensAbertos(
