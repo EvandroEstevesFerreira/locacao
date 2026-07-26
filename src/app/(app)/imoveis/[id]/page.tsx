@@ -36,6 +36,7 @@ import { ImovelAnexoUploader } from "../imovel-anexo-uploader";
 import { ContaConsumoForm } from "../conta-consumo-form";
 import { ReparoForm, OcorrenciaForm, VistoriaImovelForm } from "../fase3-forms";
 import { ImovelUpload } from "../imovel-upload";
+import { OcupanteForm } from "../ocupante-form";
 import {
   excluirImovel,
   excluirContratoImovel,
@@ -45,6 +46,7 @@ import {
   excluirReparo,
   excluirOcorrencia,
   excluirVistoriaImovel,
+  excluirOcupante,
 } from "../actions";
 
 export const metadata = { title: "Imóvel — Loca" };
@@ -148,11 +150,22 @@ export default async function ImovelDetalhePage({
     }),
   );
 
+  const { data: ocupantesData } = await supabase
+    .from("ocupante_imovel")
+    .select("id, nome, cpf, contato, data_entrada, data_saida")
+    .eq("imovel_id", id)
+    .order("created_at", { ascending: false });
+  type Ocupante = { id: string; nome: string; cpf: string | null; contato: string | null; data_entrada: string | null; data_saida: string | null };
+  const ocupantes = (ocupantesData ?? []) as Ocupante[];
+
   const st = STATUS_IMOVEL_INFO[imovel.status as StatusImovel];
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <PageHeader eyebrow="Imóvel" titulo={imovel.apelido} descricao={tipoImovelLabel(imovel.tipo)}>
+        <Button variant="outline" render={<a href={`/api/imoveis/${id}/contrato-pdf`} />}>
+          <FileText className="size-4" /> Gerar contrato
+        </Button>
         {podeEditar ? (
           <>
             <Button variant="outline" render={<Link href={`/imoveis/${id}/editar`} />}>
@@ -477,6 +490,42 @@ export default async function ImovelDetalhePage({
                   {v.vistoria_imovel_foto.length === 0 && !podeEditar ? (
                     <span className="text-sm text-muted-foreground">Sem fotos</span>
                   ) : null}
+                </div>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Ocupantes */}
+      {podeEditar ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base"><Plus className="size-4" /> Adicionar ocupante</CardTitle>
+            <CardDescription>Para kitnet/casa/apartamento — base do termo de responsabilidade.</CardDescription>
+          </CardHeader>
+          <CardContent><OcupanteForm imovelId={id} /></CardContent>
+        </Card>
+      ) : null}
+      <Card>
+        <CardHeader className="pb-2"><CardTitle className="text-base">Ocupantes ({ocupantes.length})</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          {ocupantes.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhum ocupante cadastrado.</p>
+          ) : (
+            ocupantes.map((o) => (
+              <div key={o.id} className="flex flex-wrap items-center justify-between gap-2 border-b pb-3 last:border-0">
+                <div className="min-w-0">
+                  <p className="font-medium">{o.nome}{o.cpf ? ` · ${o.cpf}` : ""}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {[o.contato, o.data_entrada ? `entrada ${formatarData(o.data_entrada)}` : null, o.data_saida ? `saída ${formatarData(o.data_saida)}` : null].filter(Boolean).join(" · ") || "—"}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" render={<a href={`/api/imoveis/${id}/termo-pdf?ocupante=${o.id}`} />}>
+                    <FileText className="size-4" /> Gerar termo
+                  </Button>
+                  {podeEditar ? <ConfirmDelete action={excluirOcupante} id={o.id} hidden={{ imovel_id: id }} /> : null}
                 </div>
               </div>
             ))
