@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/table";
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { ContratoImovelForm } from "../contrato-imovel-form";
+import { ContratoImovelCard } from "../contrato-imovel-card";
 import { ImovelAnexoUploader } from "../imovel-anexo-uploader";
 import { ContaConsumoForm } from "../conta-consumo-form";
 import { ReparoForm, OcorrenciaForm, VistoriaImovelForm } from "../fase3-forms";
@@ -239,18 +240,32 @@ export default async function ImovelDetalhePage({
             <p className="text-sm text-muted-foreground">Nenhum contrato cadastrado.</p>
           ) : (
             contratos.map((c) => (
-              <div key={c.id} className="border border-border p-4">
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">
-                      {formatarData(c.data_inicio)} — {c.data_fim ? formatarData(c.data_fim) : "sem fim"}
-                    </span>
-                    {c.vigente ? <Badge>Vigente</Badge> : null}
-                  </div>
-                  {podeEditar ? (
+              <ContratoImovelCard
+                key={c.id}
+                imovelId={id}
+                podeEditar={podeEditar}
+                vigente={c.vigente}
+                dataLabel={`${formatarData(c.data_inicio)} — ${c.data_fim ? formatarData(c.data_fim) : "sem fim"}`}
+                contrato={{
+                  id: c.id,
+                  data_inicio: c.data_inicio,
+                  data_fim: c.data_fim,
+                  valor_aluguel: c.valor_aluguel,
+                  valor_condominio: c.valor_condominio,
+                  dia_vencimento: c.dia_vencimento,
+                  indice_reajuste: c.indice_reajuste,
+                  data_reajuste: c.data_reajuste,
+                  caucao_valor: c.caucao_valor,
+                  caucao_status: c.caucao_status,
+                  vigente: c.vigente,
+                  observacoes: c.observacoes,
+                }}
+                deleteSlot={
+                  podeEditar ? (
                     <ConfirmDelete action={excluirContratoImovel} id={c.id} hidden={{ imovel_id: id }} />
-                  ) : null}
-                </div>
+                  ) : null
+                }
+              >
                 <div className="grid gap-3 text-sm sm:grid-cols-3">
                   <Campo label="Aluguel" valor={formatarBRL(Number(c.valor_aluguel))} />
                   <Campo label="Condomínio" valor={formatarBRL(Number(c.valor_condominio))} />
@@ -283,7 +298,7 @@ export default async function ImovelDetalhePage({
                     podeEditar={podeEditar}
                   />
                 </div>
-              </div>
+              </ContratoImovelCard>
             ))
           )}
         </CardContent>

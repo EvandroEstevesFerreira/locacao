@@ -1,0 +1,605 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Loca · Controle de Locações por Obra · Sistenge</title>
+<style>
+  /* ═══════════════════════════════════════════════════════════════
+     Tema Sistenge — blueprint sobre papel, acento vermelho da marca.
+     Cantos retos (radius 0), acento #BE3A31 / logo #cf2927.
+     ═══════════════════════════════════════════════════════════════ */
+  :root{
+    --paper:#f2f2f3; --surface:#e9e9ea; --ink:#1d1f20; --muted:#5d5d60;
+    --line:rgba(29,31,32,.16); --line-strong:rgba(29,31,32,.32);
+    --gridline:rgba(29,31,32,.035);
+    --red:#BE3A31; --red-logo:#cf2927; --red-dark:#8f2a23; --red-soft:#eab8b4;
+    --neutral-200:#e7e7ea; --neutral-300:#d4d4d7;
+    --sans:'Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+    --mono:'SFMono-Regular',ui-monospace,'Cascadia Mono','Consolas',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:var(--sans); color:var(--ink); background:var(--paper);
+    overflow:hidden; -webkit-font-smoothing:antialiased;
+    background-image:
+      linear-gradient(var(--gridline) 1px,transparent 1px),
+      linear-gradient(90deg,var(--gridline) 1px,transparent 1px);
+    background-size:48px 48px;
+  }
+
+  /* ── Barra de progresso ─────────────────────────────────────── */
+  #progress{position:fixed;top:0;left:0;height:3px;background:var(--red);
+    width:0;z-index:50;transition:width .35s ease}
+
+  /* ── Marca fixa (canto superior esquerdo) ───────────────────── */
+  #brand{position:fixed;top:20px;left:28px;z-index:40;display:flex;
+    align-items:center;gap:12px;pointer-events:none}
+  #brand svg{height:20px;width:auto}
+  #brand .tag{font-family:var(--mono);font-size:11px;letter-spacing:2px;
+    color:var(--muted);text-transform:uppercase;border-left:1px solid var(--line-strong);
+    padding-left:12px}
+
+  /* ── Deck / slides ──────────────────────────────────────────── */
+  #deck{position:relative;height:100vh;width:100vw}
+  .slide{position:absolute;inset:0;display:flex;flex-direction:column;
+    justify-content:center;padding:88px 8vw 96px;opacity:0;visibility:hidden;
+    transform:translateY(18px) scale(.99);
+    transition:opacity .45s ease,transform .45s ease,visibility .45s;
+    overflow-y:auto}
+  .slide.active{opacity:1;visibility:visible;transform:none}
+  .slide::-webkit-scrollbar{width:8px}
+  .slide::-webkit-scrollbar-thumb{background:var(--neutral-300)}
+
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:3px;
+    text-transform:uppercase;color:var(--red);margin-bottom:18px;
+    display:flex;align-items:center;gap:10px}
+  .eyebrow::before{content:"";width:28px;height:2px;background:var(--red)}
+  h1{font-size:clamp(38px,6vw,84px);line-height:.98;font-weight:800;
+    letter-spacing:-.02em;margin-bottom:20px}
+  h2{font-size:clamp(28px,3.6vw,52px);line-height:1.02;font-weight:800;
+    letter-spacing:-.015em;margin-bottom:26px;max-width:16ch}
+  .lead{font-size:clamp(16px,1.5vw,22px);line-height:1.5;color:var(--muted);
+    max-width:60ch}
+  .kicker{font-family:var(--mono);font-size:13px;color:var(--muted);
+    letter-spacing:1px}
+
+  /* ── Capa ───────────────────────────────────────────────────── */
+  #cover{align-items:flex-start}
+  #cover .logo-big{width:min(440px,64vw);margin-bottom:40px}
+  #cover .logo-big .wm{fill:var(--ink)}
+  #cover h1{font-size:clamp(64px,13vw,180px);color:var(--red);margin-bottom:10px}
+  #cover .sub{font-size:clamp(18px,2vw,30px);font-weight:600;max-width:24ch;
+    line-height:1.15;margin-bottom:28px}
+  #cover .meta{display:flex;gap:28px;flex-wrap:wrap;font-family:var(--mono);
+    font-size:12px;letter-spacing:1px;color:var(--muted);text-transform:uppercase}
+  #cover .meta b{color:var(--ink);font-weight:700}
+
+  /* ── Grid de dores / features ───────────────────────────────── */
+  .grid{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);
+    margin-top:34px}
+  .g2{grid-template-columns:repeat(2,1fr)}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  .g4{grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
+  .cell{background:var(--paper);padding:24px 22px}
+  .cell .n{font-family:var(--mono);font-size:12px;color:var(--red);
+    letter-spacing:1px;margin-bottom:10px}
+  .cell h3{font-size:19px;font-weight:700;margin-bottom:8px;letter-spacing:-.01em}
+  .cell p{font-size:14.5px;line-height:1.45;color:var(--muted)}
+
+  /* ── Cartões clicáveis do mapa ──────────────────────────────── */
+  .map .cell{cursor:pointer;transition:background .18s,transform .18s;
+    position:relative}
+  .map .cell:hover{background:#fff}
+  .map .cell:hover h3{color:var(--red)}
+  .map .cell .arrow{position:absolute;top:22px;right:20px;color:var(--line-strong);
+    transition:color .18s,transform .18s;font-size:18px}
+  .map .cell:hover .arrow{color:var(--red);transform:translateX(3px)}
+
+  /* ── Slide dor→solução ──────────────────────────────────────── */
+  .ds{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);
+    border:1px solid var(--line);margin-top:30px}
+  .ds .side{background:var(--paper);padding:30px 30px}
+  .ds .side.sol{background:#fff}
+  .ds .label{font-family:var(--mono);font-size:12px;letter-spacing:2px;
+    text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+  .ds .side.dor .label{color:var(--red)}
+  .ds .side.sol .label{color:var(--ink)}
+  .ds .label .dot{width:9px;height:9px;background:currentColor;display:inline-block}
+  .ds .side p{font-size:16px;line-height:1.5}
+  .ds .side.dor p{color:var(--muted)}
+  .ds ul{list-style:none;margin-top:4px}
+  .ds li{font-size:15px;line-height:1.4;padding:9px 0 9px 22px;position:relative;
+    border-top:1px dashed var(--line)}
+  .ds li:first-child{border-top:none}
+  .ds li::before{content:"";position:absolute;left:0;top:16px;width:10px;height:2px;
+    background:var(--red)}
+  .ds li b{font-weight:700}
+
+  .featmeta{margin-top:22px;display:flex;gap:24px;flex-wrap:wrap;
+    font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.5px}
+  .featmeta span b{color:var(--ink)}
+
+  /* ── Roadmap ────────────────────────────────────────────────── */
+  .phases{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));
+    gap:1px;background:var(--line);border:1px solid var(--line);margin-top:30px}
+  .phase{background:var(--paper);padding:18px 18px 20px}
+  .phase .st{font-family:var(--mono);font-size:11px;letter-spacing:1px;
+    text-transform:uppercase;margin-bottom:10px}
+  .phase.done .st{color:#2e7d32}
+  .phase.now .st{color:var(--red)}
+  .phase.next .st{color:var(--muted)}
+  .phase h4{font-size:15px;font-weight:700;margin-bottom:4px}
+  .phase p{font-size:13px;color:var(--muted);line-height:1.4}
+  .phase.done{border-top:3px solid #2e7d32}
+  .phase.now{border-top:3px solid var(--red)}
+  .phase.next{border-top:3px solid var(--neutral-300)}
+
+  /* ── Slide futuro: imóveis ──────────────────────────────────── */
+  #futuro{background:var(--ink);color:var(--paper)}
+  #futuro .eyebrow{color:var(--red-soft)}
+  #futuro .eyebrow::before{background:var(--red-soft)}
+  #futuro .lead{color:#b9babb}
+  #futuro .prop{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+    gap:1px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.14);
+    margin-top:34px}
+  #futuro .prop .cell{background:var(--ink);text-align:center;padding:30px 16px}
+  #futuro .prop .ic{font-size:34px;margin-bottom:12px;display:block}
+  #futuro .prop h3{color:var(--paper);font-size:16px}
+  #futuro .prop p{color:#9a9c9d;font-size:12.5px;margin-top:4px}
+  #futuro .badge{display:inline-block;font-family:var(--mono);font-size:11px;
+    letter-spacing:2px;text-transform:uppercase;color:var(--paper);
+    border:1px solid var(--red);background:var(--red);padding:5px 12px;margin-bottom:18px}
+
+  /* ── Encerramento ───────────────────────────────────────────── */
+  #fim h1{color:var(--red)}
+  #fim .whatsnext{margin-top:34px;border-left:3px solid var(--red);padding:14px 0 14px 22px;
+    max-width:52ch}
+  #fim .whatsnext .l{font-family:var(--mono);font-size:12px;letter-spacing:2px;
+    text-transform:uppercase;color:var(--red);margin-bottom:6px}
+  #fim .whatsnext p{font-size:18px;line-height:1.4}
+
+  /* ── Controles de navegação ─────────────────────────────────── */
+  #nav{position:fixed;bottom:22px;right:28px;z-index:40;display:flex;
+    align-items:center;gap:10px}
+  #nav button{font-family:var(--mono);font-size:13px;background:var(--paper);
+    border:1px solid var(--line-strong);color:var(--ink);width:44px;height:44px;
+    cursor:pointer;transition:.15s;display:flex;align-items:center;justify-content:center}
+  #nav button:hover{background:var(--red);color:#fff;border-color:var(--red)}
+  #nav button:disabled{opacity:.3;cursor:not-allowed;background:var(--paper);
+    color:var(--ink);border-color:var(--line)}
+  #counter{position:fixed;bottom:26px;left:28px;z-index:40;font-family:var(--mono);
+    font-size:13px;letter-spacing:2px;color:var(--muted)}
+  #counter b{color:var(--red);font-size:16px}
+
+  /* ── Dots (índice rápido) ───────────────────────────────────── */
+  #dots{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);z-index:40;
+    display:flex;gap:8px}
+  #dots span{width:9px;height:9px;background:var(--neutral-300);cursor:pointer;
+    transition:.15s;border:1px solid transparent}
+  #dots span:hover{background:var(--muted)}
+  #dots span.on{background:var(--red);transform:scale(1.15)}
+
+  #hint{position:fixed;bottom:70px;left:50%;transform:translateX(-50%);z-index:40;
+    font-family:var(--mono);font-size:11px;letter-spacing:1px;color:var(--muted);
+    opacity:.9;transition:opacity .5s}
+  #hint.hide{opacity:0}
+
+  @media(max-width:760px){
+    .slide{padding:80px 6vw 110px}
+    .ds,.g2,.g3{grid-template-columns:1fr}
+    #brand .tag{display:none}
+    #dots{display:none}
+  }
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+
+<div id="brand">
+  <svg viewBox="0 0 1920 392.19" aria-label="Sistenge">
+    <g fill="#cf2927">
+      <path d="M95.63,305.28h276.21c23.7,0,47.95-19.22,54.16-42.9,6.21-23.69-7.97-42.9-31.68-42.9H118.11l-22.48,85.81Z"/>
+      <path d="M555.81,76.75h-276.21c-23.7,0-47.95,19.22-54.16,42.9-6.21,23.7,7.97,42.91,31.68,42.91h276.21l22.48-85.82Z"/>
+    </g>
+    <g fill="currentColor">
+      <path d="M643.58,205.45c-33.51,0-39.7-14.53-31.66-44.61,7.73-28.87,20.96-43.61,55.29-43.61h94.26l-8.87,33.11h-86.19c-9.09,0-13.31,3.64-15.84,13.12-2.49,9.3-.23,12.93,8.86,12.93h47.64c33.52,0,39.67,13.92,31.67,43.8-7.95,29.67-21.64,44.61-55.35,44.61h-97.92l8.81-32.9h90.04c8.89,0,13.34-3.84,15.94-13.53,2.71-10.08-.38-12.91-8.84-12.91h-47.85.01Z"/>
+      <polygon points="829.48 117.24 789.96 264.79 750.4 264.79 789.92 117.24 829.48 117.24"/>
+      <path d="M873.32,205.45c-33.51,0-39.7-14.53-31.66-44.61,7.73-28.87,20.96-43.61,55.29-43.61h94.26l-8.87,33.11h-86.19c-9.1,0-13.31,3.64-15.84,13.12-2.49,9.3-.23,12.93,8.86,12.93h47.65c33.52,0,39.67,13.92,31.67,43.8-7.95,29.67-21.64,44.61-55.35,44.61h-97.92l8.81-32.9h90.05c8.88,0,13.33-3.84,15.93-13.53,2.71-10.08-.38-12.91-8.84-12.91h-47.85Z"/>
+      <polygon points="1054.6 149.14 1002.31 149.14 1010.85 117.24 1154.99 117.24 1146.46 149.14 1094.17 149.14 1063.19 264.79 1023.61 264.79 1054.6 149.14"/>
+      <polygon points="1287.32 205.25 1191.01 205.25 1183.61 232.9 1280.72 232.9 1272.17 264.8 1135.5 264.8 1175.04 117.24 1311.3 117.24 1302.75 149.14 1206.05 149.14 1198.65 176.79 1294.95 176.79 1287.32 205.25"/>
+      <polygon points="1430.47 221.81 1458.48 117.24 1495.01 117.24 1455.49 264.79 1407.45 264.79 1362.6 163.88 1335.57 264.79 1298.82 264.79 1338.36 117.24 1385.2 117.24 1430.47 221.81"/>
+      <path d="M1620.49,264.8h-75.7c-43.61,0-62.05-12.51-45.67-73.66,16.39-61.17,41.61-73.89,85.21-73.89h75.3l-8.7,32.51h-75.1c-19.79,0-28.81,8.07-37.73,41.38-8.92,33.3-4.17,41.18,15.62,41.18h40.78l11.84-44.21h34.72l-20.54,76.7h-.02Z"/>
+      <polygon points="1800.39 205.25 1704.09 205.25 1696.68 232.9 1793.79 232.9 1785.24 264.8 1648.57 264.8 1688.11 117.24 1824.37 117.24 1815.83 149.14 1719.13 149.14 1711.72 176.79 1808.02 176.79 1800.39 205.25"/>
+    </g>
+  </svg>
+  <span class="tag">Controle de Locações</span>
+</div>
+
+<div id="deck">
+
+  <!-- 0 · CAPA -->
+  <section class="slide active" id="cover">
+    <svg class="logo-big" viewBox="0 0 1920 392.19" aria-label="Sistenge">
+      <g fill="#cf2927">
+        <path d="M95.63,305.28h276.21c23.7,0,47.95-19.22,54.16-42.9,6.21-23.69-7.97-42.9-31.68-42.9H118.11l-22.48,85.81Z"/>
+        <path d="M555.81,76.75h-276.21c-23.7,0-47.95,19.22-54.16,42.9-6.21,23.7,7.97,42.91,31.68,42.91h276.21l22.48-85.82Z"/>
+      </g>
+      <g class="wm">
+        <path d="M643.58,205.45c-33.51,0-39.7-14.53-31.66-44.61,7.73-28.87,20.96-43.61,55.29-43.61h94.26l-8.87,33.11h-86.19c-9.09,0-13.31,3.64-15.84,13.12-2.49,9.3-.23,12.93,8.86,12.93h47.64c33.52,0,39.67,13.92,31.67,43.8-7.95,29.67-21.64,44.61-55.35,44.61h-97.92l8.81-32.9h90.04c8.89,0,13.34-3.84,15.94-13.53,2.71-10.08-.38-12.91-8.84-12.91h-47.85.01Z"/>
+        <polygon points="829.48 117.24 789.96 264.79 750.4 264.79 789.92 117.24 829.48 117.24"/>
+        <path d="M873.32,205.45c-33.51,0-39.7-14.53-31.66-44.61,7.73-28.87,20.96-43.61,55.29-43.61h94.26l-8.87,33.11h-86.19c-9.1,0-13.31,3.64-15.84,13.12-2.49,9.3-.23,12.93,8.86,12.93h47.65c33.52,0,39.67,13.92,31.67,43.8-7.95,29.67-21.64,44.61-55.35,44.61h-97.92l8.81-32.9h90.05c8.88,0,13.33-3.84,15.93-13.53,2.71-10.08-.38-12.91-8.84-12.91h-47.85Z"/>
+        <polygon points="1054.6 149.14 1002.31 149.14 1010.85 117.24 1154.99 117.24 1146.46 149.14 1094.17 149.14 1063.19 264.79 1023.61 264.79 1054.6 149.14"/>
+        <polygon points="1287.32 205.25 1191.01 205.25 1183.61 232.9 1280.72 232.9 1272.17 264.8 1135.5 264.8 1175.04 117.24 1311.3 117.24 1302.75 149.14 1206.05 149.14 1198.65 176.79 1294.95 176.79 1287.32 205.25"/>
+        <polygon points="1430.47 221.81 1458.48 117.24 1495.01 117.24 1455.49 264.79 1407.45 264.79 1362.6 163.88 1335.57 264.79 1298.82 264.79 1338.36 117.24 1385.2 117.24 1430.47 221.81"/>
+        <path d="M1620.49,264.8h-75.7c-43.61,0-62.05-12.51-45.67-73.66,16.39-61.17,41.61-73.89,85.21-73.89h75.3l-8.7,32.51h-75.1c-19.79,0-28.81,8.07-37.73,41.38-8.92,33.3-4.17,41.18,15.62,41.18h40.78l11.84-44.21h34.72l-20.54,76.7h-.02Z"/>
+        <polygon points="1800.39 205.25 1704.09 205.25 1696.68 232.9 1793.79 232.9 1785.24 264.8 1648.57 264.8 1688.11 117.24 1824.37 117.24 1815.83 149.14 1719.13 149.14 1711.72 176.79 1808.02 176.79 1800.39 205.25"/>
+      </g>
+    </svg>
+    <h1>Loca</h1>
+    <div class="sub">O sistema que controla, obra por obra, tudo o que a Sistenge aluga de terceiros.</div>
+    <div class="meta">
+      <span><b>Locatária:</b> Sistenge Engenharia</span>
+      <span><b>Foco:</b> custo &amp; equipamento parado</span>
+      <span><b>Stack:</b> Next.js 16 · Supabase · Vercel</span>
+    </div>
+  </section>
+
+  <!-- 1 · O PROBLEMA -->
+  <section class="slide" id="problema">
+    <div class="eyebrow">O problema</div>
+    <h2>Locação descontrolada custa caro. E vaza dinheiro em silêncio.</h2>
+    <p class="lead">Sem um sistema, o controle vive em planilhas soltas, no WhatsApp e na memória de quem está em campo. O resultado aparece na fatura.</p>
+    <div class="grid g4">
+      <div class="cell"><div class="n">DOR 01</div><h3>Equipamento parado</h3><p>Continua alugado e cobrando, mesmo sem uso na obra. Ninguém devolve a tempo.</p></div>
+      <div class="cell"><div class="n">DOR 02</div><h3>Sem rastreio</h3><p>O que está alugado, por quanto, desde quando e por qual obra? Ninguém sabe de imediato.</p></div>
+      <div class="cell"><div class="n">DOR 03</div><h3>Disputa de avaria</h3><p>Fornecedor cobra dano sem prova do estado na entrega. Sua palavra contra a dele.</p></div>
+      <div class="cell"><div class="n">DOR 04</div><h3>Vencimento esquecido</h3><p>Devolução e pagamento passam da data. Multa, juros e custo extra.</p></div>
+      <div class="cell"><div class="n">DOR 05</div><h3>Custo disperso</h3><p>Nenhuma visão consolidada por obra ou por fornecedor para gestão e prestação de contas.</p></div>
+      <div class="cell"><div class="n">DOR 06</div><h3>Acesso sem controle</h3><p>Todo mundo vê tudo, ou ninguém acha nada. Sem separação por função e por obra.</p></div>
+    </div>
+  </section>
+
+  <!-- 2 · A SOLUÇÃO -->
+  <section class="slide" id="solucao">
+    <div class="eyebrow">A solução</div>
+    <h2>Um só lugar, organizado por obra, do contrato à devolução.</h2>
+    <p class="lead">O Loca centraliza contratos, equipamentos, vistorias, financeiro e alertas, com dado isolado por organização e por obra (RLS no banco). Você acessa de qualquer lugar, como app (PWA).</p>
+    <div class="grid g3">
+      <div class="cell"><div class="n">PILAR 01</div><h3>Rastreio total</h3><p>Cada equipamento e contrato tem histórico: retirada, custo acumulado, devolução prevista e real.</p></div>
+      <div class="cell"><div class="n">PILAR 02</div><h3>Prova documental</h3><p>Fotos, legendas e assinaturas na entrada e na devolução, com PDF gerado.</p></div>
+      <div class="cell"><div class="n">PILAR 03</div><h3>Antecipação</h3><p>Robô diário avisa por e-mail sobre devoluções e vencimentos antes de virarem custo.</p></div>
+    </div>
+  </section>
+
+  <!-- 3 · MAPA DE FUNCIONALIDADES -->
+  <section class="slide" id="mapa">
+    <div class="eyebrow">Mapa do sistema</div>
+    <h2>Todas as funcionalidades. Clique para navegar.</h2>
+    <div class="grid g4 map">
+      <div class="cell" data-go="acesso"><span class="arrow">→</span><div class="n">01</div><h3>Acesso &amp; Permissões</h3><p>Login, 4 perfis (RBAC) e escopo por obra.</p></div>
+      <div class="cell" data-go="usuarios"><span class="arrow">→</span><div class="n">02</div><h3>Gestão de Usuários</h3><p>Criar, editar e desligar, com e-mail de acesso.</p></div>
+      <div class="cell" data-go="cadastros"><span class="arrow">→</span><div class="n">03</div><h3>Cadastros Base</h3><p>Obras, fornecedores, itens e equipamentos.</p></div>
+      <div class="cell" data-go="contratos"><span class="arrow">→</span><div class="n">04</div><h3>Contratos &amp; Movimentação</h3><p>Locação, custo, pró-rata e devolução.</p></div>
+      <div class="cell" data-go="vistorias"><span class="arrow">→</span><div class="n">05</div><h3>Vistorias &amp; Avarias</h3><p>Fotos, assinaturas, avarias e PDF.</p></div>
+      <div class="cell" data-go="financeiro"><span class="arrow">→</span><div class="n">06</div><h3>Financeiro</h3><p>Contas a pagar e fluxo de caixa projetado.</p></div>
+      <div class="cell" data-go="dashboard"><span class="arrow">→</span><div class="n">07</div><h3>Dashboard</h3><p>KPIs e devoluções dos próximos 7 dias.</p></div>
+      <div class="cell" data-go="relatorios"><span class="arrow">→</span><div class="n">08</div><h3>Relatórios</h3><p>PDF e Excel com filtros e subtotais.</p></div>
+      <div class="cell" data-go="alertas"><span class="arrow">→</span><div class="n">09</div><h3>Alertas Automáticos</h3><p>Robô diário por e-mail (Cron + Resend).</p></div>
+    </div>
+  </section>
+
+  <!-- 4 · ACESSO -->
+  <section class="slide" id="acesso">
+    <div class="eyebrow">01 · Acesso &amp; Permissões</div>
+    <h2>Cada função enxerga só o que precisa.</h2>
+    <div class="ds">
+      <div class="side dor">
+        <div class="label"><span class="dot"></span>A dor</div>
+        <p>Sistema aberto demais expõe custo e dados sensíveis; fechado demais trava quem opera em campo. E dados de uma obra vazam para outra.</p>
+      </div>
+      <div class="side sol">
+        <div class="label"><span class="dot"></span>Como o Loca resolve</div>
+        <ul>
+          <li>Login por e-mail/senha, recuperação e nova senha em <b>português</b>.</li>
+          <li><b>4 perfis fixos:</b> master, administrador, gestor (só leitura + relatórios) e operador (opera em campo).</li>
+          <li><b>Escopo por obra:</b> gestor e operador só veem obras atribuídas a eles.</li>
+          <li>Regra espelhada no banco (<b>RLS</b>): a proteção não depende só da tela.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="featmeta"><span><b>Segurança:</b> RLS por organização e por obra</span><span><b>Auth:</b> Supabase</span></div>
+  </section>
+
+  <!-- 5 · USUÁRIOS -->
+  <section class="slide" id="usuarios">
+    <div class="eyebrow">02 · Gestão de Usuários</div>
+    <h2>Onboarding e desligamento sob controle.</h2>
+    <div class="ds">
+      <div class="side dor">
+        <div class="label"><span class="dot"></span>A dor</div>
+        <p>Criar acesso na mão, mandar senha por caminhos inseguros e esquecer de remover quem saiu da empresa.</p>
+      </div>
+      <div class="side sol">
+        <div class="label"><span class="dot"></span>Como o Loca resolve</div>
+        <ul>
+          <li>Master cria o usuário com senha temporária e <b>e-mail de boas-vindas automático</b>.</li>
+          <li>Edita perfil, nome, status ativo/inativo e <b>obras atribuídas</b>.</li>
+          <li>Redefine senha com aviso por e-mail ao usuário.</li>
+          <li>Desligamento em cascata, sem deixar acesso órfão.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="featmeta"><span><b>E-mails:</b> Resend</span><span><b>Templates:</b> PT-BR, marca Sistenge</span></div>
+  </section>
+
+  <!-- 6 · CADASTROS -->
+  <section class="slide" id="cadastros">
+    <div class="eyebrow">03 · Cadastros Base</div>
+    <h2>A fundação organizada do controle.</h2>
+    <div class="ds">
+      <div class="side dor">
+        <div class="label"><span class="dot"></span>A dor</div>
+        <p>Fornecedores repetidos, equipamentos sem identificação e custo lançado na obra errada, fora do centro de custo.</p>
+      </div>
+      <div class="side sol">
+        <div class="label"><span class="dot"></span>Como o Loca resolve</div>
+        <ul>
+          <li><b>Obras</b> com código, responsável, centro de custo e status (ativa/pausada/encerrada).</li>
+          <li><b>Fornecedores</b> com CNPJ validado e contato central.</li>
+          <li><b>Catálogo de itens:</b> equipamento, material retornável e consumível.</li>
+          <li><b>Equipamento por unidade</b>, com patrimônio ou nº de série rastreável.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 · CONTRATOS -->
+  <section class="slide" id="contratos">
+    <div class="eyebrow">04 · Contratos &amp; Movimentação</div>
+    <h2>Do aluguel à devolução, com custo calculado.</h2>
+    <div class="ds">
+      <div class="side dor">
+        <div class="label"><span class="dot"></span>A dor</div>
+        <p>Não saber quanto um contrato já custou, pagar período cheio por dias parciais e perder o contrato original em papel.</p>
+      </div>
+      <div class="side sol">
+        <div class="label"><span class="dot"></span>Como o Loca resolve</div>
+        <ul>
+          <li>Contrato por obra e fornecedor, com <b>cadência</b> (diária/semanal/quinzenal/mensal).</li>
+          <li><b>Cálculo automático de custo</b> por item (qtd × valor × períodos) e <b>cobrança pró-rata</b>.</li>
+          <li>Registro de <b>devolução</b> com baixa de saldo, e a vistoria de devolução já é criada na hora.</li>
+          <li>Anexo do <b>contrato original</b> guardado no sistema (Storage).</li>
+        </ul>
+      </div>
+    </div>
+    <div class="featmeta"><span><b>Resolve direto:</b> equipamento parado</span></div>
+  </section>
+
+  <!-- 8 · VISTORIAS -->
+  <section class="slide" id="vistorias">
+    <div class="eyebrow">05 · Vistorias, Fotos &amp; Avarias</div>
+    <h2>Prova do estado na entrada e na devolução.</h2>
+    <div class="ds">
+      <div class="side dor">
+        <div class="label"><span class="dot"></span>A dor</div>
+        <p>Fornecedor cobra avaria que não foi sua. Sem foto nem assinatura, a discussão vira prejuízo.</p>
+      </div>
+      <div class="side sol">
+        <div class="label"><span class="dot"></span>Como o Loca resolve</div>
+        <ul>
+          <li>Vistoria de <b>entrada e devolução</b> com fotos e <b>legenda por foto</b>.</li>
+          <li>Registro de <b>avarias</b> (custo estimado, status aberta/cobrada/resolvida).</li>
+          <li><b>Duas assinaturas</b> (Sistenge + quem retira/recebe) com carimbo de data/hora.</li>
+          <li><b>PDF do relatório de vistoria</b> gerado para arquivo e cobrança.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="featmeta"><span><b>Storage:</b> fotos privadas por obra</span><span><b>Saída:</b> PDF assinado</span></div>
+  </section>
+
+  <!-- 9 · FINANCEIRO -->
+  <section class="slide" id="financeiro">
+    <div class="eyebrow">06 · Financeiro</div>
+    <h2>Contas a pagar e o que vem pela frente.</h2>
+    <div class="ds">
+      <div class="side dor">
+        <div class="label"><span class="dot"></span>A dor</div>
+        <p>Surpresa no caixa: desembolso de locação que ninguém previu, e vencidos descobertos tarde demais.</p>
+      </div>
+      <div class="side sol">
+        <div class="label"><span class="dot"></span>Como o Loca resolve</div>
+        <ul>
+          <li>Lançamentos por obra/contrato com competência, vencimento e <b>baixa de pagamento</b>.</li>
+          <li><b>Fluxo de caixa projetado</b> até 12 meses, somando lançamentos reais + custo estimado dos contratos ativos.</li>
+          <li>Visão de pago, pendente e vencido.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10 · DASHBOARD -->
+  <section class="slide" id="dashboard">
+    <div class="eyebrow">07 · Dashboard</div>
+    <h2>O que exige atenção, logo na abertura.</h2>
+    <div class="ds">
+      <div class="side dor">
+        <div class="label"><span class="dot"></span>A dor</div>
+        <p>Abrir o sistema e não saber por onde começar nem o que está prestes a atrasar.</p>
+      </div>
+      <div class="side sol">
+        <div class="label"><span class="dot"></span>Como o Loca resolve</div>
+        <ul>
+          <li><b>KPIs:</b> obras ativas, contratos ativos, itens em aberto, avarias abertas.</li>
+          <li>Card financeiro com <b>pendente e vencido</b>.</li>
+          <li>Lista de <b>devoluções previstas nos próximos 7 dias</b>.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11 · RELATÓRIOS -->
+  <section class="slide" id="relatorios">
+    <div class="eyebrow">08 · Relatórios</div>
+    <h2>Consolidação pronta para prestar contas.</h2>
+    <div class="ds">
+      <div class="side dor">
+        <div class="label"><span class="dot"></span>A dor</div>
+        <p>Montar relatório de custo na mão, somar obra por obra e ainda exportar para a gestão.</p>
+      </div>
+      <div class="side sol">
+        <div class="label"><span class="dot"></span>Como o Loca resolve</div>
+        <ul>
+          <li><b>Itens em aberto, contas a pagar e custo por obra.</b></li>
+          <li>Filtros por obra, <b>fornecedor</b>, status e período.</li>
+          <li><b>Subtotais por grupo + total geral</b> automáticos.</li>
+          <li>Exportação em <b>PDF e Excel</b>, respeitando o acesso do usuário.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="featmeta"><span><b>Saída:</b> PDF · Excel</span></div>
+  </section>
+
+  <!-- 12 · ALERTAS -->
+  <section class="slide" id="alertas">
+    <div class="eyebrow">09 · Alertas Automáticos</div>
+    <h2>O sistema avisa antes de virar custo.</h2>
+    <div class="ds">
+      <div class="side dor">
+        <div class="label"><span class="dot"></span>A dor</div>
+        <p>Depender da memória das pessoas para lembrar de devolver equipamento e pagar em dia.</p>
+      </div>
+      <div class="side sol">
+        <div class="label"><span class="dot"></span>Como o Loca resolve</div>
+        <ul>
+          <li><b>Robô diário</b> (Vercel Cron) varre devoluções, fins de contrato e pagamentos a vencer.</li>
+          <li>Avisos <b>escalonados</b> (ex.: 30 → 15 → 3 dias) por e-mail.</li>
+          <li>Destinatários e prazos configuráveis; <b>sem e-mail duplicado</b>.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="featmeta"><span><b>Ataque direto:</b> equipamento parado &amp; multa por atraso</span></div>
+  </section>
+
+  <!-- 13 · ROADMAP -->
+  <section class="slide" id="roadmap">
+    <div class="eyebrow">Status &amp; Roadmap</div>
+    <h2>Onde o Loca está.</h2>
+    <div class="phases">
+      <div class="phase done"><div class="st">✓ Pronto</div><h4>Fundação</h4><p>Login, perfis, RLS, PWA.</p></div>
+      <div class="phase done"><div class="st">✓ Pronto</div><h4>Cadastros</h4><p>Obras, fornecedores, itens.</p></div>
+      <div class="phase done"><div class="st">✓ Pronto</div><h4>Contratos</h4><p>Custo, pró-rata, devolução.</p></div>
+      <div class="phase done"><div class="st">✓ Pronto</div><h4>Vistorias</h4><p>Fotos, avarias, assinaturas.</p></div>
+      <div class="phase done"><div class="st">✓ Pronto</div><h4>Financeiro</h4><p>Contas + fluxo de caixa.</p></div>
+      <div class="phase done"><div class="st">✓ Pronto</div><h4>Alertas</h4><p>Cron + e-mail.</p></div>
+      <div class="phase done"><div class="st">✓ Pronto</div><h4>Relatórios</h4><p>PDF/Excel + subtotais.</p></div>
+      <div class="phase now"><div class="st">● Agora</div><h4>Relatórios v2</h4><p>Fornecedor, ociosidade, gráficos.</p></div>
+    </div>
+  </section>
+
+  <!-- 14 · FUTURO: IMÓVEIS -->
+  <section class="slide" id="futuro">
+    <div class="badge">Próximo grande passo</div>
+    <div class="eyebrow">O que vem por aí</div>
+    <h2>Gestão de Imóveis da empresa.</h2>
+    <p class="lead">Além dos equipamentos de obra, o Loca vai controlar o patrimônio imobiliário da Sistenge: o que a empresa aluga e administra.</p>
+    <div class="prop">
+      <div class="cell"><span class="ic">🏠</span><h3>Casas</h3><p>Residências alugadas ou próprias.</p></div>
+      <div class="cell"><span class="ic">🚪</span><h3>Kitnets</h3><p>Alojamento de equipe em obra.</p></div>
+      <div class="cell"><span class="ic">🏢</span><h3>Escritórios</h3><p>Sedes e frentes administrativas.</p></div>
+      <div class="cell"><span class="ic">🏬</span><h3>Apartamentos</h3><p>Unidades e afins.</p></div>
+    </div>
+    <p class="lead" style="margin-top:26px">Mesmo motor de contratos, vencimentos, vistorias, custos e alertas, agora também para imóveis.</p>
+  </section>
+
+  <!-- 15 · FIM -->
+  <section class="slide" id="fim">
+    <div class="eyebrow">Loca · Sistenge</div>
+    <h1>Controle no lugar do improviso.</h1>
+    <p class="lead">Um só sistema para tudo o que a Sistenge aluga, organizado por obra, com prova documental e alertas que cortam custo. Hoje os equipamentos; em breve, os imóveis.</p>
+    <div class="whatsnext">
+      <div class="l">Próximo passo</div>
+      <p>Rodar uma obra-piloto real no Loca e medir quanto de custo de locação a gente corta no primeiro mês.</p>
+    </div>
+  </section>
+
+</div>
+
+<div id="counter"><b>01</b> / 16</div>
+<div id="dots"></div>
+<div id="hint">← →  ou  espaço para navegar</div>
+<div id="nav">
+  <button id="prev" aria-label="Anterior">←</button>
+  <button id="next" aria-label="Próximo">→</button>
+</div>
+
+<script>
+  const slides=[...document.querySelectorAll('.slide')];
+  const total=slides.length;
+  let i=0;
+  const prev=document.getElementById('prev');
+  const next=document.getElementById('next');
+  const counter=document.getElementById('counter');
+  const progress=document.getElementById('progress');
+  const hint=document.getElementById('hint');
+  const dotsWrap=document.getElementById('dots');
+
+  slides.forEach((_,idx)=>{
+    const d=document.createElement('span');
+    d.addEventListener('click',()=>go(idx));
+    dotsWrap.appendChild(d);
+  });
+  const dots=[...dotsWrap.children];
+
+  function go(n){
+    i=Math.max(0,Math.min(total-1,n));
+    slides.forEach((s,idx)=>s.classList.toggle('active',idx===i));
+    dots.forEach((d,idx)=>d.classList.toggle('on',idx===i));
+    counter.querySelector('b').textContent=String(i+1).padStart(2,'0');
+    progress.style.width=((i)/(total-1)*100)+'%';
+    prev.disabled=i===0; next.disabled=i===total-1;
+    slides[i].scrollTop=0;
+    if(i>0){hint.classList.add('hide');}
+  }
+
+  next.addEventListener('click',()=>go(i+1));
+  prev.addEventListener('click',()=>go(i-1));
+
+  document.addEventListener('keydown',e=>{
+    if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){e.preventDefault();go(i+1);}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();go(i-1);}
+    else if(e.key==='Home'){go(0);}
+    else if(e.key==='End'){go(total-1);}
+    else if(e.key==='f'||e.key==='F'){toggleFs();}
+  });
+
+  // Cartões do mapa → pulam para o slide
+  document.querySelectorAll('.map .cell').forEach(c=>{
+    c.addEventListener('click',()=>{
+      const id=c.getAttribute('data-go');
+      const idx=slides.findIndex(s=>s.id===id);
+      if(idx>=0)go(idx);
+    });
+  });
+
+  // Swipe (toque)
+  let x0=null;
+  document.addEventListener('touchstart',e=>x0=e.touches[0].clientX,{passive:true});
+  document.addEventListener('touchend',e=>{
+    if(x0===null)return;
+    const dx=e.changedTouches[0].clientX-x0;
+    if(Math.abs(dx)>50){dx<0?go(i+1):go(i-1);}
+    x0=null;
+  },{passive:true});
+
+  function toggleFs(){
+    if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();
+    else document.exitFullscreen?.();
+  }
+
+  go(0);
+</script>
+</body>
+</html>
