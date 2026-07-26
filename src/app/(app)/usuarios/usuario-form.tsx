@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import Link from "next/link";
 import { salvarUsuario, type UsuarioFormState } from "./actions";
 import { PAPEIS, PAPEL_INFO, type Papel } from "@/lib/permissoes";
+import { MODULOS } from "@/lib/modulos";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,11 +16,16 @@ export function UsuarioForm({
   usuario,
   obras,
   obrasDoUsuario,
+  modulosDoUsuario,
 }: {
   usuario: { id: string; nome: string; email: string; papel: Papel; ativo: boolean };
   obras: { id: string; codigo: string; nome: string }[];
   obrasDoUsuario: string[];
+  /** null = acesso a todos os módulos (padrão retrocompatível). */
+  modulosDoUsuario: string[] | null;
 }) {
+  // null → todos liberados por padrão (marca todas as caixas).
+  const todosMarcados = modulosDoUsuario == null;
   const [state, formAction, isPending] = useActionState<
     UsuarioFormState,
     FormData
@@ -70,6 +76,28 @@ export function UsuarioForm({
           minLength={8}
           placeholder="Deixe em branco para manter a senha atual"
         />
+      </div>
+
+      <div className="space-y-2">
+        <Label>Acesso por módulo</Label>
+        <p className="text-xs text-muted-foreground">
+          Marque os módulos que este usuário pode acessar. Se nenhum for marcado,
+          ele terá acesso a todos. O Master sempre acessa tudo.
+        </p>
+        <div className="grid gap-2 rounded-md border p-3 sm:grid-cols-2">
+          {MODULOS.map((m) => (
+            <label key={m.chave} className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                name="modulos"
+                value={m.chave}
+                defaultChecked={todosMarcados || (modulosDoUsuario?.includes(m.chave) ?? false)}
+                className="size-4"
+              />
+              <span className="font-medium">{m.label}</span>
+            </label>
+          ))}
+        </div>
       </div>
 
       <div className="space-y-2">

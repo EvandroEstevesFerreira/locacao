@@ -28,7 +28,7 @@ export default async function EditarUsuarioPage({
 
   const [{ data: usuario }, { data: obras }, { data: vinculos }] =
     await Promise.all([
-      supabase.from("perfil").select("id, nome, email, papel, ativo").eq("id", id).single(),
+      supabase.from("perfil").select("id, nome, email, papel, ativo, modulos").eq("id", id).single(),
       supabase.from("obra").select("id, codigo, nome").order("codigo"),
       supabase.from("obra_usuario").select("obra_id").eq("perfil_id", id),
     ]);
@@ -53,6 +53,7 @@ export default async function EditarUsuarioPage({
             }}
             obras={obras ?? []}
             obrasDoUsuario={(vinculos ?? []).map((v) => v.obra_id)}
+            modulosDoUsuario={(usuario.modulos as string[] | null) ?? null}
           />
         </CardContent>
       </Card>

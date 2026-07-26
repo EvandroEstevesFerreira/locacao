@@ -3,11 +3,22 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { NAV_ITEMS } from "@/lib/nav";
+import { moduloLiberado } from "@/lib/modulos";
 import { cn } from "@/lib/utils";
 
-export function Sidebar({ isMaster = false }: { isMaster?: boolean }) {
+export function Sidebar({
+  isMaster = false,
+  modulos = null,
+}: {
+  isMaster?: boolean;
+  modulos?: string[] | null;
+}) {
   const pathname = usePathname();
-  const itens = NAV_ITEMS.filter((item) => !item.apenasMaster || isMaster);
+  const itens = NAV_ITEMS.filter((item) => {
+    if (item.apenasMaster && !isMaster) return false;
+    if (item.modulo && !moduloLiberado(modulos, isMaster, item.modulo)) return false;
+    return true;
+  });
 
   return (
     <nav className="flex flex-col gap-1 p-3">
