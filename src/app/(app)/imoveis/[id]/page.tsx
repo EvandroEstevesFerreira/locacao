@@ -58,6 +58,7 @@ type Contrato = {
   data_fim: string | null;
   valor_aluguel: number;
   valor_condominio: number;
+  valor_iptu: number;
   dia_vencimento: number | null;
   indice_reajuste: string | null;
   data_reajuste: string | null;
@@ -252,6 +253,7 @@ export default async function ImovelDetalhePage({
                   data_fim: c.data_fim,
                   valor_aluguel: c.valor_aluguel,
                   valor_condominio: c.valor_condominio,
+                  valor_iptu: c.valor_iptu,
                   dia_vencimento: c.dia_vencimento,
                   indice_reajuste: c.indice_reajuste,
                   data_reajuste: c.data_reajuste,
@@ -269,6 +271,11 @@ export default async function ImovelDetalhePage({
                 <div className="grid gap-3 text-sm sm:grid-cols-3">
                   <Campo label="Aluguel" valor={formatarBRL(Number(c.valor_aluguel))} />
                   <Campo label="Condomínio" valor={formatarBRL(Number(c.valor_condominio))} />
+                  <Campo label="IPTU" valor={formatarBRL(Number(c.valor_iptu))} />
+                  <Campo
+                    label="Total/mês"
+                    valor={formatarBRL(Number(c.valor_aluguel) + Number(c.valor_condominio) + Number(c.valor_iptu))}
+                  />
                   <Campo label="Vencimento" valor={c.dia_vencimento ? `dia ${c.dia_vencimento}` : null} />
                   <Campo label="Reajuste" valor={[c.indice_reajuste, c.data_reajuste ? formatarData(c.data_reajuste) : null].filter(Boolean).join(" · ")} />
                   <Campo label="Caução" valor={c.caucao_valor != null ? `${formatarBRL(Number(c.caucao_valor))}${c.caucao_status ? ` (${STATUS_CAUCAO_INFO[c.caucao_status as StatusCaucao]})` : ""}` : null} />

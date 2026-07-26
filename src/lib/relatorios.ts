@@ -351,12 +351,12 @@ async function avarias(
 // ===========================================================================
 // Relatórios do módulo Imóveis (Fase 6)
 // ===========================================================================
-type Vig = { valor_aluguel: number; valor_condominio: number; vigente: boolean };
+type Vig = { valor_aluguel: number; valor_condominio: number; valor_iptu: number; vigente: boolean };
 
 async function imoveisCusto(supabase: DB, filtros: FiltrosRelatorio): Promise<Relatorio> {
   const { data } = await supabase
     .from("imovel")
-    .select("apelido, tipo, obra_id, obra:obra_id(codigo), contrato_imovel(valor_aluguel, valor_condominio, vigente)")
+    .select("apelido, tipo, obra_id, obra:obra_id(codigo), contrato_imovel(valor_aluguel, valor_condominio, valor_iptu, vigente)")
     .order("apelido");
   const linhas = (data ?? [])
     .filter((i: Record<string, unknown>) => !filtros.obra_id || i.obra_id === filtros.obra_id)
@@ -365,13 +365,15 @@ async function imoveisCusto(supabase: DB, filtros: FiltrosRelatorio): Promise<Re
       const vig = ((i.contrato_imovel as Vig[]) ?? []).find((c) => c.vigente);
       const aluguel = vig ? Number(vig.valor_aluguel) : 0;
       const cond = vig ? Number(vig.valor_condominio) : 0;
+      const iptu = vig ? Number(vig.valor_iptu) : 0;
       return {
         imovel: i.apelido as string,
         tipo: tipoImovelLabel(i.tipo as string),
         obra: obra?.codigo ?? "—",
         aluguel,
         condominio: cond,
-        total: aluguel + cond,
+        iptu,
+        total: aluguel + cond + iptu,
       };
     });
   return {
@@ -383,6 +385,7 @@ async function imoveisCusto(supabase: DB, filtros: FiltrosRelatorio): Promise<Re
       { key: "obra", label: "Obra", tipo: "texto" },
       { key: "aluguel", label: "Aluguel", tipo: "moeda" },
       { key: "condominio", label: "Condomínio", tipo: "moeda" },
+      { key: "iptu", label: "IPTU", tipo: "moeda" },
       { key: "total", label: "Total/mês", tipo: "moeda" },
     ],
     linhas,
