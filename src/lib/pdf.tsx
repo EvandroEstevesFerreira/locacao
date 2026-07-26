@@ -318,3 +318,84 @@ export function DocumentoVistoria({ v }: { v: VistoriaPdf }) {
     </Document>
   );
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Documento de texto genérico (Imóveis): contrato e termo de responsabilidade
+// ═══════════════════════════════════════════════════════════════════════════
+
+const docStyles = StyleSheet.create({
+  page: { padding: 40, fontSize: 11, fontFamily: "Helvetica", color: "#1d1f20", lineHeight: 1.5 },
+  marca: { fontSize: 16, fontFamily: "Helvetica-Bold", letterSpacing: 1 },
+  eyebrow: { fontSize: 8, color: ACENTO, letterSpacing: 2, textTransform: "uppercase", marginBottom: 14 },
+  titulo: { fontSize: 16, fontFamily: "Helvetica-Bold", textAlign: "center", marginBottom: 16 },
+  infoBox: { border: "1 solid #cfcfd2", padding: 10, marginBottom: 16 },
+  infoRow: { flexDirection: "row", marginBottom: 3 },
+  infoLabel: { width: "35%", fontSize: 9, color: "#5d5d60" },
+  infoValor: { width: "65%", fontSize: 10 },
+  paragrafo: { marginBottom: 10, textAlign: "justify" },
+  assRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 48 },
+  assCol: { width: "45%" },
+  assLinha: { borderTop: "1 solid #1d1f20", paddingTop: 3, textAlign: "center" },
+  assNome: { fontSize: 10 },
+  assRole: { fontSize: 8, color: "#8a8a8d" },
+  local: { marginTop: 32, fontSize: 10 },
+});
+
+export type InfoLinha = { label: string; valor: string };
+export type Assinatura = { nome: string; papel: string };
+
+export function DocumentoTexto({
+  orgNome,
+  eyebrow,
+  titulo,
+  infos,
+  paragrafos,
+  assinaturas,
+  localData,
+}: {
+  orgNome: string;
+  eyebrow: string;
+  titulo: string;
+  infos: InfoLinha[];
+  paragrafos: string[];
+  assinaturas: Assinatura[];
+  localData: string;
+}) {
+  return (
+    <Document>
+      <Page size="A4" style={docStyles.page}>
+        <Text style={docStyles.marca}>SISTENGE</Text>
+        <Text style={docStyles.eyebrow}>{eyebrow} · {orgNome}</Text>
+        <Text style={docStyles.titulo}>{titulo}</Text>
+
+        {infos.length > 0 ? (
+          <View style={docStyles.infoBox}>
+            {infos.map((i, idx) => (
+              <View key={idx} style={docStyles.infoRow}>
+                <Text style={docStyles.infoLabel}>{i.label}</Text>
+                <Text style={docStyles.infoValor}>{i.valor}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+
+        {paragrafos.map((p, idx) => (
+          <Text key={idx} style={docStyles.paragrafo}>{p}</Text>
+        ))}
+
+        <Text style={docStyles.local}>{localData}</Text>
+
+        <View style={docStyles.assRow}>
+          {assinaturas.map((a, idx) => (
+            <View key={idx} style={docStyles.assCol}>
+              <View style={docStyles.assLinha}>
+                <Text style={docStyles.assNome}>{a.nome || "—"}</Text>
+                <Text style={docStyles.assRole}>{a.papel}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+      </Page>
+    </Document>
+  );
+}

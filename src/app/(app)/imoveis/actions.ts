@@ -402,6 +402,44 @@ export async function salvarAnexoOcorrencia(
   revalidatePath(`/imoveis/${imovelId}`);
 }
 
+// ---------------------------------------------------------------------------
+// Fase 4: ocupantes
+// ---------------------------------------------------------------------------
+export async function salvarOcupante(
+  _prev: ImovelFormState,
+  formData: FormData,
+): Promise<ImovelFormState> {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) return { error: "Sem permissão." };
+  const imovelId = txt(formData.get("imovel_id"));
+  const nome = txt(formData.get("nome"));
+  if (!imovelId || !nome) return { error: "Informe o nome do ocupante." };
+  const supabase = await createClient();
+  const { error } = await supabase.from("ocupante_imovel").insert({
+    org_id: perfil.org_id,
+    imovel_id: imovelId,
+    nome,
+    cpf: txt(formData.get("cpf")),
+    contato: txt(formData.get("contato")),
+    data_entrada: txt(formData.get("data_entrada")),
+    data_saida: txt(formData.get("data_saida")),
+  });
+  if (error) return { error: "Não foi possível salvar o ocupante." };
+  revalidatePath(`/imoveis/${imovelId}`);
+  redirect(`/imoveis/${imovelId}`);
+}
+
+export async function excluirOcupante(formData: FormData) {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
+  const id = txt(formData.get("id"));
+  const imovelId = txt(formData.get("imovel_id"));
+  if (!id) return;
+  const supabase = await createClient();
+  await supabase.from("ocupante_imovel").delete().eq("id", id);
+  if (imovelId) revalidatePath(`/imoveis/${imovelId}`);
+}
+
 const CAMPOS_ANEXO = ["anexo_contrato_path", "caucao_comprovante_path"] as const;
 type CampoAnexo = (typeof CAMPOS_ANEXO)[number];
 
