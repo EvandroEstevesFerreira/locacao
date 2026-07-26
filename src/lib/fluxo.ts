@@ -60,6 +60,14 @@ export async function gerarFluxoCaixa(
   if (filtros.obra_id) qc = qc.eq("obra_id", filtros.obra_id);
   const { data: contratos } = await qc;
 
+  // --- Contratos de imóvel vigentes (para projeção da parcela mensal) ---
+  const { data: contratosImovel } = await supabase
+    .from("contrato_imovel")
+    .select(
+      "id, data_inicio, data_fim, valor_aluguel, valor_condominio, valor_iptu, seguro_fianca, seguro_fianca_mensal, imovel:imovel_id(obra_id)",
+    )
+    .eq("vigente", true);
+
   const hojeMes = startOfMonth(new Date());
   let fimMes = addMonths(hojeMes, 1);
 
@@ -85,6 +93,32 @@ export async function gerarFluxoCaixa(
       return { id: c.id as string, custoMensal, inicio, fim };
     },
   );
+
+  // custo mensal projetado dos imóveis (contrato vigente) + janela de vigência
+  const projPorImovel = (contratosImovel ?? [])
+    .filter((c: Record<string, unknown>) => {
+      if (!filtros.obra_id) return true;
+      const imv = c.imovel as { obra_id: string | null } | null;
+      return imv?.obra_id === filtros.obra_id;
+    })
+    .map((c: Record<string, unknown>) => {
+      const custoMensal =
+        Number(c.valor_aluguel) +
+        Number(c.valor_condominio) +
+        Number(c.valor_iptu) +
+        (c.seguro_fianca_mensal ? Number(c.seguro_fianca) : 0);
+      const inicio = c.data_inicio
+        ? startOfMonth(new Date(String(c.data_inicio)))
+        : hojeMes;
+      const fim = c.data_fim
+        ? startOfMonth(new Date(String(c.data_fim)))
+        : addMonths(hojeMes, 11);
+      if (fim > fimMes) fimMes = fim;
+      // prefixo "imovel:" garante id único (não colide com lançamentos por contrato)
+      return { id: `imovel:${c.id}`, custoMensal, inicio, fim };
+    });
+
+  const proj = [...projPorContrato, ...projPorImovel];
 
   // estende o horizonte até o maior vencimento pendente
   for (const l of lancamentos ?? []) {
@@ -116,8 +150,8 @@ export async function gerarFluxoCaixa(
       lancMes.map((l) => l.contrato_id).filter(Boolean),
     );
 
-    // projeção: contratos ativos vigentes no mês SEM lançamento próprio
-    const projetado = projPorContrato
+    // projeção: contratos ativos/imóveis vigentes no mês SEM lançamento próprio
+    const projetado = proj
       .filter(
         (p) =>
           !contratosComLanc.has(p.id) &&
