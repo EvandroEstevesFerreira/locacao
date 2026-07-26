@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { salvarContratoImovel, type ImovelFormState } from "./actions";
 import { STATUS_CAUCAO_INFO, type StatusCaucao } from "@/lib/imoveis";
+import { formatarBRL } from "@/lib/locacao";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +18,7 @@ export type ContratoImovelDados = {
   data_fim?: string | null;
   valor_aluguel?: number | null;
   valor_condominio?: number | null;
+  valor_iptu?: number | null;
   dia_vencimento?: number | null;
   indice_reajuste?: string | null;
   data_reajuste?: string | null;
@@ -40,6 +42,12 @@ export function ContratoImovelForm({
     {},
   );
 
+  const [aluguel, setAluguel] = useState(contrato?.valor_aluguel ?? 0);
+  const [condominio, setCondominio] = useState(contrato?.valor_condominio ?? 0);
+  const [iptu, setIptu] = useState(contrato?.valor_iptu ?? 0);
+  const totalMensal =
+    (Number(aluguel) || 0) + (Number(condominio) || 0) + (Number(iptu) || 0);
+
   return (
     <form action={formAction} className="space-y-4">
       <input type="hidden" name="imovel_id" value={imovelId} />
@@ -56,11 +64,15 @@ export function ContratoImovelForm({
         </div>
         <div className="space-y-2">
           <Label htmlFor="valor_aluguel">Aluguel (R$)</Label>
-          <Input id="valor_aluguel" name="valor_aluguel" type="number" step="0.01" min={0} defaultValue={contrato?.valor_aluguel ?? ""} />
+          <Input id="valor_aluguel" name="valor_aluguel" type="number" step="0.01" min={0} value={aluguel} onChange={(e) => setAluguel(e.target.value === "" ? 0 : Number(e.target.value))} />
         </div>
         <div className="space-y-2">
           <Label htmlFor="valor_condominio">Condomínio (R$)</Label>
-          <Input id="valor_condominio" name="valor_condominio" type="number" step="0.01" min={0} defaultValue={contrato?.valor_condominio ?? ""} />
+          <Input id="valor_condominio" name="valor_condominio" type="number" step="0.01" min={0} value={condominio} onChange={(e) => setCondominio(e.target.value === "" ? 0 : Number(e.target.value))} />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="valor_iptu">IPTU (R$)</Label>
+          <Input id="valor_iptu" name="valor_iptu" type="number" step="0.01" min={0} value={iptu} onChange={(e) => setIptu(e.target.value === "" ? 0 : Number(e.target.value))} />
         </div>
         <div className="space-y-2">
           <Label htmlFor="dia_vencimento">Dia de vencimento</Label>
@@ -74,6 +86,11 @@ export function ContratoImovelForm({
           <Label htmlFor="data_reajuste">Próximo reajuste</Label>
           <Input id="data_reajuste" name="data_reajuste" type="date" defaultValue={contrato?.data_reajuste ?? ""} />
         </div>
+      </div>
+
+      <div className="flex items-center justify-between rounded-lg bg-muted/50 px-4 py-3 text-sm">
+        <span className="text-muted-foreground">Total mensal (aluguel + condomínio + IPTU)</span>
+        <span className="text-base font-semibold">{formatarBRL(totalMensal)}</span>
       </div>
 
       <fieldset className="grid gap-4 border-t pt-4 sm:grid-cols-2">

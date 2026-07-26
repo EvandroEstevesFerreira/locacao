@@ -105,6 +105,7 @@ export async function salvarContratoImovel(
     data_fim: txt(formData.get("data_fim")),
     valor_aluguel: num(formData.get("valor_aluguel")) ?? 0,
     valor_condominio: num(formData.get("valor_condominio")) ?? 0,
+    valor_iptu: num(formData.get("valor_iptu")) ?? 0,
     dia_vencimento: num(formData.get("dia_vencimento")),
     indice_reajuste: txt(formData.get("indice_reajuste")),
     data_reajuste: txt(formData.get("data_reajuste")),
