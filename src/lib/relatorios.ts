@@ -76,7 +76,8 @@ export const TIPOS_RELATORIO: {
   {
     valor: "imoveis_custo",
     label: "Imóveis — custo mensal",
-    descricao: "Aluguel + condomínio (contrato vigente) por imóvel.",
+    descricao:
+      "Aluguel + condomínio + IPTU + seguro fiança (contrato vigente) por imóvel, com subtotal por obra.",
     usaPeriodo: false,
   },
   {
@@ -363,21 +364,21 @@ type Vig = {
 async function imoveisCusto(supabase: DB, filtros: FiltrosRelatorio): Promise<Relatorio> {
   const { data } = await supabase
     .from("imovel")
-    .select("apelido, tipo, obra_id, obra:obra_id(codigo), contrato_imovel(valor_aluguel, valor_condominio, valor_iptu, seguro_fianca, seguro_fianca_mensal, vigente)")
+    .select("apelido, tipo, obra_id, obra:obra_id(codigo, nome), contrato_imovel(valor_aluguel, valor_condominio, valor_iptu, seguro_fianca, seguro_fianca_mensal, vigente)")
     .order("apelido");
   const linhas = (data ?? [])
     .filter((i: Record<string, unknown>) => !filtros.obra_id || i.obra_id === filtros.obra_id)
     .map((i: Record<string, unknown>) => {
-      const obra = i.obra as { codigo: string } | null;
+      const obra = i.obra as { codigo: string; nome: string } | null;
       const vig = ((i.contrato_imovel as Vig[]) ?? []).find((c) => c.vigente);
       const aluguel = vig ? Number(vig.valor_aluguel) : 0;
       const cond = vig ? Number(vig.valor_condominio) : 0;
       const iptu = vig ? Number(vig.valor_iptu) : 0;
       const seguro = vig && vig.seguro_fianca_mensal ? Number(vig.seguro_fianca) : 0;
       return {
+        obra: obra ? `${obra.codigo} — ${obra.nome}` : "Sem obra",
         imovel: i.apelido as string,
         tipo: tipoImovelLabel(i.tipo as string),
-        obra: obra?.codigo ?? "—",
         aluguel,
         condominio: cond,
         iptu,
@@ -387,11 +388,11 @@ async function imoveisCusto(supabase: DB, filtros: FiltrosRelatorio): Promise<Re
     });
   return {
     titulo: "Imóveis — custo mensal",
-    grafico: { labelKey: "imovel", valorKey: "total" },
+    agruparPor: "obra",
     colunas: [
+      { key: "obra", label: "Obra", tipo: "texto" },
       { key: "imovel", label: "Imóvel", tipo: "texto" },
       { key: "tipo", label: "Tipo", tipo: "texto" },
-      { key: "obra", label: "Obra", tipo: "texto" },
       { key: "aluguel", label: "Aluguel", tipo: "moeda" },
       { key: "condominio", label: "Condomínio", tipo: "moeda" },
       { key: "iptu", label: "IPTU", tipo: "moeda" },
