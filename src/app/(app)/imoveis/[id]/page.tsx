@@ -34,12 +34,17 @@ import { ConfirmDelete } from "@/components/confirm-delete";
 import { ContratoImovelForm } from "../contrato-imovel-form";
 import { ImovelAnexoUploader } from "../imovel-anexo-uploader";
 import { ContaConsumoForm } from "../conta-consumo-form";
+import { ReparoForm, OcorrenciaForm, VistoriaImovelForm } from "../fase3-forms";
+import { ImovelUpload } from "../imovel-upload";
 import {
   excluirImovel,
   excluirContratoImovel,
   removerAnexoImovelContrato,
   alternarPagoConsumo,
   excluirContaConsumo,
+  excluirReparo,
+  excluirOcorrencia,
+  excluirVistoriaImovel,
 } from "../actions";
 
 export const metadata = { title: "Imóvel — Loca" };
@@ -115,6 +120,33 @@ export default async function ImovelDetalhePage({
   };
   const contas = (contasData ?? []) as Conta[];
   const totalConsumo = contas.reduce((s, c) => s + Number(c.valor), 0);
+
+  // --- Fase 3: reparos, ocorrências, vistorias ---
+  const [{ data: reparosData }, { data: ocorrenciasData }, { data: vistoriasData }] =
+    await Promise.all([
+      supabase.from("reparo_imovel").select("id, data, descricao, valor, executor, anexo_path").eq("imovel_id", id).order("data", { ascending: false }),
+      supabase.from("ocorrencia_imovel").select("id, data, tipo, descricao, anexo_path").eq("imovel_id", id).order("data", { ascending: false }),
+      supabase.from("vistoria_imovel").select("id, data, responsavel, observacoes, vistoria_imovel_foto(id, path)").eq("imovel_id", id).order("data", { ascending: false }),
+    ]);
+  type Reparo = { id: string; data: string; descricao: string; valor: number; executor: string | null; anexo_path: string | null };
+  type Ocorrencia = { id: string; data: string; tipo: string; descricao: string; anexo_path: string | null };
+  type VistoriaImv = { id: string; data: string; responsavel: string | null; observacoes: string | null; vistoria_imovel_foto: { id: string; path: string }[] };
+  const reparos = (reparosData ?? []) as Reparo[];
+  const ocorrencias = (ocorrenciasData ?? []) as Ocorrencia[];
+  const vistorias = (vistoriasData ?? []) as VistoriaImv[];
+  const totalReparos = reparos.reduce((s, r) => s + Number(r.valor), 0);
+
+  const paths3 = [
+    ...reparos.map((r) => r.anexo_path),
+    ...ocorrencias.map((o) => o.anexo_path),
+    ...vistorias.flatMap((v) => v.vistoria_imovel_foto.map((f) => f.path)),
+  ].filter(Boolean) as string[];
+  await Promise.all(
+    paths3.map(async (p) => {
+      const { data } = await supabase.storage.from("imoveis").createSignedUrl(p, 3600);
+      if (data?.signedUrl) urlDe.set(p, data.signedUrl);
+    }),
+  );
 
   const st = STATUS_IMOVEL_INFO[imovel.status as StatusImovel];
 
@@ -324,6 +356,130 @@ export default async function ImovelDetalhePage({
                 ))}
               </TableBody>
             </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Reparos */}
+      {podeEditar ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base"><Plus className="size-4" /> Registrar reparo</CardTitle>
+          </CardHeader>
+          <CardContent><ReparoForm imovelId={id} /></CardContent>
+        </Card>
+      ) : null}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center justify-between text-base">
+            <span>Reparos ({reparos.length})</span>
+            <span className="text-sm font-normal text-muted-foreground">Total: {formatarBRL(totalReparos)}</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {reparos.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhum reparo registrado.</p>
+          ) : (
+            reparos.map((r) => (
+              <div key={r.id} className="flex flex-wrap items-center justify-between gap-2 border-b pb-3 last:border-0">
+                <div className="min-w-0">
+                  <p className="font-medium">{r.descricao}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {formatarData(r.data)} · {formatarBRL(Number(r.valor))}
+                    {r.executor ? ` · ${r.executor}` : ""}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {r.anexo_path && urlDe.get(r.anexo_path) ? (
+                    <a href={urlDe.get(r.anexo_path)} target="_blank" rel="noopener" className="inline-flex items-center gap-1 text-sm text-primary hover:underline"><FileText className="size-4" /> Anexo</a>
+                  ) : (
+                    <ImovelUpload kind="reparo" registroId={r.id} imovelId={id} orgId={orgId} rotulo="Anexar" />
+                  )}
+                  <ConfirmDelete action={excluirReparo} id={r.id} hidden={{ imovel_id: id }} />
+                </div>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Ocorrências */}
+      {podeEditar ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base"><Plus className="size-4" /> Registrar ocorrência</CardTitle>
+            <CardDescription>Avarias, desentendimentos, reparos e afins.</CardDescription>
+          </CardHeader>
+          <CardContent><OcorrenciaForm imovelId={id} /></CardContent>
+        </Card>
+      ) : null}
+      <Card>
+        <CardHeader className="pb-2"><CardTitle className="text-base">Ocorrências ({ocorrencias.length})</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          {ocorrencias.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhuma ocorrência.</p>
+          ) : (
+            ocorrencias.map((o) => (
+              <div key={o.id} className="flex flex-wrap items-center justify-between gap-2 border-b pb-3 last:border-0">
+                <div className="min-w-0">
+                  <p className="font-medium capitalize">{o.tipo}</p>
+                  <p className="text-sm text-muted-foreground">{formatarData(o.data)} · {o.descricao}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {o.anexo_path && urlDe.get(o.anexo_path) ? (
+                    <a href={urlDe.get(o.anexo_path)} target="_blank" rel="noopener" className="inline-flex items-center gap-1 text-sm text-primary hover:underline"><FileText className="size-4" /> Anexo</a>
+                  ) : (
+                    <ImovelUpload kind="ocorrencia" registroId={o.id} imovelId={id} orgId={orgId} rotulo="Anexar" />
+                  )}
+                  <ConfirmDelete action={excluirOcorrencia} id={o.id} hidden={{ imovel_id: id }} />
+                </div>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Vistorias */}
+      {podeEditar ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base"><Plus className="size-4" /> Nova vistoria</CardTitle>
+          </CardHeader>
+          <CardContent><VistoriaImovelForm imovelId={id} /></CardContent>
+        </Card>
+      ) : null}
+      <Card>
+        <CardHeader className="pb-2"><CardTitle className="text-base">Vistorias ({vistorias.length})</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          {vistorias.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhuma vistoria.</p>
+          ) : (
+            vistorias.map((v) => (
+              <div key={v.id} className="border border-border p-4">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <div>
+                    <p className="font-medium">{formatarData(v.data)}{v.responsavel ? ` · ${v.responsavel}` : ""}</p>
+                    {v.observacoes ? <p className="text-sm text-muted-foreground">{v.observacoes}</p> : null}
+                  </div>
+                  {podeEditar ? <ConfirmDelete action={excluirVistoriaImovel} id={v.id} hidden={{ imovel_id: id }} /> : null}
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  {v.vistoria_imovel_foto.map((f) =>
+                    urlDe.get(f.path) ? (
+                      <a key={f.id} href={urlDe.get(f.path)} target="_blank" rel="noopener" className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
+                        <FileText className="size-4" /> Foto
+                      </a>
+                    ) : null,
+                  )}
+                  {podeEditar ? (
+                    <ImovelUpload kind="vistoria_foto" registroId={v.id} imovelId={id} orgId={orgId} rotulo="Adicionar foto" />
+                  ) : null}
+                  {v.vistoria_imovel_foto.length === 0 && !podeEditar ? (
+                    <span className="text-sm text-muted-foreground">Sem fotos</span>
+                  ) : null}
+                </div>
+              </div>
+            ))
           )}
         </CardContent>
       </Card>
