@@ -351,12 +351,19 @@ async function avarias(
 // ===========================================================================
 // Relatórios do módulo Imóveis (Fase 6)
 // ===========================================================================
-type Vig = { valor_aluguel: number; valor_condominio: number; valor_iptu: number; vigente: boolean };
+type Vig = {
+  valor_aluguel: number;
+  valor_condominio: number;
+  valor_iptu: number;
+  seguro_fianca: number;
+  seguro_fianca_mensal: boolean;
+  vigente: boolean;
+};
 
 async function imoveisCusto(supabase: DB, filtros: FiltrosRelatorio): Promise<Relatorio> {
   const { data } = await supabase
     .from("imovel")
-    .select("apelido, tipo, obra_id, obra:obra_id(codigo), contrato_imovel(valor_aluguel, valor_condominio, valor_iptu, vigente)")
+    .select("apelido, tipo, obra_id, obra:obra_id(codigo), contrato_imovel(valor_aluguel, valor_condominio, valor_iptu, seguro_fianca, seguro_fianca_mensal, vigente)")
     .order("apelido");
   const linhas = (data ?? [])
     .filter((i: Record<string, unknown>) => !filtros.obra_id || i.obra_id === filtros.obra_id)
@@ -366,6 +373,7 @@ async function imoveisCusto(supabase: DB, filtros: FiltrosRelatorio): Promise<Re
       const aluguel = vig ? Number(vig.valor_aluguel) : 0;
       const cond = vig ? Number(vig.valor_condominio) : 0;
       const iptu = vig ? Number(vig.valor_iptu) : 0;
+      const seguro = vig && vig.seguro_fianca_mensal ? Number(vig.seguro_fianca) : 0;
       return {
         imovel: i.apelido as string,
         tipo: tipoImovelLabel(i.tipo as string),
@@ -373,7 +381,8 @@ async function imoveisCusto(supabase: DB, filtros: FiltrosRelatorio): Promise<Re
         aluguel,
         condominio: cond,
         iptu,
-        total: aluguel + cond + iptu,
+        seguro,
+        total: aluguel + cond + iptu + seguro,
       };
     });
   return {
@@ -386,6 +395,7 @@ async function imoveisCusto(supabase: DB, filtros: FiltrosRelatorio): Promise<Re
       { key: "aluguel", label: "Aluguel", tipo: "moeda" },
       { key: "condominio", label: "Condomínio", tipo: "moeda" },
       { key: "iptu", label: "IPTU", tipo: "moeda" },
+      { key: "seguro", label: "Seguro fiança", tipo: "moeda" },
       { key: "total", label: "Total/mês", tipo: "moeda" },
     ],
     linhas,

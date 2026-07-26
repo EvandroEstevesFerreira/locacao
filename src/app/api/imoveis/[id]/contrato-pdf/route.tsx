@@ -18,7 +18,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
   const { data: imovel } = await supabase
     .from("imovel")
-    .select("apelido, tipo, endereco, cidade, uf, proprietario_nome, org_id, contrato_imovel(data_inicio, data_fim, valor_aluguel, valor_condominio, valor_iptu, dia_vencimento, indice_reajuste, caucao_valor, vigente)")
+    .select("apelido, tipo, endereco, cidade, uf, proprietario_nome, org_id, contrato_imovel(data_inicio, data_fim, valor_aluguel, valor_condominio, valor_iptu, seguro_fianca, seguro_fianca_mensal, dia_vencimento, indice_reajuste, caucao_valor, vigente)")
     .eq("id", id)
     .single();
   if (!imovel) return NextResponse.json({ error: "Imóvel não encontrado." }, { status: 404 });
@@ -28,7 +28,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
   const contratos = (imovel.contrato_imovel ?? []) as Array<{
     data_inicio: string | null; data_fim: string | null; valor_aluguel: number;
-    valor_condominio: number; valor_iptu: number; dia_vencimento: number | null;
+    valor_condominio: number; valor_iptu: number; seguro_fianca: number;
+    seguro_fianca_mensal: boolean; dia_vencimento: number | null;
     indice_reajuste: string | null; caucao_valor: number | null; vigente: boolean;
   }>;
   const c = contratos.find((x) => x.vigente) ?? contratos[0] ?? null;
@@ -45,7 +46,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       { label: "Aluguel mensal", valor: formatarBRL(Number(c.valor_aluguel)) },
       { label: "Condomínio", valor: formatarBRL(Number(c.valor_condominio)) },
       { label: "IPTU", valor: formatarBRL(Number(c.valor_iptu)) },
-      { label: "Total mensal", valor: formatarBRL(Number(c.valor_aluguel) + Number(c.valor_condominio) + Number(c.valor_iptu)) },
+      { label: "Seguro fiança", valor: `${formatarBRL(Number(c.seguro_fianca))}${c.seguro_fianca_mensal ? "" : " (não somado à parcela)"}` },
+      { label: "Total mensal", valor: formatarBRL(Number(c.valor_aluguel) + Number(c.valor_condominio) + Number(c.valor_iptu) + (c.seguro_fianca_mensal ? Number(c.seguro_fianca) : 0)) },
       { label: "Vencimento", valor: c.dia_vencimento ? `dia ${c.dia_vencimento}` : "—" },
     );
     if (c.caucao_valor != null) infos.push({ label: "Caução", valor: formatarBRL(Number(c.caucao_valor)) });
@@ -54,9 +56,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const aluguel = c ? formatarBRL(Number(c.valor_aluguel)) : "—";
   const cond = c ? formatarBRL(Number(c.valor_condominio)) : "R$ 0,00";
   const iptu = c ? formatarBRL(Number(c.valor_iptu)) : "R$ 0,00";
+  const seguroTxt =
+    c && Number(c.seguro_fianca) > 0
+      ? ` e seguro fiança de ${formatarBRL(Number(c.seguro_fianca))}${c.seguro_fianca_mensal ? "" : " (não incluído na parcela mensal)"}`
+      : "";
   const paragrafos = [
     `Pelo presente instrumento particular, ${orgNome} (doravante LOCATÁRIA) e ${imovel.proprietario_nome ?? "o LOCADOR"} (doravante LOCADOR) ajustam a locação do imóvel acima identificado, nas condições a seguir.`,
-    `O valor do aluguel mensal é de ${aluguel}, acrescido de condomínio de ${cond} e IPTU de ${iptu}${c?.dia_vencimento ? `, com vencimento todo dia ${c.dia_vencimento} de cada mês` : ""}. ${c?.indice_reajuste ? `O reajuste observará o índice ${c.indice_reajuste}, na periodicidade legal.` : ""}`,
+    `O valor do aluguel mensal é de ${aluguel}, acrescido de condomínio de ${cond} e IPTU de ${iptu}${seguroTxt}${c?.dia_vencimento ? `, com vencimento todo dia ${c.dia_vencimento} de cada mês` : ""}. ${c?.indice_reajuste ? `O reajuste observará o índice ${c.indice_reajuste}, na periodicidade legal.` : ""}`,
     "A LOCATÁRIA compromete-se a conservar o imóvel, comunicar avarias e devolvê-lo, ao término da locação, no estado em que o recebeu, salvo o desgaste natural pelo uso regular.",
     "Eventuais danos causados ao imóvel, além do desgaste natural, serão de responsabilidade da LOCATÁRIA, apurados em vistoria de devolução.",
     "As partes elegem o foro da comarca do imóvel para dirimir questões oriundas deste contrato.",

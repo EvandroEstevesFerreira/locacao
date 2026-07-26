@@ -19,6 +19,8 @@ export type ContratoImovelDados = {
   valor_aluguel?: number | null;
   valor_condominio?: number | null;
   valor_iptu?: number | null;
+  seguro_fianca?: number | null;
+  seguro_fianca_mensal?: boolean;
   dia_vencimento?: number | null;
   indice_reajuste?: string | null;
   data_reajuste?: string | null;
@@ -45,8 +47,15 @@ export function ContratoImovelForm({
   const [aluguel, setAluguel] = useState(contrato?.valor_aluguel ?? 0);
   const [condominio, setCondominio] = useState(contrato?.valor_condominio ?? 0);
   const [iptu, setIptu] = useState(contrato?.valor_iptu ?? 0);
+  const [seguro, setSeguro] = useState(contrato?.seguro_fianca ?? 0);
+  const [seguroMensal, setSeguroMensal] = useState(
+    contrato?.seguro_fianca_mensal ?? true,
+  );
   const totalMensal =
-    (Number(aluguel) || 0) + (Number(condominio) || 0) + (Number(iptu) || 0);
+    (Number(aluguel) || 0) +
+    (Number(condominio) || 0) +
+    (Number(iptu) || 0) +
+    (seguroMensal ? Number(seguro) || 0 : 0);
 
   return (
     <form action={formAction} className="space-y-4">
@@ -75,6 +84,10 @@ export function ContratoImovelForm({
           <Input id="valor_iptu" name="valor_iptu" type="number" step="0.01" min={0} value={iptu} onChange={(e) => setIptu(e.target.value === "" ? 0 : Number(e.target.value))} />
         </div>
         <div className="space-y-2">
+          <Label htmlFor="seguro_fianca">Seguro fiança (R$)</Label>
+          <Input id="seguro_fianca" name="seguro_fianca" type="number" step="0.01" min={0} value={seguro} onChange={(e) => setSeguro(e.target.value === "" ? 0 : Number(e.target.value))} />
+        </div>
+        <div className="space-y-2">
           <Label htmlFor="dia_vencimento">Dia de vencimento</Label>
           <Input id="dia_vencimento" name="dia_vencimento" type="number" min={1} max={31} defaultValue={contrato?.dia_vencimento ?? ""} />
         </div>
@@ -88,8 +101,21 @@ export function ContratoImovelForm({
         </div>
       </div>
 
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          name="seguro_fianca_mensal"
+          checked={seguroMensal}
+          onChange={(e) => setSeguroMensal(e.target.checked)}
+          className="size-4"
+        />
+        Somar o seguro fiança na parcela mensal
+      </label>
+
       <div className="flex items-center justify-between rounded-lg bg-muted/50 px-4 py-3 text-sm">
-        <span className="text-muted-foreground">Total mensal (aluguel + condomínio + IPTU)</span>
+        <span className="text-muted-foreground">
+          Total mensal (aluguel + condomínio + IPTU{seguroMensal ? " + seguro fiança" : ""})
+        </span>
         <span className="text-base font-semibold">{formatarBRL(totalMensal)}</span>
       </div>
 

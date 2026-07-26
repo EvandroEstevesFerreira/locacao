@@ -59,6 +59,8 @@ type Contrato = {
   valor_aluguel: number;
   valor_condominio: number;
   valor_iptu: number;
+  seguro_fianca: number;
+  seguro_fianca_mensal: boolean;
   dia_vencimento: number | null;
   indice_reajuste: string | null;
   data_reajuste: string | null;
@@ -274,6 +276,8 @@ export default async function ImovelDetalhePage({
                   valor_aluguel: c.valor_aluguel,
                   valor_condominio: c.valor_condominio,
                   valor_iptu: c.valor_iptu,
+                  seguro_fianca: c.seguro_fianca,
+                  seguro_fianca_mensal: c.seguro_fianca_mensal,
                   dia_vencimento: c.dia_vencimento,
                   indice_reajuste: c.indice_reajuste,
                   data_reajuste: c.data_reajuste,
@@ -293,8 +297,17 @@ export default async function ImovelDetalhePage({
                   <Campo label="Condomínio" valor={formatarBRL(Number(c.valor_condominio))} />
                   <Campo label="IPTU" valor={formatarBRL(Number(c.valor_iptu))} />
                   <Campo
+                    label="Seguro fiança"
+                    valor={`${formatarBRL(Number(c.seguro_fianca))}${c.seguro_fianca_mensal ? "" : " (não somado)"}`}
+                  />
+                  <Campo
                     label="Total/mês"
-                    valor={formatarBRL(Number(c.valor_aluguel) + Number(c.valor_condominio) + Number(c.valor_iptu))}
+                    valor={formatarBRL(
+                      Number(c.valor_aluguel) +
+                        Number(c.valor_condominio) +
+                        Number(c.valor_iptu) +
+                        (c.seguro_fianca_mensal ? Number(c.seguro_fianca) : 0),
+                    )}
                   />
                   <Campo label="Vencimento" valor={c.dia_vencimento ? `dia ${c.dia_vencimento}` : null} />
                   <Campo label="Reajuste" valor={[c.indice_reajuste, c.data_reajuste ? formatarData(c.data_reajuste) : null].filter(Boolean).join(" · ")} />
