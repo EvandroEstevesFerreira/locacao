@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import Link from "next/link";
 import { criarUsuario, type UsuarioFormState } from "./actions";
 import { PAPEIS, PAPEL_INFO } from "@/lib/permissoes";
+import { MODULOS } from "@/lib/modulos";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -62,6 +63,28 @@ export function UsuarioNovoForm({
         <p className="text-xs text-muted-foreground">
           O usuário entra com esta senha e pode trocá-la depois.
         </p>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Acesso por módulo</Label>
+        <p className="text-xs text-muted-foreground">
+          Marque os módulos que este usuário pode acessar. Se nenhum for marcado,
+          ele terá acesso a todos. O Master sempre acessa tudo.
+        </p>
+        <div className="grid gap-2 rounded-md border p-3 sm:grid-cols-2">
+          {MODULOS.map((m) => (
+            <label key={m.chave} className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                name="modulos"
+                value={m.chave}
+                defaultChecked
+                className="size-4"
+              />
+              <span className="font-medium">{m.label}</span>
+            </label>
+          ))}
+        </div>
       </div>
 
       <div className="space-y-2">

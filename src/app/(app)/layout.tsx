@@ -23,9 +23,12 @@ export default async function AppLayout({
 
   const { data: perfil } = await supabase
     .from("perfil")
-    .select("nome, email, papel")
+    .select("nome, email, papel, modulos")
     .eq("id", user.id)
     .single();
+
+  const isMaster = perfil?.papel === "master";
+  const modulos = (perfil?.modulos as string[] | null) ?? null;
 
   return (
     <div className="grid min-h-dvh grid-rows-[auto_1fr] md:grid-cols-[240px_1fr] md:grid-rows-1">
@@ -38,7 +41,7 @@ export default async function AppLayout({
           <div className="eyebrow mt-1.5">Locações de obra</div>
         </div>
         <div className="flex-1 overflow-y-auto">
-          <Sidebar isMaster={perfil?.papel === "master"} />
+          <Sidebar isMaster={isMaster} modulos={modulos} />
         </div>
         {/* Rodapé: usuário logado + perfil + sair */}
         <div className="border-t p-3">
@@ -99,7 +102,7 @@ export default async function AppLayout({
         {/* Navegação inferior (mobile) */}
         <nav className="border-t bg-card md:hidden">
           <div className="overflow-x-auto">
-            <Sidebar isMaster={perfil?.papel === "master"} />
+            <Sidebar isMaster={isMaster} modulos={modulos} />
           </div>
         </nav>
       </div>

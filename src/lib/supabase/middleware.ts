@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { moduloDaRota, moduloLiberado } from "@/lib/modulos";
 
 /**
  * Renova a sessão do usuário a cada requisição e protege rotas.
@@ -48,6 +49,30 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     return NextResponse.redirect(url);
+  }
+
+  // Acesso modular por usuário: bloqueia navegação direta (GET) a um módulo
+  // não liberado. Mutações (server actions/POST) já são protegidas por papel +
+  // RLS. Fail-open: qualquer erro de leitura não tranca o usuário.
+  if (user && request.method === "GET") {
+    const modulo = moduloDaRota(request.nextUrl.pathname);
+    if (modulo) {
+      const uid = user.sub as string | undefined;
+      if (uid) {
+        const { data: perfil } = await supabase
+          .from("perfil")
+          .select("papel, modulos")
+          .eq("id", uid)
+          .single();
+        const isMaster = perfil?.papel === "master";
+        const modulos = (perfil?.modulos as string[] | null) ?? null;
+        if (perfil && !moduloLiberado(modulos, isMaster, modulo)) {
+          const url = request.nextUrl.clone();
+          url.pathname = "/";
+          return NextResponse.redirect(url);
+        }
+      }
+    }
   }
 
   return supabaseResponse;

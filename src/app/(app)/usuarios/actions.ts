@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentPerfil, PAPEIS, PAPEL_INFO, type Papel } from "@/lib/auth";
+import { normalizarModulos } from "@/lib/modulos";
 import {
   enviarEmail,
   emailConfigurado,
@@ -26,6 +27,15 @@ async function exigirMaster() {
 
 function obrasDoForm(formData: FormData) {
   return formData.getAll("obras").map(String).filter(Boolean);
+}
+
+/**
+ * Módulos marcados no form. Lista vazia → null (= acesso a todos os módulos),
+ * evitando trancar o usuário fora de tudo por engano.
+ */
+function modulosDoForm(formData: FormData): string[] | null {
+  const marcados = normalizarModulos(formData.getAll("modulos").map(String));
+  return marcados.length > 0 ? marcados : null;
 }
 
 async function sincronizarObras(
@@ -104,6 +114,7 @@ export async function criarUsuario(
       papel: parsed.data.papel,
       nome: parsed.data.nome,
       ativo: true,
+      modulos: modulosDoForm(formData),
     })
     .eq("id", uid);
 
@@ -183,7 +194,12 @@ export async function salvarUsuario(
   const supabase = await createClient();
   const { error } = await supabase
     .from("perfil")
-    .update({ papel: parsed.data.papel, nome: parsed.data.nome, ativo })
+    .update({
+      papel: parsed.data.papel,
+      nome: parsed.data.nome,
+      ativo,
+      modulos: modulosDoForm(formData),
+    })
     .eq("id", parsed.data.id);
   if (error) return { error: "Não foi possível salvar. Tente novamente." };
 
