@@ -254,6 +254,154 @@ export async function excluirContaConsumo(formData: FormData) {
   if (imovelId) revalidatePath(`/imoveis/${imovelId}`);
 }
 
+// ---------------------------------------------------------------------------
+// Fase 3: vistorias, reparos e ocorrências
+// ---------------------------------------------------------------------------
+const TIPOS_OCORRENCIA = ["avaria", "reparo", "desentendimento", "outro"];
+
+export async function salvarReparo(
+  _prev: ImovelFormState,
+  formData: FormData,
+): Promise<ImovelFormState> {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) return { error: "Sem permissão." };
+  const imovelId = txt(formData.get("imovel_id"));
+  const data = txt(formData.get("data"));
+  const descricao = txt(formData.get("descricao"));
+  if (!imovelId || !data || !descricao)
+    return { error: "Preencha data e descrição do reparo." };
+  const supabase = await createClient();
+  const { error } = await supabase.from("reparo_imovel").insert({
+    org_id: perfil.org_id,
+    imovel_id: imovelId,
+    data,
+    descricao,
+    valor: num(formData.get("valor")) ?? 0,
+    executor: txt(formData.get("executor")),
+  });
+  if (error) return { error: "Não foi possível salvar o reparo." };
+  revalidatePath(`/imoveis/${imovelId}`);
+  redirect(`/imoveis/${imovelId}`);
+}
+
+export async function excluirReparo(formData: FormData) {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
+  const id = txt(formData.get("id"));
+  const imovelId = txt(formData.get("imovel_id"));
+  if (!id) return;
+  const supabase = await createClient();
+  await supabase.from("reparo_imovel").delete().eq("id", id);
+  if (imovelId) revalidatePath(`/imoveis/${imovelId}`);
+}
+
+export async function salvarOcorrencia(
+  _prev: ImovelFormState,
+  formData: FormData,
+): Promise<ImovelFormState> {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) return { error: "Sem permissão." };
+  const imovelId = txt(formData.get("imovel_id"));
+  const data = txt(formData.get("data"));
+  const descricao = txt(formData.get("descricao"));
+  if (!imovelId || !data || !descricao)
+    return { error: "Preencha data e descrição da ocorrência." };
+  const tipoRaw = String(formData.get("tipo") ?? "outro");
+  const supabase = await createClient();
+  const { error } = await supabase.from("ocorrencia_imovel").insert({
+    org_id: perfil.org_id,
+    imovel_id: imovelId,
+    data,
+    tipo: TIPOS_OCORRENCIA.includes(tipoRaw) ? tipoRaw : "outro",
+    descricao,
+  });
+  if (error) return { error: "Não foi possível salvar a ocorrência." };
+  revalidatePath(`/imoveis/${imovelId}`);
+  redirect(`/imoveis/${imovelId}`);
+}
+
+export async function excluirOcorrencia(formData: FormData) {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
+  const id = txt(formData.get("id"));
+  const imovelId = txt(formData.get("imovel_id"));
+  if (!id) return;
+  const supabase = await createClient();
+  await supabase.from("ocorrencia_imovel").delete().eq("id", id);
+  if (imovelId) revalidatePath(`/imoveis/${imovelId}`);
+}
+
+export async function salvarVistoriaImovel(
+  _prev: ImovelFormState,
+  formData: FormData,
+): Promise<ImovelFormState> {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) return { error: "Sem permissão." };
+  const imovelId = txt(formData.get("imovel_id"));
+  const data = txt(formData.get("data"));
+  if (!imovelId || !data) return { error: "Informe a data da vistoria." };
+  const supabase = await createClient();
+  const { error } = await supabase.from("vistoria_imovel").insert({
+    org_id: perfil.org_id,
+    imovel_id: imovelId,
+    data,
+    responsavel: txt(formData.get("responsavel")),
+    observacoes: txt(formData.get("observacoes")),
+  });
+  if (error) return { error: "Não foi possível salvar a vistoria." };
+  revalidatePath(`/imoveis/${imovelId}`);
+  redirect(`/imoveis/${imovelId}`);
+}
+
+export async function excluirVistoriaImovel(formData: FormData) {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
+  const id = txt(formData.get("id"));
+  const imovelId = txt(formData.get("imovel_id"));
+  if (!id) return;
+  const supabase = await createClient();
+  await supabase.from("vistoria_imovel").delete().eq("id", id);
+  if (imovelId) revalidatePath(`/imoveis/${imovelId}`);
+}
+
+// Anexos/fotos da Fase 3 (bucket "imoveis")
+export async function salvarFotoVistoriaImovel(
+  vistoriaId: string,
+  imovelId: string,
+  path: string,
+) {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
+  const supabase = await createClient();
+  await supabase
+    .from("vistoria_imovel_foto")
+    .insert({ org_id: perfil.org_id, vistoria_id: vistoriaId, path });
+  revalidatePath(`/imoveis/${imovelId}`);
+}
+
+export async function salvarAnexoReparo(reparoId: string, imovelId: string, path: string) {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
+  const supabase = await createClient();
+  await supabase.from("reparo_imovel").update({ anexo_path: path }).eq("id", reparoId);
+  revalidatePath(`/imoveis/${imovelId}`);
+}
+
+export async function salvarAnexoOcorrencia(
+  ocorrenciaId: string,
+  imovelId: string,
+  path: string,
+) {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
+  const supabase = await createClient();
+  await supabase
+    .from("ocorrencia_imovel")
+    .update({ anexo_path: path })
+    .eq("id", ocorrenciaId);
+  revalidatePath(`/imoveis/${imovelId}`);
+}
+
 const CAMPOS_ANEXO = ["anexo_contrato_path", "caucao_comprovante_path"] as const;
 type CampoAnexo = (typeof CAMPOS_ANEXO)[number];
 
