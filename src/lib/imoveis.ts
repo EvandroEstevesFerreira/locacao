@@ -41,3 +41,21 @@ export const STATUS_CAUCAO_INFO: Record<StatusCaucao, string> = {
 export function tipoImovelLabel(t: string): string {
   return TIPO_IMOVEL_INFO[t as TipoImovel] ?? t;
 }
+
+// --- Contas de consumo (Fase 2) ---
+export type TipoConsumo = "agua" | "luz" | "gas" | "internet" | "iptu" | "outro";
+
+export const TIPO_CONSUMO_INFO: Record<TipoConsumo, string> = {
+  agua: "Água",
+  luz: "Luz",
+  gas: "Gás",
+  internet: "Internet",
+  iptu: "IPTU",
+  outro: "Outro",
+};
+
+export const TIPOS_CONSUMO = Object.keys(TIPO_CONSUMO_INFO) as TipoConsumo[];
+
+export function tipoConsumoLabel(t: string): string {
+  return TIPO_CONSUMO_INFO[t as TipoConsumo] ?? t;
+}

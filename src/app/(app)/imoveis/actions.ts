@@ -150,6 +150,110 @@ export async function excluirContratoImovel(formData: FormData) {
 // ---------------------------------------------------------------------------
 // Anexos (bucket "imoveis"): contrato do proprietário e comprovante de caução
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Contas de consumo (Fase 2) — mês a mês, com integração opcional ao financeiro
+// ---------------------------------------------------------------------------
+const TIPOS_CONSUMO = ["agua", "luz", "gas", "internet", "iptu", "outro"];
+const CONSUMO_LABEL: Record<string, string> = {
+  agua: "Água", luz: "Luz", gas: "Gás", internet: "Internet", iptu: "IPTU", outro: "Consumo",
+};
+
+export async function salvarContaConsumo(
+  _prev: ImovelFormState,
+  formData: FormData,
+): Promise<ImovelFormState> {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id) return { error: "Sessão inválida." };
+  if (!podeOperar(perfil.papel)) return { error: "Sem permissão." };
+
+  const imovelId = txt(formData.get("imovel_id"));
+  if (!imovelId) return { error: "Imóvel inválido." };
+  const competencia = txt(formData.get("competencia")); // yyyy-MM (input month) ou yyyy-MM-dd
+  if (!competencia) return { error: "Informe a competência (mês)." };
+  const competenciaData = competencia.length === 7 ? `${competencia}-01` : competencia;
+
+  const tipoRaw = String(formData.get("tipo") ?? "outro");
+  const tipo = TIPOS_CONSUMO.includes(tipoRaw) ? tipoRaw : "outro";
+  const valor = num(formData.get("valor")) ?? 0;
+  const vencimento = txt(formData.get("vencimento"));
+  const pago = formData.get("pago") === "on" || formData.get("pago") === "true";
+  const lancar = formData.get("lancar") === "on" || formData.get("lancar") === "true";
+
+  const supabase = await createClient();
+
+  // Integração financeira: cria um lançamento vinculado à obra do imóvel.
+  let lancamentoId: string | null = null;
+  if (lancar) {
+    const { data: imv } = await supabase
+      .from("imovel")
+      .select("apelido, obra_id")
+      .eq("id", imovelId)
+      .single();
+    if (!imv?.obra_id) {
+      return {
+        error:
+          "Para lançar no financeiro, o imóvel precisa estar vinculado a uma obra/centro de custo.",
+      };
+    }
+    const mm = competenciaData.slice(0, 7).split("-").reverse().join("/");
+    const { data: lanc, error: eLanc } = await supabase
+      .from("lancamento_financeiro")
+      .insert({
+        org_id: perfil.org_id,
+        obra_id: imv.obra_id,
+        descricao: `[Imóvel ${imv.apelido}] ${CONSUMO_LABEL[tipo]} ${mm}`,
+        competencia: competenciaData,
+        valor,
+        vencimento: vencimento ?? competenciaData,
+        status: pago ? "pago" : "pendente",
+        data_pagamento: pago ? (vencimento ?? competenciaData) : null,
+      })
+      .select("id")
+      .single();
+    if (eLanc) return { error: "Não foi possível criar o lançamento financeiro." };
+    lancamentoId = lanc?.id ?? null;
+  }
+
+  const { error } = await supabase.from("conta_consumo").insert({
+    org_id: perfil.org_id,
+    imovel_id: imovelId,
+    tipo,
+    competencia: competenciaData,
+    valor,
+    vencimento,
+    pago,
+    lancamento_id: lancamentoId,
+    observacoes: txt(formData.get("observacoes")),
+  });
+  if (error) return { error: "Não foi possível salvar a conta." };
+
+  revalidatePath(`/imoveis/${imovelId}`);
+  redirect(`/imoveis/${imovelId}`);
+}
+
+export async function alternarPagoConsumo(formData: FormData) {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
+  const id = txt(formData.get("id"));
+  const imovelId = txt(formData.get("imovel_id"));
+  const novo = formData.get("novo_status") === "pago";
+  if (!id) return;
+  const supabase = await createClient();
+  await supabase.from("conta_consumo").update({ pago: novo }).eq("id", id);
+  if (imovelId) revalidatePath(`/imoveis/${imovelId}`);
+}
+
+export async function excluirContaConsumo(formData: FormData) {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
+  const id = txt(formData.get("id"));
+  const imovelId = txt(formData.get("imovel_id"));
+  if (!id) return;
+  const supabase = await createClient();
+  await supabase.from("conta_consumo").delete().eq("id", id);
+  if (imovelId) revalidatePath(`/imoveis/${imovelId}`);
+}
+
 const CAMPOS_ANEXO = ["anexo_contrato_path", "caucao_comprovante_path"] as const;
 type CampoAnexo = (typeof CAMPOS_ANEXO)[number];
 
