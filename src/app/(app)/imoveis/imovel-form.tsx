@@ -34,6 +34,12 @@ export type ImovelDados = {
   imobiliaria_nome?: string | null;
   imobiliaria_telefone?: string | null;
   imobiliaria_email?: string | null;
+  banco?: string | null;
+  agencia?: string | null;
+  conta?: string | null;
+  tipo_conta?: string | null;
+  titular_conta?: string | null;
+  pix_chave?: string | null;
   observacoes?: string | null;
 };
 
@@ -137,6 +143,40 @@ export function ImovelForm({
           <div className="space-y-2">
             <Label htmlFor="imobiliaria_email">E-mail</Label>
             <Input id="imobiliaria_email" name="imobiliaria_email" type="email" defaultValue={imovel?.imobiliaria_email ?? ""} />
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset className="space-y-4 border-t pt-4">
+        <legend className="text-sm font-medium">Dados bancários (pagamento ao proprietário)</legend>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="space-y-2">
+            <Label htmlFor="banco">Banco</Label>
+            <Input id="banco" name="banco" defaultValue={imovel?.banco ?? ""} placeholder="Ex.: Itaú, Bradesco" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="agencia">Agência</Label>
+            <Input id="agencia" name="agencia" defaultValue={imovel?.agencia ?? ""} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="conta">Conta</Label>
+            <Input id="conta" name="conta" defaultValue={imovel?.conta ?? ""} placeholder="Nº com dígito" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="tipo_conta">Tipo de conta</Label>
+            <select id="tipo_conta" name="tipo_conta" defaultValue={imovel?.tipo_conta ?? ""} className={selectClasses}>
+              <option value="">— Não informado —</option>
+              <option value="corrente">Corrente</option>
+              <option value="poupanca">Poupança</option>
+            </select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="titular_conta">Titular da conta</Label>
+            <Input id="titular_conta" name="titular_conta" defaultValue={imovel?.titular_conta ?? ""} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="pix_chave">Chave PIX</Label>
+            <Input id="pix_chave" name="pix_chave" defaultValue={imovel?.pix_chave ?? ""} placeholder="CPF/CNPJ, e-mail, telefone ou aleatória" />
           </div>
         </div>
       </fieldset>

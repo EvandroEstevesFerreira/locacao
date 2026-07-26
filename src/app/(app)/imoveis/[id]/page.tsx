@@ -217,6 +217,26 @@ export default async function ImovelDetalhePage({
         </CardContent>
       </Card>
 
+      {/* Dados bancários */}
+      {imovel.banco || imovel.conta || imovel.pix_chave || imovel.titular_conta ? (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Dados bancários</CardTitle>
+            <CardDescription>Pagamento ao proprietário.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 sm:grid-cols-3">
+            <Campo label="Banco" valor={imovel.banco} />
+            <Campo label="Agência" valor={imovel.agencia} />
+            <Campo
+              label="Conta"
+              valor={[imovel.conta, imovel.tipo_conta === "corrente" ? "corrente" : imovel.tipo_conta === "poupanca" ? "poupança" : null].filter(Boolean).join(" · ")}
+            />
+            <Campo label="Titular" valor={imovel.titular_conta} />
+            <Campo label="Chave PIX" valor={imovel.pix_chave} span />
+          </CardContent>
+        </Card>
+      ) : null}
+
       {/* Contratos */}
       {podeEditar ? (
         <Card>
