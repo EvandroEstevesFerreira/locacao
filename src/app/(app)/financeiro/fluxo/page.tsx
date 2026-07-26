@@ -41,7 +41,7 @@ export default async function FluxoCaixaPage({
       <PageHeader
         eyebrow="Financeiro"
         titulo="Fluxo de caixa"
-        descricao="Projeção de desembolsos por mês: lançamentos + contratos ativos."
+        descricao="Projeção de desembolsos por mês: lançamentos + contratos de equipamento e imóveis."
       />
 
       <ObraFilter
@@ -148,8 +148,10 @@ export default async function FluxoCaixaPage({
       </Card>
 
       <p className="text-xs text-muted-foreground">
-        &ldquo;Projetado&rdquo; = custo mensal estimado dos contratos ativos em
-        meses sem lançamento próprio. Onde há lançamento, ele prevalece.
+        &ldquo;Projetado&rdquo; = custo mensal estimado dos contratos de
+        equipamento ativos e da parcela mensal dos imóveis (aluguel + condomínio
+        + IPTU + seguro fiança, quando mensal) em meses sem lançamento próprio.
+        Onde há lançamento, ele prevalece.
       </p>
     </div>
   );
