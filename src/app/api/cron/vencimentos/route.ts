@@ -65,30 +65,43 @@ export async function GET(request: Request) {
     const limite = format(addDays(agora, maxPrazo), "yyyy-MM-dd");
 
     // Candidatos: devoluções, fins de contrato e pagamentos dentro da janela.
-    const [devolucoes, contratos, pagamentos] = await Promise.all([
-      supabase
-        .from("item_locado")
-        .select("id, data_devolucao_prevista, item:item_id(descricao), contrato:contrato_id(numero)")
-        .eq("org_id", cfg.org_id)
-        .eq("status", "em_aberto")
-        .not("data_devolucao_prevista", "is", null)
-        .gte("data_devolucao_prevista", hoje)
-        .lte("data_devolucao_prevista", limite),
-      supabase
-        .from("contrato_locacao")
-        .select("id, numero, data_fim_prevista")
-        .eq("org_id", cfg.org_id)
-        .eq("status", "ativo")
-        .not("data_fim_prevista", "is", null)
-        .gte("data_fim_prevista", hoje)
-        .lte("data_fim_prevista", limite),
-      supabase
-        .from("lancamento_financeiro")
-        .select("id, descricao, valor, vencimento")
-        .eq("org_id", cfg.org_id)
-        .eq("status", "pendente")
-        .lte("vencimento", limite),
-    ]);
+    const [devolucoes, contratos, pagamentos, imovelContratos, imoveisAtivos] =
+      await Promise.all([
+        supabase
+          .from("item_locado")
+          .select("id, data_devolucao_prevista, item:item_id(descricao), contrato:contrato_id(numero)")
+          .eq("org_id", cfg.org_id)
+          .eq("status", "em_aberto")
+          .not("data_devolucao_prevista", "is", null)
+          .gte("data_devolucao_prevista", hoje)
+          .lte("data_devolucao_prevista", limite),
+        supabase
+          .from("contrato_locacao")
+          .select("id, numero, data_fim_prevista")
+          .eq("org_id", cfg.org_id)
+          .eq("status", "ativo")
+          .not("data_fim_prevista", "is", null)
+          .gte("data_fim_prevista", hoje)
+          .lte("data_fim_prevista", limite),
+        supabase
+          .from("lancamento_financeiro")
+          .select("id, descricao, valor, vencimento")
+          .eq("org_id", cfg.org_id)
+          .eq("status", "pendente")
+          .lte("vencimento", limite),
+        // Imóveis: contratos vigentes (fim de contrato / reajuste dentro da janela)
+        supabase
+          .from("contrato_imovel")
+          .select("id, data_fim, data_reajuste, imovel:imovel_id(apelido)")
+          .eq("org_id", cfg.org_id)
+          .eq("vigente", true),
+        // Imóveis ativos + flag de contrato vigente (ausência de contrato)
+        supabase
+          .from("imovel")
+          .select("id, apelido, contrato_imovel(vigente)")
+          .eq("org_id", cfg.org_id)
+          .eq("status", "ativo"),
+      ]);
 
     type Cand = {
       tipo: string;
@@ -138,6 +151,36 @@ export async function GET(request: Request) {
       });
     }
 
+    // Imóveis: fim de contrato e reajuste dentro da janela.
+    for (const ci of imovelContratos.data ?? []) {
+      const imv = ci.imovel as unknown as { apelido: string } | null;
+      const apelido = imv?.apelido ?? "Imóvel";
+      if (ci.data_fim && ci.data_fim >= hoje && ci.data_fim <= limite) {
+        brutos.push({
+          tipo: "imovel_contrato_fim",
+          referencia_id: ci.id,
+          data_referencia: ci.data_fim,
+          linha: {
+            categoria: "Imóvel — fim de contrato",
+            descricao: apelido,
+            data: formatarData(ci.data_fim),
+          },
+        });
+      }
+      if (ci.data_reajuste && ci.data_reajuste >= hoje && ci.data_reajuste <= limite) {
+        brutos.push({
+          tipo: "imovel_reajuste",
+          referencia_id: ci.id,
+          data_referencia: ci.data_reajuste,
+          linha: {
+            categoria: "Imóvel — reajuste de aluguel",
+            descricao: apelido,
+            data: formatarData(ci.data_reajuste),
+          },
+        });
+      }
+    }
+
     // Anexa o marco (dias) a cada candidato; descarta o que não está
     // dentro de nenhum prazo configurado.
     const candidatos: Cand[] = [];
@@ -150,6 +193,27 @@ export async function GET(request: Request) {
       if (marco === null) continue;
       candidatos.push({ ...b, dias: marco });
     }
+
+    // Ausência de contrato: imóvel ativo sem contrato vigente. Não é baseado em
+    // data — avisa uma vez por mês (data_referencia = 1º dia do mês, dias = 0).
+    const mesRef = format(agora, "yyyy-MM-01");
+    for (const im of imoveisAtivos.data ?? []) {
+      const cts = (im.contrato_imovel as { vigente: boolean }[] | null) ?? [];
+      const temVigente = cts.some((c) => c.vigente);
+      if (temVigente) continue;
+      candidatos.push({
+        tipo: "imovel_sem_contrato",
+        referencia_id: im.id as string,
+        data_referencia: mesRef,
+        dias: 0,
+        linha: {
+          categoria: "Imóvel sem contrato",
+          descricao: (im.apelido as string) ?? "Imóvel",
+          data: "—",
+        },
+      });
+    }
+
     if (candidatos.length === 0) continue;
 
     // Remove os que já foram notificados (mesma referência + data + marco).
