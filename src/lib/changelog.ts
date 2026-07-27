@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.12.0";
+export const APP_VERSION = "0.13.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,16 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.13.0",
+    data: "2026-07-27",
+    titulo: "Painel com gráfico e filtro por obra",
+    mudancas: [
+      { tipo: "novo", texto: "Filtro por obra no painel inicial: todos os números e o gráfico respeitam a obra escolhida." },
+      { tipo: "novo", texto: "Gráfico de desembolso previsto (12 meses) com pago, pendente e projeção dos contratos." },
+      { tipo: "novo", texto: "Indicadores de imóveis no painel: quantidade e custo mensal dos contratos vigentes." },
+    ],
+  },
   {
     versao: "0.12.0",
     data: "2026-07-26",

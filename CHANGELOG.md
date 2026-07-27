@@ -7,6 +7,17 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.13.0] — 2026-07-27
+
+### Adicionado
+
+- Filtro por obra no painel inicial; todos os indicadores e o gráfico passam a
+  respeitar a obra escolhida.
+- Gráfico de desembolso previsto (12 meses) no painel, com pago, pendente e
+  projeção dos contratos (equipamentos e imóveis).
+- Indicadores de imóveis no painel: quantidade e custo mensal dos contratos
+  vigentes.
+
 ## [0.12.0] — 2026-07-26
 
 ### Melhorado
