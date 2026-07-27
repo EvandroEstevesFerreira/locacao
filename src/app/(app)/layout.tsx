@@ -7,6 +7,7 @@ import { APP_VERSION } from "@/lib/changelog";
 import { Sidebar } from "@/components/layout/sidebar";
 import { UserMenu } from "@/components/layout/user-menu";
 import { BackButton } from "@/components/back-button";
+import { ServiceWorkerRegister } from "@/components/sw-register";
 
 export default async function AppLayout({
   children,
@@ -33,6 +34,7 @@ export default async function AppLayout({
 
   return (
     <div className="grid min-h-dvh grid-rows-[auto_1fr] md:grid-cols-[240px_1fr] md:grid-rows-1">
+      <ServiceWorkerRegister />
       {/* Barra lateral (desktop) */}
       <aside className="hidden border-r bg-card md:flex md:flex-col">
         <div className="border-b px-4 py-4">
