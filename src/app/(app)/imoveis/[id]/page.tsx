@@ -33,6 +33,7 @@ import {
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { ContratoImovelForm } from "../contrato-imovel-form";
 import { ContratoImovelCard } from "../contrato-imovel-card";
+import { ContratoImovelAcoes, type HistoricoItem } from "../contrato-imovel-acoes";
 import { ImovelAnexoUploader } from "../imovel-anexo-uploader";
 import { ContaConsumoForm } from "../conta-consumo-form";
 import { ReparoForm, OcorrenciaForm, VistoriaImovelForm } from "../fase3-forms";
@@ -98,6 +99,20 @@ export default async function ImovelDetalhePage({
     .order("vigente", { ascending: false })
     .order("data_inicio", { ascending: false });
   const contratos = (contratosData ?? []) as Contrato[];
+
+  // Histórico versionado (aditivos/reajustes/encerramentos) por contrato.
+  const { data: histData } = await supabase
+    .from("contrato_imovel_historico")
+    .select("id, contrato_id, tipo, descricao, data_efeito")
+    .eq("imovel_id", id)
+    .order("data_efeito", { ascending: false })
+    .order("created_at", { ascending: false });
+  const histPorContrato = new Map<string, HistoricoItem[]>();
+  for (const h of histData ?? []) {
+    const arr = histPorContrato.get(h.contrato_id) ?? [];
+    arr.push({ id: h.id, tipo: h.tipo, descricao: h.descricao, data_efeito: h.data_efeito });
+    histPorContrato.set(h.contrato_id, arr);
+  }
 
   // URLs assinadas para os anexos.
   const paths = contratos
@@ -339,6 +354,14 @@ export default async function ImovelDetalhePage({
                     podeEditar={podeEditar}
                   />
                 </div>
+
+                <ContratoImovelAcoes
+                  contratoId={c.id}
+                  vigente={c.vigente}
+                  aluguelAtual={Number(c.valor_aluguel)}
+                  historico={histPorContrato.get(c.id) ?? []}
+                  podeEditar={podeEditar}
+                />
               </ContratoImovelCard>
             ))
           )}

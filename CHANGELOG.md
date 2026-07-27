@@ -7,6 +7,19 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.11.0] — 2026-07-26
+
+### Adicionado
+
+- Reajuste do aluguel por percentual, com efeito imediato no valor e registro
+  no histórico do contrato (adianta a próxima data de reajuste).
+- Aditivo de contrato de imóvel: altera valor de aluguel e/ou prazo (data fim)
+  preservando o histórico de mudanças.
+- Encerramento/distrato do contrato de imóvel com data e motivo; encerra a
+  vigência e o contrato deixa de projetar no fluxo de caixa.
+- Histórico versionado do contrato (timeline de aditivos, reajustes e
+  encerramentos) na tela do imóvel.
+
 ## [0.10.0] — 2026-07-26
 
 ### Adicionado

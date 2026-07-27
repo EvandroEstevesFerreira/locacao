@@ -163,6 +163,181 @@ export async function excluirContratoImovel(formData: FormData) {
 }
 
 // ---------------------------------------------------------------------------
+// Aditivos / reajuste / encerramento (com histórico versionado)
+// ---------------------------------------------------------------------------
+type SupaAny = Awaited<ReturnType<typeof createClient>>;
+
+async function logHistorico(
+  supabase: SupaAny,
+  base: { org_id: string; imovel_id: string; contrato_id: string },
+  tipo: "aditivo" | "reajuste" | "encerramento" | "renovacao",
+  descricao: string,
+  dataEfeito: string,
+) {
+  await supabase
+    .from("contrato_imovel_historico")
+    .insert({ ...base, tipo, descricao, data_efeito: dataEfeito });
+}
+
+function brl(n: number) {
+  return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+async function carregarContrato(supabase: SupaAny, id: string) {
+  const { data } = await supabase
+    .from("contrato_imovel")
+    .select("id, imovel_id, valor_aluguel, valor_condominio, valor_iptu, data_fim, data_reajuste, vigente")
+    .eq("id", id)
+    .single();
+  return data as
+    | {
+        id: string;
+        imovel_id: string;
+        valor_aluguel: number;
+        valor_condominio: number;
+        valor_iptu: number;
+        data_fim: string | null;
+        data_reajuste: string | null;
+        vigente: boolean;
+      }
+    | null;
+}
+
+/** Reajuste percentual do aluguel: gera histórico e adianta a data de reajuste. */
+export async function aplicarReajuste(
+  _prev: ImovelFormState,
+  formData: FormData,
+): Promise<ImovelFormState> {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id) return { error: "Sessão inválida." };
+  if (!podeOperar(perfil.papel)) return { error: "Sem permissão." };
+
+  const contratoId = txt(formData.get("contrato_id"));
+  const pct = num(formData.get("percentual"));
+  const dataEfeito = txt(formData.get("data_efeito"));
+  if (!contratoId) return { error: "Contrato inválido." };
+  if (pct == null || pct <= 0) return { error: "Informe um percentual válido." };
+  if (!dataEfeito) return { error: "Informe a data de efeito." };
+
+  const supabase = await createClient();
+  const c = await carregarContrato(supabase, contratoId);
+  if (!c) return { error: "Contrato não encontrado." };
+
+  const novo = Math.round((Number(c.valor_aluguel) * (1 + pct / 100) + Number.EPSILON) * 100) / 100;
+  // Próximo reajuste ~12 meses após o efeito.
+  const prox = new Date(dataEfeito + "T00:00:00");
+  prox.setFullYear(prox.getFullYear() + 1);
+  const proxISO = `${prox.getFullYear()}-${String(prox.getMonth() + 1).padStart(2, "0")}-${String(prox.getDate()).padStart(2, "0")}`;
+
+  const { error } = await supabase
+    .from("contrato_imovel")
+    .update({ valor_aluguel: novo, data_reajuste: proxISO })
+    .eq("id", contratoId);
+  if (error) return { error: "Não foi possível aplicar o reajuste." };
+
+  await logHistorico(
+    supabase,
+    { org_id: perfil.org_id, imovel_id: c.imovel_id, contrato_id: contratoId },
+    "reajuste",
+    `Reajuste de ${pct}%: aluguel ${brl(Number(c.valor_aluguel))} → ${brl(novo)}`,
+    dataEfeito,
+  );
+
+  revalidatePath(`/imoveis/${c.imovel_id}`);
+  redirect(`/imoveis/${c.imovel_id}`);
+}
+
+/** Aditivo com efeito no valor e/ou no prazo, preservando o histórico. */
+export async function registrarAditivo(
+  _prev: ImovelFormState,
+  formData: FormData,
+): Promise<ImovelFormState> {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id) return { error: "Sessão inválida." };
+  if (!podeOperar(perfil.papel)) return { error: "Sem permissão." };
+
+  const contratoId = txt(formData.get("contrato_id"));
+  const dataEfeito = txt(formData.get("data_efeito"));
+  const motivo = txt(formData.get("motivo"));
+  const novoAluguel = num(formData.get("novo_aluguel"));
+  const novaDataFim = txt(formData.get("nova_data_fim"));
+  if (!contratoId) return { error: "Contrato inválido." };
+  if (!dataEfeito) return { error: "Informe a data de efeito." };
+  if (novoAluguel == null && !novaDataFim) {
+    return { error: "Informe um novo valor de aluguel e/ou novo prazo." };
+  }
+
+  const supabase = await createClient();
+  const c = await carregarContrato(supabase, contratoId);
+  if (!c) return { error: "Contrato não encontrado." };
+
+  const patch: Record<string, unknown> = {};
+  const partes: string[] = [];
+  if (novoAluguel != null && novoAluguel !== Number(c.valor_aluguel)) {
+    patch.valor_aluguel = novoAluguel;
+    partes.push(`aluguel ${brl(Number(c.valor_aluguel))} → ${brl(novoAluguel)}`);
+  }
+  if (novaDataFim && novaDataFim !== c.data_fim) {
+    patch.data_fim = novaDataFim;
+    partes.push(`prazo até ${novaDataFim.split("-").reverse().join("/")}`);
+  }
+  if (Object.keys(patch).length === 0) {
+    return { error: "Nenhuma alteração em relação ao contrato atual." };
+  }
+
+  const { error } = await supabase.from("contrato_imovel").update(patch).eq("id", contratoId);
+  if (error) return { error: "Não foi possível registrar o aditivo." };
+
+  await logHistorico(
+    supabase,
+    { org_id: perfil.org_id, imovel_id: c.imovel_id, contrato_id: contratoId },
+    "aditivo",
+    `Aditivo: ${partes.join("; ")}${motivo ? ` — ${motivo}` : ""}`,
+    dataEfeito,
+  );
+
+  revalidatePath(`/imoveis/${c.imovel_id}`);
+  redirect(`/imoveis/${c.imovel_id}`);
+}
+
+/** Encerramento/distrato: encerra a vigência e registra data + motivo. */
+export async function encerrarContrato(
+  _prev: ImovelFormState,
+  formData: FormData,
+): Promise<ImovelFormState> {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id) return { error: "Sessão inválida." };
+  if (!podeOperar(perfil.papel)) return { error: "Sem permissão." };
+
+  const contratoId = txt(formData.get("contrato_id"));
+  const dataEnc = txt(formData.get("data_encerramento"));
+  const motivo = txt(formData.get("motivo"));
+  if (!contratoId) return { error: "Contrato inválido." };
+  if (!dataEnc) return { error: "Informe a data de encerramento." };
+
+  const supabase = await createClient();
+  const c = await carregarContrato(supabase, contratoId);
+  if (!c) return { error: "Contrato não encontrado." };
+
+  const { error } = await supabase
+    .from("contrato_imovel")
+    .update({ vigente: false, data_encerramento: dataEnc, motivo_encerramento: motivo })
+    .eq("id", contratoId);
+  if (error) return { error: "Não foi possível encerrar o contrato." };
+
+  await logHistorico(
+    supabase,
+    { org_id: perfil.org_id, imovel_id: c.imovel_id, contrato_id: contratoId },
+    "encerramento",
+    `Encerramento${motivo ? `: ${motivo}` : ""}`,
+    dataEnc,
+  );
+
+  revalidatePath(`/imoveis/${c.imovel_id}`);
+  redirect(`/imoveis/${c.imovel_id}`);
+}
+
+// ---------------------------------------------------------------------------
 // Anexos (bucket "imoveis"): contrato do proprietário e comprovante de caução
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------

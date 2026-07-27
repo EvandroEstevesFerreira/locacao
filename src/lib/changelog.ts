@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.10.0";
+export const APP_VERSION = "0.11.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,17 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.11.0",
+    data: "2026-07-26",
+    titulo: "Ciclo de vida do contrato de imóvel",
+    mudancas: [
+      { tipo: "novo", texto: "Reajuste do aluguel por percentual, com efeito no valor e registro no histórico." },
+      { tipo: "novo", texto: "Aditivo de contrato: altera valor e/ou prazo preservando o histórico de mudanças." },
+      { tipo: "novo", texto: "Encerramento/distrato do contrato com data e motivo (encerra a vigência e sai da projeção do fluxo)." },
+      { tipo: "novo", texto: "Histórico versionado do contrato (timeline de aditivos, reajustes e encerramentos)." },
+    ],
+  },
   {
     versao: "0.10.0",
     data: "2026-07-26",
