@@ -154,6 +154,13 @@ export function FornecedorForm({
         <p className="text-sm text-destructive">{state.error}</p>
       ) : null}
 
+      {state.duplicado ? (
+        <label className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-800 dark:bg-amber-950/40">
+          <input type="checkbox" name="confirmar_duplicado" value="true" className="size-4" />
+          Salvar mesmo assim (CNPJ já cadastrado em outro fornecedor)
+        </label>
+      ) : null}
+
       <div className="flex gap-2">
         <Button type="submit" disabled={isPending}>
           {isPending ? "Salvando…" : "Salvar"}

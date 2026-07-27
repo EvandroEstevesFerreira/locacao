@@ -2,7 +2,7 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { AlertTriangle, FileDown } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentPerfil, podeOperar } from "@/lib/auth";
+import { getCurrentPerfil, podeOperar, podeGerenciarFinanceiro } from "@/lib/auth";
 import { formatarBRL, formatarData, formatarDataHora } from "@/lib/locacao";
 import {
   STATUS_AVARIA,
@@ -30,6 +30,7 @@ import {
   excluirAvaria,
   excluirFoto,
   excluirVistoria,
+  gerarLancamentoAvaria,
 } from "../actions";
 
 export const metadata = { title: "Vistoria — Loca" };
@@ -44,6 +45,7 @@ export default async function VistoriaDetalhePage({
 }) {
   const perfil = await getCurrentPerfil();
   const podeEditar = podeOperar(perfil?.papel);
+  const podeCobrar = podeGerenciarFinanceiro(perfil?.papel);
   const { id } = await params;
 
   const supabase = await createClient();
@@ -76,7 +78,7 @@ export default async function VistoriaDetalhePage({
 
   const { data: avarias } = await supabase
     .from("avaria")
-    .select("id, descricao, custo_estimado, status")
+    .select("id, descricao, custo_estimado, status, lancamento_id")
     .eq("vistoria_id", id)
     .order("created_at");
 
@@ -260,6 +262,17 @@ export default async function VistoriaDetalhePage({
                   <Badge variant={STATUS_AVARIA[a.status as StatusAvaria].variant}>
                     {STATUS_AVARIA[a.status as StatusAvaria].label}
                   </Badge>
+                  {a.lancamento_id ? (
+                    <Badge variant="secondary">Cobrança gerada</Badge>
+                  ) : podeCobrar && Number(a.custo_estimado) > 0 ? (
+                    <form action={gerarLancamentoAvaria}>
+                      <input type="hidden" name="id" value={a.id} />
+                      <input type="hidden" name="vistoria_id" value={vistoria.id} />
+                      <Button type="submit" size="sm" variant="outline">
+                        Gerar cobrança
+                      </Button>
+                    </form>
+                  ) : null}
                   {podeEditar ? (
                     <div className="flex items-center gap-2">
                       <form action={atualizarStatusAvaria} className="flex gap-1">

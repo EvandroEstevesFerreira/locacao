@@ -7,6 +7,18 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.16.0] — 2026-07-27
+
+### Adicionado
+
+- Botão "Gerar cobrança" na avaria: cria uma conta a pagar com o custo estimado,
+  marca a avaria como "cobrada" e vincula os dois (idempotente).
+
+### Melhorado
+
+- Aviso ao cadastrar/editar fornecedor com CNPJ já usado por outro fornecedor,
+  com opção de "salvar mesmo assim".
+
 ## [0.15.0] — 2026-07-27
 
 ### Adicionado

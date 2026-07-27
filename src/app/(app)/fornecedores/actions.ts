@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeEditarCadastros } from "@/lib/auth";
 import { cnpjValido, formatarCnpj, normalizarCnpj } from "@/lib/cnpj";
 
-export type FornecedorFormState = { error?: string };
+export type FornecedorFormState = { error?: string; duplicado?: boolean };
 
 const fornecedorSchema = z.object({
   nome: z.string().trim().min(1, "Informe o nome do fornecedor.").max(200),
@@ -75,6 +75,24 @@ export async function salvarFornecedor(
   const obras = formData.getAll("obras").map(String).filter(Boolean);
 
   const supabase = await createClient();
+
+  // Aviso de CNPJ duplicado: bloqueia na primeira tentativa, mas permite
+  // prosseguir se o usuário confirmar ("salvar mesmo assim").
+  const confirmarDup =
+    formData.get("confirmar_duplicado") === "on" ||
+    formData.get("confirmar_duplicado") === "true";
+  if (dados.cnpj && !confirmarDup) {
+    let dupQ = supabase.from("fornecedor").select("id, nome").eq("cnpj", dados.cnpj);
+    if (id) dupQ = dupQ.neq("id", id);
+    const { data: dups } = await dupQ.limit(1);
+    if (dups && dups.length > 0) {
+      return {
+        error: `Já existe um fornecedor com este CNPJ: ${dups[0].nome}. Marque "salvar mesmo assim" para continuar.`,
+        duplicado: true,
+      };
+    }
+  }
+
   let fornecedorId = id;
   if (id) {
     const { error } = await supabase.from("fornecedor").update(dados).eq("id", id);

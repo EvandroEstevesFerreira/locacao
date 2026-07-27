@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.15.0";
+export const APP_VERSION = "0.16.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,15 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.16.0",
+    data: "2026-07-27",
+    titulo: "Cobrança de avaria e aviso de CNPJ duplicado",
+    mudancas: [
+      { tipo: "novo", texto: "Gerar cobrança (conta a pagar) direto de uma avaria, que passa a “cobrada” e fica vinculada ao lançamento." },
+      { tipo: "melhoria", texto: "Aviso ao cadastrar fornecedor com CNPJ já existente, com opção de salvar mesmo assim." },
+    ],
+  },
   {
     versao: "0.15.0",
     data: "2026-07-27",
