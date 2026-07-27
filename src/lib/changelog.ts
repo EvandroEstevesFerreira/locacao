@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.9.1";
+export const APP_VERSION = "0.10.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,16 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.10.0",
+    data: "2026-07-26",
+    titulo: "Financeiro: contas recorrentes e baixa com conciliação",
+    mudancas: [
+      { tipo: "novo", texto: "Gerar contas a pagar recorrentes dos contratos de imóvel e de locação (uma parcela por mês), sem duplicar meses já gerados." },
+      { tipo: "novo", texto: "Baixa de conta com conciliação: valor efetivamente pago, data, número da NF e anexo do comprovante." },
+      { tipo: "novo", texto: "Cálculo automático de multa e juros por atraso, com sugestão aplicável na baixa." },
+    ],
+  },
   {
     versao: "0.9.1",
     data: "2026-07-26",

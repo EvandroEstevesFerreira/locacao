@@ -7,6 +7,17 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.10.0] — 2026-07-26
+
+### Adicionado
+
+- Geração de contas a pagar recorrentes a partir dos contratos de imóvel e de
+  locação (uma parcela por mês, idempotente — não duplica meses já gerados).
+- Baixa de conta com conciliação: valor efetivamente pago, data do pagamento,
+  número da NF e anexo do comprovante no Storage.
+- Cálculo de multa (2%) e juros (1% a.m. pró-rata) por atraso, com sugestão
+  aplicável na tela de baixa.
+
 ## [0.9.1] — 2026-07-26
 
 ### Melhorado
