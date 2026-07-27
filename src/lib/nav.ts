@@ -9,6 +9,7 @@ import {
   BarChart3,
   Building2,
   Settings,
+  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 import type { ModuloKey } from "@/lib/modulos";
@@ -53,6 +54,12 @@ export const NAV_ITEMS: NavItem[] = [
     icon: BarChart3,
     implementado: true,
     modulo: "relatorios",
+  },
+  {
+    label: "Novidades",
+    href: "/novidades",
+    icon: Sparkles,
+    implementado: true,
   },
   {
     label: "Configurações",
