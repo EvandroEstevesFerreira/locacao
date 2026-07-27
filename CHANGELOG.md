@@ -7,6 +7,13 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.19.2] — 2026-07-27
+
+### Corrigido
+
+- Barras do gráfico "Desembolso previsto" do painel não apareciam (altura em `%`
+  colapsava dentro do contêiner flex). Agora a altura é calculada em pixels.
+
 ## [0.19.1] — 2026-07-27
 
 ### Melhorado

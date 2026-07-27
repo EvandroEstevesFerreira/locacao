@@ -1,4 +1,5 @@
 // Gráfico de barras simples em CSS (sem dependências). Server-safe.
+// Alturas em pixels (não em %) para não depender da altura do contêiner flex.
 
 export type BarPoint = { label: string; value: number; destaque?: boolean };
 
@@ -19,11 +20,15 @@ export function BarChart({
     );
   }
 
+  // Reserva ~18px para o rótulo do valor no topo de cada coluna.
+  const areaBarras = Math.max(24, height - 18);
+
   return (
     <div className="overflow-x-auto">
       <div className="flex min-w-full items-end gap-2" style={{ height }}>
         {data.map((d, i) => {
-          const pct = Math.round((d.value / max) * 100);
+          const alturaPx =
+            d.value > 0 ? Math.max(3, Math.round((d.value / max) * areaBarras)) : 0;
           return (
             <div key={i} className="flex min-w-8 flex-1 flex-col items-center justify-end gap-1">
               <span className="text-[10px] tabular-nums text-muted-foreground">
@@ -31,7 +36,7 @@ export function BarChart({
               </span>
               <div
                 className={`w-full rounded-t ${d.destaque ? "bg-primary" : "bg-primary/55"}`}
-                style={{ height: `${Math.max(d.value > 0 ? 2 : 0, pct)}%` }}
+                style={{ height: alturaPx }}
                 title={`${d.label}: ${formatValue(d.value)}`}
               />
             </div>
