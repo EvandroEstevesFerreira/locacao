@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Users, Building, ChevronRight } from "lucide-react";
+import { Users, Building, FileText, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeConfigurarSistema } from "@/lib/auth";
 import { PageHeader } from "@/components/page-header";
@@ -73,6 +73,25 @@ export default async function ConfiguracoesPage() {
           </div>
           <Button variant="outline" size="sm" render={<Link href="/configuracoes/empresa" />}>
             Editar
+            <ChevronRight className="size-4" />
+          </Button>
+        </CardHeader>
+      </Card>
+
+      {/* Templates de documentos */}
+      <Card>
+        <CardHeader className="flex-row items-center justify-between space-y-0">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <FileText className="size-4" /> Templates de documentos
+            </CardTitle>
+            <CardDescription>
+              Texto dos contratos e termos com variáveis (ex.: {"{{aluguel}}"})
+              preenchidas ao gerar o PDF.
+            </CardDescription>
+          </div>
+          <Button variant="outline" size="sm" render={<Link href="/configuracoes/templates" />}>
+            Abrir
             <ChevronRight className="size-4" />
           </Button>
         </CardHeader>

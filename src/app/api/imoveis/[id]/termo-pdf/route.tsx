@@ -4,6 +4,12 @@ import { createClient } from "@/lib/supabase/server";
 import { formatarData } from "@/lib/locacao";
 import { tipoImovelLabel } from "@/lib/imoveis";
 import { DocumentoTexto, type InfoLinha } from "@/lib/pdf";
+import {
+  DEFAULT_TEMPLATES,
+  documentoInfo,
+  renderTemplate,
+  corpoParaParagrafos,
+} from "@/lib/templates";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,27 +35,41 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const { data: org } = await supabase.from("organizacao").select("nome").eq("id", imovel.org_id).single();
   const orgNome = org?.nome ?? "Sistenge";
 
+  const { data: tplRow } = await supabase
+    .from("documento_template")
+    .select("titulo, corpo")
+    .eq("org_id", imovel.org_id)
+    .eq("tipo", "termo_responsabilidade")
+    .maybeSingle();
+
+  const imovelEndereco = [imovel.endereco, imovel.cidade, imovel.uf].filter(Boolean).join(", ") || "—";
   const infos: InfoLinha[] = [
     { label: "Ocupante", valor: ocupante.nome },
     { label: "CPF", valor: ocupante.cpf ?? "—" },
     { label: "Imóvel", valor: `${imovel.apelido} (${tipoImovelLabel(imovel.tipo)})` },
-    { label: "Endereço", valor: [imovel.endereco, imovel.cidade, imovel.uf].filter(Boolean).join(", ") || "—" },
+    { label: "Endereço", valor: imovelEndereco },
     { label: "Cedente", valor: `${orgNome} (Sistenge)` },
   ];
 
-  const paragrafos = [
-    `Eu, ${ocupante.nome}${ocupante.cpf ? `, inscrito(a) no CPF nº ${ocupante.cpf}` : ""}, declaro que ocuparei o imóvel acima identificado, disponibilizado por ${orgNome}, assumindo integral responsabilidade sobre sua guarda, conservação e uso adequado.`,
-    "Comprometo-me a: (a) zelar pela limpeza e conservação do imóvel e de seus equipamentos; (b) comunicar imediatamente à empresa quaisquer avarias, defeitos ou ocorrências; (c) não realizar alterações estruturais sem autorização; (d) utilizar o imóvel de forma pacífica e conforme as normas de convivência.",
-    "Declaro ciência de que serei responsável por danos causados ao imóvel além do desgaste natural de uso, apurados em vistoria, bem como pela devolução do imóvel em bom estado ao término da ocupação.",
-    "Por ser expressão da verdade, firmo o presente Termo de Responsabilidade.",
-  ];
+  const variaveis: Record<string, string> = {
+    ocupante: ocupante.nome,
+    ocupante_cpf: ocupante.cpf ?? "—",
+    imovel: `${imovel.apelido} (${tipoImovelLabel(imovel.tipo)})`,
+    imovel_endereco: imovelEndereco,
+    empresa_nome: orgNome,
+    cidade: imovel.cidade ?? "",
+  };
+
+  const tpl = tplRow ?? DEFAULT_TEMPLATES.termo_responsabilidade;
+  const tituloDoc = renderTemplate(tpl.titulo, variaveis);
+  const paragrafos = corpoParaParagrafos(renderTemplate(tpl.corpo, variaveis));
 
   const hojeStr = formatarData(new Date().toISOString().slice(0, 10));
   const buffer = await renderToBuffer(
     <DocumentoTexto
       orgNome={orgNome}
-      eyebrow="Termo de responsabilidade"
-      titulo="TERMO DE RESPONSABILIDADE"
+      eyebrow={documentoInfo("termo_responsabilidade")?.eyebrow ?? "Termo de responsabilidade"}
+      titulo={tituloDoc}
       infos={infos}
       paragrafos={paragrafos}
       assinaturas={[
