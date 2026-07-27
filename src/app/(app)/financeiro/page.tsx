@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus, Pencil, Check, Undo2 } from "lucide-react";
+import { Plus, Pencil, Undo2, Coins, RefreshCw } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeGerenciarFinanceiro } from "@/lib/auth";
 import { formatarBRL, formatarData } from "@/lib/locacao";
@@ -82,10 +82,16 @@ export default async function FinanceiroPage({
           Fluxo de caixa
         </Button>
         {podeEditar ? (
-          <Button render={<Link href="/financeiro/novo" />}>
-            <Plus className="size-4" />
-            Novo lançamento
-          </Button>
+          <>
+            <Button variant="secondary" render={<Link href="/financeiro/recorrentes" />}>
+              <RefreshCw className="size-4" />
+              Gerar recorrentes
+            </Button>
+            <Button render={<Link href="/financeiro/novo" />}>
+              <Plus className="size-4" />
+              Novo lançamento
+            </Button>
+          </>
         ) : null}
       </PageHeader>
 
@@ -168,22 +174,29 @@ export default async function FinanceiroPage({
                       {podeEditar ? (
                         <TableCell>
                           <div className="flex items-center justify-end gap-1">
-                            <form action={alternarPago}>
-                              <input type="hidden" name="id" value={l.id} />
-                              <input
-                                type="hidden"
-                                name="novo_status"
-                                value={l.status === "pago" ? "pendente" : "pago"}
-                              />
+                            {l.status === "pago" ? (
+                              <form action={alternarPago}>
+                                <input type="hidden" name="id" value={l.id} />
+                                <input type="hidden" name="novo_status" value="pendente" />
+                                <Button
+                                  type="submit"
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  aria-label="Reabrir"
+                                >
+                                  <Undo2 />
+                                </Button>
+                              </form>
+                            ) : (
                               <Button
-                                type="submit"
                                 variant="ghost"
                                 size="icon-sm"
-                                aria-label={l.status === "pago" ? "Reabrir" : "Marcar pago"}
+                                aria-label="Dar baixa"
+                                render={<Link href={`/financeiro/${l.id}/baixa`} />}
                               >
-                                {l.status === "pago" ? <Undo2 /> : <Check />}
+                                <Coins />
                               </Button>
-                            </form>
+                            )}
                             <Button
                               variant="ghost"
                               size="icon-sm"
