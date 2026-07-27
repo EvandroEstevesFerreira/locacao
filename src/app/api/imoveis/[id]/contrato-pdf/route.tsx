@@ -18,13 +18,20 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
   const { data: imovel } = await supabase
     .from("imovel")
-    .select("apelido, tipo, endereco, cidade, uf, proprietario_nome, org_id, contrato_imovel(data_inicio, data_fim, valor_aluguel, valor_condominio, valor_iptu, seguro_fianca, seguro_fianca_mensal, dia_vencimento, indice_reajuste, caucao_valor, vigente)")
+    .select("apelido, tipo, endereco, cidade, uf, proprietario_nome, banco, agencia, conta, tipo_conta, titular_conta, pix_chave, org_id, contrato_imovel(data_inicio, data_fim, valor_aluguel, valor_condominio, valor_iptu, seguro_fianca, seguro_fianca_mensal, dia_vencimento, indice_reajuste, caucao_valor, vigente)")
     .eq("id", id)
     .single();
   if (!imovel) return NextResponse.json({ error: "Imóvel não encontrado." }, { status: 404 });
 
-  const { data: org } = await supabase.from("organizacao").select("nome").eq("id", imovel.org_id).single();
+  const { data: org } = await supabase
+    .from("organizacao")
+    .select("nome, razao_social, cnpj, endereco, cidade, uf, cep, representante_nome, representante_cargo, representante_cpf")
+    .eq("id", imovel.org_id)
+    .single();
   const orgNome = org?.nome ?? "Sistenge";
+  const locatariaNome = org?.razao_social ?? orgNome;
+  const locatariaEndereco = [org?.endereco, org?.cidade, org?.uf, org?.cep].filter(Boolean).join(", ");
+  const assinanteLocataria = org?.representante_nome ?? orgNome;
 
   const contratos = (imovel.contrato_imovel ?? []) as Array<{
     data_inicio: string | null; data_fim: string | null; valor_aluguel: number;
@@ -34,11 +41,19 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   }>;
   const c = contratos.find((x) => x.vigente) ?? contratos[0] ?? null;
 
+  const locatariaValor = [
+    locatariaNome,
+    org?.cnpj ? `CNPJ ${org.cnpj}` : null,
+    locatariaEndereco || null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   const infos: InfoLinha[] = [
     { label: "Imóvel", valor: `${imovel.apelido} (${tipoImovelLabel(imovel.tipo)})` },
     { label: "Endereço", valor: [imovel.endereco, imovel.cidade, imovel.uf].filter(Boolean).join(", ") || "—" },
     { label: "Locador (proprietário)", valor: imovel.proprietario_nome ?? "—" },
-    { label: "Locatária", valor: `${orgNome} (Sistenge)` },
+    { label: "Locatária", valor: locatariaValor || `${orgNome} (Sistenge)` },
   ];
   if (c) {
     infos.push(
@@ -52,6 +67,19 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     );
     if (c.caucao_valor != null) infos.push({ label: "Caução", valor: formatarBRL(Number(c.caucao_valor)) });
   }
+
+  // Dados bancários do imóvel (pagamento ao locador) — para conferência/assinatura.
+  const contaTxt = [
+    imovel.conta,
+    imovel.tipo_conta === "corrente" ? "corrente" : imovel.tipo_conta === "poupanca" ? "poupança" : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  if (imovel.banco) infos.push({ label: "Banco", valor: imovel.banco });
+  if (imovel.agencia) infos.push({ label: "Agência", valor: imovel.agencia });
+  if (contaTxt) infos.push({ label: "Conta", valor: contaTxt });
+  if (imovel.titular_conta) infos.push({ label: "Titular", valor: imovel.titular_conta });
+  if (imovel.pix_chave) infos.push({ label: "Chave PIX", valor: imovel.pix_chave });
 
   const aluguel = c ? formatarBRL(Number(c.valor_aluguel)) : "—";
   const cond = c ? formatarBRL(Number(c.valor_condominio)) : "R$ 0,00";
@@ -78,7 +106,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       paragrafos={paragrafos}
       assinaturas={[
         { nome: imovel.proprietario_nome ?? "Locador", papel: "Locador" },
-        { nome: orgNome, papel: "Locatária (Sistenge)" },
+        {
+          nome: assinanteLocataria,
+          papel: org?.representante_cargo
+            ? `${org.representante_cargo} — ${locatariaNome}`
+            : `Locatária (${locatariaNome})`,
+        },
       ]}
       localData={`${imovel.cidade ?? "________"}, ${hojeStr}.`}
     />,
