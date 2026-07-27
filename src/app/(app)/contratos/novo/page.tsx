@@ -12,10 +12,20 @@ export default async function NovoContratoPage() {
   if (!podeOperar(perfil?.papel)) redirect("/contratos");
 
   const supabase = await createClient();
-  const [{ data: obras }, { data: fornecedores }] = await Promise.all([
+  const ano = new Date().getFullYear();
+  const [{ data: obras }, { data: fornecedores }, { data: nums }] = await Promise.all([
     supabase.from("obra").select("id, codigo, nome").eq("status", "ativa").order("codigo"),
     supabase.from("fornecedor").select("id, nome").eq("ativo", true).order("nome"),
+    supabase.from("contrato_locacao").select("numero").ilike("numero", `CT-${ano}-%`),
   ]);
+
+  // Sugestão de numeração automática: CT-<ano>-<sequência> (o usuário pode ajustar).
+  let maxSeq = 0;
+  for (const r of nums ?? []) {
+    const m = /-(\d+)\s*$/.exec(r.numero ?? "");
+    if (m) maxSeq = Math.max(maxSeq, Number(m[1]));
+  }
+  const numeroSugerido = `CT-${ano}-${String(maxSeq + 1).padStart(3, "0")}`;
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -25,7 +35,7 @@ export default async function NovoContratoPage() {
       />
       <Card>
         <CardContent className="pt-6">
-          <ContratoForm obras={obras ?? []} fornecedores={fornecedores ?? []} />
+          <ContratoForm obras={obras ?? []} fornecedores={fornecedores ?? []} numeroSugerido={numeroSugerido} />
         </CardContent>
       </Card>
     </div>

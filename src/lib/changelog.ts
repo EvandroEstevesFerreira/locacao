@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.18.0";
+export const APP_VERSION = "0.19.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,14 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.19.0",
+    data: "2026-07-27",
+    titulo: "Numeração automática de contrato",
+    mudancas: [
+      { tipo: "melhoria", texto: "Novo contrato já vem com um número sugerido (CT-ano-sequência), que você pode ajustar." },
+    ],
+  },
   {
     versao: "0.18.0",
     data: "2026-07-27",
