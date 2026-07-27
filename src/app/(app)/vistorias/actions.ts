@@ -4,7 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentPerfil, podeOperar } from "@/lib/auth";
+import { getCurrentPerfil, podeOperar, podeGerenciarFinanceiro } from "@/lib/auth";
 
 export type VistoriaFormState = { error?: string; ok?: boolean };
 
@@ -158,6 +158,70 @@ export async function atualizarStatusAvaria(formData: FormData) {
   const supabase = await createClient();
   await supabase.from("avaria").update({ status }).eq("id", id);
   if (vistoriaId) revalidatePath(`/vistorias/${vistoriaId}`);
+}
+
+/**
+ * Gera uma conta a pagar (lançamento financeiro) a partir de uma avaria e a
+ * marca como "cobrada". Idempotente: não duplica se já houver lançamento.
+ */
+export async function gerarLancamentoAvaria(formData: FormData) {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id) return;
+  // Criar lançamento exige permissão financeira (alinha com a RLS de inserção).
+  if (!podeGerenciarFinanceiro(perfil.papel)) return;
+
+  const id = (formData.get("id") as string | null)?.trim();
+  const vistoriaId = (formData.get("vistoria_id") as string | null)?.trim();
+  if (!id) return;
+
+  const supabase = await createClient();
+  const { data: avaria } = await supabase
+    .from("avaria")
+    .select("id, descricao, custo_estimado, lancamento_id, vistoria:vistoria_id(contrato:contrato_id(obra_id, numero))")
+    .eq("id", id)
+    .single();
+  if (!avaria || avaria.lancamento_id) {
+    if (vistoriaId) revalidatePath(`/vistorias/${vistoriaId}`);
+    return;
+  }
+
+  const vist = avaria.vistoria as unknown as { contrato: { obra_id: string; numero: string } | null } | null;
+  const obraId = vist?.contrato?.obra_id;
+  const custo = Number(avaria.custo_estimado);
+  if (!obraId || !(custo > 0)) {
+    if (vistoriaId) revalidatePath(`/vistorias/${vistoriaId}`);
+    return;
+  }
+
+  const hoje = new Date();
+  const competencia = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-01`;
+  const venc = new Date(hoje);
+  venc.setDate(venc.getDate() + 30);
+  const vencISO = `${venc.getFullYear()}-${String(venc.getMonth() + 1).padStart(2, "0")}-${String(venc.getDate()).padStart(2, "0")}`;
+
+  const { data: lanc, error } = await supabase
+    .from("lancamento_financeiro")
+    .insert({
+      org_id: perfil.org_id,
+      obra_id: obraId,
+      descricao: `Avaria (contrato ${vist?.contrato?.numero ?? "—"}): ${avaria.descricao}`.slice(0, 200),
+      competencia,
+      valor: custo,
+      vencimento: vencISO,
+      status: "pendente",
+      origem: "avaria",
+    })
+    .select("id")
+    .single();
+  if (error || !lanc) return;
+
+  await supabase
+    .from("avaria")
+    .update({ status: "cobrada", lancamento_id: lanc.id })
+    .eq("id", id);
+
+  if (vistoriaId) revalidatePath(`/vistorias/${vistoriaId}`);
+  revalidatePath("/financeiro");
 }
 
 export async function excluirAvaria(formData: FormData) {
