@@ -29,10 +29,12 @@ export function ContratoForm({
   contrato,
   obras,
   fornecedores,
+  numeroSugerido,
 }: {
   contrato?: Contrato;
   obras: { id: string; codigo: string; nome: string }[];
   fornecedores: { id: string; nome: string }[];
+  numeroSugerido?: string;
 }) {
   const [state, formAction, isPending] = useActionState<
     ContratoFormState,
@@ -92,7 +94,7 @@ export function ContratoForm({
             name="numero"
             required
             maxLength={60}
-            defaultValue={contrato?.numero ?? ""}
+            defaultValue={contrato?.numero ?? numeroSugerido ?? ""}
             placeholder="Ex.: CT-2026-001"
           />
         </div>
