@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.16.0";
+export const APP_VERSION = "0.17.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,15 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.17.0",
+    data: "2026-07-27",
+    titulo: "Histórico por entidade e logs estruturados",
+    mudancas: [
+      { tipo: "novo", texto: "Linha do tempo de auditoria na tela do contrato e do imóvel (quem criou/alterou/excluiu), visível ao Master." },
+      { tipo: "melhoria", texto: "Logs do servidor em formato estruturado (JSON), facilitando diagnóstico e monitoramento." },
+    ],
+  },
   {
     versao: "0.16.0",
     data: "2026-07-27",

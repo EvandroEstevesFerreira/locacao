@@ -23,6 +23,7 @@ import {
   type StatusContrato,
 } from "@/lib/locacao";
 import { PageHeader } from "@/components/page-header";
+import { AtividadeTimeline } from "@/components/atividade-timeline";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -587,6 +588,8 @@ export default async function ContratoDetalhePage({
           </CardContent>
         </Card>
       ) : null}
+
+      <AtividadeTimeline entidade="contrato_locacao" registroId={contrato.id} />
     </div>
   );
 }

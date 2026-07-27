@@ -36,6 +36,7 @@ import { type ReactNode } from "react";
 import { ContratoImovelCard } from "../contrato-imovel-card";
 import { ContratoImovelAcoes, type HistoricoItem } from "../contrato-imovel-acoes";
 import { PiiText } from "@/components/pii-text";
+import { AtividadeTimeline } from "@/components/atividade-timeline";
 import { ImovelAnexoUploader } from "../imovel-anexo-uploader";
 import { ContaConsumoForm } from "../conta-consumo-form";
 import { ReparoForm, OcorrenciaForm, VistoriaImovelForm } from "../fase3-forms";
@@ -623,6 +624,8 @@ export default async function ImovelDetalhePage({
           )}
         </CardContent>
       </Card>
+
+      <AtividadeTimeline entidade="imovel" registroId={id} />
     </div>
   );
 }
