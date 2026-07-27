@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.14.0";
+export const APP_VERSION = "0.15.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,15 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.15.0",
+    data: "2026-07-27",
+    titulo: "Contrato de equipamento em PDF e ajustes de documentos",
+    mudancas: [
+      { tipo: "novo", texto: "Geração do contrato de locação de equipamento em PDF, com template editável (variáveis) e itens do contrato." },
+      { tipo: "melhoria", texto: "Termo de responsabilidade passa a citar a Política de Alojamento e a entrega de chaves." },
+    ],
+  },
   {
     versao: "0.14.0",
     data: "2026-07-27",

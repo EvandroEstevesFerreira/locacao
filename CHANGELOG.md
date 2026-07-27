@@ -7,6 +7,18 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.15.0] — 2026-07-27
+
+### Adicionado
+
+- Geração do contrato de locação de equipamento em PDF, com template editável
+  (variáveis) em Configurações → Templates e a lista de itens do contrato.
+
+### Melhorado
+
+- Termo de responsabilidade passa a citar a Política de Alojamento (POL-RH-001)
+  e a obrigação de entrega das chaves na devolução.
+
 ## [0.14.0] — 2026-07-27
 
 ### Segurança

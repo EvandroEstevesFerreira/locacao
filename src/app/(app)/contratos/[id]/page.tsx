@@ -7,6 +7,7 @@ import {
   AlertTriangle,
   Paperclip,
   Download,
+  FileText,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeOperar, podeExcluirCritico } from "@/lib/auth";
@@ -202,6 +203,10 @@ export default async function ContratoDetalhePage({
         eyebrow="Contrato de locação"
         titulo={`Contrato ${contrato.numero}`}
       >
+        <Button variant="outline" render={<a href={`/api/contratos/${contrato.id}/pdf`} target="_blank" rel="noopener noreferrer" />}>
+          <FileText className="size-4" />
+          Gerar contrato (PDF)
+        </Button>
         {podeEditar ? (
           <>
             <Button
