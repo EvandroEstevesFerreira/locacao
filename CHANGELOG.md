@@ -7,6 +7,18 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.17.0] — 2026-07-27
+
+### Adicionado
+
+- Linha do tempo de auditoria por entidade (contrato de locação e imóvel):
+  quem criou/alterou/excluiu e quando. Visível ao Master (RLS).
+
+### Melhorado
+
+- Logs do servidor em formato estruturado (JSON por linha) via `src/lib/logger.ts`,
+  aplicados às rotinas de cron; preparação para APM (Sentry via `SENTRY_DSN`).
+
 ## [0.16.0] — 2026-07-27
 
 ### Adicionado

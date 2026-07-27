@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { addDays, differenceInCalendarDays, format } from "date-fns";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { logger, erroMeta } from "@/lib/logger";
 import {
   emailConfigurado,
   enviarEmail,
@@ -267,7 +268,7 @@ export async function GET(request: Request) {
     resumo.push({ org: cfg.org_id, enviados: novos.length });
    } catch (e) {
     // Isola a falha: uma org com erro não impede as demais.
-    console.error("[cron/vencimentos] falha na org", cfg.org_id, e);
+    logger.error("cron.vencimentos.org_falha", { org_id: cfg.org_id, ...erroMeta(e) });
     erros.push({ org: cfg.org_id, erro: e instanceof Error ? e.message : String(e) });
    }
   }

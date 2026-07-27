@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { format } from "date-fns";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { logger, erroMeta } from "@/lib/logger";
 import {
   TIPOS_RELATORIO,
   gerarRelatorio,
@@ -110,7 +111,7 @@ export async function GET(request: Request) {
     enviados.push({ org: cfg.org_id, tipo });
    } catch (e) {
     // Isola a falha: uma org com erro não impede as demais.
-    console.error("[cron/relatorio-email] falha na org", cfg.org_id, e);
+    logger.error("cron.relatorio_email.org_falha", { org_id: cfg.org_id, ...erroMeta(e) });
     erros.push({ org: cfg.org_id, erro: e instanceof Error ? e.message : String(e) });
    }
   }
