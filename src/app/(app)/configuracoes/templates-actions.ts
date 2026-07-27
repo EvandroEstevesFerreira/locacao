@@ -1,0 +1,60 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { createClient } from "@/lib/supabase/server";
+import { getCurrentPerfil, podeConfigurarSistema } from "@/lib/auth";
+import { DOCUMENTOS, type TipoDocumento } from "@/lib/templates";
+
+export type TemplateFormState = { error?: string; ok?: boolean };
+
+const TIPOS = DOCUMENTOS.map((d) => d.tipo) as string[];
+
+export async function salvarTemplate(
+  _prev: TemplateFormState,
+  formData: FormData,
+): Promise<TemplateFormState> {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id || !podeConfigurarSistema(perfil.papel)) {
+    return { error: "Apenas o Master pode editar templates." };
+  }
+
+  const tipo = String(formData.get("tipo") ?? "");
+  if (!TIPOS.includes(tipo)) return { error: "Documento inválido." };
+
+  const titulo = String(formData.get("titulo") ?? "").trim();
+  const corpo = String(formData.get("corpo") ?? "").trim();
+  if (!titulo) return { error: "Informe o título do documento." };
+  if (!corpo) return { error: "O corpo do documento não pode ficar vazio." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("documento_template").upsert(
+    {
+      org_id: perfil.org_id,
+      tipo,
+      titulo,
+      corpo,
+      ativo: true,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "org_id,tipo" },
+  );
+  if (error) return { error: "Não foi possível salvar o template." };
+
+  revalidatePath(`/configuracoes/templates/${tipo}`);
+  return { ok: true };
+}
+
+/** Restaura o padrão: remove a linha salva (o PDF volta a usar o template do código). */
+export async function restaurarTemplate(formData: FormData) {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id || !podeConfigurarSistema(perfil.papel)) return;
+  const tipo = String(formData.get("tipo") ?? "");
+  if (!TIPOS.includes(tipo)) return;
+  const supabase = await createClient();
+  await supabase
+    .from("documento_template")
+    .delete()
+    .eq("org_id", perfil.org_id)
+    .eq("tipo", tipo as TipoDocumento);
+  revalidatePath(`/configuracoes/templates/${tipo}`);
+}

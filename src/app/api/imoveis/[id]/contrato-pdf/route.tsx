@@ -4,6 +4,12 @@ import { createClient } from "@/lib/supabase/server";
 import { formatarBRL, formatarData } from "@/lib/locacao";
 import { tipoImovelLabel } from "@/lib/imoveis";
 import { DocumentoTexto, type InfoLinha } from "@/lib/pdf";
+import {
+  DEFAULT_TEMPLATES,
+  documentoInfo,
+  renderTemplate,
+  corpoParaParagrafos,
+} from "@/lib/templates";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,6 +38,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const locatariaNome = org?.razao_social ?? orgNome;
   const locatariaEndereco = [org?.endereco, org?.cidade, org?.uf, org?.cep].filter(Boolean).join(", ");
   const assinanteLocataria = org?.representante_nome ?? orgNome;
+
+  const { data: tplRow } = await supabase
+    .from("documento_template")
+    .select("titulo, corpo")
+    .eq("org_id", imovel.org_id)
+    .eq("tipo", "contrato_imovel")
+    .maybeSingle();
 
   const contratos = (imovel.contrato_imovel ?? []) as Array<{
     data_inicio: string | null; data_fim: string | null; valor_aluguel: number;
@@ -81,27 +94,55 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   if (imovel.titular_conta) infos.push({ label: "Titular", valor: imovel.titular_conta });
   if (imovel.pix_chave) infos.push({ label: "Chave PIX", valor: imovel.pix_chave });
 
-  const aluguel = c ? formatarBRL(Number(c.valor_aluguel)) : "—";
-  const cond = c ? formatarBRL(Number(c.valor_condominio)) : "R$ 0,00";
-  const iptu = c ? formatarBRL(Number(c.valor_iptu)) : "R$ 0,00";
-  const seguroTxt =
-    c && Number(c.seguro_fianca) > 0
-      ? ` e seguro fiança de ${formatarBRL(Number(c.seguro_fianca))}${c.seguro_fianca_mensal ? "" : " (não incluído na parcela mensal)"}`
-      : "";
-  const paragrafos = [
-    `Pelo presente instrumento particular, ${orgNome} (doravante LOCATÁRIA) e ${imovel.proprietario_nome ?? "o LOCADOR"} (doravante LOCADOR) ajustam a locação do imóvel acima identificado, nas condições a seguir.`,
-    `O valor do aluguel mensal é de ${aluguel}, acrescido de condomínio de ${cond} e IPTU de ${iptu}${seguroTxt}${c?.dia_vencimento ? `, com vencimento todo dia ${c.dia_vencimento} de cada mês` : ""}. ${c?.indice_reajuste ? `O reajuste observará o índice ${c.indice_reajuste}, na periodicidade legal.` : ""}`,
-    "A LOCATÁRIA compromete-se a conservar o imóvel, comunicar avarias e devolvê-lo, ao término da locação, no estado em que o recebeu, salvo o desgaste natural pelo uso regular.",
-    "Eventuais danos causados ao imóvel, além do desgaste natural, serão de responsabilidade da LOCATÁRIA, apurados em vistoria de devolução.",
-    "As partes elegem o foro da comarca do imóvel para dirimir questões oriundas deste contrato.",
-  ];
+  const totalMensal = c
+    ? Number(c.valor_aluguel) +
+      Number(c.valor_condominio) +
+      Number(c.valor_iptu) +
+      (c.seguro_fianca_mensal ? Number(c.seguro_fianca) : 0)
+    : 0;
+  const dadosBancarios =
+    [
+      imovel.banco ? `Banco ${imovel.banco}` : null,
+      imovel.agencia ? `ag. ${imovel.agencia}` : null,
+      contaTxt ? `conta ${contaTxt}` : null,
+      imovel.titular_conta ? `titular ${imovel.titular_conta}` : null,
+      imovel.pix_chave ? `PIX ${imovel.pix_chave}` : null,
+    ]
+      .filter(Boolean)
+      .join(", ") || "não informados";
+
+  const variaveis: Record<string, string> = {
+    locataria: locatariaNome,
+    empresa_cnpj: org?.cnpj ?? "",
+    empresa_endereco: locatariaEndereco,
+    locador: imovel.proprietario_nome ?? "o LOCADOR",
+    imovel: `${imovel.apelido} (${tipoImovelLabel(imovel.tipo)})`,
+    imovel_endereco: [imovel.endereco, imovel.cidade, imovel.uf].filter(Boolean).join(", ") || "—",
+    vigencia: c
+      ? `${c.data_inicio ? formatarData(c.data_inicio) : "—"} a ${c.data_fim ? formatarData(c.data_fim) : "—"}`
+      : "—",
+    aluguel: c ? formatarBRL(Number(c.valor_aluguel)) : "—",
+    condominio: c ? formatarBRL(Number(c.valor_condominio)) : "R$ 0,00",
+    iptu: c ? formatarBRL(Number(c.valor_iptu)) : "R$ 0,00",
+    seguro_fianca: c ? formatarBRL(Number(c.seguro_fianca)) : "R$ 0,00",
+    total_mensal: c ? formatarBRL(totalMensal) : "—",
+    vencimento: c?.dia_vencimento ? `dia ${c.dia_vencimento}` : "—",
+    indice_reajuste: c?.indice_reajuste ?? "—",
+    caucao: c?.caucao_valor != null ? formatarBRL(Number(c.caucao_valor)) : "—",
+    dados_bancarios: dadosBancarios,
+    cidade: imovel.cidade ?? "",
+  };
+
+  const tpl = tplRow ?? DEFAULT_TEMPLATES.contrato_imovel;
+  const tituloDoc = renderTemplate(tpl.titulo, variaveis);
+  const paragrafos = corpoParaParagrafos(renderTemplate(tpl.corpo, variaveis));
 
   const hojeStr = formatarData(new Date().toISOString().slice(0, 10));
   const buffer = await renderToBuffer(
     <DocumentoTexto
       orgNome={orgNome}
-      eyebrow="Contrato de locação"
-      titulo="CONTRATO DE LOCAÇÃO DE IMÓVEL"
+      eyebrow={documentoInfo("contrato_imovel")?.eyebrow ?? "Contrato de locação"}
+      titulo={tituloDoc}
       infos={infos}
       paragrafos={paragrafos}
       assinaturas={[
