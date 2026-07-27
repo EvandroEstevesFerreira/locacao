@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.19.0";
+export const APP_VERSION = "0.19.1";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,14 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.19.1",
+    data: "2026-07-27",
+    titulo: "E-mail de avisos com obra e custo mensal",
+    mudancas: [
+      { tipo: "melhoria", texto: "O e-mail de avisos de vencimento agora mostra a obra e o custo mensal de cada item." },
+    ],
+  },
   {
     versao: "0.19.0",
     data: "2026-07-27",

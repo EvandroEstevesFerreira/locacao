@@ -13,6 +13,8 @@ export type LinhaAlerta = {
   categoria: string;
   descricao: string;
   data: string;
+  obra?: string;
+  custo?: string;
 };
 
 /** Monta o HTML do e-mail de aviso de vencimentos. */
@@ -20,13 +22,16 @@ export function montarEmailVencimentos(
   orgNome: string,
   linhas: LinhaAlerta[],
 ): string {
+  const cel = "padding:8px 12px;border-bottom:1px solid #eee;";
   const itens = linhas
     .map(
       (l) =>
         `<tr>
-          <td style="padding:8px 12px;border-bottom:1px solid #eee;">${l.categoria}</td>
-          <td style="padding:8px 12px;border-bottom:1px solid #eee;">${l.descricao}</td>
-          <td style="padding:8px 12px;border-bottom:1px solid #eee;white-space:nowrap;">${l.data}</td>
+          <td style="${cel}">${l.categoria}</td>
+          <td style="${cel}">${l.descricao}</td>
+          <td style="${cel}">${l.obra ?? "—"}</td>
+          <td style="${cel}text-align:right;white-space:nowrap;">${l.custo ?? "—"}</td>
+          <td style="${cel}white-space:nowrap;">${l.data}</td>
         </tr>`,
     )
     .join("");
@@ -40,6 +45,8 @@ export function montarEmailVencimentos(
       <tr style="text-align:left;background:#f5f5f5;">
         <th style="padding:8px 12px;">Tipo</th>
         <th style="padding:8px 12px;">Descrição</th>
+        <th style="padding:8px 12px;">Obra</th>
+        <th style="padding:8px 12px;text-align:right;">Custo mensal</th>
         <th style="padding:8px 12px;">Data</th>
       </tr>
     </thead>

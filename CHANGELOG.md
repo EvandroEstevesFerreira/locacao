@@ -7,6 +7,13 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.19.1] — 2026-07-27
+
+### Melhorado
+
+- E-mail de avisos de vencimento agora inclui as colunas **Obra** e **Custo
+  mensal** de cada item (contratos, imóveis, devoluções e pagamentos).
+
 ## [0.19.0] — 2026-07-27
 
 ### Melhorado

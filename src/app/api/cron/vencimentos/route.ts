@@ -8,7 +8,17 @@ import {
   montarEmailVencimentos,
   type LinhaAlerta,
 } from "@/lib/email";
-import { formatarData, hojeISOSaoPaulo, dataDeISO } from "@/lib/locacao";
+import {
+  formatarData,
+  formatarBRL,
+  hojeISOSaoPaulo,
+  dataDeISO,
+  periodosPorMes,
+  type Cadencia,
+} from "@/lib/locacao";
+
+type ObraRef = { codigo: string; nome: string } | null;
+const nomeObra = (o: ObraRef) => (o ? `${o.codigo} — ${o.nome}` : undefined);
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -73,7 +83,7 @@ export async function GET(request: Request) {
       await Promise.all([
         supabase
           .from("item_locado")
-          .select("id, data_devolucao_prevista, item:item_id(descricao), contrato:contrato_id(numero)")
+          .select("id, data_devolucao_prevista, quantidade, valor_unitario_periodo, item:item_id(descricao), contrato:contrato_id(numero, cadencia, obra:obra_id(codigo, nome))")
           .eq("org_id", cfg.org_id)
           .eq("status", "em_aberto")
           .not("data_devolucao_prevista", "is", null)
@@ -81,7 +91,7 @@ export async function GET(request: Request) {
           .lte("data_devolucao_prevista", limite),
         supabase
           .from("contrato_locacao")
-          .select("id, numero, data_fim_prevista")
+          .select("id, numero, cadencia, data_fim_prevista, obra:obra_id(codigo, nome), item_locado(quantidade, valor_unitario_periodo)")
           .eq("org_id", cfg.org_id)
           .eq("status", "ativo")
           .not("data_fim_prevista", "is", null)
@@ -89,20 +99,20 @@ export async function GET(request: Request) {
           .lte("data_fim_prevista", limite),
         supabase
           .from("lancamento_financeiro")
-          .select("id, descricao, valor, vencimento")
+          .select("id, descricao, valor, vencimento, obra:obra_id(codigo, nome)")
           .eq("org_id", cfg.org_id)
           .eq("status", "pendente")
           .lte("vencimento", limite),
         // Imóveis: contratos vigentes (fim de contrato / reajuste dentro da janela)
         supabase
           .from("contrato_imovel")
-          .select("id, data_fim, data_reajuste, imovel:imovel_id(apelido)")
+          .select("id, data_fim, data_reajuste, valor_aluguel, valor_condominio, valor_iptu, seguro_fianca, seguro_fianca_mensal, imovel:imovel_id(apelido, obra:obra_id(codigo, nome))")
           .eq("org_id", cfg.org_id)
           .eq("vigente", true),
         // Imóveis ativos + flag de contrato vigente (ausência de contrato)
         supabase
           .from("imovel")
-          .select("id, apelido, contrato_imovel(vigente)")
+          .select("id, apelido, obra:obra_id(codigo, nome), contrato_imovel(vigente)")
           .eq("org_id", cfg.org_id)
           .eq("status", "ativo"),
       ]);
@@ -118,7 +128,11 @@ export async function GET(request: Request) {
 
     for (const d of devolucoes.data ?? []) {
       const item = d.item as unknown as { descricao: string } | null;
-      const contrato = d.contrato as unknown as { numero: string } | null;
+      const contrato = d.contrato as unknown as { numero: string; cadencia: Cadencia; obra: ObraRef } | null;
+      const custoMensal =
+        Number(d.quantidade) *
+        Number(d.valor_unitario_periodo) *
+        (contrato ? periodosPorMes(contrato.cadencia) : 0);
       brutos.push({
         tipo: "devolucao",
         referencia_id: d.id,
@@ -127,10 +141,18 @@ export async function GET(request: Request) {
           categoria: "Devolução prevista",
           descricao: `${item?.descricao ?? "Item"} (contrato ${contrato?.numero ?? "—"})`,
           data: formatarData(d.data_devolucao_prevista),
+          obra: nomeObra(contrato?.obra ?? null),
+          custo: custoMensal > 0 ? formatarBRL(custoMensal) : undefined,
         },
       });
     }
     for (const c of contratos.data ?? []) {
+      const obra = c.obra as unknown as ObraRef;
+      const itens = (c.item_locado as { quantidade: number; valor_unitario_periodo: number }[] | null) ?? [];
+      const custoMensal = itens.reduce(
+        (s, i) => s + Number(i.quantidade) * Number(i.valor_unitario_periodo) * periodosPorMes(c.cadencia as Cadencia),
+        0,
+      );
       brutos.push({
         tipo: "contrato_fim",
         referencia_id: c.id,
@@ -139,10 +161,13 @@ export async function GET(request: Request) {
           categoria: "Fim de contrato",
           descricao: `Contrato ${c.numero}`,
           data: formatarData(c.data_fim_prevista),
+          obra: nomeObra(obra),
+          custo: custoMensal > 0 ? formatarBRL(custoMensal) : undefined,
         },
       });
     }
     for (const p of pagamentos.data ?? []) {
+      const obra = p.obra as unknown as ObraRef;
       brutos.push({
         tipo: "pagamento",
         referencia_id: p.id,
@@ -151,14 +176,23 @@ export async function GET(request: Request) {
           categoria: "Pagamento",
           descricao: p.descricao,
           data: formatarData(p.vencimento),
+          obra: nomeObra(obra),
+          custo: formatarBRL(Number(p.valor)),
         },
       });
     }
 
     // Imóveis: fim de contrato e reajuste dentro da janela.
     for (const ci of imovelContratos.data ?? []) {
-      const imv = ci.imovel as unknown as { apelido: string } | null;
+      const imv = ci.imovel as unknown as { apelido: string; obra: ObraRef } | null;
       const apelido = imv?.apelido ?? "Imóvel";
+      const obra = nomeObra(imv?.obra ?? null);
+      const custoMensal =
+        Number(ci.valor_aluguel) +
+        Number(ci.valor_condominio) +
+        Number(ci.valor_iptu) +
+        (ci.seguro_fianca_mensal ? Number(ci.seguro_fianca ?? 0) : 0);
+      const custo = custoMensal > 0 ? formatarBRL(custoMensal) : undefined;
       if (ci.data_fim && ci.data_fim >= hoje && ci.data_fim <= limite) {
         brutos.push({
           tipo: "imovel_contrato_fim",
@@ -168,6 +202,8 @@ export async function GET(request: Request) {
             categoria: "Imóvel — fim de contrato",
             descricao: apelido,
             data: formatarData(ci.data_fim),
+            obra,
+            custo,
           },
         });
       }
@@ -180,6 +216,8 @@ export async function GET(request: Request) {
             categoria: "Imóvel — reajuste de aluguel",
             descricao: apelido,
             data: formatarData(ci.data_reajuste),
+            obra,
+            custo,
           },
         });
       }
@@ -214,6 +252,7 @@ export async function GET(request: Request) {
           categoria: "Imóvel sem contrato",
           descricao: (im.apelido as string) ?? "Imóvel",
           data: "—",
+          obra: nomeObra((im.obra as unknown as ObraRef) ?? null),
         },
       });
     }
