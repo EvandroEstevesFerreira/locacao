@@ -1,4 +1,3 @@
-import { FileText, Download } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeEditarCadastros } from "@/lib/auth";
 import { formatarData } from "@/lib/locacao";
@@ -7,7 +6,6 @@ import {
   CATEGORIA_BIBLIOTECA_INFO,
 } from "@/lib/biblioteca";
 import { PageHeader } from "@/components/page-header";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -15,9 +13,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ConfirmDelete } from "@/components/confirm-delete";
 import { BibliotecaUploader } from "../biblioteca-uploader";
-import { excluirDocumentoBiblioteca } from "../actions";
+import { BibliotecaItem } from "../biblioteca-item";
 
 export const metadata = { title: "Documentos do alojamento — Loca" };
 
@@ -89,46 +86,21 @@ export default async function DocumentosPage() {
                 <CardTitle className="text-base">{info.label}</CardTitle>
                 <CardDescription>{info.descricao}</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-2">
+              <CardContent className="space-y-1">
                 {doList.map((d) => (
-                  <div
+                  <BibliotecaItem
                     key={d.id}
-                    className="flex flex-wrap items-center justify-between gap-2 border-b pb-2 last:border-0"
-                  >
-                    <div className="flex min-w-0 items-start gap-2">
-                      <FileText className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                      <div className="min-w-0">
-                        <p className="font-medium">{d.titulo}</p>
-                        {d.descricao ? (
-                          <p className="text-sm text-muted-foreground">{d.descricao}</p>
-                        ) : null}
-                        <p className="text-xs text-muted-foreground">
-                          {formatarData(d.created_at.slice(0, 10))}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {url.get(d.path) ? (
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          render={
-                            <a href={url.get(d.path)} target="_blank" rel="noopener noreferrer" />
-                          }
-                        >
-                          <Download className="size-4" /> Baixar
-                        </Button>
-                      ) : null}
-                      {podeEditar ? (
-                        <ConfirmDelete
-                          action={excluirDocumentoBiblioteca}
-                          id={d.id}
-                          hidden={{ path: d.path }}
-                          mensagem="Remover este documento da biblioteca?"
-                        />
-                      ) : null}
-                    </div>
-                  </div>
+                    doc={{
+                      id: d.id,
+                      categoria: d.categoria,
+                      titulo: d.titulo,
+                      descricao: d.descricao,
+                      path: d.path,
+                    }}
+                    downloadUrl={url.get(d.path)}
+                    dataLabel={formatarData(d.created_at.slice(0, 10))}
+                    podeEditar={podeEditar}
+                  />
                 ))}
               </CardContent>
             </Card>

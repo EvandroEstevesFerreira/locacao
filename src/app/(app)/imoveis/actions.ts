@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeOperar, podeEditarCadastros } from "@/lib/auth";
 import { CATEGORIAS_BIBLIOTECA } from "@/lib/biblioteca";
 
-export type ImovelFormState = { error?: string };
+export type ImovelFormState = { error?: string; ok?: boolean };
 
 function txt(v: FormDataEntryValue | null): string | null {
   const t = String(v ?? "").trim();
@@ -493,6 +493,33 @@ export async function salvarDocumentoBiblioteca(
     path,
   });
   revalidatePath("/imoveis/documentos");
+}
+
+export async function atualizarDocumentoBiblioteca(
+  _prev: ImovelFormState,
+  formData: FormData,
+): Promise<ImovelFormState> {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id || !podeEditarCadastros(perfil.papel)) {
+    return { error: "Sem permissão." };
+  }
+  const id = txt(formData.get("id"));
+  const titulo = txt(formData.get("titulo"));
+  if (!id) return { error: "Documento inválido." };
+  if (!titulo) return { error: "Informe o título do documento." };
+  const categoria = String(formData.get("categoria") ?? "outro");
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("biblioteca_documento")
+    .update({
+      titulo,
+      descricao: txt(formData.get("descricao")),
+      categoria: CATEGORIAS_BIBLIOTECA.includes(categoria as never) ? categoria : "outro",
+    })
+    .eq("id", id);
+  if (error) return { error: "Não foi possível salvar." };
+  revalidatePath("/imoveis/documentos");
+  return { ok: true };
 }
 
 export async function excluirDocumentoBiblioteca(formData: FormData) {

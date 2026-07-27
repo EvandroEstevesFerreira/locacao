@@ -7,6 +7,13 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.9.1] — 2026-07-26
+
+### Melhorado
+
+- Documentos da biblioteca do alojamento agora podem ter nome, descrição e
+  categoria editados.
+
 ## [0.9.0] — 2026-07-26
 
 ### Adicionado
