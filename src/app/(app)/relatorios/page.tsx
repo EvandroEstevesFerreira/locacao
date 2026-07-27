@@ -82,8 +82,8 @@ export default async function RelatoriosPage({
         <CardContent className="pt-6">
           <form className="flex flex-wrap items-end gap-3" method="get">
             <div className="flex flex-col gap-1">
-              <label className="text-xs text-muted-foreground">Relatório</label>
-              <select name="tipo" defaultValue={tipo} className={selectClasses}>
+              <label htmlFor="f-tipo" className="text-xs text-muted-foreground">Relatório</label>
+              <select id="f-tipo" name="tipo" defaultValue={tipo} className={selectClasses}>
                 {TIPOS_RELATORIO.map((t) => (
                   <option key={t.valor} value={t.valor}>
                     {t.label}
@@ -92,8 +92,8 @@ export default async function RelatoriosPage({
               </select>
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-xs text-muted-foreground">Obra</label>
-              <select name="obra" defaultValue={sp.obra ?? ""} className={selectClasses}>
+              <label htmlFor="f-obra" className="text-xs text-muted-foreground">Obra</label>
+              <select id="f-obra" name="obra" defaultValue={sp.obra ?? ""} className={selectClasses}>
                 <option value="">Todas</option>
                 {(obras ?? []).map((o) => (
                   <option key={o.id} value={o.id}>
@@ -103,8 +103,9 @@ export default async function RelatoriosPage({
               </select>
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-xs text-muted-foreground">Fornecedor</label>
+              <label htmlFor="f-fornecedor" className="text-xs text-muted-foreground">Fornecedor</label>
               <select
+                id="f-fornecedor"
                 name="fornecedor"
                 defaultValue={sp.fornecedor ?? ""}
                 className={selectClasses}
@@ -118,16 +119,17 @@ export default async function RelatoriosPage({
               </select>
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-xs text-muted-foreground">Status</label>
-              <select name="status" defaultValue={sp.status ?? ""} className={selectClasses}>
+              <label htmlFor="f-status" className="text-xs text-muted-foreground">Status</label>
+              <select id="f-status" name="status" defaultValue={sp.status ?? ""} className={selectClasses}>
                 <option value="">Todos</option>
                 <option value="pendente">Pendente</option>
                 <option value="pago">Pago</option>
               </select>
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-xs text-muted-foreground">De</label>
+              <label htmlFor="f-inicio" className="text-xs text-muted-foreground">De</label>
               <input
+                id="f-inicio"
                 type="date"
                 name="inicio"
                 defaultValue={sp.inicio ?? ""}
@@ -135,8 +137,9 @@ export default async function RelatoriosPage({
               />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-xs text-muted-foreground">Até</label>
+              <label htmlFor="f-fim" className="text-xs text-muted-foreground">Até</label>
               <input
+                id="f-fim"
                 type="date"
                 name="fim"
                 defaultValue={sp.fim ?? ""}

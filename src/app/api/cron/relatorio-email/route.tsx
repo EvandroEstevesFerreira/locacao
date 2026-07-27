@@ -6,9 +6,11 @@ import {
   TIPOS_RELATORIO,
   gerarRelatorio,
   type TipoRelatorio,
+  type Relatorio,
 } from "@/lib/relatorios";
 import { DocumentoRelatorio } from "@/lib/pdf";
 import { emailConfigurado, enviarEmail, montarEmailRelatorio } from "@/lib/email";
+import { hojeISOSaoPaulo, dataDeISO } from "@/lib/locacao";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,6 +20,13 @@ function autorizado(request: Request) {
   const secret = process.env.CRON_SECRET;
   if (!secret) return false;
   return request.headers.get("authorization") === `Bearer ${secret}`;
+}
+
+// Fora do try/catch: evita construir JSX dentro de try (regra do ESLint).
+async function renderRelatorioPdf(relatorio: Relatorio, periodo: string) {
+  return renderToBuffer(
+    <DocumentoRelatorio relatorio={relatorio} periodo={periodo} />,
+  );
 }
 
 export async function GET(request: Request) {
@@ -33,9 +42,11 @@ export async function GET(request: Request) {
 
   const supabase = createAdminClient();
   const agora = new Date();
-  const hojeStr = format(agora, "yyyy-MM-dd");
-  const isoWeekday = ((agora.getDay() + 6) % 7) + 1; // 1=segunda … 7=domingo
-  const diaDoMes = agora.getDate();
+  // Datas ancoradas no fuso de São Paulo (o Vercel roda em UTC).
+  const hojeStr = hojeISOSaoPaulo(agora);
+  const hojeData = dataDeISO(hojeStr);
+  const isoWeekday = ((hojeData.getDay() + 6) % 7) + 1; // 1=segunda … 7=domingo
+  const diaDoMes = hojeData.getDate();
 
   const { data: configs } = await supabase
     .from("config_relatorio_email")
@@ -43,8 +54,10 @@ export async function GET(request: Request) {
     .eq("ativo", true);
 
   const enviados: { org: string; tipo: string }[] = [];
+  const erros: { org: string; erro: string }[] = [];
 
   for (const cfg of configs ?? []) {
+   try {
     const destinatarios = (cfg.destinatarios ?? []).filter(Boolean);
     if (destinatarios.length === 0) continue;
 
@@ -73,12 +86,10 @@ export async function GET(request: Request) {
       .single();
     const orgNome = org?.nome ?? "Organização";
 
-    const periodoLabel = format(agora, "dd/MM/yyyy");
+    const periodoLabel = format(hojeData, "dd/MM/yyyy");
     const html = montarEmailRelatorio(orgNome, relatorio, periodoLabel);
 
-    const pdf = await renderToBuffer(
-      <DocumentoRelatorio relatorio={relatorio} periodo={periodoLabel} />,
-    );
+    const pdf = await renderRelatorioPdf(relatorio, periodoLabel);
     const anexo = {
       filename: `relatorio-${tipo}-${hojeStr}.pdf`,
       content: Buffer.from(pdf).toString("base64"),
@@ -97,7 +108,12 @@ export async function GET(request: Request) {
       .eq("org_id", cfg.org_id);
 
     enviados.push({ org: cfg.org_id, tipo });
+   } catch (e) {
+    // Isola a falha: uma org com erro não impede as demais.
+    console.error("[cron/relatorio-email] falha na org", cfg.org_id, e);
+    erros.push({ org: cfg.org_id, erro: e instanceof Error ? e.message : String(e) });
+   }
   }
 
-  return NextResponse.json({ ok: true, enviados });
+  return NextResponse.json({ ok: true, enviados, erros });
 }

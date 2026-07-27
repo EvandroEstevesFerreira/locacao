@@ -86,6 +86,7 @@ export default async function ImovelDetalhePage({
   const { data: imovel } = await supabase
     .from("imovel")
     .select("*, obra:obra_id(codigo, nome)")
+    .is("deleted_at", null)
     .eq("id", id)
     .single();
   if (!imovel) notFound();

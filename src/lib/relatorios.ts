@@ -162,7 +162,8 @@ async function custoPorFornecedor(
     .from("lancamento_financeiro")
     .select(
       "valor, status, contrato:contrato_id(fornecedor_id, fornecedor:fornecedor_id(nome))",
-    );
+    )
+    .is("deleted_at", null);
   if (filtros.obra_id) q = q.eq("obra_id", filtros.obra_id);
   if (filtros.status) q = q.eq("status", filtros.status);
   if (filtros.inicio) q = q.gte("vencimento", filtros.inicio);
@@ -365,6 +366,7 @@ async function imoveisCusto(supabase: DB, filtros: FiltrosRelatorio): Promise<Re
   const { data } = await supabase
     .from("imovel")
     .select("apelido, tipo, obra_id, obra:obra_id(codigo, nome), contrato_imovel(valor_aluguel, valor_condominio, valor_iptu, seguro_fianca, seguro_fianca_mensal, vigente)")
+    .is("deleted_at", null)
     .order("apelido");
   const linhas = (data ?? [])
     .filter((i: Record<string, unknown>) => !filtros.obra_id || i.obra_id === filtros.obra_id)
@@ -446,6 +448,7 @@ async function imoveisSemContrato(supabase: DB, filtros: FiltrosRelatorio): Prom
   const { data } = await supabase
     .from("imovel")
     .select("apelido, tipo, obra_id, obra:obra_id(codigo), contrato_imovel(vigente)")
+    .is("deleted_at", null)
     .eq("status", "ativo")
     .order("apelido");
   const linhas = (data ?? [])
@@ -776,6 +779,7 @@ async function contasPagar(
     .select(
       "descricao, competencia, vencimento, valor, status, obra:obra_id(codigo,nome), contrato:contrato_id(fornecedor_id, fornecedor:fornecedor_id(nome))",
     )
+    .is("deleted_at", null)
     .order("vencimento");
   if (filtros.obra_id) q = q.eq("obra_id", filtros.obra_id);
   if (filtros.status) q = q.eq("status", filtros.status);
@@ -827,7 +831,8 @@ async function custoPorObra(
     .from("lancamento_financeiro")
     .select(
       "valor, status, obra:obra_id(codigo,nome), contrato:contrato_id(fornecedor_id)",
-    );
+    )
+    .is("deleted_at", null);
   if (filtros.obra_id) q = q.eq("obra_id", filtros.obra_id);
   if (filtros.status) q = q.eq("status", filtros.status);
   if (filtros.inicio) q = q.gte("vencimento", filtros.inicio);

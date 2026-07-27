@@ -54,7 +54,7 @@ export async function gerarFluxoCaixa(
   let qc = supabase
     .from("contrato_locacao")
     .select(
-      "id, obra_id, data_inicio, data_fim_prevista, cadencia, item_locado(quantidade, valor_unitario_periodo, status)",
+      "id, obra_id, data_inicio, data_fim_prevista, cadencia, item_locado(quantidade, valor_unitario_periodo, status, movimentacao(quantidade, tipo))",
     )
     .eq("status", "ativo");
   if (filtros.obra_id) qc = qc.eq("obra_id", filtros.obra_id);
@@ -75,16 +75,21 @@ export async function gerarFluxoCaixa(
   const projPorContrato = (contratos ?? []).map(
     (c: Record<string, unknown>) => {
       const itens = (c.item_locado as Record<string, unknown>[]) ?? [];
-      const custoMensal = itens
-        .filter((i) => i.status === "em_aberto")
-        .reduce(
-          (s, i) =>
-            s +
-            Number(i.quantidade) *
-              Number(i.valor_unitario_periodo) *
-              periodosPorMes(c.cadencia as Cadencia),
-          0,
+      const custoMensal = itens.reduce((s, i) => {
+        // Saldo em aberto = quantidade - devolvido (respeita devoluções parciais).
+        const movs = (i.movimentacao as Record<string, unknown>[]) ?? [];
+        const devolvido = movs
+          .filter((m) => m.tipo === "devolucao")
+          .reduce((a, m) => a + Number(m.quantidade), 0);
+        const saldo = Math.max(0, Number(i.quantidade) - devolvido);
+        if (saldo <= 0) return s;
+        return (
+          s +
+          saldo *
+            Number(i.valor_unitario_periodo) *
+            periodosPorMes(c.cadencia as Cadencia)
         );
+      }, 0);
       const inicio = startOfMonth(new Date(String(c.data_inicio)));
       const fim = c.data_fim_prevista
         ? startOfMonth(new Date(String(c.data_fim_prevista)))

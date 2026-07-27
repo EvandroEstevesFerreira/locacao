@@ -7,7 +7,7 @@ import {
   montarEmailVencimentos,
   type LinhaAlerta,
 } from "@/lib/email";
-import { formatarData } from "@/lib/locacao";
+import { formatarData, hojeISOSaoPaulo, dataDeISO } from "@/lib/locacao";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -30,8 +30,9 @@ export async function GET(request: Request) {
   }
 
   const supabase = createAdminClient();
-  const agora = new Date();
-  const hoje = format(agora, "yyyy-MM-dd");
+  // Datas ancoradas no fuso de São Paulo (o Vercel roda em UTC).
+  const hoje = hojeISOSaoPaulo();
+  const agora = dataDeISO(hoje);
 
   const { data: configs } = await supabase
     .from("config_alerta")
@@ -40,7 +41,9 @@ export async function GET(request: Request) {
 
   const resumo: { org: string; enviados: number }[] = [];
 
+  const erros: { org: string; erro: string }[] = [];
   for (const cfg of configs ?? []) {
+   try {
     const destinatarios = (cfg.destinatarios ?? []).filter(Boolean);
     if (destinatarios.length === 0) continue;
 
@@ -262,7 +265,12 @@ export async function GET(request: Request) {
     );
 
     resumo.push({ org: cfg.org_id, enviados: novos.length });
+   } catch (e) {
+    // Isola a falha: uma org com erro não impede as demais.
+    console.error("[cron/vencimentos] falha na org", cfg.org_id, e);
+    erros.push({ org: cfg.org_id, erro: e instanceof Error ? e.message : String(e) });
+   }
   }
 
-  return NextResponse.json({ ok: true, resumo });
+  return NextResponse.json({ ok: true, resumo, erros });
 }

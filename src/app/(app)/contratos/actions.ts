@@ -94,7 +94,8 @@ export async function excluirContrato(formData: FormData) {
   const id = (formData.get("id") as string | null)?.trim();
   if (!id) return;
   const supabase = await createClient();
-  await supabase.from("contrato_locacao").delete().eq("id", id);
+  // Soft-delete: preserva histórico e auditoria.
+  await supabase.from("contrato_locacao").update({ deleted_at: new Date().toISOString() }).eq("id", id);
   revalidatePath("/contratos");
   redirect("/contratos");
 }

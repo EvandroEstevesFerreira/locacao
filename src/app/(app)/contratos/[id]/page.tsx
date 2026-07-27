@@ -13,7 +13,7 @@ import { getCurrentPerfil, podeOperar, podeExcluirCritico } from "@/lib/auth";
 import {
   CADENCIA,
   STATUS_CONTRATO,
-  calcularCusto,
+  custoLinhaLocado,
   dataDeISO,
   formatarBRL,
   formatarData,
@@ -128,17 +128,22 @@ export default async function ContratoDetalhePage({
   const prorata = !!contrato.cobranca_prorata;
 
   const linhasCalc = linhas.map((l) => {
-    const devolvido = (l.movimentacao ?? [])
-      .filter((m) => m.tipo === "devolucao")
-      .reduce((s, m) => s + Number(m.quantidade), 0);
-    const saldo = Number(l.quantidade) - devolvido;
+    const retirada = dataDeISO(l.data_retirada);
     const fim = l.data_devolucao ? dataDeISO(l.data_devolucao) : hoje;
-    const periodos = periodosEntre(cadencia, dataDeISO(l.data_retirada), fim, prorata);
-    const custo = calcularCusto(
-      Number(l.quantidade),
-      Number(l.valor_unitario_periodo),
-      periodos,
-    );
+    const devolucoes = (l.movimentacao ?? [])
+      .filter((m) => m.tipo === "devolucao")
+      .map((m) => ({ quantidade: Number(m.quantidade), data: dataDeISO(m.data) }));
+    // Custo respeita devoluções parciais: cada unidade é cobrada até voltar.
+    const { saldo, custo } = custoLinhaLocado({
+      quantidade: Number(l.quantidade),
+      valorUnitarioPeriodo: Number(l.valor_unitario_periodo),
+      cadencia,
+      retirada,
+      devolucoes,
+      fim,
+      prorata,
+    });
+    const periodos = periodosEntre(cadencia, retirada, fim, prorata);
     return { ...l, saldo, periodos, custo };
   });
 
