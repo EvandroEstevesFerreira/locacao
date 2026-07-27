@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus, Pencil } from "lucide-react";
+import { Plus, Pencil, FileText } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeOperar } from "@/lib/auth";
 import { formatarBRL } from "@/lib/locacao";
@@ -84,6 +84,10 @@ export default async function ImoveisPage({
         titulo="Imóveis"
         descricao="Kitnets, apartamentos, casas, galpões e escritórios locados pela Sistenge."
       >
+        <Button variant="outline" render={<Link href="/imoveis/documentos" />}>
+          <FileText className="size-4" />
+          Documentos
+        </Button>
         {podeEditar ? (
           <Button render={<Link href="/imoveis/novo" />}>
             <Plus className="size-4" />

@@ -7,6 +7,14 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.9.0] — 2026-07-26
+
+### Adicionado
+
+- Biblioteca de documentos do alojamento no módulo Imóveis (normativos,
+  formulários e placas), com categorias, upload por administradores e download
+  para toda a equipe. Arquivos no Storage.
+
 ## [0.8.0] — 2026-07-26
 
 ### Segurança

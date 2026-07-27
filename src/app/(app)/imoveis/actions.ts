@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentPerfil, podeOperar } from "@/lib/auth";
+import { getCurrentPerfil, podeOperar, podeEditarCadastros } from "@/lib/auth";
+import { CATEGORIAS_BIBLIOTECA } from "@/lib/biblioteca";
 
 export type ImovelFormState = { error?: string };
 
@@ -469,6 +470,41 @@ export async function salvarAnexoImovelContrato(
   const supabase = await createClient();
   await supabase.from("contrato_imovel").update({ [campo]: path }).eq("id", contratoId);
   revalidatePath(`/imoveis/${imovelId}`);
+}
+
+// ---------------------------------------------------------------------------
+// Biblioteca de documentos do alojamento (nível organização, bucket "imoveis").
+// ---------------------------------------------------------------------------
+export async function salvarDocumentoBiblioteca(
+  path: string,
+  categoria: string,
+  titulo: string,
+  descricao: string | null,
+) {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id || !podeEditarCadastros(perfil.papel)) return;
+  if (!path || !titulo.trim()) return;
+  const supabase = await createClient();
+  await supabase.from("biblioteca_documento").insert({
+    org_id: perfil.org_id,
+    categoria: CATEGORIAS_BIBLIOTECA.includes(categoria as never) ? categoria : "outro",
+    titulo: titulo.trim(),
+    descricao: descricao?.trim() || null,
+    path,
+  });
+  revalidatePath("/imoveis/documentos");
+}
+
+export async function excluirDocumentoBiblioteca(formData: FormData) {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id || !podeEditarCadastros(perfil.papel)) return;
+  const id = txt(formData.get("id"));
+  const path = txt(formData.get("path"));
+  if (!id) return;
+  const supabase = await createClient();
+  if (path) await supabase.storage.from("imoveis").remove([path]);
+  await supabase.from("biblioteca_documento").delete().eq("id", id);
+  revalidatePath("/imoveis/documentos");
 }
 
 export async function removerAnexoImovelContrato(formData: FormData) {
