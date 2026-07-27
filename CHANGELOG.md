@@ -7,6 +7,14 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.19.3] — 2026-07-27
+
+### Melhorado
+
+- Tela de Configurações reorganizada em duas seções — **Organização** (atalhos:
+  empresa, templates, usuários, auditoria, como lista de linhas clicáveis) e
+  **Automações de e-mail** (alertas e relatório) — com layout mais limpo.
+
 ## [0.19.2] — 2026-07-27
 
 ### Corrigido
