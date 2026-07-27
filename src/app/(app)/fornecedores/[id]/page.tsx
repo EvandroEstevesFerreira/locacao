@@ -17,13 +17,18 @@ export default async function EditarFornecedorPage({
 
   const { id } = await params;
   const supabase = await createClient();
-  const { data: fornecedor } = await supabase
-    .from("fornecedor")
-    .select(
-      "id, nome, cnpj, contato_nome, contato_telefone, contato_email, observacoes, ativo",
-    )
-    .eq("id", id)
-    .single();
+  const [{ data: fornecedor }, { data: obras }, { data: vinculos }] =
+    await Promise.all([
+      supabase
+        .from("fornecedor")
+        .select(
+          "id, nome, cnpj, contato_nome, contato_telefone, contato_email, observacoes, ativo",
+        )
+        .eq("id", id)
+        .single(),
+      supabase.from("obra").select("id, codigo, nome").order("codigo"),
+      supabase.from("fornecedor_obra").select("obra_id").eq("fornecedor_id", id),
+    ]);
 
   if (!fornecedor) notFound();
 
@@ -32,7 +37,11 @@ export default async function EditarFornecedorPage({
       <PageHeader titulo="Editar fornecedor" descricao={fornecedor.nome} />
       <Card>
         <CardContent className="pt-6">
-          <FornecedorForm fornecedor={fornecedor} />
+          <FornecedorForm
+            fornecedor={fornecedor}
+            obras={obras ?? []}
+            obrasDoFornecedor={(vinculos ?? []).map((v) => v.obra_id)}
+          />
         </CardContent>
       </Card>
     </div>

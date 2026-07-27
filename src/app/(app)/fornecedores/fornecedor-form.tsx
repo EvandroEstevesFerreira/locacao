@@ -20,7 +20,15 @@ type Fornecedor = {
   ativo: boolean;
 };
 
-export function FornecedorForm({ fornecedor }: { fornecedor?: Fornecedor }) {
+export function FornecedorForm({
+  fornecedor,
+  obras = [],
+  obrasDoFornecedor = [],
+}: {
+  fornecedor?: Fornecedor;
+  obras?: { id: string; codigo: string; nome: string }[];
+  obrasDoFornecedor?: string[];
+}) {
   const [state, formAction, isPending] = useActionState<
     FornecedorFormState,
     FormData
@@ -101,6 +109,35 @@ export function FornecedorForm({ fornecedor }: { fornecedor?: Fornecedor }) {
           rows={3}
           defaultValue={fornecedor?.observacoes ?? ""}
         />
+      </div>
+
+      <div className="space-y-2">
+        <Label>Obras / locais atendidos</Label>
+        <p className="text-xs text-muted-foreground">
+          Vincule as obras onde este fornecedor atua (fornecedores costumam ser
+          locais). Serve para organizar e filtrar — não impede usá-lo em outras
+          obras.
+        </p>
+        {obras.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nenhuma obra cadastrada.</p>
+        ) : (
+          <div className="grid max-h-56 gap-2 overflow-y-auto rounded-md border p-3 sm:grid-cols-2">
+            {obras.map((o) => (
+              <label key={o.id} className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  name="obras"
+                  value={o.id}
+                  defaultChecked={obrasDoFornecedor.includes(o.id)}
+                  className="size-4"
+                />
+                <span>
+                  <span className="font-medium">{o.codigo}</span> — {o.nome}
+                </span>
+              </label>
+            ))}
+          </div>
+        )}
       </div>
 
       <label className="flex items-center gap-2 text-sm">
