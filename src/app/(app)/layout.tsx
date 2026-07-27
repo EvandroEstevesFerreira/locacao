@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { LogOut, UserRound } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PAPEL_INFO, type Papel } from "@/lib/permissoes";
+import { APP_VERSION } from "@/lib/changelog";
 import { Sidebar } from "@/components/layout/sidebar";
 import { UserMenu } from "@/components/layout/user-menu";
 import { BackButton } from "@/components/back-button";
@@ -78,6 +79,12 @@ export default async function AppLayout({
               </button>
             </form>
           </div>
+          <Link
+            href="/novidades"
+            className="mt-2 block px-2 text-xs text-muted-foreground hover:text-primary"
+          >
+            Loca v{APP_VERSION} · Novidades
+          </Link>
         </div>
       </aside>
 
