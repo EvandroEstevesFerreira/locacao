@@ -58,6 +58,7 @@ export default async function ImoveisPage({
         .select(
           "id, tipo, apelido, cidade, uf, status, obra:obra_id(codigo), contrato_imovel(valor_aluguel, valor_condominio, vigente)",
         )
+        .is("deleted_at", null)
         .order("apelido");
       if (tipo) q = q.eq("tipo", tipo);
       if (status) q = q.eq("status", status);

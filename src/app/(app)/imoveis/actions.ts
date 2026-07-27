@@ -84,7 +84,8 @@ export async function excluirImovel(formData: FormData) {
   const id = txt(formData.get("id"));
   if (!id) return;
   const supabase = await createClient();
-  await supabase.from("imovel").delete().eq("id", id);
+  // Soft-delete: preserva histórico e auditoria.
+  await supabase.from("imovel").update({ deleted_at: new Date().toISOString() }).eq("id", id);
   revalidatePath("/imoveis");
   redirect("/imoveis");
 }

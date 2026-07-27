@@ -16,7 +16,9 @@ const schema = z.object({
   obra_id: z.string().uuid("Selecione a obra."),
   contrato_id: z.string().uuid().optional().or(z.literal("")),
   descricao: z.string().trim().min(1, "Informe a descrição.").max(200),
-  competencia: z.string().min(1, "Informe a competência."),
+  competencia: z
+    .string()
+    .regex(/^\d{4}-\d{2}(-\d{2})?$/, "Competência inválida (use AAAA-MM)."),
   valor: z.coerce.number().positive("Valor deve ser maior que zero."),
   vencimento: z.string().min(1, "Informe o vencimento."),
   status: z.enum(["pendente", "pago"]),
@@ -58,10 +60,11 @@ export async function salvarLancamento(
     valor: parsed.data.valor,
     vencimento: parsed.data.vencimento,
     status: parsed.data.status,
+    // Consistente com alternarPago: sem data informada, usa hoje (pagamento agora).
     data_pagamento:
       parsed.data.status === "pago"
         ? (formData.get("data_pagamento") as string | null) ||
-          parsed.data.vencimento
+          new Date().toISOString().slice(0, 10)
         : null,
   };
 
@@ -103,6 +106,7 @@ export async function excluirLancamento(formData: FormData) {
   const id = (formData.get("id") as string | null)?.trim();
   if (!id) return;
   const supabase = await createClient();
-  await supabase.from("lancamento_financeiro").delete().eq("id", id);
+  // Soft-delete: preserva histórico e auditoria.
+  await supabase.from("lancamento_financeiro").update({ deleted_at: new Date().toISOString() }).eq("id", id);
   revalidatePath("/financeiro");
 }

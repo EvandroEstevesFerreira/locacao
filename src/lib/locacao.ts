@@ -52,6 +52,39 @@ export function calcularCusto(
   return quantidade * valorUnitarioPeriodo * periodos;
 }
 
+export type MovimentacaoDevolucao = { quantidade: number; data: Date };
+
+/**
+ * Custo de uma linha locada respeitando DEVOLUÇÕES PARCIAIS: cada quantidade
+ * devolvida é cobrada da retirada até a data em que voltou; o saldo ainda em
+ * aberto é cobrado da retirada até `fim` (hoje ou data de encerramento).
+ * Corrige a superestimativa de cobrar sempre a quantidade cheia até hoje.
+ */
+export function custoLinhaLocado(p: {
+  quantidade: number;
+  valorUnitarioPeriodo: number;
+  cadencia: Cadencia;
+  retirada: Date;
+  devolucoes: MovimentacaoDevolucao[];
+  fim: Date;
+  prorata?: boolean;
+}): { saldo: number; custo: number } {
+  const prorata = p.prorata ?? false;
+  const devolvido = p.devolucoes.reduce((s, m) => s + Number(m.quantidade), 0);
+  const saldo = Math.max(0, Number(p.quantidade) - devolvido);
+
+  let custo = 0;
+  for (const m of p.devolucoes) {
+    const periodos = periodosEntre(p.cadencia, p.retirada, m.data, prorata);
+    custo += calcularCusto(Number(m.quantidade), p.valorUnitarioPeriodo, periodos);
+  }
+  if (saldo > 0) {
+    const periodos = periodosEntre(p.cadencia, p.retirada, p.fim, prorata);
+    custo += calcularCusto(saldo, p.valorUnitarioPeriodo, periodos);
+  }
+  return { saldo, custo };
+}
+
 export function formatarBRL(valor: number): string {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
@@ -69,6 +102,11 @@ export function formatarData(iso: string | null): string {
   if (!iso) return "—";
   const d = dataDeISO(iso);
   return d.toLocaleDateString("pt-BR");
+}
+
+/** Data de "hoje" no fuso de São Paulo como 'yyyy-mm-dd' (en-CA = ISO). */
+export function hojeISOSaoPaulo(base: Date = new Date()): string {
+  return base.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
 }
 
 /** Formata um timestamp ISO como data + hora no fuso de São Paulo. */

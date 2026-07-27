@@ -77,6 +77,7 @@ export async function excluirObra(formData: FormData) {
   if (!id) return;
 
   const supabase = await createClient();
-  await supabase.from("obra").delete().eq("id", id);
+  // Soft-delete: preserva histórico e auditoria.
+  await supabase.from("obra").update({ deleted_at: new Date().toISOString() }).eq("id", id);
   revalidatePath("/obras");
 }

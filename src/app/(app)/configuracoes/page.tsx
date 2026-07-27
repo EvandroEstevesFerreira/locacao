@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Users, Building, FileText, ChevronRight } from "lucide-react";
+import { Users, Building, FileText, History, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeConfigurarSistema } from "@/lib/auth";
 import { PageHeader } from "@/components/page-header";
@@ -92,6 +92,24 @@ export default async function ConfiguracoesPage() {
           </div>
           <Button variant="outline" size="sm" render={<Link href="/configuracoes/templates" />}>
             Abrir
+            <ChevronRight className="size-4" />
+          </Button>
+        </CardHeader>
+      </Card>
+
+      {/* Auditoria */}
+      <Card>
+        <CardHeader className="flex-row items-center justify-between space-y-0">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <History className="size-4" /> Auditoria
+            </CardTitle>
+            <CardDescription>
+              Histórico de quem criou, alterou ou excluiu registros.
+            </CardDescription>
+          </div>
+          <Button variant="outline" size="sm" render={<Link href="/configuracoes/auditoria" />}>
+            Ver
             <ChevronRight className="size-4" />
           </Button>
         </CardHeader>
