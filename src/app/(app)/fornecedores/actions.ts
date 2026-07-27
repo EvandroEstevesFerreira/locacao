@@ -72,14 +72,36 @@ export async function salvarFornecedor(
     ativo,
   };
 
-  const supabase = await createClient();
-  const { error } = id
-    ? await supabase.from("fornecedor").update(dados).eq("id", id)
-    : await supabase
-        .from("fornecedor")
-        .insert({ org_id: perfil.org_id, ...dados });
+  const obras = formData.getAll("obras").map(String).filter(Boolean);
 
-  if (error) return { error: "Não foi possível salvar. Tente novamente." };
+  const supabase = await createClient();
+  let fornecedorId = id;
+  if (id) {
+    const { error } = await supabase.from("fornecedor").update(dados).eq("id", id);
+    if (error) return { error: "Não foi possível salvar. Tente novamente." };
+  } else {
+    const { data: criado, error } = await supabase
+      .from("fornecedor")
+      .insert({ org_id: perfil.org_id, ...dados })
+      .select("id")
+      .single();
+    if (error || !criado) return { error: "Não foi possível salvar. Tente novamente." };
+    fornecedorId = criado.id;
+  }
+
+  // Sincroniza os vínculos com obras (N:N).
+  if (fornecedorId) {
+    await supabase.from("fornecedor_obra").delete().eq("fornecedor_id", fornecedorId);
+    if (obras.length > 0) {
+      await supabase.from("fornecedor_obra").insert(
+        obras.map((obra_id) => ({
+          fornecedor_id: fornecedorId!,
+          obra_id,
+          org_id: perfil.org_id!,
+        })),
+      );
+    }
+  }
 
   revalidatePath("/fornecedores");
   redirect("/fornecedores");
