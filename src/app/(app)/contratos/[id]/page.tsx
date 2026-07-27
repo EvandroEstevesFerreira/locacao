@@ -43,11 +43,13 @@ import { ConfirmDelete } from "@/components/confirm-delete";
 import { AddItemLocadoForm } from "../add-item-locado-form";
 import { DevolucaoForm } from "../devolucao-form";
 import { AnexoUploader } from "../anexo-uploader";
+import { ContratoDocsUploader } from "../contrato-docs-uploader";
 import {
   excluirContrato,
   excluirItemLocado,
   criarRelatorioRetirada,
   removerAnexoContrato,
+  removerContratoDoc,
 } from "../actions";
 
 export const metadata = { title: "Contrato — Loca" };
@@ -68,6 +70,7 @@ type Linha = {
   data_devolucao_prevista: string | null;
   data_devolucao: string | null;
   status: "em_aberto" | "devolvido";
+  identificacao: string | null;
   item: { descricao: string; unidade: string | null } | null;
   movimentacao: Mov[];
 };
@@ -115,10 +118,32 @@ export default async function ContratoDetalhePage({
         .data?.signedUrl ?? null
     : null;
 
+  // Documentos adicionais (aditivos / renovações).
+  const { data: docsRaw } = await supabase
+    .from("contrato_anexo")
+    .select("id, tipo, descricao, path, data")
+    .eq("contrato_id", id)
+    .order("data", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false });
+  type Doc = { id: string; tipo: string; descricao: string | null; path: string; data: string | null };
+  const docs = (docsRaw ?? []) as Doc[];
+  const docUrl = new Map<string, string>();
+  await Promise.all(
+    docs.map(async (d) => {
+      const { data } = await supabase.storage.from("contratos").createSignedUrl(d.path, 600);
+      if (data?.signedUrl) docUrl.set(d.path, data.signedUrl);
+    }),
+  );
+  const DOC_LABEL: Record<string, string> = {
+    aditivo: "Aditivo",
+    renovacao: "Renovação",
+    outro: "Documento",
+  };
+
   const { data: linhasRaw } = await supabase
     .from("item_locado")
     .select(
-      "id, quantidade, valor_unitario_periodo, data_retirada, data_devolucao_prevista, data_devolucao, status, item:item_id(descricao,unidade), movimentacao(id, quantidade, tipo, data, vistoria_id, vistoria:vistoria_id(vistoria_foto(count)))",
+      "id, quantidade, valor_unitario_periodo, data_retirada, data_devolucao_prevista, data_devolucao, status, identificacao, item:item_id(descricao,unidade), movimentacao(id, quantidade, tipo, data, vistoria_id, vistoria:vistoria_id(vistoria_foto(count)))",
     )
     .eq("contrato_id", id)
     .order("created_at");
@@ -172,7 +197,7 @@ export default async function ContratoDetalhePage({
     .order("descricao");
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="mx-auto flex max-w-5xl flex-col gap-6">
       <PageHeader
         eyebrow="Contrato de locação"
         titulo={`Contrato ${contrato.numero}`}
@@ -202,7 +227,7 @@ export default async function ContratoDetalhePage({
         ) : null}
       </PageHeader>
 
-      <Card>
+      <Card className="order-1">
         <CardContent className="grid gap-4 pt-6 sm:grid-cols-2 lg:grid-cols-4">
           <Info label="Obra" valor={obra ? `${obra.codigo} — ${obra.nome}` : "—"} />
           <Info label="Fornecedor" valor={fornecedor?.nome ?? "—"} />
@@ -234,8 +259,8 @@ export default async function ContratoDetalhePage({
         </CardContent>
       </Card>
 
-      {/* Contrato de locação (original) */}
-      <Card>
+      {/* Contrato de locação (original + aditivos) */}
+      <Card className="order-5">
         <CardHeader className="flex-row items-center justify-between space-y-0">
           <div>
             <CardTitle className="flex items-center gap-2 text-base">
@@ -284,10 +309,74 @@ export default async function ContratoDetalhePage({
             ) : null}
           </div>
         </CardHeader>
+        <CardContent className="space-y-3 border-t pt-4">
+          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+            Aditivos e renovações
+          </p>
+          {docs.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Nenhum aditivo ou renovação anexado.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {docs.map((d) => (
+                <li
+                  key={d.id}
+                  className="flex flex-wrap items-center justify-between gap-2 border-b pb-2 last:border-0"
+                >
+                  <div className="min-w-0">
+                    <span className="font-medium">{DOC_LABEL[d.tipo] ?? d.tipo}</span>
+                    {d.descricao ? (
+                      <span className="text-muted-foreground"> — {d.descricao}</span>
+                    ) : null}
+                    {d.data ? (
+                      <span className="block text-xs text-muted-foreground">
+                        {formatarData(d.data)}
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {docUrl.get(d.path) ? (
+                      <a
+                        href={docUrl.get(d.path)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                      >
+                        <Download className="size-4" /> Abrir
+                      </a>
+                    ) : null}
+                    {podeEditar ? (
+                      <form action={removerContratoDoc}>
+                        <input type="hidden" name="id" value={d.id} />
+                        <input type="hidden" name="contrato_id" value={contrato.id} />
+                        <input type="hidden" name="path" value={d.path} />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          type="submit"
+                          className="text-muted-foreground hover:text-destructive"
+                        >
+                          Remover
+                        </Button>
+                      </form>
+                    ) : null}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+          {podeEditar ? (
+            <ContratoDocsUploader
+              contratoId={contrato.id}
+              orgId={perfil?.org_id ?? ""}
+            />
+          ) : null}
+        </CardContent>
       </Card>
 
       {/* Relatório fotográfico de retirada */}
-      <Card>
+      <Card className="order-4">
         <CardHeader className="flex-row items-center justify-between space-y-0">
           <div>
             <CardTitle className="text-base">
@@ -331,7 +420,7 @@ export default async function ContratoDetalhePage({
 
       {/* Adicionar item (antes da lista) */}
       {podeEditar ? (
-        <Card>
+        <Card className="order-2">
           <CardHeader>
             <CardTitle className="text-base">Adicionar item</CardTitle>
             <CardDescription>
@@ -349,7 +438,7 @@ export default async function ContratoDetalhePage({
       ) : null}
 
       {/* Itens locados */}
-      <Card>
+      <Card className="order-3">
         <CardHeader>
           <CardTitle className="text-base">Itens locados</CardTitle>
           <CardDescription>
@@ -384,6 +473,11 @@ export default async function ContratoDetalhePage({
                         <span className="text-muted-foreground">
                           {" "}
                           ({l.item.unidade})
+                        </span>
+                      ) : null}
+                      {l.identificacao ? (
+                        <span className="block text-xs font-normal text-muted-foreground">
+                          nº {l.identificacao}
                         </span>
                       ) : null}
                     </TableCell>
@@ -437,7 +531,7 @@ export default async function ContratoDetalhePage({
 
       {/* Histórico de devoluções */}
       {devolucoes.length > 0 ? (
-        <Card>
+        <Card className="order-6">
           <CardHeader>
             <CardTitle className="text-base">Histórico de devoluções</CardTitle>
             <CardDescription>

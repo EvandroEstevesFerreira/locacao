@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.7.0";
+export const APP_VERSION = "0.8.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,17 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.8.0",
+    data: "2026-07-26",
+    titulo: "Acesso por obra nos imóveis e melhorias no contrato",
+    mudancas: [
+      { tipo: "seguranca", texto: "Imóveis e relatórios agora respeitam o acesso por obra: cada usuário vê apenas os dados das obras a que tem acesso." },
+      { tipo: "novo", texto: "Identificação do equipamento (nº de série/registro/tag) nos itens do contrato." },
+      { tipo: "novo", texto: "Aditivos e renovações: é possível anexar novos documentos ao contrato ao longo do tempo, além do original." },
+      { tipo: "melhoria", texto: "Nova disposição da tela do contrato: adicionar item e itens primeiro, depois o relatório de retirada e os documentos do contrato." },
+    ],
+  },
   {
     versao: "0.7.0",
     data: "2026-07-26",
