@@ -1,10 +1,16 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Users, Building, FileText, History, ChevronRight } from "lucide-react";
+import {
+  Users,
+  Building,
+  FileText,
+  History,
+  ChevronRight,
+  type LucideIcon,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeConfigurarSistema } from "@/lib/auth";
 import { PageHeader } from "@/components/page-header";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -38,9 +44,7 @@ export default async function ConfiguracoesPage() {
   const config = {
     ativo: data?.ativo ?? true,
     dias_alerta:
-      data?.dias_alerta && data.dias_alerta.length > 0
-        ? data.dias_alerta
-        : [3],
+      data?.dias_alerta && data.dias_alerta.length > 0 ? data.dias_alerta : [3],
     destinatarios: (data?.destinatarios ?? []) as string[],
   };
 
@@ -53,113 +57,112 @@ export default async function ConfiguracoesPage() {
   };
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="mx-auto max-w-2xl space-y-8">
       <PageHeader
         eyebrow="Preferências"
         titulo="Configurações"
-        descricao="Usuários e avisos automáticos de vencimento."
+        descricao="Cadastros da organização, documentos e automações de e-mail."
       />
-      {/* Dados da empresa */}
-      <Card>
-        <CardHeader className="flex-row items-center justify-between space-y-0">
-          <div>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Building className="size-4" /> Dados da empresa
-            </CardTitle>
+
+      {/* Organização */}
+      <section className="space-y-3">
+        <SecaoTitulo>Organização</SecaoTitulo>
+        <Card>
+          <CardContent className="divide-y p-0">
+            <LinkRow
+              href="/configuracoes/empresa"
+              icon={Building}
+              titulo="Dados da empresa"
+              descricao="CNPJ, endereço, contatos e representante — usados nos contratos."
+            />
+            <LinkRow
+              href="/configuracoes/templates"
+              icon={FileText}
+              titulo="Templates de documentos"
+              descricao="Texto dos contratos e termos com variáveis preenchidas ao gerar o PDF."
+            />
+            <LinkRow
+              href="/usuarios"
+              icon={Users}
+              titulo="Usuários"
+              descricao="Papéis e acesso por obra dos usuários da organização."
+            />
+            <LinkRow
+              href="/configuracoes/auditoria"
+              icon={History}
+              titulo="Auditoria"
+              descricao="Histórico de quem criou, alterou ou excluiu registros."
+            />
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* Automações de e-mail */}
+      <section className="space-y-3">
+        <SecaoTitulo>Automações de e-mail</SecaoTitulo>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Alertas de vencimento</CardTitle>
             <CardDescription>
-              Cadastro completo da organização (CNPJ, endereço, contatos,
-              representante) — usado nos contratos.
+              Um robô diário verifica devoluções previstas, fins de contrato e
+              pagamentos a vencer e envia um resumo por e-mail.
             </CardDescription>
-          </div>
-          <Button variant="outline" size="sm" render={<Link href="/configuracoes/empresa" />}>
-            Editar
-            <ChevronRight className="size-4" />
-          </Button>
-        </CardHeader>
-      </Card>
+          </CardHeader>
+          <CardContent>
+            <ConfigAlertaForm config={config} />
+          </CardContent>
+        </Card>
 
-      {/* Templates de documentos */}
-      <Card>
-        <CardHeader className="flex-row items-center justify-between space-y-0">
-          <div>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <FileText className="size-4" /> Templates de documentos
-            </CardTitle>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Relatório por e-mail</CardTitle>
             <CardDescription>
-              Texto dos contratos e termos com variáveis (ex.: {"{{aluguel}}"})
-              preenchidas ao gerar o PDF.
+              Envio automático de um relatório (com PDF anexo), semanal ou
+              mensalmente, para os destinatários escolhidos.
             </CardDescription>
-          </div>
-          <Button variant="outline" size="sm" render={<Link href="/configuracoes/templates" />}>
-            Abrir
-            <ChevronRight className="size-4" />
-          </Button>
-        </CardHeader>
-      </Card>
-
-      {/* Auditoria */}
-      <Card>
-        <CardHeader className="flex-row items-center justify-between space-y-0">
-          <div>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <History className="size-4" /> Auditoria
-            </CardTitle>
-            <CardDescription>
-              Histórico de quem criou, alterou ou excluiu registros.
-            </CardDescription>
-          </div>
-          <Button variant="outline" size="sm" render={<Link href="/configuracoes/auditoria" />}>
-            Ver
-            <ChevronRight className="size-4" />
-          </Button>
-        </CardHeader>
-      </Card>
-
-      {/* Usuários */}
-      <Card>
-        <CardHeader className="flex-row items-center justify-between space-y-0">
-          <div>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Users className="size-4" /> Usuários
-            </CardTitle>
-            <CardDescription>
-              Papéis e acesso por obra dos usuários da organização.
-            </CardDescription>
-          </div>
-          <Button variant="outline" size="sm" render={<Link href="/usuarios" />}>
-            Gerenciar
-            <ChevronRight className="size-4" />
-          </Button>
-        </CardHeader>
-      </Card>
-
-      {/* Alertas */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Alertas de vencimento</CardTitle>
-          <CardDescription>
-            Um robô diário (Vercel Cron) verifica devoluções previstas, fins de
-            contrato e pagamentos a vencer e envia um resumo por e-mail.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ConfigAlertaForm config={config} />
-        </CardContent>
-      </Card>
-
-      {/* Relatório por e-mail */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Relatório por e-mail</CardTitle>
-          <CardDescription>
-            Envio automático de um relatório (com PDF anexo) por e-mail, semanal
-            ou mensalmente, para os destinatários escolhidos.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ConfigRelatorioForm config={configRel} />
-        </CardContent>
-      </Card>
+          </CardHeader>
+          <CardContent>
+            <ConfigRelatorioForm config={configRel} />
+          </CardContent>
+        </Card>
+      </section>
     </div>
+  );
+}
+
+function SecaoTitulo({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="px-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+      {children}
+    </h2>
+  );
+}
+
+function LinkRow({
+  href,
+  icon: Icon,
+  titulo,
+  descricao,
+}: {
+  href: string;
+  icon: LucideIcon;
+  titulo: string;
+  descricao: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none"
+    >
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+        <Icon className="size-4" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium">{titulo}</p>
+        <p className="text-xs text-muted-foreground">{descricao}</p>
+      </div>
+      <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+    </Link>
   );
 }

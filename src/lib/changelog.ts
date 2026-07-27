@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.19.2";
+export const APP_VERSION = "0.19.3";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,14 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.19.3",
+    data: "2026-07-27",
+    titulo: "Tela de Configurações reorganizada",
+    mudancas: [
+      { tipo: "melhoria", texto: "Configurações agrupadas em “Organização” (atalhos) e “Automações de e-mail”, com layout mais limpo." },
+    ],
+  },
   {
     versao: "0.19.2",
     data: "2026-07-27",
