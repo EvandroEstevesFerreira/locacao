@@ -1,0 +1,50 @@
+// Gráfico de barras simples em CSS (sem dependências). Server-safe.
+
+export type BarPoint = { label: string; value: number; destaque?: boolean };
+
+export function BarChart({
+  data,
+  formatValue = (n) => String(n),
+  height = 160,
+}: {
+  data: BarPoint[];
+  formatValue?: (n: number) => string;
+  height?: number;
+}) {
+  const max = Math.max(1, ...data.map((d) => d.value));
+
+  if (data.length === 0) {
+    return (
+      <p className="py-8 text-center text-sm text-muted-foreground">Sem dados no período.</p>
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <div className="flex min-w-full items-end gap-2" style={{ height }}>
+        {data.map((d, i) => {
+          const pct = Math.round((d.value / max) * 100);
+          return (
+            <div key={i} className="flex min-w-8 flex-1 flex-col items-center justify-end gap-1">
+              <span className="text-[10px] tabular-nums text-muted-foreground">
+                {d.value > 0 ? formatValue(d.value) : ""}
+              </span>
+              <div
+                className={`w-full rounded-t ${d.destaque ? "bg-primary" : "bg-primary/55"}`}
+                style={{ height: `${Math.max(d.value > 0 ? 2 : 0, pct)}%` }}
+                title={`${d.label}: ${formatValue(d.value)}`}
+              />
+            </div>
+          );
+        })}
+      </div>
+      <div className="mt-1 flex min-w-full gap-2">
+        {data.map((d, i) => (
+          <div key={i} className="min-w-8 flex-1 text-center text-[10px] text-muted-foreground">
+            {d.label}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

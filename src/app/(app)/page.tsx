@@ -1,15 +1,17 @@
 import Link from "next/link";
 import { addDays, format } from "date-fns";
 import {
-  HardHat,
   FileText,
   PackageOpen,
   AlertTriangle,
   CalendarClock,
   Wallet,
+  Building2,
+  LineChart,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { formatarBRL, formatarData } from "@/lib/locacao";
+import { gerarFluxoCaixa } from "@/lib/fluxo";
 import {
   Card,
   CardContent,
@@ -18,6 +20,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { PageHeader } from "@/components/page-header";
+import { ObraFilter } from "@/components/obra-filter";
+import { BarChart } from "@/components/bar-chart";
 
 type Devolucao = {
   id: string;
@@ -26,40 +30,95 @@ type Devolucao = {
   item: { descricao: string } | null;
 };
 
-export default async function HomePage() {
+type ImovelKpi = {
+  contrato_imovel: {
+    valor_aluguel: number;
+    valor_condominio: number;
+    valor_iptu: number;
+    seguro_fianca: number | null;
+    seguro_fianca_mensal: boolean | null;
+    vigente: boolean;
+  }[] | null;
+};
+
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
   const supabase = await createClient();
+  const sp = await searchParams;
+  const obra = sp.obra;
   const hoje = new Date();
   const em7 = format(addDays(hoje, 7), "yyyy-MM-dd");
 
-  const [
-    obrasAtivas,
-    contratosAtivos,
-    itensEmAberto,
-    avariasAbertas,
-    pendentesRes,
-    devolucoesRes,
-  ] = await Promise.all([
-    supabase.from("obra").select("*", { count: "exact", head: true }).eq("status", "ativa"),
-    supabase
-      .from("contrato_locacao")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "ativo"),
-    supabase
+  const contratosQ = supabase
+    .from("contrato_locacao")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "ativo");
+  const itensQ = obra
+    ? supabase
+        .from("item_locado")
+        .select("*, contrato:contrato_id!inner(obra_id)", { count: "exact", head: true })
+        .eq("status", "em_aberto")
+        .eq("contrato.obra_id", obra)
+    : supabase
+        .from("item_locado")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "em_aberto");
+  const avariasQ = obra
+    ? supabase
+        .from("avaria")
+        .select("*, vistoria:vistoria_id!inner(contrato:contrato_id!inner(obra_id))", { count: "exact", head: true })
+        .eq("status", "aberta")
+        .eq("vistoria.contrato.obra_id", obra)
+    : supabase.from("avaria").select("*", { count: "exact", head: true }).eq("status", "aberta");
+  const imoveisQ = (() => {
+    let q = supabase
+      .from("imovel")
+      .select(
+        "id, contrato_imovel(valor_aluguel, valor_condominio, valor_iptu, seguro_fianca, seguro_fianca_mensal, vigente)",
+        { count: "exact" },
+      )
+      .is("deleted_at", null);
+    if (obra) q = q.eq("obra_id", obra);
+    return q;
+  })();
+  const pendentesQ = (() => {
+    let q = supabase.from("lancamento_financeiro").select("valor, vencimento").eq("status", "pendente");
+    if (obra) q = q.eq("obra_id", obra);
+    return q;
+  })();
+  const devolucoesQ = (() => {
+    let q = supabase
       .from("item_locado")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "em_aberto"),
-    supabase.from("avaria").select("*", { count: "exact", head: true }).eq("status", "aberta"),
-    supabase
-      .from("lancamento_financeiro")
-      .select("valor, vencimento")
-      .eq("status", "pendente"),
-    supabase
-      .from("item_locado")
-      .select("id, data_devolucao_prevista, contrato:contrato_id(numero), item:item_id(descricao)")
+      .select("id, data_devolucao_prevista, contrato:contrato_id!inner(numero, obra_id), item:item_id(descricao)")
       .eq("status", "em_aberto")
       .not("data_devolucao_prevista", "is", null)
       .lte("data_devolucao_prevista", em7)
-      .order("data_devolucao_prevista"),
+      .order("data_devolucao_prevista");
+    if (obra) q = q.eq("contrato.obra_id", obra);
+    return q;
+  })();
+
+  const [
+    { data: obrasLista },
+    contratosAtivos,
+    itensEmAberto,
+    avariasAbertas,
+    imoveisRes,
+    pendentesRes,
+    devolucoesRes,
+    fluxo,
+  ] = await Promise.all([
+    supabase.from("obra").select("id, codigo, nome").order("codigo"),
+    obra ? contratosQ.eq("obra_id", obra) : contratosQ,
+    itensQ,
+    avariasQ,
+    imoveisQ,
+    pendentesQ,
+    devolucoesQ,
+    gerarFluxoCaixa(supabase, obra ? { obra_id: obra } : {}),
   ]);
 
   const hojeStr = format(hoje, "yyyy-MM-dd");
@@ -70,26 +129,24 @@ export default async function HomePage() {
     .reduce((s, l) => s + Number(l.valor), 0);
   const devolucoes = (devolucoesRes.data ?? []) as unknown as Devolucao[];
 
+  const imoveis = (imoveisRes.data ?? []) as unknown as ImovelKpi[];
+  const custoImoveis = imoveis.reduce((s, r) => {
+    const v = (r.contrato_imovel ?? []).find((c) => c.vigente);
+    if (!v) return s;
+    return (
+      s +
+      Number(v.valor_aluguel) +
+      Number(v.valor_condominio) +
+      Number(v.valor_iptu) +
+      (v.seguro_fianca_mensal ? Number(v.seguro_fianca ?? 0) : 0)
+    );
+  }, 0);
+
   const kpis = [
-    { href: "/obras", icon: HardHat, label: "Obras ativas", valor: obrasAtivas.count ?? 0 },
-    {
-      href: "/contratos",
-      icon: FileText,
-      label: "Contratos ativos",
-      valor: contratosAtivos.count ?? 0,
-    },
-    {
-      href: "/contratos",
-      icon: PackageOpen,
-      label: "Itens em aberto",
-      valor: itensEmAberto.count ?? 0,
-    },
-    {
-      href: "/vistorias",
-      icon: AlertTriangle,
-      label: "Avarias abertas",
-      valor: avariasAbertas.count ?? 0,
-    },
+    { href: "/contratos", icon: FileText, label: "Contratos ativos", valor: contratosAtivos.count ?? 0 },
+    { href: "/contratos", icon: PackageOpen, label: "Itens em aberto", valor: itensEmAberto.count ?? 0 },
+    { href: "/imoveis", icon: Building2, label: "Imóveis", valor: imoveisRes.count ?? 0 },
+    { href: "/vistorias", icon: AlertTriangle, label: "Avarias abertas", valor: avariasAbertas.count ?? 0 },
   ];
 
   return (
@@ -98,7 +155,9 @@ export default async function HomePage() {
         eyebrow={`Painel · ${formatarData(hojeStr)}`}
         titulo="Início"
         descricao="Visão geral das locações ativas, custos e devoluções."
-      />
+      >
+        <ObraFilter obras={obrasLista ?? []} value={obra} basePath="/" />
+      </PageHeader>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {kpis.map((k) => {
@@ -122,6 +181,34 @@ export default async function HomePage() {
           );
         })}
       </div>
+
+      {/* Série temporal: desembolso previsto por mês */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <LineChart className="size-4" /> Desembolso previsto (12 meses)
+          </CardTitle>
+          <CardDescription>
+            Pago, pendente e projeção dos contratos. Total previsto:{" "}
+            <strong>{formatarBRL(fluxo.totalPrevisto)}</strong>
+            {custoImoveis > 0 ? (
+              <> · imóveis vigentes: {formatarBRL(custoImoveis)}/mês</>
+            ) : null}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <BarChart
+            data={fluxo.meses.map((m, i) => ({
+              label: m.label.replace(/\/\d{2}(\d{2})$/, "/$1"),
+              value: m.total,
+              destaque: i === 0,
+            }))}
+            formatValue={(n) =>
+              n >= 1000 ? `${Math.round(n / 1000)}k` : String(Math.round(n))
+            }
+          />
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Financeiro */}
