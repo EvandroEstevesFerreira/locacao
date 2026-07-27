@@ -107,6 +107,7 @@ const itemLocadoSchema = z.object({
   valor_unitario_periodo: z.coerce.number().min(0, "Valor inválido."),
   data_retirada: z.string().min(1, "Informe a data de retirada."),
   data_devolucao_prevista: z.string().optional(),
+  identificacao: z.string().trim().max(120).optional(),
 });
 
 export type ItemLocadoFormState = { error?: string };
@@ -126,6 +127,7 @@ export async function adicionarItemLocado(
     valor_unitario_periodo: formData.get("valor_unitario_periodo"),
     data_retirada: formData.get("data_retirada"),
     data_devolucao_prevista: formData.get("data_devolucao_prevista") ?? undefined,
+    identificacao: formData.get("identificacao") ?? undefined,
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
@@ -140,6 +142,7 @@ export async function adicionarItemLocado(
     valor_unitario_periodo: parsed.data.valor_unitario_periodo,
     data_retirada: parsed.data.data_retirada,
     data_devolucao_prevista: nuloSeVazio(parsed.data.data_devolucao_prevista),
+    identificacao: nuloSeVazio(parsed.data.identificacao),
   });
   if (error) return { error: "Não foi possível adicionar o item." };
 
@@ -316,4 +319,44 @@ export async function removerAnexoContrato(formData: FormData) {
     .update({ anexo_path: null })
     .eq("id", contratoId);
   revalidatePath(`/contratos/${contratoId}`);
+}
+
+// ---------------------------------------------------------------------------
+// Documentos adicionais do contrato: aditivos e renovações (bucket "contratos").
+// ---------------------------------------------------------------------------
+const TIPOS_DOC = ["aditivo", "renovacao", "outro"];
+
+export async function salvarContratoDoc(
+  contratoId: string,
+  path: string,
+  tipo: string,
+  descricao: string | null,
+  data: string | null,
+) {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
+  if (!contratoId || !path) return;
+  const supabase = await createClient();
+  await supabase.from("contrato_anexo").insert({
+    org_id: perfil.org_id,
+    contrato_id: contratoId,
+    tipo: TIPOS_DOC.includes(tipo) ? tipo : "outro",
+    descricao: descricao?.trim() || null,
+    path,
+    data: data || null,
+  });
+  revalidatePath(`/contratos/${contratoId}`);
+}
+
+export async function removerContratoDoc(formData: FormData) {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
+  const id = (formData.get("id") as string | null)?.trim();
+  const contratoId = (formData.get("contrato_id") as string | null)?.trim();
+  const path = (formData.get("path") as string | null)?.trim();
+  if (!id) return;
+  const supabase = await createClient();
+  if (path) await supabase.storage.from("contratos").remove([path]);
+  await supabase.from("contrato_anexo").delete().eq("id", id);
+  if (contratoId) revalidatePath(`/contratos/${contratoId}`);
 }

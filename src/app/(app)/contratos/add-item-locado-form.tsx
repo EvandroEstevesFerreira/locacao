@@ -79,6 +79,15 @@ export function AddItemLocadoForm({
             type="date"
           />
         </div>
+        <div className="space-y-1.5 sm:col-span-2">
+          <Label htmlFor="identificacao">Nº de série / registro / tag</Label>
+          <Input
+            id="identificacao"
+            name="identificacao"
+            maxLength={120}
+            placeholder="Identificação do equipamento (opcional)"
+          />
+        </div>
       </div>
       {state.error ? (
         <p className="text-sm text-destructive">{state.error}</p>

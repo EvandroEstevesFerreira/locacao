@@ -7,6 +7,23 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.8.0] — 2026-07-26
+
+### Segurança
+
+- Imóveis e relatórios passam a respeitar o acesso por obra do usuário (correção
+  de vazamento entre obras).
+
+### Adicionado
+
+- Identificação do equipamento (nº de série/registro/tag) nos itens do contrato.
+- Aditivos e renovações: anexar novos documentos ao contrato além do original.
+
+### Melhorado
+
+- Nova disposição da tela do contrato (adicionar item → itens → relatório de
+  retirada → documentos do contrato).
+
 ## [0.7.0] — 2026-07-26
 
 ### Adicionado
