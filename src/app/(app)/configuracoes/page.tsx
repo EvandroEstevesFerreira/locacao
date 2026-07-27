@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Users, ChevronRight } from "lucide-react";
+import { Users, Building, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeConfigurarSistema } from "@/lib/auth";
 import { PageHeader } from "@/components/page-header";
@@ -59,6 +59,25 @@ export default async function ConfiguracoesPage() {
         titulo="Configurações"
         descricao="Usuários e avisos automáticos de vencimento."
       />
+      {/* Dados da empresa */}
+      <Card>
+        <CardHeader className="flex-row items-center justify-between space-y-0">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Building className="size-4" /> Dados da empresa
+            </CardTitle>
+            <CardDescription>
+              Cadastro completo da organização (CNPJ, endereço, contatos,
+              representante) — usado nos contratos.
+            </CardDescription>
+          </div>
+          <Button variant="outline" size="sm" render={<Link href="/configuracoes/empresa" />}>
+            Editar
+            <ChevronRight className="size-4" />
+          </Button>
+        </CardHeader>
+      </Card>
+
       {/* Usuários */}
       <Card>
         <CardHeader className="flex-row items-center justify-between space-y-0">

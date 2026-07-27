@@ -8,6 +8,61 @@ import { TIPOS_RELATORIO } from "@/lib/relatorios";
 
 export type ConfigFormState = { error?: string; ok?: boolean };
 
+// ---------------------------------------------------------------------------
+// Dados da empresa (organização) — usados nos contratos/documentos.
+// ---------------------------------------------------------------------------
+function txtEmpresa(formData: FormData, campo: string): string | null {
+  const v = String(formData.get(campo) ?? "").trim();
+  return v === "" ? null : v;
+}
+
+const CAMPOS_EMPRESA = [
+  "nome",
+  "razao_social",
+  "nome_fantasia",
+  "cnpj",
+  "inscricao_estadual",
+  "inscricao_municipal",
+  "endereco",
+  "cidade",
+  "uf",
+  "cep",
+  "telefone",
+  "email",
+  "site",
+  "representante_nome",
+  "representante_cargo",
+  "representante_cpf",
+  "responsaveis",
+  "observacoes",
+] as const;
+
+export async function salvarEmpresa(
+  _prev: ConfigFormState,
+  formData: FormData,
+): Promise<ConfigFormState> {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id || !podeConfigurarSistema(perfil.papel)) {
+    return { error: "Apenas o Master pode alterar os dados da empresa." };
+  }
+
+  const nome = txtEmpresa(formData, "nome");
+  if (!nome) return { error: "Informe ao menos o nome da empresa." };
+
+  const dados: Record<string, string | null> = {};
+  for (const campo of CAMPOS_EMPRESA) dados[campo] = txtEmpresa(formData, campo);
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("organizacao")
+    .update({ ...dados, updated_at: new Date().toISOString() })
+    .eq("id", perfil.org_id);
+  if (error) return { error: "Não foi possível salvar. Tente novamente." };
+
+  revalidatePath("/configuracoes/empresa");
+  return { ok: true };
+}
+
 const schema = z.object({
   ativo: z.boolean(),
   dias_alerta: z
