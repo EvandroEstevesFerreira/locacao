@@ -15,6 +15,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ConfirmDelete } from "@/components/confirm-delete";
+import { ListSearch } from "@/components/list-search";
+import { Pagination } from "@/components/pagination";
+import { SortHeader } from "@/components/sort-header";
+import { PAGE_SIZE, parseListParams, termoOr } from "@/lib/lista";
 import { excluirObra } from "./actions";
 
 export const metadata = { title: "Obras — Loca" };
@@ -28,17 +32,30 @@ const STATUS: Record<
   encerrada: { label: "Encerrada", variant: "outline" },
 };
 
-export default async function ObrasPage() {
+export default async function ObrasPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
   const perfil = await getCurrentPerfil();
   const podeEditar = podeEditarCadastros(perfil?.papel);
+  const sp = await searchParams;
+  const { q, sort, ascending, from, to, page } = parseListParams(sp, {
+    sortCols: ["codigo", "nome", "responsavel", "status"],
+    defaultSort: "codigo",
+  });
 
   const supabase = await createClient();
-  const { data: obras } = await supabase
+  let query = supabase
     .from("obra")
-    .select("id, codigo, nome, responsavel, status")
-    .order("codigo");
+    .select("id, codigo, nome, responsavel, status", { count: "exact" });
+  if (q) query = query.or(termoOr(["codigo", "nome", "responsavel"], q));
+  query = query.order(sort, { ascending }).range(from, to);
+  const { data: obras, count } = await query;
 
+  const total = count ?? 0;
   const temObras = (obras?.length ?? 0) > 0;
+  const buscando = q.length > 0;
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -55,20 +72,29 @@ export default async function ObrasPage() {
         ) : null}
       </PageHeader>
 
-      {temObras ? (
-        <Card>
+      {temObras || buscando ? (
+        <>
+          <ListSearch placeholder="Buscar por código, nome ou responsável…" ariaLabel="Buscar obra" />
+          <Card>
           <CardContent className="p-0">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Código</TableHead>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Responsável</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead><SortHeader column="codigo" label="Código" /></TableHead>
+                  <TableHead><SortHeader column="nome" label="Nome" /></TableHead>
+                  <TableHead><SortHeader column="responsavel" label="Responsável" /></TableHead>
+                  <TableHead><SortHeader column="status" label="Status" /></TableHead>
                   <TableHead className="w-24 text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
+                {!temObras ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
+                      Nenhuma obra encontrada para “{q}”.
+                    </TableCell>
+                  </TableRow>
+                ) : null}
                 {obras!.map((obra) => {
                   const s = STATUS[obra.status] ?? STATUS.ativa;
                   return (
@@ -102,7 +128,9 @@ export default async function ObrasPage() {
               </TableBody>
             </Table>
           </CardContent>
-        </Card>
+          </Card>
+          <Pagination page={page} pageSize={PAGE_SIZE} total={total} />
+        </>
       ) : (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center gap-3 py-16 text-center">

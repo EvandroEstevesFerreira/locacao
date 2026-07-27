@@ -11,6 +11,10 @@ import {
   type StatusImovel,
 } from "@/lib/imoveis";
 import { PageHeader } from "@/components/page-header";
+import { Pagination } from "@/components/pagination";
+import { SortHeader } from "@/components/sort-header";
+import { PAGE_SIZE, parseListParams, termoOr } from "@/lib/lista";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -43,36 +47,54 @@ type Row = {
 export default async function ImoveisPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tipo?: string; status?: string; obra?: string }>;
+  searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const perfil = await getCurrentPerfil();
   const podeEditar = podeOperar(perfil?.papel);
-  const { tipo, status, obra } = await searchParams;
+  const sp = await searchParams;
+  const { tipo, status, obra } = sp;
+  const { q, sort, ascending, from, to, page } = parseListParams(sp, {
+    sortCols: ["apelido", "tipo", "cidade", "status"],
+    defaultSort: "apelido",
+  });
 
   const supabase = await createClient();
-  const [{ data: obras }, imoveisRes] = await Promise.all([
+  const [{ data: obras }, imoveisRes, kpiRes] = await Promise.all([
     supabase.from("obra").select("id, codigo, nome").order("codigo"),
-    (async () => {
-      let q = supabase
+    (() => {
+      let qq = supabase
         .from("imovel")
         .select(
           "id, tipo, apelido, cidade, uf, status, obra:obra_id(codigo), contrato_imovel(valor_aluguel, valor_condominio, vigente)",
+          { count: "exact" },
         )
-        .is("deleted_at", null)
-        .order("apelido");
-      if (tipo) q = q.eq("tipo", tipo);
-      if (status) q = q.eq("status", status);
-      if (obra) q = q.eq("obra_id", obra);
-      return q;
+        .is("deleted_at", null);
+      if (tipo) qq = qq.eq("tipo", tipo);
+      if (status) qq = qq.eq("status", status);
+      if (obra) qq = qq.eq("obra_id", obra);
+      if (q) qq = qq.or(termoOr(["apelido", "cidade"], q));
+      return qq.order(sort, { ascending }).range(from, to);
+    })(),
+    (() => {
+      let qq = supabase
+        .from("imovel")
+        .select("contrato_imovel(valor_aluguel, valor_condominio, vigente)")
+        .is("deleted_at", null);
+      if (tipo) qq = qq.eq("tipo", tipo);
+      if (status) qq = qq.eq("status", status);
+      if (obra) qq = qq.eq("obra_id", obra);
+      if (q) qq = qq.or(termoOr(["apelido", "cidade"], q));
+      return qq;
     })(),
   ]);
 
   const imoveis = (imoveisRes.data ?? []) as unknown as Row[];
+  const total = imoveisRes.count ?? 0;
 
   const vigenteDe = (r: Row) =>
     (r.contrato_imovel ?? []).find((c) => c.vigente) ?? null;
 
-  const aluguelTotal = imoveis.reduce((s, r) => {
+  const aluguelTotal = ((kpiRes.data ?? []) as unknown as Row[]).reduce((s, r) => {
     const v = vigenteDe(r);
     return s + (v ? Number(v.valor_aluguel) + Number(v.valor_condominio) : 0);
   }, 0);
@@ -97,12 +119,16 @@ export default async function ImoveisPage({
       </PageHeader>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Kpi label="Imóveis" valor={String(imoveis.length)} />
+        <Kpi label="Imóveis" valor={String(total)} />
         <Kpi label="Custo mensal (aluguel + condomínio, vigentes)" valor={formatarBRL(aluguelTotal)} />
       </div>
 
       {/* Filtros */}
       <form className="flex flex-wrap items-end gap-3" method="get">
+        <div className="flex flex-1 flex-col gap-1">
+          <label className="text-xs text-muted-foreground">Buscar</label>
+          <Input name="q" defaultValue={q} placeholder="Apelido ou cidade…" className="min-w-48" />
+        </div>
         <div className="flex flex-col gap-1">
           <label className="text-xs text-muted-foreground">Tipo</label>
           <select name="tipo" defaultValue={tipo ?? ""} className={selectClasses}>
@@ -146,11 +172,11 @@ export default async function ImoveisPage({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Imóvel</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Cidade/UF</TableHead>
+                <TableHead><SortHeader column="apelido" label="Imóvel" /></TableHead>
+                <TableHead><SortHeader column="tipo" label="Tipo" /></TableHead>
+                <TableHead><SortHeader column="cidade" label="Cidade/UF" /></TableHead>
                 <TableHead>Obra</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead><SortHeader column="status" label="Status" /></TableHead>
                 <TableHead className="text-right">Aluguel + cond.</TableHead>
                 {podeEditar ? <TableHead className="text-right">Ações</TableHead> : null}
               </TableRow>
@@ -214,6 +240,7 @@ export default async function ImoveisPage({
           </Table>
         </CardContent>
       </Card>
+      <Pagination page={page} pageSize={PAGE_SIZE} total={total} />
     </div>
   );
 }
