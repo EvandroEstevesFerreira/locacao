@@ -32,8 +32,10 @@ import {
 } from "@/components/ui/table";
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { ContratoImovelForm } from "../contrato-imovel-form";
+import { type ReactNode } from "react";
 import { ContratoImovelCard } from "../contrato-imovel-card";
 import { ContratoImovelAcoes, type HistoricoItem } from "../contrato-imovel-acoes";
+import { PiiText } from "@/components/pii-text";
 import { ImovelAnexoUploader } from "../imovel-anexo-uploader";
 import { ContaConsumoForm } from "../conta-consumo-form";
 import { ReparoForm, OcorrenciaForm, VistoriaImovelForm } from "../fase3-forms";
@@ -247,10 +249,17 @@ export default async function ImovelDetalhePage({
             <Campo label="Agência" valor={imovel.agencia} />
             <Campo
               label="Conta"
-              valor={[imovel.conta, imovel.tipo_conta === "corrente" ? "corrente" : imovel.tipo_conta === "poupanca" ? "poupança" : null].filter(Boolean).join(" · ")}
+              node={
+                imovel.conta ? (
+                  <span className="inline-flex items-center gap-1">
+                    <PiiText value={imovel.conta} />
+                    {imovel.tipo_conta === "corrente" ? " · corrente" : imovel.tipo_conta === "poupanca" ? " · poupança" : ""}
+                  </span>
+                ) : undefined
+              }
             />
             <Campo label="Titular" valor={imovel.titular_conta} />
-            <Campo label="Chave PIX" valor={imovel.pix_chave} span />
+            <Campo label="Chave PIX" span node={imovel.pix_chave ? <PiiText value={imovel.pix_chave} keepEnd={4} /> : undefined} />
           </CardContent>
         </Card>
       ) : null}
@@ -595,7 +604,10 @@ export default async function ImovelDetalhePage({
             ocupantes.map((o) => (
               <div key={o.id} className="flex flex-wrap items-center justify-between gap-2 border-b pb-3 last:border-0">
                 <div className="min-w-0">
-                  <p className="font-medium">{o.nome}{o.cpf ? ` · ${o.cpf}` : ""}</p>
+                  <p className="font-medium">
+                    {o.nome}
+                    {o.cpf ? <> · <PiiText value={o.cpf} keepEnd={2} /></> : null}
+                  </p>
                   <p className="text-sm text-muted-foreground">
                     {[o.contato, o.data_entrada ? `entrada ${formatarData(o.data_entrada)}` : null, o.data_saida ? `saída ${formatarData(o.data_saida)}` : null].filter(Boolean).join(" · ") || "—"}
                   </p>
@@ -619,15 +631,17 @@ function Campo({
   label,
   valor,
   span,
+  node,
 }: {
   label: string;
-  valor: string | number | null | undefined;
+  valor?: string | number | null | undefined;
   span?: boolean;
+  node?: ReactNode;
 }) {
   return (
     <div className={span ? "sm:col-span-3" : ""}>
       <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="font-medium">{valor ? String(valor) : "—"}</p>
+      <p className="font-medium">{node ?? (valor ? String(valor) : "—")}</p>
     </div>
   );
 }

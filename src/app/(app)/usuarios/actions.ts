@@ -115,6 +115,7 @@ export async function criarUsuario(
       nome: parsed.data.nome,
       ativo: true,
       modulos: modulosDoForm(formData),
+      senha_temporaria: true, // força troca no primeiro acesso
     })
     .eq("id", uid);
 
@@ -214,6 +215,11 @@ export async function salvarUsuario(
       await admin.auth.admin.updateUserById(parsed.data.id, {
         password: novaSenha,
       });
+      // Nova senha definida pelo master é temporária: força troca no próximo acesso.
+      await admin
+        .from("perfil")
+        .update({ senha_temporaria: true })
+        .eq("id", parsed.data.id);
     } catch {
       return {
         error:
