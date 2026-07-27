@@ -7,6 +7,17 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.12.0] — 2026-07-26
+
+### Melhorado
+
+- Busca por texto nas listas de obras, itens, contratos, fornecedores, imóveis
+  e financeiro.
+- Ordenação por coluna (clique no cabeçalho) e paginação em todas as listas
+  principais, preservando busca e filtros na URL.
+- Desempenho: as listas carregam por página (20 itens) em vez de trazer todos
+  os registros de uma vez.
+
 ## [0.11.0] — 2026-07-26
 
 ### Adicionado

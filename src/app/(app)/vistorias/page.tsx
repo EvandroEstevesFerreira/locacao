@@ -6,6 +6,9 @@ import { formatarData } from "@/lib/locacao";
 import { TIPO_VISTORIA, type TipoVistoria } from "@/lib/vistoria";
 import { PageHeader } from "@/components/page-header";
 import { ObraFilter } from "@/components/obra-filter";
+import { Pagination } from "@/components/pagination";
+import { SortHeader } from "@/components/sort-header";
+import { PAGE_SIZE, parseListParams } from "@/lib/lista";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -32,21 +35,28 @@ type Row = {
 export default async function VistoriasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ obra?: string }>;
+  searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const perfil = await getCurrentPerfil();
   const podeEditar = podeOperar(perfil?.papel);
-  const { obra } = await searchParams;
+  const sp = await searchParams;
+  const obra = sp.obra;
+  const { sort, ascending, from, to, page } = parseListParams(sp, {
+    sortCols: ["data", "tipo"],
+    defaultSort: "data",
+    defaultDir: "desc",
+  });
 
   const supabase = await createClient();
   let q = supabase
     .from("vistoria")
     .select(
       "id, tipo, data, contrato:contrato_id!inner(numero, obra_id, obra:obra_id(codigo)), vistoria_foto(count), avaria(count)",
-    )
-    .order("data", { ascending: false });
+      { count: "exact" },
+    );
   if (obra) q = q.eq("contrato.obra_id", obra);
-  const { data } = await q;
+  q = q.order(sort, { ascending }).range(from, to);
+  const { data, count } = await q;
 
   const { data: obrasData } = await supabase
     .from("obra")
@@ -54,7 +64,9 @@ export default async function VistoriasPage({
     .order("codigo");
 
   const vistorias = (data ?? []) as unknown as Row[];
+  const total = count ?? 0;
   const tem = vistorias.length > 0;
+  const buscando = Boolean(obra);
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -73,21 +85,29 @@ export default async function VistoriasPage({
 
       <ObraFilter obras={obrasData ?? []} value={obra} basePath="/vistorias" />
 
-      {tem ? (
-        <Card>
+      {tem || buscando ? (
+        <>
+          <Card>
           <CardContent className="p-0">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Data</TableHead>
+                  <TableHead><SortHeader column="data" label="Data" /></TableHead>
                   <TableHead>Contrato</TableHead>
-                  <TableHead>Tipo</TableHead>
+                  <TableHead><SortHeader column="tipo" label="Tipo" /></TableHead>
                   <TableHead className="text-right">Fotos</TableHead>
                   <TableHead className="text-right">Avarias</TableHead>
                   <TableHead className="w-12 text-right">Abrir</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
+                {!tem ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
+                      Nenhuma vistoria encontrada.
+                    </TableCell>
+                  </TableRow>
+                ) : null}
                 {vistorias.map((v) => (
                   <TableRow key={v.id}>
                     <TableCell>{formatarData(v.data)}</TableCell>
@@ -130,7 +150,9 @@ export default async function VistoriasPage({
               </TableBody>
             </Table>
           </CardContent>
-        </Card>
+          </Card>
+          <Pagination page={page} pageSize={PAGE_SIZE} total={total} />
+        </>
       ) : (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center gap-3 py-16 text-center">

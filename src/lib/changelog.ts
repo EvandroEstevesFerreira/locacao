@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.11.0";
+export const APP_VERSION = "0.12.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,16 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.12.0",
+    data: "2026-07-26",
+    titulo: "Busca, ordenação e paginação nas listas",
+    mudancas: [
+      { tipo: "melhoria", texto: "Busca por texto nas listas de obras, itens, contratos, fornecedores, imóveis e financeiro." },
+      { tipo: "melhoria", texto: "Ordenação por coluna (clique no título) e paginação em todas as listas principais." },
+      { tipo: "melhoria", texto: "Desempenho: as listas passam a carregar por página, sem trazer tudo de uma vez." },
+    ],
+  },
   {
     versao: "0.11.0",
     data: "2026-07-26",

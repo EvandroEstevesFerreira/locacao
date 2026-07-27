@@ -15,6 +15,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ConfirmDelete } from "@/components/confirm-delete";
+import { Pagination } from "@/components/pagination";
+import { SortHeader } from "@/components/sort-header";
+import { PAGE_SIZE, parseListParams, termoOr } from "@/lib/lista";
 import { FornecedoresToolbar } from "./fornecedores-toolbar";
 import { excluirFornecedor } from "./actions";
 
@@ -33,38 +36,41 @@ type Forn = {
 export default async function FornecedoresPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; obra?: string }>;
+  searchParams: Promise<Record<string, string | undefined>>;
 }) {
-  const { q = "", obra = "" } = await searchParams;
+  const sp = await searchParams;
+  const obra = sp.obra ?? "";
+  const { q, sort, ascending, from, to, page } = parseListParams(sp, {
+    sortCols: ["nome", "cnpj", "ativo"],
+    defaultSort: "nome",
+  });
   const perfil = await getCurrentPerfil();
   const podeEditar = podeEditarCadastros(perfil?.papel);
 
   const supabase = await createClient();
-  const [{ data: fornecedoresData }, { data: obrasData }] = await Promise.all([
+  // Filtro por obra vira join interno (server-side) para paginar corretamente.
+  const embed = obra
+    ? "fornecedor_obra!inner(obra:obra_id(id, codigo))"
+    : "fornecedor_obra(obra:obra_id(id, codigo))";
+  const [{ data: fornecedoresData, count }, { data: obrasData }] = await Promise.all([
     (() => {
       let query = supabase
         .from("fornecedor")
         .select(
-          "id, nome, cnpj, contato_nome, contato_telefone, ativo, fornecedor_obra(obra:obra_id(id, codigo))",
-        )
-        .order("nome");
-      // Sanitiza para evitar injeção de filtro no PostgREST (vírgula/paren/curinga).
-      const busca = q.trim().replace(/[,%()*\\]/g, " ").trim();
-      if (busca) query = query.or(`nome.ilike.%${busca}%,cnpj.ilike.%${busca}%`);
-      return query;
+          `id, nome, cnpj, contato_nome, contato_telefone, ativo, ${embed}`,
+          { count: "exact" },
+        );
+      if (obra) query = query.eq("fornecedor_obra.obra_id", obra);
+      if (q) query = query.or(termoOr(["nome", "cnpj"], q));
+      return query.order(sort, { ascending }).range(from, to);
     })(),
     supabase.from("obra").select("id, codigo, nome").order("codigo"),
   ]);
 
-  let fornecedores = (fornecedoresData ?? []) as unknown as Forn[];
-  if (obra) {
-    fornecedores = fornecedores.filter((f) =>
-      f.fornecedor_obra?.some((fo) => fo.obra?.id === obra),
-    );
-  }
-
+  const fornecedores = (fornecedoresData ?? []) as unknown as Forn[];
+  const total = count ?? 0;
   const tem = fornecedores.length > 0;
-  const filtrando = Boolean(q.trim() || obra);
+  const filtrando = Boolean(q || obra);
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -84,16 +90,17 @@ export default async function FornecedoresPage({
       <FornecedoresToolbar obras={obrasData ?? []} q={q} obra={obra} />
 
       {tem ? (
-        <Card>
+        <>
+          <Card>
           <CardContent className="p-0">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>CNPJ</TableHead>
+                  <TableHead><SortHeader column="nome" label="Nome" /></TableHead>
+                  <TableHead><SortHeader column="cnpj" label="CNPJ" /></TableHead>
                   <TableHead>Contato</TableHead>
                   <TableHead>Obras</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead><SortHeader column="ativo" label="Status" /></TableHead>
                   <TableHead className="w-24 text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -141,7 +148,9 @@ export default async function FornecedoresPage({
               </TableBody>
             </Table>
           </CardContent>
-        </Card>
+          </Card>
+          <Pagination page={page} pageSize={PAGE_SIZE} total={total} />
+        </>
       ) : filtrando ? (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center gap-2 py-16 text-center">
