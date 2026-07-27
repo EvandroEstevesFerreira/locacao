@@ -7,6 +7,15 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.14.0] — 2026-07-27
+
+### Segurança
+
+- Troca de senha obrigatória no primeiro acesso e após redefinição pelo
+  administrador (flag `senha_temporaria` + guarda no middleware).
+- Dados sensíveis (CPF, conta bancária e chave PIX) exibidos mascarados na tela,
+  com opção de revelar sob demanda.
+
 ## [0.13.0] — 2026-07-27
 
 ### Adicionado

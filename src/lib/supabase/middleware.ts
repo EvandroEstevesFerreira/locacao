@@ -51,22 +51,32 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Acesso modular por usuário: bloqueia navegação direta (GET) a um módulo
-  // não liberado. Mutações (server actions/POST) já são protegidas por papel +
-  // RLS. Fail-open: qualquer erro de leitura não tranca o usuário.
+  // Acesso modular por usuário + onboarding (troca forçada de senha).
+  // Mutações (server actions/POST) já são protegidas por papel + RLS.
+  // Fail-open: qualquer erro de leitura não tranca o usuário.
   if (user && request.method === "GET") {
+    const uid = user.sub as string | undefined;
     const modulo = moduloDaRota(request.nextUrl.pathname);
-    if (modulo) {
-      const uid = user.sub as string | undefined;
-      if (uid) {
-        const { data: perfil } = await supabase
-          .from("perfil")
-          .select("papel, modulos")
-          .eq("id", uid)
-          .single();
-        const isMaster = perfil?.papel === "master";
-        const modulos = (perfil?.modulos as string[] | null) ?? null;
-        if (perfil && !moduloLiberado(modulos, isMaster, modulo)) {
+    const naTrocaSenha = request.nextUrl.pathname.startsWith("/trocar-senha");
+    if (uid && (modulo || !naTrocaSenha)) {
+      const { data: perfil } = await supabase
+        .from("perfil")
+        .select("papel, modulos, senha_temporaria")
+        .eq("id", uid)
+        .single();
+
+      // Senha temporária: força a troca antes de qualquer outra navegação.
+      if (perfil?.senha_temporaria && !naTrocaSenha) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/trocar-senha";
+        url.search = "";
+        return NextResponse.redirect(url);
+      }
+
+      if (perfil && modulo) {
+        const isMaster = perfil.papel === "master";
+        const modulos = (perfil.modulos as string[] | null) ?? null;
+        if (!moduloLiberado(modulos, isMaster, modulo)) {
           const url = request.nextUrl.clone();
           url.pathname = "/";
           return NextResponse.redirect(url);
