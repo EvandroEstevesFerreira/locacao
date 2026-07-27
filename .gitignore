@@ -43,3 +43,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Arquivo de apresentação avulso (não faz parte do app)
+apresentacao-loca.html

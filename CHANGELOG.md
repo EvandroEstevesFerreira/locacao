@@ -7,6 +7,20 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.18.0] — 2026-07-27
+
+### Adicionado
+
+- Service worker com uso offline básico: navegação usa network-first e, sem
+  conexão, exibe uma página `/offline` amigável. Estáticos com
+  stale-while-revalidate. Registro best-effort.
+- Ícones PNG 192/512 do PWA (gerados por `scripts/gen-icons.mjs`) referenciados
+  no manifest e no `<head>` (incl. apple-touch-icon).
+
+### Interno
+
+- `apresentacao-loca.html` (arquivo avulso) adicionado ao `.gitignore`.
+
 ## [0.17.0] — 2026-07-27
 
 ### Adicionado

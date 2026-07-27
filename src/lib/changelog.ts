@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.17.0";
+export const APP_VERSION = "0.18.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,15 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.18.0",
+    data: "2026-07-27",
+    titulo: "App instalável com uso offline básico",
+    mudancas: [
+      { tipo: "novo", texto: "Uso offline básico: ao perder a conexão, o app mostra uma tela amigável em vez de erro." },
+      { tipo: "melhoria", texto: "Ícones do aplicativo em alta resolução (192/512) para instalar na tela inicial do celular." },
+    ],
+  },
   {
     versao: "0.17.0",
     data: "2026-07-27",
