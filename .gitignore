@@ -46,3 +46,6 @@ next-env.d.ts
 
 # Arquivo de apresentação avulso (não faz parte do app)
 apresentacao-loca.html
+
+# Supabase CLI — estado local do `supabase link`
+supabase/.temp/

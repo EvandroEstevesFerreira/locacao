@@ -88,14 +88,25 @@ export async function salvarContrato(
   redirect(`/contratos/${contratoId}`);
 }
 
-export async function excluirContrato(formData: FormData) {
+export async function excluirContrato(
+  formData: FormData,
+): Promise<ContratoFormState | void> {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !podeExcluirCritico(perfil.papel)) return;
+  if (!perfil?.org_id || !podeExcluirCritico(perfil.papel)) {
+    return { error: "Somente o Master pode excluir contratos." };
+  }
   const id = (formData.get("id") as string | null)?.trim();
-  if (!id) return;
+  if (!id) return { error: "Contrato inválido." };
   const supabase = await createClient();
-  // Soft-delete: preserva histórico e auditoria.
-  await supabase.from("contrato_locacao").update({ deleted_at: new Date().toISOString() }).eq("id", id);
+  // Soft-delete pela função `soft_delete` (migration 0041): a policy de SELECT
+  // esconde linhas com deleted_at, o que faz o RLS recusar um UPDATE direto.
+  const { data, error } = await supabase.rpc("soft_delete", {
+    p_entidade: "contrato_locacao",
+    p_id: id,
+  });
+  if (error || data !== true) {
+    return { error: "Não foi possível excluir o contrato. Tente novamente." };
+  }
   revalidatePath("/contratos");
   redirect("/contratos");
 }

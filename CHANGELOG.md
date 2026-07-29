@@ -7,6 +7,30 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.19.4] — 2026-07-29
+
+### Corrigido
+
+- **Exclusão de registros não funcionava** em imóveis, obras, contratos e
+  lançamentos financeiros: a tela recarregava e o registro permanecia na lista.
+  As policies de SELECT criadas em `0033`/`0034` exigem `deleted_at is null` e o
+  Postgres aplica essa policy também à **nova** linha de um `UPDATE`, abortando
+  o próprio comando que marca a exclusão (`new row violates row-level security
+  policy`). A exclusão passa a usar a função `public.soft_delete` (SECURITY
+  DEFINER, migration `0041`), que valida organização, papel e escopo de obra.
+
+### Melhorado
+
+- Exclusão recusada (permissão, registro inexistente) agora mostra o motivo em
+  um aviso na tela — antes o erro do banco era descartado silenciosamente.
+- Excluir contrato passa a pedir confirmação, como nas demais telas.
+
+### Segurança
+
+- `public.soft_delete` (SECURITY DEFINER) deixa de ter `execute` para o papel
+  `anon` (migration `0042`). Sem sessão a função já recusava, mas função com
+  SECURITY DEFINER não deve ficar exposta a chamadas anônimas.
+
 ## [0.19.3] — 2026-07-27
 
 ### Melhorado

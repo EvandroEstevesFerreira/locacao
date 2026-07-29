@@ -218,16 +218,12 @@ export default async function ContratoDetalhePage({
               Editar
             </Button>
             {podeExcluir ? (
-              <form action={excluirContrato}>
-                <input type="hidden" name="id" value={contrato.id} />
-                <Button
-                  variant="outline"
-                  type="submit"
-                  className="text-destructive"
-                >
-                  Excluir
-                </Button>
-              </form>
+              <ConfirmDelete
+                action={excluirContrato}
+                id={contrato.id}
+                rotulo="Excluir"
+                mensagem="Excluir este contrato? Ele deixa de aparecer nas listas e relatórios."
+              />
             ) : null}
           </>
         ) : null}

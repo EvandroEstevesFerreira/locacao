@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.19.3";
+export const APP_VERSION = "0.19.4";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,17 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.19.4",
+    data: "2026-07-29",
+    titulo: "Exclusão de registros voltou a funcionar",
+    mudancas: [
+      { tipo: "correcao", texto: "Excluir imóvel, obra, contrato ou lançamento não tinha efeito: a tela recarregava e o registro continuava na lista. Agora a exclusão é concluída." },
+      { tipo: "melhoria", texto: "Se uma exclusão for recusada (por permissão, por exemplo), o motivo aparece na tela em vez de falhar em silêncio." },
+      { tipo: "melhoria", texto: "Excluir contrato passa a pedir confirmação, como nas demais telas." },
+      { tipo: "seguranca", texto: "A rotina de exclusão do banco deixa de ficar acessível a quem não está autenticado." },
+    ],
+  },
   {
     versao: "0.19.3",
     data: "2026-07-27",

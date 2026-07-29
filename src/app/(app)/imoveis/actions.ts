@@ -79,14 +79,23 @@ export async function salvarImovel(
   redirect(id ? `/imoveis/${id}` : "/imoveis");
 }
 
-export async function excluirImovel(formData: FormData) {
+export async function excluirImovel(formData: FormData): Promise<ImovelFormState | void> {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) {
+    return { error: "Você não tem permissão para excluir imóveis." };
+  }
   const id = txt(formData.get("id"));
-  if (!id) return;
+  if (!id) return { error: "Imóvel inválido." };
   const supabase = await createClient();
-  // Soft-delete: preserva histórico e auditoria.
-  await supabase.from("imovel").update({ deleted_at: new Date().toISOString() }).eq("id", id);
+  // Soft-delete pela função `soft_delete` (migration 0041): a policy de SELECT
+  // esconde linhas com deleted_at, o que faz o RLS recusar um UPDATE direto.
+  const { data, error } = await supabase.rpc("soft_delete", {
+    p_entidade: "imovel",
+    p_id: id,
+  });
+  if (error || data !== true) {
+    return { error: "Não foi possível excluir o imóvel. Tente novamente." };
+  }
   revalidatePath("/imoveis");
   redirect("/imoveis");
 }
