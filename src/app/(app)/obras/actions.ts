@@ -70,14 +70,23 @@ export async function salvarObra(
   redirect("/obras");
 }
 
-export async function excluirObra(formData: FormData) {
+export async function excluirObra(formData: FormData): Promise<ObraFormState | void> {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !podeEditarCadastros(perfil.papel)) return;
+  if (!perfil?.org_id || !podeEditarCadastros(perfil.papel)) {
+    return { error: "Você não tem permissão para excluir obras." };
+  }
   const id = (formData.get("id") as string | null)?.trim();
-  if (!id) return;
+  if (!id) return { error: "Obra inválida." };
 
   const supabase = await createClient();
-  // Soft-delete: preserva histórico e auditoria.
-  await supabase.from("obra").update({ deleted_at: new Date().toISOString() }).eq("id", id);
+  // Soft-delete pela função `soft_delete` (migration 0041): a policy de SELECT
+  // esconde linhas com deleted_at, o que faz o RLS recusar um UPDATE direto.
+  const { data, error } = await supabase.rpc("soft_delete", {
+    p_entidade: "obra",
+    p_id: id,
+  });
+  if (error || data !== true) {
+    return { error: "Não foi possível excluir a obra. Tente novamente." };
+  }
   revalidatePath("/obras");
 }
