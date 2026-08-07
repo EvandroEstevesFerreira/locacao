@@ -85,11 +85,26 @@ export function custoLinhaLocado(p: {
   return { saldo, custo };
 }
 
+// Formatadores içados para constante de módulo: construir um Intl a cada
+// chamada é caro, e em /relatorios, /financeiro/fluxo e contratos/[id] são
+// centenas de chamadas por render.
+const BRL = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+});
+
+const DATA_SAO_PAULO = new Intl.DateTimeFormat("pt-BR", {
+  timeZone: "America/Sao_Paulo",
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+});
+
+/** Colunas `date` do Postgres chegam sempre neste formato. */
+const SO_DATA = /^\d{4}-\d{2}-\d{2}$/;
+
 export function formatarBRL(valor: number): string {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(valor || 0);
+  return BRL.format(valor || 0);
 }
 
 /** Converte 'yyyy-mm-dd' (coluna date) em Date local, sem fuso deslocar o dia. */
@@ -100,8 +115,14 @@ export function dataDeISO(iso: string): Date {
 
 export function formatarData(iso: string | null): string {
   if (!iso) return "—";
-  const d = dataDeISO(iso);
-  return d.toLocaleDateString("pt-BR");
+  // Duas entradas possíveis, e tratá-las igual dava errado:
+  // - 'yyyy-mm-dd' (coluna date): split manual, senão o fuso desloca o dia.
+  // - timestamp ISO completo: `dataDeISO` fazia Number("10T12:00:00Z") = NaN e
+  //   a tela mostrava "Invalid Date". Aqui vai pelo Intl no fuso de São Paulo.
+  if (SO_DATA.test(iso)) return dataDeISO(iso).toLocaleDateString("pt-BR");
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return DATA_SAO_PAULO.format(d);
 }
 
 /** Data de "hoje" no fuso de São Paulo como 'yyyy-mm-dd' (en-CA = ISO). */

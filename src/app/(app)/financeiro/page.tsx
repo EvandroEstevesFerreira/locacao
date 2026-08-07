@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Plus, Pencil, Undo2, Coins, RefreshCw } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeGerenciarFinanceiro } from "@/lib/auth";
-import { formatarBRL, formatarData } from "@/lib/locacao";
+import { formatarBRL, formatarData, hojeISOSaoPaulo} from "@/lib/locacao";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -77,7 +77,7 @@ export default async function FinanceiroPage({
   const { data: kpiData } = await kpiQuery;
   const todos = (kpiData ?? []) as { valor: number; vencimento: string; status: string }[];
 
-  const hojeStr = new Date().toISOString().slice(0, 10);
+  const hojeStr = hojeISOSaoPaulo();
   const totalPendente = todos
     .filter((l) => l.status === "pendente")
     .reduce((s, l) => s + Number(l.valor), 0);

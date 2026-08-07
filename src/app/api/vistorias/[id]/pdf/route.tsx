@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { createClient } from "@/lib/supabase/server";
-import { formatarBRL, formatarData, formatarDataHora } from "@/lib/locacao";
+import { formatarBRL, formatarData, formatarDataHora, hojeISOSaoPaulo} from "@/lib/locacao";
 import {
   STATUS_AVARIA,
   TIPO_VISTORIA,
@@ -128,7 +128,7 @@ export async function GET(
       ? formatarDataHora(vistoria.assinatura_retirante_em as string)
       : undefined,
     empresaAssinado: !!vistoria.assinatura_empresa_img,
-    geradoEm: formatarData(new Date().toISOString().slice(0, 10)),
+    geradoEm: formatarData(hojeISOSaoPaulo()),
   };
 
   const buffer = await renderToBuffer(<DocumentoVistoria v={dados} />);

@@ -15,6 +15,7 @@ import {
   periodosPorMes,
   type Cadencia,
 } from "@/lib/locacao";
+import { hojeISOSaoPaulo } from "./locacao";
 
 export type TipoRelatorio =
   | "itens_abertos"
@@ -204,7 +205,7 @@ async function ociosidade(
   filtros: FiltrosRelatorio,
 ): Promise<Relatorio> {
   const hoje = new Date();
-  const hojeStr = hoje.toISOString().slice(0, 10);
+  const hojeStr = hojeISOSaoPaulo(hoje);
   const { data } = await supabase
     .from("item_locado")
     .select(

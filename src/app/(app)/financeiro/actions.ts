@@ -9,7 +9,7 @@ import {
   podeGerenciarFinanceiro,
   podeExcluirCritico,
 } from "@/lib/auth";
-import { periodosPorMes, type Cadencia } from "@/lib/locacao";
+import { periodosPorMes, type Cadencia, hojeISOSaoPaulo} from "@/lib/locacao";
 import { mesesRecorrentes } from "@/lib/financeiro";
 
 export type LancamentoFormState = { error?: string };
@@ -66,7 +66,7 @@ export async function salvarLancamento(
     data_pagamento:
       parsed.data.status === "pago"
         ? (formData.get("data_pagamento") as string | null) ||
-          new Date().toISOString().slice(0, 10)
+          hojeISOSaoPaulo()
         : null,
   };
 
@@ -90,7 +90,7 @@ export async function alternarPago(formData: FormData) {
   if (!id || !["pendente", "pago"].includes(novo ?? "")) return;
 
   const supabase = await createClient();
-  const hoje = new Date().toISOString().slice(0, 10);
+  const hoje = hojeISOSaoPaulo();
   await supabase
     .from("lancamento_financeiro")
     .update({

@@ -4,8 +4,9 @@ import { useActionState } from "react";
 import { registrarDevolucao, type DevolucaoFormState } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { hojeISOSaoPaulo } from "@/lib/locacao";
 
-const hoje = () => new Date().toISOString().slice(0, 10);
+const hoje = () => hojeISOSaoPaulo();
 
 export function DevolucaoForm({
   itemLocadoId,
