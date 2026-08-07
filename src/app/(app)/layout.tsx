@@ -7,6 +7,7 @@ import { APP_VERSION } from "@/lib/changelog";
 import { Sidebar } from "@/components/layout/sidebar";
 import { UserMenu } from "@/components/layout/user-menu";
 import { BackButton } from "@/components/back-button";
+import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { ServiceWorkerRegister } from "@/components/sw-register";
 
 export default async function AppLayout({
@@ -99,7 +100,8 @@ export default async function AppLayout({
           <span className="text-lg font-semibold tracking-tight md:hidden">
             SISTENGE
           </span>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-1 sm:gap-2">
+            <ThemeToggle />
             <UserMenu
               nome={perfil?.nome ?? ""}
               email={perfil?.email ?? user.email ?? ""}

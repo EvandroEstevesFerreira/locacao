@@ -1,8 +1,12 @@
 /**
  * Logotipo horizontal da Sistenge (ícone + wordmark).
- * O ícone usa o vermelho oficial da marca (#cf2927); as letras herdam
+ * O ícone usa o vermelho oficial da marca (#BE3A31); as letras herdam
  * `currentColor`, então acompanham o tema (claro/escuro) de onde é usado.
  * Fonte: Manual de Identidade Visual — "Versão Fundo Claro".
+ *
+ * Ser theme-aware por `currentColor` é uma vantagem sobre o Logo do Sistenge
+ * People, que precisa de dois arquivos SVG e de um guard de hidratação para
+ * escolher entre eles.
  */
 export function SistengeLogo({ className }: { className?: string }) {
   return (
@@ -13,7 +17,7 @@ export function SistengeLogo({ className }: { className?: string }) {
       className={className}
     >
       {/* Ícone (vermelho da marca) */}
-      <g fill="#cf2927">
+      <g fill="#BE3A31">
         <path d="M95.63,305.28h276.21c23.7,0,47.95-19.22,54.16-42.9,6.21-23.69-7.97-42.9-31.68-42.9H118.11l-22.48,85.81Z" />
         <path d="M555.81,76.75h-276.21c-23.7,0-47.95,19.22-54.16,42.9-6.21,23.7,7.97,42.91,31.68,42.91h276.21l22.48-85.82Z" />
       </g>
@@ -28,6 +32,26 @@ export function SistengeLogo({ className }: { className?: string }) {
         <path d="M1620.49,264.8h-75.7c-43.61,0-62.05-12.51-45.67-73.66,16.39-61.17,41.61-73.89,85.21-73.89h75.3l-8.7,32.51h-75.1c-19.79,0-28.81,8.07-37.73,41.38-8.92,33.3-4.17,41.18,15.62,41.18h40.78l11.84-44.21h34.72l-20.54,76.7h-.02Z" />
         <polygon points="1800.39 205.25 1704.09 205.25 1696.68 232.9 1793.79 232.9 1785.24 264.8 1648.57 264.8 1688.11 117.24 1824.37 117.24 1815.83 149.14 1719.13 149.14 1711.72 176.79 1808.02 176.79 1800.39 205.25" />
       </g>
+    </svg>
+  );
+}
+
+/**
+ * Apenas o símbolo da Sistenge, sem o wordmark — para espaços estreitos
+ * (sidebar colapsada, header em mobile). O viewBox recorta o grupo vermelho do
+ * logotipo completo, então os dois ficam alinhados pixel a pixel.
+ */
+export function SistengeIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="76 76 500 230"
+      role="img"
+      aria-label="Sistenge"
+      className={className}
+      fill="#BE3A31"
+    >
+      <path d="M95.63,305.28h276.21c23.7,0,47.95-19.22,54.16-42.9,6.21-23.69-7.97-42.9-31.68-42.9H118.11l-22.48,85.81Z" />
+      <path d="M555.81,76.75h-276.21c-23.7,0-47.95,19.22-54.16,42.9-6.21,23.7,7.97,42.91,31.68,42.91h276.21l22.48-85.82Z" />
     </svg>
   );
 }
