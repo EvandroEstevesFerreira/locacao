@@ -5,10 +5,11 @@
    Base UI usam (dialog, select, separator, avatar). Não remover. */
 @import "shadcn/tailwind.css";
 
-/* Documentação não é fonte de classes. Sem isto, um exemplo de código num
-   .md — `bg-[url(...)]`, `from-[#1A1D24]` — é lido como utility real e o
+/* Markdown nunca é fonte de classes. Sem isto, um exemplo de código num .md
+   (CHANGELOG.md, docs/, AGENTS.md) é lido como utility real: uma linha citando
+   `bg-[url(...)]` faz o Tailwind emitir `background-image:url(...)` e o
    Turbopack tenta resolver `url(...)` como módulo, quebrando o build. */
-@source not "../../docs";
+@source not "../../**/*.md";
 
 /* Variante dark ciente de escopo. Dois detalhes deliberados:
    - `:where(.dark, .dark *)` também casa o próprio elemento que carrega a
