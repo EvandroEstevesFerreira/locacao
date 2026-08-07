@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/table";
 import { SelectFilter } from "@/components/shared/select-filter";
 import { ListFilters } from "@/components/shared/list-filters";
+import { listarObrasParaFiltro } from "@/lib/data/obras";
 
 export const metadata = { title: "Fluxo de caixa — Loca" };
 
@@ -30,9 +31,9 @@ export default async function FluxoCaixaPage({
   const { obra } = await searchParams;
   const supabase = await createClient();
 
-  const [fluxo, { data: obrasData }] = await Promise.all([
+  const [fluxo, obrasData] = await Promise.all([
     gerarFluxoCaixa(supabase, { obra_id: obra }),
-    supabase.from("obra").select("id, codigo, nome").order("codigo"),
+    listarObrasParaFiltro(),
   ]);
 
   const prox3 = fluxo.meses.slice(0, 3).reduce((s, m) => s + m.total, 0);
@@ -49,7 +50,7 @@ export default async function FluxoCaixaPage({
           param="obra"
           label="Obra"
           placeholder="Todas as obras"
-          opcoes={(obrasData ?? []).map((o) => ({ value: o.id, label: `${o.codigo} — ${o.nome}` }))}
+          opcoes={obrasData.map((o) => ({ value: o.id, label: `${o.codigo} — ${o.nome}` }))}
         />
       </ListFilters>
 

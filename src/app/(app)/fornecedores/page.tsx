@@ -21,6 +21,7 @@ import { PAGE_SIZE, parseListParams, termoOr } from "@/lib/lista";
 import { FornecedoresToolbar } from "./fornecedores-toolbar";
 import { excluirFornecedor } from "./actions";
 import { EmptyState } from "@/components/shared/empty-state";
+import { listarObrasParaFiltro } from "@/lib/data/obras";
 
 export const metadata = { title: "Fornecedores — Loca" };
 
@@ -53,7 +54,7 @@ export default async function FornecedoresPage({
   const embed = obra
     ? "fornecedor_obra!inner(obra:obra_id(id, codigo))"
     : "fornecedor_obra(obra:obra_id(id, codigo))";
-  const [{ data: fornecedoresData, count }, { data: obrasData }] = await Promise.all([
+  const [{ data: fornecedoresData, count }, obrasData] = await Promise.all([
     (() => {
       let query = supabase
         .from("fornecedor")
@@ -65,7 +66,7 @@ export default async function FornecedoresPage({
       if (q) query = query.or(termoOr(["nome", "cnpj"], q));
       return query.order(sort, { ascending }).range(from, to);
     })(),
-    supabase.from("obra").select("id, codigo, nome").order("codigo"),
+    listarObrasParaFiltro(),
   ]);
 
   const fornecedores = (fornecedoresData ?? []) as unknown as Forn[];
@@ -88,7 +89,7 @@ export default async function FornecedoresPage({
         }
       />
 
-      <FornecedoresToolbar obras={obrasData ?? []} q={q} obra={obra} />
+      <FornecedoresToolbar obras={obrasData} q={q} obra={obra} />
 
       {tem ? (
         <>

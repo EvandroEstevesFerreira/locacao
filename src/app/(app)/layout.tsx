@@ -1,10 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ChevronsRight } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentPerfil } from "@/lib/auth";
 import { moduloLiberado } from "@/lib/modulos";
 import { navVisivel } from "@/lib/nav";
-import type { Papel } from "@/lib/permissoes";
 import { APP_VERSION } from "@/lib/changelog";
 import { SistengeIcon, SistengeLogo } from "@/components/sistenge-logo";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
@@ -21,24 +20,17 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  // Usa o mesmo `getCurrentPerfil()` das páginas, que é `cache()`ado: antes o
+  // layout fazia seu próprio getUser() + SELECT em perfil, então cada render
+  // custava duas idas ao Auth e duas ao banco para a mesma informação.
+  const perfil = await getCurrentPerfil();
+  if (!perfil) {
     redirect("/login");
   }
 
-  const { data: perfil } = await supabase
-    .from("perfil")
-    .select("nome, email, papel, modulos")
-    .eq("id", user.id)
-    .single();
-
-  const isMaster = perfil?.papel === "master";
-  const modulos = (perfil?.modulos as string[] | null) ?? null;
-  const papel = (perfil?.papel ?? "gestor") as Papel;
+  const isMaster = perfil.papel === "master";
+  const modulos = perfil.modulos;
+  const papel = perfil.papel;
 
   // Filtragem no server, uma vez por request. Antes rodava no client e duas
   // vezes (uma por árvore de navegação), e o bundle do cliente carregava a
@@ -124,11 +116,11 @@ export default async function AppLayout({
           <div className="flex items-center gap-1 sm:gap-2">
             <ThemeToggle />
             <span className="hidden max-w-45 truncate text-sm text-muted-foreground lg:inline">
-              Olá, {(perfil?.nome ?? perfil?.email ?? "").split(" ")[0]}
+              Olá, {(perfil.nome ?? perfil.email ?? "").split(" ")[0]}
             </span>
             <UserMenu
-              nome={perfil?.nome ?? ""}
-              email={perfil?.email ?? user.email ?? ""}
+              nome={perfil.nome ?? ""}
+              email={perfil.email ?? ""}
               papel={papel}
               versao={APP_VERSION}
             />

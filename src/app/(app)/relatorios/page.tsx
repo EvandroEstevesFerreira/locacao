@@ -21,6 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { NativeSelect } from "@/components/ui/native-select";
+import { listarObrasParaFiltro } from "@/lib/data/obras";
 
 export const metadata = { title: "Relatórios — Loca" };
 
@@ -44,8 +45,8 @@ export default async function RelatoriosPage({
   const meta = TIPOS_RELATORIO.find((t) => t.valor === tipo)!;
 
   const supabase = await createClient();
-  const [{ data: obras }, { data: fornecedores }] = await Promise.all([
-    supabase.from("obra").select("id, codigo, nome").order("codigo"),
+  const [obras, { data: fornecedores }] = await Promise.all([
+    listarObrasParaFiltro(),
     supabase.from("fornecedor").select("id, nome").order("nome"),
   ]);
 
@@ -94,7 +95,7 @@ export default async function RelatoriosPage({
               <label htmlFor="f-obra" className="text-xs text-muted-foreground">Obra</label>
               <NativeSelect className="w-auto" id="f-obra" name="obra" defaultValue={sp.obra ?? ""}>
                 <option value="">Todas</option>
-                {(obras ?? []).map((o) => (
+                {obras.map((o) => (
                   <option key={o.id} value={o.id}>
                     {o.codigo} — {o.nome}
                   </option>

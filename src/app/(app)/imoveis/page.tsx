@@ -29,6 +29,7 @@ import { KpiCard } from "@/components/shared/kpi-card";
 import { ListFilters } from "@/components/shared/list-filters";
 import { ListSearch } from "@/components/shared/list-search";
 import { SelectFilter } from "@/components/shared/select-filter";
+import { listarObrasParaFiltro } from "@/lib/data/obras";
 
 export const metadata = { title: "Imóveis — Loca" };
 
@@ -60,8 +61,8 @@ export default async function ImoveisPage({
   });
 
   const supabase = await createClient();
-  const [{ data: obras }, imoveisRes, kpiRes] = await Promise.all([
-    supabase.from("obra").select("id, codigo, nome").order("codigo"),
+  const [obras, imoveisRes, kpiRes] = await Promise.all([
+    listarObrasParaFiltro(),
     (() => {
       let qq = supabase
         .from("imovel")
@@ -151,7 +152,7 @@ export default async function ImoveisPage({
           param="obra"
           label="Obra"
           placeholder="Todas as obras"
-          opcoes={(obras ?? []).map((o) => ({ value: o.id, label: `${o.codigo} — ${o.nome}` }))}
+          opcoes={obras.map((o) => ({ value: o.id, label: `${o.codigo} — ${o.nome}` }))}
         />
       </ListFilters>
 

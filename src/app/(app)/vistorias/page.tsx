@@ -22,6 +22,7 @@ import {
 import { SelectFilter } from "@/components/shared/select-filter";
 import { ListFilters } from "@/components/shared/list-filters";
 import { EmptyState } from "@/components/shared/empty-state";
+import { listarObrasParaFiltro } from "@/lib/data/obras";
 
 export const metadata = { title: "Vistorias — Loca" };
 
@@ -60,10 +61,7 @@ export default async function VistoriasPage({
   q = q.order(sort, { ascending }).range(from, to);
   const { data, count } = await q;
 
-  const { data: obrasData } = await supabase
-    .from("obra")
-    .select("id, codigo, nome")
-    .order("codigo");
+  const obrasData = await listarObrasParaFiltro();
 
   const vistorias = (data ?? []) as unknown as Row[];
   const total = count ?? 0;
@@ -90,7 +88,7 @@ export default async function VistoriasPage({
           param="obra"
           label="Obra"
           placeholder="Todas as obras"
-          opcoes={(obrasData ?? []).map((o) => ({ value: o.id, label: `${o.codigo} — ${o.nome}` }))}
+          opcoes={obrasData.map((o) => ({ value: o.id, label: `${o.codigo} — ${o.nome}` }))}
         />
       </ListFilters>
 

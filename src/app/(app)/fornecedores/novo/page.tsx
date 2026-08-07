@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeEditarCadastros } from "@/lib/auth";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { FornecedorForm } from "../fornecedor-form";
+import { listarObrasParaFiltro } from "@/lib/data/obras";
 
 export const metadata = { title: "Novo fornecedor — Loca" };
 
@@ -11,11 +11,7 @@ export default async function NovoFornecedorPage() {
   const perfil = await getCurrentPerfil();
   if (!podeEditarCadastros(perfil?.papel)) redirect("/fornecedores");
 
-  const supabase = await createClient();
-  const { data: obras } = await supabase
-    .from("obra")
-    .select("id, codigo, nome")
-    .order("codigo");
+  const obras = await listarObrasParaFiltro();
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -25,7 +21,7 @@ export default async function NovoFornecedorPage() {
       />
       <Card>
         <CardContent className="pt-6">
-          <FornecedorForm obras={obras ?? []} />
+          <FornecedorForm obras={obras} />
         </CardContent>
       </Card>
     </div>

@@ -9,6 +9,12 @@ export type Perfil = {
   nome: string | null;
   email: string | null;
   papel: Papel;
+  /**
+   * Módulos liberados para o usuário. `null` = acesso total (retrocompatível
+   * com quem nunca teve módulos definidos). Vem no mesmo select que o resto do
+   * perfil para que o layout e as páginas compartilhem uma única consulta.
+   */
+  modulos: string[] | null;
 };
 
 /** Rótulo e descrição de cada perfil (usado nas telas de usuários). */

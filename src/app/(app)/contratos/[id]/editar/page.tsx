@@ -4,6 +4,7 @@ import { getCurrentPerfil, podeOperar } from "@/lib/auth";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { ContratoForm } from "../../contrato-form";
+import { listarObrasParaFiltro } from "@/lib/data/obras";
 
 export const metadata = { title: "Editar contrato — Loca" };
 
@@ -17,7 +18,7 @@ export default async function EditarContratoPage({
 
   const { id } = await params;
   const supabase = await createClient();
-  const [{ data: contrato }, { data: obras }, { data: fornecedores }] =
+  const [{ data: contrato }, obras, { data: fornecedores }] =
     await Promise.all([
       supabase
         .from("contrato_locacao")
@@ -26,7 +27,7 @@ export default async function EditarContratoPage({
         )
         .eq("id", id)
         .single(),
-      supabase.from("obra").select("id, codigo, nome").order("codigo"),
+      listarObrasParaFiltro(),
       supabase.from("fornecedor").select("id, nome").order("nome"),
     ]);
 
@@ -39,7 +40,7 @@ export default async function EditarContratoPage({
         <CardContent className="pt-6">
           <ContratoForm
             contrato={contrato}
-            obras={obras ?? []}
+            obras={obras}
             fornecedores={fornecedores ?? []}
           />
         </CardContent>

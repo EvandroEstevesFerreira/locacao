@@ -22,6 +22,7 @@ import {
 import { PageHeader } from "@/components/shared/page-header";
 import { BarChart } from "@/components/bar-chart";
 import { SelectFilter } from "@/components/shared/select-filter";
+import { listarObrasParaFiltro } from "@/lib/data/obras";
 
 type Devolucao = {
   id: string;
@@ -102,7 +103,7 @@ export default async function HomePage({
   })();
 
   const [
-    { data: obrasLista },
+    obrasLista,
     contratosAtivos,
     itensEmAberto,
     avariasAbertas,
@@ -111,7 +112,7 @@ export default async function HomePage({
     devolucoesRes,
     fluxo,
   ] = await Promise.all([
-    supabase.from("obra").select("id, codigo, nome").order("codigo"),
+    listarObrasParaFiltro(),
     obra ? contratosQ.eq("obra_id", obra) : contratosQ,
     itensQ,
     avariasQ,
@@ -159,7 +160,7 @@ export default async function HomePage({
             param="obra"
             label="Obra"
             placeholder="Todas as obras"
-            opcoes={(obrasLista ?? []).map((o) => ({ value: o.id, label: `${o.codigo} — ${o.nome}` }))}
+            opcoes={obrasLista.map((o) => ({ value: o.id, label: `${o.codigo} — ${o.nome}` }))}
           />
         }
       />
