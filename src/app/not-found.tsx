@@ -1,12 +1,15 @@
 // 404 da raiz: para URLs que não casam com NENHUMA rota (/xyz, um link antigo
 // que mudou de lugar).
 //
-// A de `(app)/not-found.tsx` não cobre este caso: ela vive dentro do grupo e só
-// atende ao `notFound()` lançado por uma rota do grupo, herdando o shell — que
-// exige sessão. Uma URL inexistente pode ser aberta por quem não está logado,
-// então esta é autônoma: sem sidebar, sem header, sem consulta ao Supabase.
+// A de `(app)/not-found.tsx` não cobre este caso: ela atende só ao `notFound()`
+// lançado por uma rota DE DENTRO do grupo. Um caminho que não casa com segmento
+// nenhum não entra no grupo, então o Next resolve para a raiz — e sem este
+// arquivo serve a própria tela padrão, em inglês e sem estilo.
 //
-// Sem este arquivo o Next serve a própria tela padrão, em inglês e sem estilo.
+// Fica sem shell por necessidade, não por escolha: o layout de `(app)` só se
+// aplica a rotas do grupo. Na prática só usuário autenticado chega aqui — quem
+// não tem sessão é desviado para /login pelo middleware antes do roteamento —,
+// mas ainda assim ela não consulta o Supabase, para não depender disso.
 
 import Link from "next/link";
 import { FileQuestion, Home } from "lucide-react";
