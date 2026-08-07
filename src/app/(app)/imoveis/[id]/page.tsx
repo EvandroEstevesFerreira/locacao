@@ -669,14 +669,13 @@ function AnexoLinha({
             rotulo={rotulo}
           />
           {path ? (
-            <form action={removerAnexoImovelContrato}>
-              <input type="hidden" name="contrato_id" value={contratoId} />
-              <input type="hidden" name="imovel_id" value={imovelId} />
-              <input type="hidden" name="campo" value={campo} />
-              <Button type="submit" variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive">
-                Remover
-              </Button>
-            </form>
+            <ConfirmDelete
+              action={removerAnexoImovelContrato}
+              id={contratoId}
+              hidden={{ contrato_id: contratoId, imovel_id: imovelId, campo }}
+              rotulo="Remover"
+              mensagem="Remover este anexo? O arquivo será apagado."
+            />
           ) : null}
         </>
       ) : null}

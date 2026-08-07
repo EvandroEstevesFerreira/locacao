@@ -285,18 +285,13 @@ export default async function ContratoDetalhePage({
                   <Download className="size-4" /> Abrir
                 </Button>
                 {podeEditar ? (
-                  <form action={removerAnexoContrato}>
-                    <input type="hidden" name="contrato_id" value={contrato.id} />
-                    <input type="hidden" name="path" value={anexoPath ?? ""} />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      type="submit"
-                      className="text-destructive"
-                    >
-                      Remover
-                    </Button>
-                  </form>
+                  <ConfirmDelete
+                    action={removerAnexoContrato}
+                    id={contrato.id}
+                    hidden={{ contrato_id: contrato.id, path: anexoPath ?? "" }}
+                    rotulo="Remover"
+                    mensagem="Remover o contrato anexado? O arquivo será apagado."
+                  />
                 ) : null}
               </>
             ) : (
@@ -349,19 +344,13 @@ export default async function ContratoDetalhePage({
                       </a>
                     ) : null}
                     {podeEditar ? (
-                      <form action={removerContratoDoc}>
-                        <input type="hidden" name="id" value={d.id} />
-                        <input type="hidden" name="contrato_id" value={contrato.id} />
-                        <input type="hidden" name="path" value={d.path} />
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          type="submit"
-                          className="text-muted-foreground hover:text-destructive"
-                        >
-                          Remover
-                        </Button>
-                      </form>
+                      <ConfirmDelete
+                        action={removerContratoDoc}
+                        id={d.id}
+                        hidden={{ contrato_id: contrato.id, path: d.path }}
+                        rotulo="Remover"
+                        mensagem="Remover este documento? O arquivo será apagado."
+                      />
                     ) : null}
                   </div>
                 </li>

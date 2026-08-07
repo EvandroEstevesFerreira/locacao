@@ -162,7 +162,9 @@ export async function salvarContratoImovel(
 
 export async function excluirContratoImovel(formData: FormData) {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) {
+    return { error: "Você não tem permissão para excluir contratos de imóvel." };
+  }
   const id = txt(formData.get("id"));
   const imovelId = txt(formData.get("imovel_id"));
   if (!id) return;
@@ -444,7 +446,9 @@ export async function alternarPagoConsumo(formData: FormData) {
 
 export async function excluirContaConsumo(formData: FormData) {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) {
+    return { error: "Você não tem permissão para excluir contas de consumo." };
+  }
   const id = txt(formData.get("id"));
   const imovelId = txt(formData.get("imovel_id"));
   if (!id) return;
@@ -485,7 +489,9 @@ export async function salvarReparo(
 
 export async function excluirReparo(formData: FormData) {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) {
+    return { error: "Você não tem permissão para excluir reparos." };
+  }
   const id = txt(formData.get("id"));
   const imovelId = txt(formData.get("imovel_id"));
   if (!id) return;
@@ -521,7 +527,9 @@ export async function salvarOcorrencia(
 
 export async function excluirOcorrencia(formData: FormData) {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) {
+    return { error: "Você não tem permissão para excluir ocorrências." };
+  }
   const id = txt(formData.get("id"));
   const imovelId = txt(formData.get("imovel_id"));
   if (!id) return;
@@ -554,7 +562,9 @@ export async function salvarVistoriaImovel(
 
 export async function excluirVistoriaImovel(formData: FormData) {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) {
+    return { error: "Você não tem permissão para excluir vistorias do imóvel." };
+  }
   const id = txt(formData.get("id"));
   const imovelId = txt(formData.get("imovel_id"));
   if (!id) return;
@@ -630,7 +640,9 @@ export async function salvarOcupante(
 
 export async function excluirOcupante(formData: FormData) {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) {
+    return { error: "Você não tem permissão para excluir ocupantes." };
+  }
   const id = txt(formData.get("id"));
   const imovelId = txt(formData.get("imovel_id"));
   if (!id) return;
@@ -708,7 +720,9 @@ export async function atualizarDocumentoBiblioteca(
 
 export async function excluirDocumentoBiblioteca(formData: FormData) {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !podeEditarCadastros(perfil.papel)) return;
+  if (!perfil?.org_id || !podeEditarCadastros(perfil.papel)) {
+    return { error: "Você não tem permissão para excluir documentos." };
+  }
   const id = txt(formData.get("id"));
   const path = txt(formData.get("path"));
   if (!id) return;
@@ -720,7 +734,9 @@ export async function excluirDocumentoBiblioteca(formData: FormData) {
 
 export async function removerAnexoImovelContrato(formData: FormData) {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) {
+    return { error: "Você não tem permissão para remover anexos do imóvel." };
+  }
   const contratoId = txt(formData.get("contrato_id"));
   const imovelId = txt(formData.get("imovel_id"));
   const campo = String(formData.get("campo") ?? "") as CampoAnexo;

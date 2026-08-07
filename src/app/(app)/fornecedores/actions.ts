@@ -127,7 +127,9 @@ export async function salvarFornecedor(
 
 export async function excluirFornecedor(formData: FormData) {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !podeEditarCadastros(perfil.papel)) return;
+  if (!perfil?.org_id || !podeEditarCadastros(perfil.papel)) {
+    return { error: "Você não tem permissão para excluir fornecedores." };
+  }
   const id = (formData.get("id") as string | null)?.trim();
   if (!id) return;
 

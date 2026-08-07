@@ -73,7 +73,9 @@ export async function salvarItem(
 
 export async function excluirItem(formData: FormData) {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !podeEditarCadastros(perfil.papel)) return;
+  if (!perfil?.org_id || !podeEditarCadastros(perfil.papel)) {
+    return { error: "Você não tem permissão para excluir itens do catálogo." };
+  }
   const id = (formData.get("id") as string | null)?.trim();
   if (!id) return;
   const supabase = await createClient();
@@ -128,7 +130,9 @@ export async function adicionarUnidade(
 
 export async function excluirUnidade(formData: FormData) {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !podeEditarCadastros(perfil.papel)) return;
+  if (!perfil?.org_id || !podeEditarCadastros(perfil.papel)) {
+    return { error: "Você não tem permissão para excluir unidades." };
+  }
   const id = (formData.get("id") as string | null)?.trim();
   const itemId = (formData.get("item_id") as string | null)?.trim();
   if (!id) return;

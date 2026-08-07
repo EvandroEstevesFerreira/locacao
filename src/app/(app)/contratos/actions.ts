@@ -163,7 +163,9 @@ export async function adicionarItemLocado(
 
 export async function excluirItemLocado(formData: FormData) {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) {
+    return { error: "Você não tem permissão para excluir itens do contrato." };
+  }
   const id = (formData.get("id") as string | null)?.trim();
   const contratoId = (formData.get("contrato_id") as string | null)?.trim();
   if (!id) return;
@@ -319,7 +321,9 @@ export async function salvarAnexoContrato(contratoId: string, path: string) {
 
 export async function removerAnexoContrato(formData: FormData) {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) {
+    return { error: "Você não tem permissão para remover anexos do contrato." };
+  }
   const contratoId = (formData.get("contrato_id") as string | null)?.trim();
   const path = (formData.get("path") as string | null)?.trim();
   if (!contratoId) return;
@@ -361,7 +365,9 @@ export async function salvarContratoDoc(
 
 export async function removerContratoDoc(formData: FormData) {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) {
+    return { error: "Você não tem permissão para remover documentos do contrato." };
+  }
   const id = (formData.get("id") as string | null)?.trim();
   const contratoId = (formData.get("contrato_id") as string | null)?.trim();
   const path = (formData.get("path") as string | null)?.trim();

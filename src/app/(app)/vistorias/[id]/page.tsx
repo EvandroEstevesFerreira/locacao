@@ -128,12 +128,12 @@ export default async function VistoriaDetalhePage({
               Gerar PDF
             </Button>
             {podeEditar ? (
-              <form action={excluirVistoria}>
-                <input type="hidden" name="id" value={vistoria.id} />
-                <Button variant="outline" type="submit" className="text-destructive">
-                  Excluir vistoria
-                </Button>
-              </form>
+              <ConfirmDelete
+                action={excluirVistoria}
+                id={vistoria.id}
+                rotulo="Excluir vistoria"
+                mensagem="Excluir esta vistoria, com as fotos e avarias registradas?"
+              />
             ) : null}
           </>
         }
