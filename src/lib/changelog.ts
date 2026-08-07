@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.21.0";
+export const APP_VERSION = "0.22.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,21 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.22.0",
+    data: "2026-08-06",
+    titulo: "Filtros ao vivo e correção no cálculo de datas",
+    mudancas: [
+      { tipo: "correcao", texto: "Entre 21h e a meia-noite o sistema considerava o dia seguinte. Isso fazia contas com vencimento para hoje aparecerem como vencidas, cobrava um dia a mais no cálculo de multa e juros da baixa, e imprimia os contratos, termos e laudos com a data de amanhã. O dia passa a ser sempre o de Brasília." },
+      { tipo: "melhoria", texto: "A busca das listagens aplica sozinha enquanto você digita, com um botão para limpar — antes era preciso apertar Enter. Quem preferir, Enter continua funcionando." },
+      { tipo: "melhoria", texto: "Os filtros ficaram iguais em todas as listas e aplicam na hora, sem botão \"Filtrar\". Um botão \"Limpar\" aparece quando há algum filtro ativo." },
+      { tipo: "correcao", texto: "Filtrar por obra deixava de considerar a busca que você já tinha digitado. Agora os filtros se somam." },
+      { tipo: "correcao", texto: "Mudar um filtro estando na página 3 mantinha o pedido pela página 3 de um resultado que passou a ter uma só, e a lista aparecia vazia. Agora volta para a primeira página." },
+      { tipo: "melhoria", texto: "As telas de imóvel, contrato e vistoria abrem mais rápido: os anexos passaram a ser liberados de uma vez, em vez de um por um." },
+      { tipo: "melhoria", texto: "As telas sem nenhum registro agora explicam para que serve aquele cadastro, em vez de só dizer que está vazio." },
+      { tipo: "melhoria", texto: "Os indicadores de Financeiro e Imóveis ganharam ícone e cor conforme a situação — vencido em vermelho, pago em verde." },
+    ],
+  },
   {
     versao: "0.21.0",
     data: "2026-08-06",

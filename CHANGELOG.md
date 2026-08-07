@@ -7,6 +7,73 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.22.0] — 2026-08-06
+
+Primeira parte da Fase 3 da migração para a construção do **Sistenge People**
+(referência: `docs/superpowers/plans/people-fase3-paginas-data-forms.md`).
+
+### Corrigido
+
+- **"Hoje" era calculado em UTC em nove lugares**, enquanto `hojeISOSaoPaulo()`
+  já existia e era usado em quatro. `toISOString()` devolve a data em UTC, então
+  entre 21h e a meia-noite em Brasília (BRT = UTC−3) todos enxergavam o dia
+  seguinte. Efeitos: conta com vencimento hoje entrava no total "Vencido"; o
+  cálculo de multa e juros da baixa contava um dia a mais de atraso; os quatro
+  PDFs saíam datados de amanhã; a data padrão da devolução vinha errada.
+  Coberto por testes com clock fixo, com uma asserção travando explicitamente o
+  comportamento errado ao lado do certo.
+- `formatarData` devolvia "Invalid Date" para timestamp completo: `dataDeISO`
+  faz split manual em `-`, então `"2026-03-10T12:00:00Z"` produzia
+  `Number("10T12:00:00Z")` = `NaN`. Agora há guard por regex.
+- `ObraFilter` montava a URL só com `?obra=`, **descartando os demais
+  parâmetros** — filtrar por obra em /contratos apagava a busca por número.
+- Mudar filtro sem voltar para a primeira página deixava a lista vazia (pedido
+  da página 3 num resultado com uma só). Os três filtros novos apagam `page`.
+
+### Adicionado
+
+- `src/lib/data/storage.ts` com `assinarUrls` e `TTL_URL_ASSINADA` — o primeiro
+  arquivo da camada de leitura.
+- `src/lib/acoes.ts` com o tipo `ActionResult` compartilhado.
+- `src/components/shared/`: `campo.tsx`, `list-search.tsx` (reescrito),
+  `select-filter.tsx`, `list-filters.tsx`.
+- **CI** em `.github/workflows/ci.yml` — o projeto não tinha nenhuma. Node 22,
+  `npm ci` → typecheck → lint → test → build.
+- Seção **"Convenções de código"** no `AGENTS.md`, fixando a regra PT-BR
+  inviolável, a restrição do token `--brand`, `createAdminClient()` só em cron,
+  `soft_delete` obrigatório, "uma action ou redireciona ou devolve ActionResult",
+  quando usar react-hook-form, e a exceção justificada de /relatorios.
+- 23 testes novos (de 30 para 53): `hojeISOSaoPaulo`, `formatarData`,
+  `formatarBRL` e `src/lib/lista.test.ts` cobrindo `parseListParams` e `termoOr`
+  — que são controle de segurança (allowlist do `.order()` e sanitização do
+  `.or(ilike)`) e estavam sem nenhum teste.
+- Stub de `server-only` no vitest, para a camada de leitura.
+
+### Alterado
+
+- **Anexos assinados em lote.** `imoveis/[id]` fazia dois `Promise.all` de
+  `createSignedUrl` individuais: um imóvel com 3 contratos, 8 reparos e 12 fotos
+  disparava ~25 requisições ao Storage antes do primeiro byte de HTML. Agora uma
+  por bucket, via `createSignedUrls`. O TTL também foi unificado (era 600 em um
+  lugar e 3600 em dois).
+- `formatarBRL` e o formatador de data içados para constante de módulo — eram
+  reconstruídos a cada chamada, centenas por render em /relatorios e /fluxo.
+- **Busca ao vivo** com debounce de 300ms e botão de limpar. Enter continua
+  aplicando na hora.
+- Os dois `<form method="get">` de /financeiro e /imoveis viram
+  `ListFilters` + `ListSearch` + `SelectFilter`.
+- Os 7 `<Card className="border-dashed">` viram `EmptyState`, com descrição
+  explicando para que serve o cadastro.
+- As duas funções `Kpi` locais viram `KpiCard` com ícone e variante de cor. A
+  prop booleana `alerta` era a proliferação que o `variant` resolve.
+- Três helpers locais idênticos de par rótulo/valor (`Info` × 2 e `Campo`) viram
+  `src/components/shared/campo.tsx`.
+
+### Removido
+
+- `src/components/obra-filter.tsx` e `src/components/list-search.tsx`,
+  substituídos pelos equivalentes em `shared/`.
+
 ## [0.21.0] — 2026-08-06
 
 Fase 2 da migração para a identidade e a construção do **Sistenge People**
