@@ -53,6 +53,8 @@ import {
   removerAnexoContrato,
   removerContratoDoc,
 } from "../actions";
+import { Campo } from "@/components/shared/campo";
+import { assinarUrls } from "@/lib/data/storage";
 
 export const metadata = { title: "Contrato — Loca" };
 
@@ -115,10 +117,6 @@ export default async function ContratoDetalhePage({
   } | null;
 
   const anexoPath = (contrato.anexo_path as string | null) ?? null;
-  const anexoUrl = anexoPath
-    ? (await supabase.storage.from("contratos").createSignedUrl(anexoPath, 600))
-        .data?.signedUrl ?? null
-    : null;
 
   // Documentos adicionais (aditivos / renovações).
   const { data: docsRaw } = await supabase
@@ -129,13 +127,13 @@ export default async function ContratoDetalhePage({
     .order("created_at", { ascending: false });
   type Doc = { id: string; tipo: string; descricao: string | null; path: string; data: string | null };
   const docs = (docsRaw ?? []) as Doc[];
-  const docUrl = new Map<string, string>();
-  await Promise.all(
-    docs.map(async (d) => {
-      const { data } = await supabase.storage.from("contratos").createSignedUrl(d.path, 600);
-      if (data?.signedUrl) docUrl.set(d.path, data.signedUrl);
-    }),
-  );
+  // Uma requisição para o anexo original e todos os aditivos juntos — antes era
+  // uma por arquivo.
+  const docUrl = await assinarUrls("contratos", [
+    anexoPath,
+    ...docs.map((d) => d.path),
+  ]);
+  const anexoUrl = anexoPath ? docUrl.get(anexoPath) ?? null : null;
   const DOC_LABEL: Record<string, string> = {
     aditivo: "Aditivo",
     renovacao: "Renovação",
@@ -233,8 +231,8 @@ export default async function ContratoDetalhePage({
 
       <Card className="order-1">
         <CardContent className="grid gap-4 pt-6 sm:grid-cols-2 lg:grid-cols-4">
-          <Info label="Obra" valor={obra ? `${obra.codigo} — ${obra.nome}` : "—"} />
-          <Info label="Fornecedor" valor={fornecedor?.nome ?? "—"} />
+          <Campo label="Obra" valor={obra ? `${obra.codigo} — ${obra.nome}` : "—"} />
+          <Campo label="Fornecedor" valor={fornecedor?.nome ?? "—"} />
           <div>
             <p className="text-xs text-muted-foreground">Cadência</p>
             <p className="flex items-center gap-2 font-medium">
@@ -250,12 +248,12 @@ export default async function ContratoDetalhePage({
             <p className="text-xs text-muted-foreground">Status</p>
             <Badge variant={statusC.variant}>{statusC.label}</Badge>
           </div>
-          <Info label="Início" valor={formatarData(contrato.data_inicio)} />
-          <Info
+          <Campo label="Início" valor={formatarData(contrato.data_inicio)} />
+          <Campo
             label="Fim previsto"
             valor={formatarData(contrato.data_fim_prevista)}
           />
-          <Info
+          <Campo
             label="Custo estimado acumulado"
             valor={formatarBRL(custoTotal)}
             destaque
@@ -592,22 +590,6 @@ export default async function ContratoDetalhePage({
   );
 }
 
-function Info({
-  label,
-  valor,
-  destaque,
-}: {
-  label: string;
-  valor: string;
-  destaque?: boolean;
-}) {
-  return (
-    <div>
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className={destaque ? "text-lg font-semibold" : "font-medium"}>{valor}</p>
-    </div>
-  );
-}
 
 function ConfirmDeleteItem({
   itemId,

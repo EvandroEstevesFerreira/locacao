@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/card";
 import { BibliotecaUploader } from "../biblioteca-uploader";
 import { BibliotecaItem } from "../biblioteca-item";
+import { assinarUrls } from "@/lib/data/storage";
 
 export const metadata = { title: "Documentos do alojamento — Loca" };
 
@@ -38,13 +39,7 @@ export default async function DocumentosPage() {
     .order("created_at", { ascending: false });
   const docs = (data ?? []) as Doc[];
 
-  const url = new Map<string, string>();
-  await Promise.all(
-    docs.map(async (d) => {
-      const { data } = await supabase.storage.from("imoveis").createSignedUrl(d.path, 3600);
-      if (data?.signedUrl) url.set(d.path, data.signedUrl);
-    }),
-  );
+  const url = await assinarUrls("imoveis", docs.map((d) => d.path));
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">

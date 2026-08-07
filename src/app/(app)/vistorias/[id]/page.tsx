@@ -33,6 +33,7 @@ import {
   gerarLancamentoAvaria,
 } from "../actions";
 import { NativeSelect } from "@/components/ui/native-select";
+import { Campo } from "@/components/shared/campo";
 
 export const metadata = { title: "Vistoria — Loca" };
 
@@ -165,9 +166,9 @@ export default async function VistoriaDetalhePage({
               {TIPO_VISTORIA[vistoria.tipo as TipoVistoria].label}
             </Badge>
           </div>
-          <Info label="Data" valor={formatarData(vistoria.data)} />
-          <Info label="Responsável" valor={vistoria.responsavel ?? "—"} />
-          <Info
+          <Campo label="Data" valor={formatarData(vistoria.data)} />
+          <Campo label="Responsável" valor={vistoria.responsavel ?? "—"} />
+          <Campo
             label="Avarias (custo est.)"
             valor={formatarBRL(totalAvarias)}
           />
@@ -407,11 +408,3 @@ function AssinaturaRO({
   );
 }
 
-function Info({ label, valor }: { label: string; valor: string }) {
-  return (
-    <div>
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="font-medium">{valor}</p>
-    </div>
-  );
-}

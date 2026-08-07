@@ -32,7 +32,6 @@ import {
 } from "@/components/ui/table";
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { ContratoImovelForm } from "../contrato-imovel-form";
-import { type ReactNode } from "react";
 import { ContratoImovelCard } from "../contrato-imovel-card";
 import { ContratoImovelAcoes, type HistoricoItem } from "../contrato-imovel-acoes";
 import { PiiText } from "@/components/pii-text";
@@ -53,6 +52,8 @@ import {
   excluirVistoriaImovel,
   excluirOcupante,
 } from "../actions";
+import { Campo } from "@/components/shared/campo";
+import { assinarUrls } from "@/lib/data/storage";
 
 export const metadata = { title: "Imóvel — Loca" };
 
@@ -121,13 +122,6 @@ export default async function ImovelDetalhePage({
   const paths = contratos
     .flatMap((c) => [c.anexo_contrato_path, c.caucao_comprovante_path])
     .filter(Boolean) as string[];
-  const urlDe = new Map<string, string>();
-  await Promise.all(
-    paths.map(async (p) => {
-      const { data } = await supabase.storage.from("imoveis").createSignedUrl(p, 3600);
-      if (data?.signedUrl) urlDe.set(p, data.signedUrl);
-    }),
-  );
 
   const { data: contasData } = await supabase
     .from("conta_consumo")
@@ -166,12 +160,11 @@ export default async function ImovelDetalhePage({
     ...ocorrencias.map((o) => o.anexo_path),
     ...vistorias.flatMap((v) => v.vistoria_imovel_foto.map((f) => f.path)),
   ].filter(Boolean) as string[];
-  await Promise.all(
-    paths3.map(async (p) => {
-      const { data } = await supabase.storage.from("imoveis").createSignedUrl(p, 3600);
-      if (data?.signedUrl) urlDe.set(p, data.signedUrl);
-    }),
-  );
+  // Um único lote para contratos, caução, reparos, ocorrências e fotos de
+  // vistoria. Antes eram dois Promise.all de chamadas individuais: um imóvel
+  // com 3 contratos, 8 reparos e 12 fotos disparava ~25 requisições ao Storage
+  // antes do primeiro byte de HTML.
+  const urlDe = await assinarUrls("imoveis", [...paths, ...paths3]);
 
   const { data: ocupantesData } = await supabase
     .from("ocupante_imovel")
@@ -636,24 +629,6 @@ export default async function ImovelDetalhePage({
   );
 }
 
-function Campo({
-  label,
-  valor,
-  span,
-  node,
-}: {
-  label: string;
-  valor?: string | number | null | undefined;
-  span?: boolean;
-  node?: ReactNode;
-}) {
-  return (
-    <div className={span ? "sm:col-span-3" : ""}>
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="font-medium">{node ?? (valor ? String(valor) : "—")}</p>
-    </div>
-  );
-}
 
 function AnexoLinha({
   rotulo,
