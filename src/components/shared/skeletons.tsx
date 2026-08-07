@@ -105,3 +105,27 @@ export function SkeletonDetalhe({ secoes = 3 }: { secoes?: number }) {
     </div>
   );
 }
+
+/**
+ * Fallback de uma seção dentro de uma página de detalhe, para usar no
+ * `<Suspense>` que envolve cada bloco decomposto.
+ *
+ * É o que permite o cabeçalho aparecer de imediato enquanto as seções que
+ * dependem de consultas lentas (URLs assinadas de anexo, agregações) continuam
+ * carregando.
+ */
+export function SecaoSkeleton({ linhas = 3 }: { linhas?: number }) {
+  return (
+    <Card role="status" aria-label="Carregando seção">
+      <CardHeader className="pb-2">
+        <Skeleton className="h-4 w-32" />
+      </CardHeader>
+      <CardContent className="space-y-3 pt-4">
+        {Array.from({ length: linhas }).map((_, i) => (
+          <Skeleton key={i} className="h-4 w-full" />
+        ))}
+      </CardContent>
+      <span className="sr-only">Carregando…</span>
+    </Card>
+  );
+}

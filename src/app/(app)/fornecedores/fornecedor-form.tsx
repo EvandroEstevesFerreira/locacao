@@ -225,7 +225,7 @@ export function FornecedorForm({
       <FormError>{erroServidor}</FormError>
 
       {duplicado ? (
-        <label className="flex items-center gap-2 rounded-md border border-warning/40 bg-warning/10 p-3 text-sm">
+        <label className="flex items-center gap-2 rounded-md border border-warning/40 bg-warning/10 p-3 text-sm text-warning-strong">
           <input
             type="checkbox"
             className="size-4"

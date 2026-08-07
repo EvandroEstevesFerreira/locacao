@@ -54,6 +54,9 @@
   --color-success-foreground: var(--success-foreground);
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
+  /* Variante escura do aviso, legível SOBRE o próprio tint (bg-warning/10).
+     O --warning puro tem contraste ~1.9:1 nesse fundo e falha. */
+  --color-warning-strong: var(--warning-strong);
   --color-info: var(--info);
   --color-info-foreground: var(--info-foreground);
 
@@ -146,6 +149,7 @@
   --success-foreground: hsl(0 0% 98%);
   --warning: hsl(38 92% 50%);
   --warning-foreground: hsl(0 0% 98%);
+  --warning-strong: hsl(26 90% 37%);
   --info: hsl(199 89% 48%);
   --info-foreground: hsl(0 0% 98%);
 
@@ -227,6 +231,7 @@
   --success-foreground: hsl(0 0% 98%);
   --warning: hsl(38 92% 55%);
   --warning-foreground: hsl(0 0% 98%);
+  --warning-strong: hsl(43 96% 66%);
   --info: hsl(199 89% 55%);
   --info-foreground: hsl(0 0% 98%);
 

@@ -1,52 +1,49 @@
-import Image from "next/image";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { AlertTriangle, FileDown } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentPerfil, podeOperar, podeGerenciarFinanceiro } from "@/lib/auth";
-import { formatarBRL, formatarData, formatarDataHora } from "@/lib/locacao";
 import {
-  STATUS_AVARIA,
-  TIPO_VISTORIA,
-  type StatusAvaria,
-  type TipoVistoria,
-} from "@/lib/vistoria";
+  getCurrentPerfil,
+  podeOperar,
+  podeGerenciarFinanceiro,
+} from "@/lib/auth";
+import { formatarBRL, formatarData } from "@/lib/locacao";
+import { TIPO_VISTORIA, type TipoVistoria } from "@/lib/vistoria";
 import { PageHeader } from "@/components/shared/page-header";
+import { Campo } from "@/components/shared/campo";
+import { SecaoSkeleton } from "@/components/shared/skeletons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmDelete } from "@/components/confirm-delete";
-import { FotoUploader } from "../foto-uploader";
-import { AddAvariaForm } from "../add-avaria-form";
-import { RelatorioForm } from "../relatorio-form";
-import { FotoLegenda } from "../foto-legenda";
-import {
-  atualizarStatusAvaria,
-  excluirAvaria,
-  excluirFoto,
-  excluirVistoria,
-  gerarLancamentoAvaria,
-} from "../actions";
-import { NativeSelect } from "@/components/ui/native-select";
-import { Campo } from "@/components/shared/campo";
+import { excluirVistoria } from "../actions";
+import { VistoriaFotos, contarFotos } from "./_components/vistoria-fotos";
+import { VistoriaAvarias, somarAvarias } from "./_components/vistoria-avarias";
+import { VistoriaAssinaturas } from "./_components/vistoria-assinaturas";
 
 export const metadata = { title: "Vistoria — Loca" };
 
-
+/**
+ * Detalhe da vistoria.
+ *
+ * A página `await`ta apenas a consulta de identidade (a linha de `vistoria`) mais
+ * os dois agregados curtos que o cabeçalho mostra. Cada seção busca os próprios
+ * dados dentro de um `<Suspense>`, então o cabeçalho e o resumo aparecem de
+ * imediato em vez de esperar as fotos — que são a parte lenta, porque exigem
+ * assinar URLs de Storage.
+ *
+ * Era um único componente de 410 linhas que carregava tudo antes de renderizar
+ * qualquer coisa.
+ */
 export default async function VistoriaDetalhePage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   const perfil = await getCurrentPerfil();
   const podeEditar = podeOperar(perfil?.papel);
   const podeCobrar = podeGerenciarFinanceiro(perfil?.papel);
-  const { id } = await params;
 
   const supabase = await createClient();
   const { data: vistoria } = await supabase
@@ -58,34 +55,11 @@ export default async function VistoriaDetalhePage({
     .single();
 
   if (!vistoria) notFound();
+
   const contrato = vistoria.contrato as unknown as {
     numero: string;
     obra: { codigo: string; nome: string } | null;
   } | null;
-
-  const { data: fotos } = await supabase
-    .from("vistoria_foto")
-    .select("id, path, legenda")
-    .eq("vistoria_id", id)
-    .order("created_at");
-
-  const paths = (fotos ?? []).map((f) => f.path);
-  const assinadas = paths.length
-    ? (await supabase.storage.from("vistorias").createSignedUrls(paths, 3600))
-        .data ?? []
-    : [];
-  const urlPorPath = new Map(assinadas.map((s) => [s.path, s.signedUrl]));
-
-  const { data: avarias } = await supabase
-    .from("avaria")
-    .select("id, descricao, custo_estimado, status, lancamento_id")
-    .eq("vistoria_id", id)
-    .order("created_at");
-
-  const totalAvarias = (avarias ?? []).reduce(
-    (s, a) => s + Number(a.custo_estimado),
-    0,
-  );
 
   // Contexto: esta vistoria é o relatório de uma devolução?
   const { data: movs } = await supabase
@@ -93,15 +67,21 @@ export default async function VistoriaDetalhePage({
     .select("quantidade, item_locado:item_locado_id(item:item_id(descricao))")
     .eq("vistoria_id", id);
   const mov = (movs ?? [])[0] as unknown as
-    | { quantidade: number; item_locado: { item: { descricao: string } | null } | null }
+    | {
+        quantidade: number;
+        item_locado: { item: { descricao: string } | null } | null;
+      }
     | undefined;
   const contextoDevolucao = mov
     ? `Devolução de ${mov.quantidade} un. de ${mov.item_locado?.item?.descricao ?? "item"}`
     : null;
 
-  const semFotos = (fotos?.length ?? 0) === 0;
-  const empresaImg = (vistoria.assinatura_empresa_img as string | null) ?? null;
-  const empresaAssinado = !!empresaImg;
+  // Agregados curtos do cabeçalho — `head: true` na contagem, sem trazer linhas.
+  const [qtdFotos, totalAvarias] = await Promise.all([
+    contarFotos(id),
+    somarAvarias(id),
+  ]);
+  const empresaAssinado = !!vistoria.assinatura_empresa_img;
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -143,18 +123,18 @@ export default async function VistoriaDetalhePage({
         <p className="text-sm text-muted-foreground">{contextoDevolucao}</p>
       ) : null}
 
-      {semFotos ? (
-        <div className="flex items-center gap-2 border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-          <AlertTriangle className="size-4 shrink-0" />
+      {qtdFotos === 0 ? (
+        <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+          <AlertTriangle className="size-4 shrink-0" aria-hidden />
           Relatório pendente: adicione ao menos uma foto para concluí-lo.
         </div>
       ) : null}
 
       {!empresaAssinado ? (
-        <div className="flex items-center gap-2 border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-700">
-          <AlertTriangle className="size-4 shrink-0" />
-          Relatório <strong>não assinado</strong> pelo representante da empresa.
-          A assinatura é opcional, mas recomendada antes de finalizar.
+        <div className="flex items-center gap-2 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning-strong">
+          <AlertTriangle className="size-4 shrink-0" aria-hidden />
+          Relatório <strong>não assinado</strong> pelo representante da empresa. A
+          assinatura é opcional, mas recomendada antes de finalizar.
         </div>
       ) : null}
 
@@ -167,244 +147,32 @@ export default async function VistoriaDetalhePage({
             </Badge>
           </div>
           <Campo label="Data" valor={formatarData(vistoria.data)} />
-          <Campo label="Responsável" valor={vistoria.responsavel ?? "—"} />
-          <Campo
-            label="Avarias (custo est.)"
-            valor={formatarBRL(totalAvarias)}
-          />
+          <Campo label="Responsável" valor={vistoria.responsavel} />
+          <Campo label="Avarias (custo est.)" valor={formatarBRL(totalAvarias)} />
         </CardContent>
       </Card>
 
-      {/* Fotos */}
-      <Card>
-        <CardHeader className="flex-row items-center justify-between space-y-0">
-          <div>
-            <CardTitle className="text-base">Fotos</CardTitle>
-            <CardDescription>Prova do estado na retirada/devolução.</CardDescription>
-          </div>
-          {podeEditar ? (
-            <FotoUploader vistoriaId={vistoria.id} orgId={perfil!.org_id!} />
-          ) : null}
-        </CardHeader>
-        <CardContent>
-          {(fotos?.length ?? 0) > 0 ? (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-              {fotos!.map((f) => {
-                const url = urlPorPath.get(f.path);
-                return (
-                  <div key={f.id} className="group relative">
-                    {url ? (
-                      <Image
-                        src={url}
-                        alt="Foto da vistoria"
-                        width={300}
-                        height={300}
-                        unoptimized
-                        className="aspect-square w-full rounded-md object-cover"
-                      />
-                    ) : (
-                      <div className="aspect-square rounded-md bg-muted" />
-                    )}
-                    {podeEditar ? (
-                      <div className="absolute right-1 top-1 opacity-0 transition-opacity group-hover:opacity-100">
-                        <ConfirmDelete
-                          action={excluirFoto}
-                          id={f.id}
-                          hidden={{ path: f.path, vistoria_id: vistoria.id }}
-                          mensagem="Remover esta foto?"
-                        />
-                      </div>
-                    ) : null}
-                    {podeEditar ? (
-                      <FotoLegenda
-                        fotoId={f.id}
-                        vistoriaId={vistoria.id}
-                        defaultValue={f.legenda ?? ""}
-                      />
-                    ) : f.legenda ? (
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {f.legenda}
-                      </p>
-                    ) : null}
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Nenhuma foto ainda.
-            </p>
-          )}
-        </CardContent>
-      </Card>
+      <Suspense fallback={<SecaoSkeleton linhas={4} />}>
+        <VistoriaFotos
+          vistoriaId={id}
+          orgId={perfil?.org_id ?? ""}
+          podeEditar={podeEditar}
+        />
+      </Suspense>
 
-      {/* Avarias */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Avarias</CardTitle>
-          <CardDescription>
-            Registre danos que podem gerar cobrança do fornecedor.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {(avarias?.length ?? 0) > 0 ? (
-            <ul className="divide-y rounded-md border">
-              {avarias!.map((a) => (
-                <li
-                  key={a.id}
-                  className="flex flex-wrap items-center justify-between gap-3 px-3 py-2 text-sm"
-                >
-                  <div className="min-w-0 flex-1">
-                    <span className="font-medium">{a.descricao}</span>
-                    <span className="text-muted-foreground">
-                      {" "}
-                      · {formatarBRL(Number(a.custo_estimado))}
-                    </span>
-                  </div>
-                  <Badge variant={STATUS_AVARIA[a.status as StatusAvaria].variant}>
-                    {STATUS_AVARIA[a.status as StatusAvaria].label}
-                  </Badge>
-                  {a.lancamento_id ? (
-                    <Badge variant="secondary">Cobrança gerada</Badge>
-                  ) : podeCobrar && Number(a.custo_estimado) > 0 ? (
-                    <form action={gerarLancamentoAvaria}>
-                      <input type="hidden" name="id" value={a.id} />
-                      <input type="hidden" name="vistoria_id" value={vistoria.id} />
-                      <Button type="submit" size="sm" variant="outline">
-                        Gerar cobrança
-                      </Button>
-                    </form>
-                  ) : null}
-                  {podeEditar ? (
-                    <div className="flex items-center gap-2">
-                      <form action={atualizarStatusAvaria} className="flex gap-1">
-                        <input type="hidden" name="id" value={a.id} />
-                        <input type="hidden" name="vistoria_id" value={vistoria.id} />
-                        <NativeSelect className="w-auto"
-                          name="status"
-                          defaultValue={a.status}
-                        >
-                          <option value="aberta">Aberta</option>
-                          <option value="cobrada">Cobrada</option>
-                          <option value="resolvida">Resolvida</option>
-                        </NativeSelect>
-                        <Button type="submit" size="sm" variant="outline">
-                          Salvar
-                        </Button>
-                      </form>
-                      <ConfirmDelete
-                        action={excluirAvaria}
-                        id={a.id}
-                        hidden={{ vistoria_id: vistoria.id }}
-                        mensagem="Remover esta avaria?"
-                      />
-                    </div>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Nenhuma avaria registrada.
-            </p>
-          )}
+      <Suspense fallback={<SecaoSkeleton linhas={3} />}>
+        <VistoriaAvarias
+          vistoriaId={id}
+          podeEditar={podeEditar}
+          podeCobrar={podeCobrar}
+        />
+      </Suspense>
 
-          {podeEditar ? <AddAvariaForm key={avarias?.length ?? 0} vistoriaId={vistoria.id} /> : null}
-        </CardContent>
-      </Card>
-
-      {/* Observações e assinaturas */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Observações e assinaturas</CardTitle>
-          <CardDescription>
-            Observações e as duas assinaturas (representante e quem retira).
-            Entram no PDF do relatório.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {podeEditar ? (
-            <RelatorioForm
-              vistoriaId={vistoria.id}
-              usuarioNome={perfil?.nome ?? ""}
-              defaults={{
-                observacoes: vistoria.observacoes ?? "",
-                empresaNome:
-                  (vistoria.assinatura_empresa_nome as string | null) ?? "",
-                empresaImg: empresaImg ?? "",
-                empresaEm: vistoria.assinatura_empresa_em
-                  ? formatarDataHora(vistoria.assinatura_empresa_em as string)
-                  : "",
-                retiranteNome:
-                  (vistoria.assinatura_retirante_nome as string | null) ?? "",
-                retiranteImg:
-                  (vistoria.assinatura_retirante_img as string | null) ?? "",
-                retiranteEm: vistoria.assinatura_retirante_em
-                  ? formatarDataHora(vistoria.assinatura_retirante_em as string)
-                  : "",
-              }}
-            />
-          ) : (
-            <div className="space-y-4 text-sm">
-              <p className="text-muted-foreground">
-                {vistoria.observacoes || "Sem observações."}
-              </p>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <AssinaturaRO
-                  label="Representante Sistenge"
-                  nome={
-                    (vistoria.assinatura_empresa_nome as string | null) ?? "—"
-                  }
-                  assinado={empresaAssinado}
-                  em={
-                    vistoria.assinatura_empresa_em
-                      ? formatarDataHora(vistoria.assinatura_empresa_em as string)
-                      : null
-                  }
-                />
-                <AssinaturaRO
-                  label="Quem retira / recebe"
-                  nome={
-                    (vistoria.assinatura_retirante_nome as string | null) ?? "—"
-                  }
-                  assinado={!!vistoria.assinatura_retirante_img}
-                  em={
-                    vistoria.assinatura_retirante_em
-                      ? formatarDataHora(
-                          vistoria.assinatura_retirante_em as string,
-                        )
-                      : null
-                  }
-                />
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <VistoriaAssinaturas
+        vistoria={vistoria}
+        usuarioNome={perfil?.nome ?? ""}
+        podeEditar={podeEditar}
+      />
     </div>
   );
 }
-
-function AssinaturaRO({
-  label,
-  nome,
-  assinado,
-  em,
-}: {
-  label: string;
-  nome: string;
-  assinado: boolean;
-  em?: string | null;
-}) {
-  return (
-    <div className="border border-border p-3">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="font-medium">{nome}</p>
-      <p className="mt-1 text-xs text-muted-foreground">
-        {assinado ? "Assinatura registrada" : "Sem assinatura"}
-        {assinado && em ? ` · ${em}` : ""}
-      </p>
-    </div>
-  );
-}
-
