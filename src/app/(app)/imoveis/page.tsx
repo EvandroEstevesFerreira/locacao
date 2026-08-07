@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus, Pencil, FileText } from "lucide-react";
+import { Plus, Pencil, FileText, Building2, Coins } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeOperar } from "@/lib/auth";
 import { formatarBRL } from "@/lib/locacao";
@@ -14,7 +14,6 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Pagination } from "@/components/pagination";
 import { SortHeader } from "@/components/sort-header";
 import { PAGE_SIZE, parseListParams, termoOr } from "@/lib/lista";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,7 +25,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { NativeSelect } from "@/components/ui/native-select";
+import { KpiCard } from "@/components/shared/kpi-card";
+import { ListFilters } from "@/components/shared/list-filters";
+import { ListSearch } from "@/components/shared/list-search";
+import { SelectFilter } from "@/components/shared/select-filter";
 
 export const metadata = { title: "Imóveis — Loca" };
 
@@ -120,53 +122,38 @@ export default async function ImoveisPage({
       />
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Kpi label="Imóveis" valor={String(total)} />
-        <Kpi label="Custo mensal (aluguel + condomínio, vigentes)" valor={formatarBRL(aluguelTotal)} />
+        <KpiCard icon={<Building2 />} label="Imóveis no filtro" value={String(total)} />
+        <KpiCard
+          icon={<Coins />}
+          label="Custo mensal"
+          value={formatarBRL(aluguelTotal)}
+          detail="Aluguel + condomínio dos contratos vigentes"
+          variant="info"
+        />
       </div>
 
-      {/* Filtros */}
-      <form className="flex flex-wrap items-end gap-3" method="get">
-        <div className="flex flex-1 flex-col gap-1">
-          <label className="text-xs text-muted-foreground">Buscar</label>
-          <Input name="q" defaultValue={q} placeholder="Apelido ou cidade…" className="min-w-48" />
-        </div>
-        <div className="flex flex-col gap-1">
-          <label className="text-xs text-muted-foreground">Tipo</label>
-          <NativeSelect className="w-auto" name="tipo" defaultValue={tipo ?? ""}>
-            <option value="">Todos</option>
-            {TIPOS_IMOVEL.map((t) => (
-              <option key={t} value={t}>
-                {TIPO_IMOVEL_INFO[t]}
-              </option>
-            ))}
-          </NativeSelect>
-        </div>
-        <div className="flex flex-col gap-1">
-          <label className="text-xs text-muted-foreground">Status</label>
-          <NativeSelect className="w-auto" name="status" defaultValue={status ?? ""}>
-            <option value="">Todos</option>
-            {(Object.keys(STATUS_IMOVEL_INFO) as StatusImovel[]).map((s) => (
-              <option key={s} value={s}>
-                {STATUS_IMOVEL_INFO[s].label}
-              </option>
-            ))}
-          </NativeSelect>
-        </div>
-        <div className="flex flex-col gap-1">
-          <label className="text-xs text-muted-foreground">Obra</label>
-          <NativeSelect className="w-auto" name="obra" defaultValue={obra ?? ""}>
-            <option value="">Todas</option>
-            {(obras ?? []).map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.codigo} — {o.nome}
-              </option>
-            ))}
-          </NativeSelect>
-        </div>
-        <Button type="submit" variant="outline">
-          Filtrar
-        </Button>
-      </form>
+      <ListFilters>
+        <ListSearch placeholder="Buscar por apelido ou cidade…" ariaLabel="Buscar imóvel" />
+        <SelectFilter
+          param="tipo"
+          label="Tipo"
+          opcoes={TIPOS_IMOVEL.map((t) => ({ value: t, label: TIPO_IMOVEL_INFO[t] }))}
+        />
+        <SelectFilter
+          param="status"
+          label="Status"
+          opcoes={(Object.keys(STATUS_IMOVEL_INFO) as StatusImovel[]).map((s) => ({
+            value: s,
+            label: STATUS_IMOVEL_INFO[s].label,
+          }))}
+        />
+        <SelectFilter
+          param="obra"
+          label="Obra"
+          placeholder="Todas as obras"
+          opcoes={(obras ?? []).map((o) => ({ value: o.id, label: `${o.codigo} — ${o.nome}` }))}
+        />
+      </ListFilters>
 
       <Card>
         <CardContent className="p-0">
@@ -246,13 +233,3 @@ export default async function ImoveisPage({
   );
 }
 
-function Kpi({ label, valor }: { label: string; valor: string }) {
-  return (
-    <Card>
-      <CardContent className="pt-6">
-        <p className="text-sm text-muted-foreground">{label}</p>
-        <p className="text-2xl font-semibold">{valor}</p>
-      </CardContent>
-    </Card>
-  );
-}

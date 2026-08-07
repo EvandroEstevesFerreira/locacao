@@ -1,5 +1,14 @@
 import Link from "next/link";
-import { Plus, Pencil, Undo2, Coins, RefreshCw } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Undo2,
+  Coins,
+  RefreshCw,
+  Clock,
+  AlertTriangle,
+  CheckCircle2,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeGerenciarFinanceiro } from "@/lib/auth";
 import { formatarBRL, formatarData, hojeISOSaoPaulo} from "@/lib/locacao";
@@ -16,12 +25,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ConfirmDelete } from "@/components/confirm-delete";
-import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/pagination";
 import { SortHeader } from "@/components/sort-header";
 import { PAGE_SIZE, parseListParams, termoOr } from "@/lib/lista";
 import { alternarPago, excluirLancamento } from "./actions";
-import { NativeSelect } from "@/components/ui/native-select";
+import { KpiCard } from "@/components/shared/kpi-card";
+import { ListFilters } from "@/components/shared/list-filters";
+import { ListSearch } from "@/components/shared/list-search";
+import { SelectFilter } from "@/components/shared/select-filter";
 
 export const metadata = { title: "Financeiro — Loca" };
 
@@ -118,40 +129,44 @@ export default async function FinanceiroPage({
       />
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <Kpi label="A pagar (pendente)" valor={formatarBRL(totalPendente)} />
-        <Kpi label="Vencido" valor={formatarBRL(totalVencido)} alerta />
-        <Kpi label="Pago" valor={formatarBRL(totalPago)} />
+        <KpiCard
+          icon={<Clock />}
+          label="A pagar (pendente)"
+          value={formatarBRL(totalPendente)}
+          variant="warning"
+        />
+        <KpiCard
+          icon={<AlertTriangle />}
+          label="Vencido"
+          value={formatarBRL(totalVencido)}
+          variant="danger"
+        />
+        <KpiCard
+          icon={<CheckCircle2 />}
+          label="Pago"
+          value={formatarBRL(totalPago)}
+          variant="success"
+        />
       </div>
 
-      {/* Filtros */}
-      <form className="flex flex-wrap items-end gap-3" method="get">
-        <div className="flex flex-1 flex-col gap-1">
-          <label className="text-xs text-muted-foreground">Buscar</label>
-          <Input name="q" defaultValue={q} placeholder="Descrição…" className="min-w-48" />
-        </div>
-        <div className="flex flex-col gap-1">
-          <label className="text-xs text-muted-foreground">Obra</label>
-          <NativeSelect className="w-auto" name="obra" defaultValue={obra ?? ""}>
-            <option value="">Todas</option>
-            {(obras ?? []).map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.codigo} — {o.nome}
-              </option>
-            ))}
-          </NativeSelect>
-        </div>
-        <div className="flex flex-col gap-1">
-          <label className="text-xs text-muted-foreground">Status</label>
-          <NativeSelect className="w-auto" name="status" defaultValue={status ?? ""}>
-            <option value="">Todos</option>
-            <option value="pendente">Pendente</option>
-            <option value="pago">Pago</option>
-          </NativeSelect>
-        </div>
-        <Button type="submit" variant="outline">
-          Filtrar
-        </Button>
-      </form>
+      <ListFilters>
+        <ListSearch placeholder="Buscar por descrição…" ariaLabel="Buscar lançamento" />
+        <SelectFilter
+          param="obra"
+          label="Obra"
+          placeholder="Todas as obras"
+          opcoes={(obras ?? []).map((o) => ({ value: o.id, label: `${o.codigo} — ${o.nome}` }))}
+        />
+        <SelectFilter
+          param="status"
+          label="Status"
+          placeholder="Todos"
+          opcoes={[
+            { value: "pendente", label: "Pendente" },
+            { value: "pago", label: "Pago" },
+          ]}
+        />
+      </ListFilters>
 
       <Card>
         <CardContent className="p-0">
@@ -248,23 +263,3 @@ export default async function FinanceiroPage({
   );
 }
 
-function Kpi({
-  label,
-  valor,
-  alerta,
-}: {
-  label: string;
-  valor: string;
-  alerta?: boolean;
-}) {
-  return (
-    <Card>
-      <CardContent className="pt-6">
-        <p className="text-sm text-muted-foreground">{label}</p>
-        <p className={`text-2xl font-semibold ${alerta ? "text-destructive" : ""}`}>
-          {valor}
-        </p>
-      </CardContent>
-    </Card>
-  );
-}

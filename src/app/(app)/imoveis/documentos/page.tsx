@@ -16,6 +16,8 @@ import {
 import { BibliotecaUploader } from "../biblioteca-uploader";
 import { BibliotecaItem } from "../biblioteca-item";
 import { assinarUrls } from "@/lib/data/storage";
+import { EmptyState } from "@/components/shared/empty-state";
+import { FileText } from "lucide-react";
 
 export const metadata = { title: "Documentos do alojamento — Loca" };
 
@@ -64,11 +66,11 @@ export default async function DocumentosPage() {
       ) : null}
 
       {docs.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="py-16 text-center text-sm text-muted-foreground">
-            Nenhum documento na biblioteca ainda.
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={<FileText />}
+          titulo="Nenhum documento na biblioteca"
+          descricao="Normativos, formulários e placas ficam aqui para consultar, baixar e imprimir."
+        />
       ) : (
         CATEGORIAS_BIBLIOTECA.map((cat) => {
           const doList = docs.filter((d) => d.categoria === cat);

@@ -27,6 +27,7 @@ import {
 import { SelectFilter } from "@/components/shared/select-filter";
 import { ListSearch } from "@/components/shared/list-search";
 import { ListFilters } from "@/components/shared/list-filters";
+import { EmptyState } from "@/components/shared/empty-state";
 
 export const metadata = { title: "Contratos — Loca" };
 
@@ -164,20 +165,12 @@ export default async function ContratosPage({
           <Pagination page={page} pageSize={PAGE_SIZE} total={total} />
         </>
       ) : (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-            <div className="flex size-12 items-center justify-center rounded-full bg-muted">
-              <FileText className="size-6 text-muted-foreground" />
-            </div>
-            <p className="font-medium">Nenhum contrato cadastrado ainda</p>
-            {podeEditar ? (
-              <Button render={<Link href="/contratos/novo" />}>
-                <Plus className="size-4" />
-                Cadastrar primeiro contrato
-              </Button>
-            ) : null}
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={<FileText />}
+          titulo="Nenhum contrato cadastrado ainda"
+          descricao="Cadastre o primeiro contrato de locação para começar a acompanhar itens e devoluções."
+          acao={podeEditar ? { label: "Novo contrato", href: "/contratos/novo" } : undefined}
+        />
       )}
     </div>
   );

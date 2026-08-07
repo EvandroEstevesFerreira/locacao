@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/table";
 import { SelectFilter } from "@/components/shared/select-filter";
 import { ListFilters } from "@/components/shared/list-filters";
+import { EmptyState } from "@/components/shared/empty-state";
 
 export const metadata = { title: "Vistorias — Loca" };
 
@@ -162,20 +163,12 @@ export default async function VistoriasPage({
           <Pagination page={page} pageSize={PAGE_SIZE} total={total} />
         </>
       ) : (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-            <div className="flex size-12 items-center justify-center rounded-full bg-muted">
-              <ClipboardCheck className="size-6 text-muted-foreground" />
-            </div>
-            <p className="font-medium">Nenhuma vistoria registrada ainda</p>
-            {podeEditar ? (
-              <Button render={<Link href="/vistorias/nova" />}>
-                <Plus className="size-4" />
-                Registrar primeira vistoria
-              </Button>
-            ) : null}
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={<ClipboardCheck />}
+          titulo="Nenhuma vistoria registrada ainda"
+          descricao="A vistoria é a prova do estado do item na retirada e na devolução, com fotos e avarias."
+          acao={podeEditar ? { label: "Nova vistoria", href: "/vistorias/nova" } : undefined}
+        />
       )}
     </div>
   );

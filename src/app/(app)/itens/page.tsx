@@ -21,6 +21,7 @@ import { Pagination } from "@/components/pagination";
 import { SortHeader } from "@/components/sort-header";
 import { PAGE_SIZE, parseListParams, termoOr } from "@/lib/lista";
 import { excluirItem } from "./actions";
+import { EmptyState } from "@/components/shared/empty-state";
 
 export const metadata = { title: "Itens — Loca" };
 
@@ -146,20 +147,12 @@ export default async function ItensPage({
           <Pagination page={page} pageSize={PAGE_SIZE} total={total} />
         </>
       ) : (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-            <div className="flex size-12 items-center justify-center rounded-full bg-muted">
-              <Package className="size-6 text-muted-foreground" />
-            </div>
-            <p className="font-medium">Nenhum item cadastrado ainda</p>
-            {podeEditar ? (
-              <Button render={<Link href="/itens/novo" />}>
-                <Plus className="size-4" />
-                Cadastrar primeiro item
-              </Button>
-            ) : null}
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={<Package />}
+          titulo="Nenhum item cadastrado ainda"
+          descricao="O catálogo alimenta os contratos: cadastre os equipamentos e materiais que a organização aluga."
+          acao={podeEditar ? { label: "Novo item", href: "/itens/novo" } : undefined}
+        />
       )}
     </div>
   );

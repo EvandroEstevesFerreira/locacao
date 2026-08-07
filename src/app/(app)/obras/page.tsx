@@ -20,6 +20,7 @@ import { Pagination } from "@/components/pagination";
 import { SortHeader } from "@/components/sort-header";
 import { PAGE_SIZE, parseListParams, termoOr } from "@/lib/lista";
 import { excluirObra } from "./actions";
+import { EmptyState } from "@/components/shared/empty-state";
 
 export const metadata = { title: "Obras — Loca" };
 
@@ -132,20 +133,12 @@ export default async function ObrasPage({
           <Pagination page={page} pageSize={PAGE_SIZE} total={total} />
         </>
       ) : (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-            <div className="flex size-12 items-center justify-center rounded-full bg-muted">
-              <HardHat className="size-6 text-muted-foreground" />
-            </div>
-            <p className="font-medium">Nenhuma obra cadastrada ainda</p>
-            {podeEditar ? (
-              <Button render={<Link href="/obras/nova" />}>
-                <Plus className="size-4" />
-                Cadastrar primeira obra
-              </Button>
-            ) : null}
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={<HardHat />}
+          titulo="Nenhuma obra cadastrada ainda"
+          descricao="As obras são o ponto de partida: contratos, imóveis e lançamentos são vinculados a elas."
+          acao={podeEditar ? { label: "Nova obra", href: "/obras/nova" } : undefined}
+        />
       )}
     </div>
   );

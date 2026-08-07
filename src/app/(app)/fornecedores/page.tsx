@@ -20,6 +20,7 @@ import { SortHeader } from "@/components/sort-header";
 import { PAGE_SIZE, parseListParams, termoOr } from "@/lib/lista";
 import { FornecedoresToolbar } from "./fornecedores-toolbar";
 import { excluirFornecedor } from "./actions";
+import { EmptyState } from "@/components/shared/empty-state";
 
 export const metadata = { title: "Fornecedores — Loca" };
 
@@ -152,29 +153,17 @@ export default async function FornecedoresPage({
           <Pagination page={page} pageSize={PAGE_SIZE} total={total} />
         </>
       ) : filtrando ? (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center gap-2 py-16 text-center">
-            <p className="font-medium">Nenhum fornecedor encontrado</p>
-            <p className="text-sm text-muted-foreground">
-              Ajuste a busca ou o filtro de obra.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          titulo="Nenhum fornecedor encontrado"
+          descricao="Ajuste a busca ou o filtro de obra."
+        />
       ) : (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-            <div className="flex size-12 items-center justify-center rounded-full bg-muted">
-              <Truck className="size-6 text-muted-foreground" />
-            </div>
-            <p className="font-medium">Nenhum fornecedor cadastrado ainda</p>
-            {podeEditar ? (
-              <Button render={<Link href="/fornecedores/novo" />}>
-                <Plus className="size-4" />
-                Cadastrar primeiro fornecedor
-              </Button>
-            ) : null}
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={<Truck />}
+          titulo="Nenhum fornecedor cadastrado ainda"
+          descricao="Cadastre as locadoras e fornecedores de quem a organização aluga."
+          acao={podeEditar ? { label: "Novo fornecedor", href: "/fornecedores/novo" } : undefined}
+        />
       )}
     </div>
   );
