@@ -58,6 +58,15 @@ Primeira parte da Fase 3 da migração para a construção do **Sistenge People*
   lugar e 3600 em dois).
 - `formatarBRL` e o formatador de data içados para constante de módulo — eram
   reconstruídos a cada chamada, centenas por render em /relatorios e /fluxo.
+- **Perfil e obras deduplicados por requisição.** `getCurrentPerfil()` (102
+  chamadas em 47 arquivos) passou a ser `cache()`ado, e o `(app)/layout.tsx`, que
+  fazia seu próprio `getUser()` + SELECT para a mesma informação, passou a usá-lo
+  — cada render gastava duas idas ao Auth e duas ao banco. O mesmo
+  `select("id, codigo, nome")` de obra, repetido em 18 páginas, virou
+  `listarObrasParaFiltro()` em `src/lib/data/obras.ts`, também `cache()`ada. O
+  parâmetro dela é um booleano primitivo de propósito: `cache()` chaveia por
+  identidade de argumento, e um objeto de opções construído em dois lugares seria
+  *miss* e duplicaria a consulta.
 - **Busca ao vivo** com debounce de 300ms e botão de limpar. Enter continua
   aplicando na hora.
 - Os dois `<form method="get">` de /financeiro e /imoveis viram
