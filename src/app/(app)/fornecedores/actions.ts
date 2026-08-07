@@ -1,109 +1,64 @@
 "use server";
 
-import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeEditarCadastros } from "@/lib/auth";
-import { cnpjValido, formatarCnpj, normalizarCnpj } from "@/lib/cnpj";
+import { falha, primeiroErro, type ActionResult } from "@/lib/acoes";
+import { formatarCnpj, normalizarCnpj } from "@/lib/cnpj";
+import { fornecedorSchema } from "@/lib/fornecedor";
 
-export type FornecedorFormState = { error?: string; duplicado?: boolean };
-
-const fornecedorSchema = z.object({
-  nome: z.string().trim().min(1, "Informe o nome do fornecedor.").max(200),
-  cnpj: z
-    .string()
-    .trim()
-    .max(25)
-    .optional()
-    .refine((v) => !v || normalizarCnpj(v) === "" || cnpjValido(v), {
-      message: "CNPJ inválido. Verifique o número (formato alfanumérico).",
-    }),
-  contato_nome: z.string().trim().max(200).optional(),
-  contato_telefone: z.string().trim().max(40).optional(),
-  contato_email: z
-    .string()
-    .trim()
-    .max(200)
-    .optional()
-    .refine((v) => !v || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v), {
-      message: "E-mail de contato inválido.",
-    }),
-  observacoes: z.string().trim().max(1000).optional(),
-});
-
-function vazioParaNulo(v: string | undefined) {
-  const t = (v ?? "").trim();
-  return t === "" ? null : t;
-}
-
+/**
+ * Salva fornecedor e sincroniza os vínculos com obras.
+ *
+ * `duplicado: true` no retorno é sinal para o formulário mostrar a caixa
+ * "salvar mesmo assim": CNPJ repetido não é erro de validação, é uma decisão do
+ * usuário — pode haver matriz e filial com o mesmo raiz.
+ */
 export async function salvarFornecedor(
-  _prev: FornecedorFormState,
-  formData: FormData,
-): Promise<FornecedorFormState> {
+  raw: unknown,
+): Promise<ActionResult & { duplicado?: boolean }> {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id) return { error: "Sessão inválida. Entre novamente." };
+  if (!perfil?.org_id) return falha("Sessão inválida. Entre novamente.");
   if (!podeEditarCadastros(perfil.papel)) {
-    return { error: "Você não tem permissão para editar fornecedores." };
+    return falha("Você não tem permissão para editar fornecedores.");
   }
 
-  const parsed = fornecedorSchema.safeParse({
-    nome: formData.get("nome"),
-    cnpj: formData.get("cnpj") ?? undefined,
-    contato_nome: formData.get("contato_nome") ?? undefined,
-    contato_telefone: formData.get("contato_telefone") ?? undefined,
-    contato_email: formData.get("contato_email") ?? undefined,
-    observacoes: formData.get("observacoes") ?? undefined,
-  });
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
-  }
+  const parsed = fornecedorSchema.safeParse(raw);
+  if (!parsed.success) return falha(primeiroErro(parsed.error.issues));
 
-  const id = (formData.get("id") as string | null)?.trim() || null;
-  const ativo = formData.get("ativo") === "on" || formData.get("ativo") === "true";
-  const cnpjNorm = normalizarCnpj(parsed.data.cnpj ?? "");
+  const { id, obras, confirmar_duplicado, cnpj, ...resto } = parsed.data;
+  const cnpjNorm = cnpj ? normalizarCnpj(cnpj) : "";
   const dados = {
-    nome: parsed.data.nome,
+    ...resto,
     cnpj: cnpjNorm === "" ? null : formatarCnpj(cnpjNorm),
-    contato_nome: vazioParaNulo(parsed.data.contato_nome),
-    contato_telefone: vazioParaNulo(parsed.data.contato_telefone),
-    contato_email: vazioParaNulo(parsed.data.contato_email),
-    observacoes: vazioParaNulo(parsed.data.observacoes),
-    ativo,
   };
-
-  const obras = formData.getAll("obras").map(String).filter(Boolean);
 
   const supabase = await createClient();
 
-  // Aviso de CNPJ duplicado: bloqueia na primeira tentativa, mas permite
-  // prosseguir se o usuário confirmar ("salvar mesmo assim").
-  const confirmarDup =
-    formData.get("confirmar_duplicado") === "on" ||
-    formData.get("confirmar_duplicado") === "true";
-  if (dados.cnpj && !confirmarDup) {
+  if (dados.cnpj && !confirmar_duplicado) {
     let dupQ = supabase.from("fornecedor").select("id, nome").eq("cnpj", dados.cnpj);
     if (id) dupQ = dupQ.neq("id", id);
     const { data: dups } = await dupQ.limit(1);
     if (dups && dups.length > 0) {
       return {
-        error: `Já existe um fornecedor com este CNPJ: ${dups[0].nome}. Marque "salvar mesmo assim" para continuar.`,
+        ok: false,
+        erro: `Já existe um fornecedor com este CNPJ: ${dups[0].nome}.`,
         duplicado: true,
       };
     }
   }
 
-  let fornecedorId = id;
+  let fornecedorId = id ?? null;
   if (id) {
     const { error } = await supabase.from("fornecedor").update(dados).eq("id", id);
-    if (error) return { error: "Não foi possível salvar. Tente novamente." };
+    if (error) return falha("Não foi possível salvar. Tente novamente.");
   } else {
     const { data: criado, error } = await supabase
       .from("fornecedor")
       .insert({ org_id: perfil.org_id, ...dados })
       .select("id")
       .single();
-    if (error || !criado) return { error: "Não foi possível salvar. Tente novamente." };
+    if (error || !criado) return falha("Não foi possível salvar. Tente novamente.");
     fornecedorId = criado.id;
   }
 
@@ -122,7 +77,7 @@ export async function salvarFornecedor(
   }
 
   revalidatePath("/fornecedores");
-  redirect("/fornecedores");
+  return { ok: true, id: fornecedorId ?? undefined };
 }
 
 export async function excluirFornecedor(formData: FormData) {
