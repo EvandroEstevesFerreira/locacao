@@ -9,6 +9,7 @@ import {
   contaConsumoSchema,
   contratoImovelSchema,
   imovelSchema,
+  reparoSchema,
 } from "@/lib/imoveis";
 import { falha, primeiroErro, type ActionResult } from "@/lib/acoes";
 
@@ -414,29 +415,29 @@ export async function excluirContaConsumo(formData: FormData) {
 // ---------------------------------------------------------------------------
 const TIPOS_OCORRENCIA = ["avaria", "reparo", "desentendimento", "outro"];
 
-export async function salvarReparo(
-  _prev: ImovelFormState,
-  formData: FormData,
-): Promise<ImovelFormState> {
+export async function salvarReparo(raw: unknown): Promise<ActionResult> {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !podeOperar(perfil.papel)) return { error: "Sem permissão." };
-  const imovelId = txt(formData.get("imovel_id"));
-  const data = txt(formData.get("data"));
-  const descricao = txt(formData.get("descricao"));
-  if (!imovelId || !data || !descricao)
-    return { error: "Preencha data e descrição do reparo." };
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) {
+    return falha("Você não tem permissão para registrar reparos.");
+  }
+
+  const parsed = reparoSchema.safeParse(raw);
+  if (!parsed.success) return falha(primeiroErro(parsed.error.issues));
+  const { imovel_id, ...campos } = parsed.data;
+
   const supabase = await createClient();
   const { error } = await supabase.from("reparo_imovel").insert({
     org_id: perfil.org_id,
-    imovel_id: imovelId,
-    data,
-    descricao,
-    valor: num(formData.get("valor")) ?? 0,
-    executor: txt(formData.get("executor")),
+    imovel_id,
+    ...campos,
   });
-  if (error) return { error: "Não foi possível salvar o reparo." };
-  revalidatePath(`/imoveis/${imovelId}`);
-  redirect(`/imoveis/${imovelId}`);
+  if (error) return falha("Não foi possível salvar o reparo.");
+
+  // Sem `redirect()`: a action devolve {ok} e o form chama router.refresh().
+  // Um redirect aqui faria o NEXT_REDIRECT propagar e matar todo o código
+  // depois do await no client.
+  revalidatePath(`/imoveis/${imovel_id}`);
+  return { ok: true };
 }
 
 export async function excluirReparo(formData: FormData) {

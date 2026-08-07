@@ -1,12 +1,28 @@
 "use client";
 
-import { useActionState } from "react";
+// `ReparoForm` está em react-hook-form: tem 4 campos, um deles é dinheiro, e o
+// zod passou a rejeitar valor inválido em vez de virar zero em silêncio.
+// `OcorrenciaForm` e `VistoriaImovelForm` ficam em `useActionState` de propósito
+// — três campos sem validação cruzada não pagam o custo da migração.
+
+import { useActionState, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import {
+  reparoSchema,
+  type ReparoDados,
+  type ReparoInput,
+} from "@/lib/imoveis";
 import {
   salvarReparo,
   salvarOcorrencia,
   salvarVistoriaImovel,
   type ImovelFormState,
 } from "./actions";
+import { FormError } from "@/components/shared/form-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,30 +31,118 @@ import { NativeSelect } from "@/components/ui/native-select";
 
 
 export function ReparoForm({ imovelId }: { imovelId: string }) {
-  const [state, formAction, isPending] = useActionState<ImovelFormState, FormData>(salvarReparo, {});
+  const router = useRouter();
+  const [erroServidor, setErroServidor] = useState<string | null>(null);
+  const [pendente, startTransition] = useTransition();
+
+  const vazio: ReparoInput = {
+    imovel_id: imovelId,
+    data: "",
+    descricao: "",
+    valor: "",
+    executor: "",
+  };
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<ReparoInput, unknown, ReparoDados>({
+    resolver: zodResolver(reparoSchema),
+    defaultValues: vazio,
+  });
+
+  function onSubmit(values: ReparoDados) {
+    setErroServidor(null);
+    startTransition(async () => {
+      const r = await salvarReparo(values);
+      if (!r.ok) {
+        setErroServidor(r.erro);
+        return;
+      }
+      toast.success("Reparo registrado.");
+      // Form embutido na própria tela: limpa e recarrega a rota. O
+      // `router.refresh()` é essencial — a action antes fazia `redirect()` para a
+      // MESMA URL só para provocar o re-render, e sem ele o reparo criado não
+      // apareceria.
+      reset(vazio);
+      router.refresh();
+    });
+  }
+
   return (
-    <form action={formAction} className="space-y-4">
-      <input type="hidden" name="imovel_id" value={imovelId} />
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <input type="hidden" {...register("imovel_id")} />
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <Label htmlFor="r_data">Data</Label>
-          <Input id="r_data" name="data" type="date" required />
+          <Input
+            id="r_data"
+            type="date"
+            aria-invalid={!!errors.data}
+            disabled={pendente}
+            {...register("data")}
+          />
+          {errors.data ? (
+            <p className="text-xs text-destructive">{errors.data.message}</p>
+          ) : null}
         </div>
-        <div className="space-y-2 lg:col-span-2">
+
+        <div className="space-y-1.5 lg:col-span-2">
           <Label htmlFor="r_desc">Descrição</Label>
-          <Input id="r_desc" name="descricao" required placeholder="O que foi reparado" />
+          <Input
+            id="r_desc"
+            placeholder="O que foi reparado"
+            aria-invalid={!!errors.descricao}
+            disabled={pendente}
+            {...register("descricao")}
+          />
+          {errors.descricao ? (
+            <p className="text-xs text-destructive">{errors.descricao.message}</p>
+          ) : null}
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="r_valor">Valor (R$)</Label>
-          <Input id="r_valor" name="valor" type="number" step="0.01" min={0} />
+
+        <div className="space-y-1.5">
+          <Label htmlFor="r_valor">
+            Valor (R$){" "}
+            <span className="font-normal text-muted-foreground">(opcional)</span>
+          </Label>
+          <Input
+            id="r_valor"
+            type="number"
+            step="0.01"
+            min="0"
+            aria-invalid={!!errors.valor}
+            disabled={pendente}
+            {...register("valor")}
+          />
+          {errors.valor ? (
+            <p className="text-xs text-destructive">{errors.valor.message}</p>
+          ) : null}
         </div>
-        <div className="space-y-2 lg:col-span-2">
-          <Label htmlFor="r_exec">Executado por</Label>
-          <Input id="r_exec" name="executor" placeholder="Nome do prestador/empresa" />
+
+        <div className="space-y-1.5 lg:col-span-2">
+          <Label htmlFor="r_exec">
+            Executado por{" "}
+            <span className="font-normal text-muted-foreground">(opcional)</span>
+          </Label>
+          <Input
+            id="r_exec"
+            placeholder="Nome do prestador/empresa"
+            disabled={pendente}
+            {...register("executor")}
+          />
         </div>
       </div>
-      {state.error ? <p className="text-sm text-destructive">{state.error}</p> : null}
-      <Button type="submit" disabled={isPending}>{isPending ? "Salvando…" : "Adicionar reparo"}</Button>
+
+      <FormError>{erroServidor}</FormError>
+
+      <Button type="submit" disabled={pendente}>
+        {pendente ? <Loader2 className="size-4 animate-spin" /> : null}
+        {pendente ? "Salvando…" : "Adicionar reparo"}
+      </Button>
     </form>
   );
 }

@@ -237,3 +237,28 @@ export const contaConsumoSchema = z
 
 export type ContaConsumoInput = z.input<typeof contaConsumoSchema>;
 export type ContaConsumoDados = z.output<typeof contaConsumoSchema>;
+
+/**
+ * Reparo executado no imóvel.
+ *
+ * `valor` é opcional (às vezes o reparo é por conta do proprietário), mas quando
+ * vem preenchido tem de ser um número — a versão anterior fazia `num(...) ?? 0`
+ * e transformava qualquer texto inválido em zero, em silêncio, num campo de
+ * dinheiro.
+ */
+export const reparoSchema = z.object({
+  imovel_id: z.string().uuid(),
+  data: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Informe a data do reparo."),
+  descricao: z
+    .string()
+    .trim()
+    .min(3, "Descreva o que foi reparado (mínimo 3 caracteres).")
+    .max(300, "Descrição muito longa (máximo 300 caracteres)."),
+  valor: z
+    .union([z.literal(""), z.coerce.number().nonnegative("O valor não pode ser negativo.")])
+    .transform((v) => (v === "" ? 0 : v)),
+  executor: texto(120),
+});
+
+export type ReparoInput = z.input<typeof reparoSchema>;
+export type ReparoDados = z.output<typeof reparoSchema>;
