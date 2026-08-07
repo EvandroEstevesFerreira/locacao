@@ -7,6 +7,90 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.21.0] — 2026-08-06
+
+Fase 2 da migração para a identidade e a construção do **Sistenge People**
+(referência: `docs/superpowers/plans/people-fase2-shell.md`).
+
+### Adicionado
+
+- **Sidebar de 72px que expande a 240px** no hover, com cross-fade entre o
+  símbolo e o logotipo. `fixed`, com a coluna principal compensando em
+  `md:pl-18`. Acréscimo sobre o People: expande também no `focus-within`, senão
+  quem navega por Tab percorre 11 ícones sem rótulo nenhum. O foco usa
+  `ring-inset`, porque a `<aside>` tem `overflow-hidden` e um ring com offset
+  seria cortado na borda de 72px.
+- **Header sticky de 64px** com `backdrop-blur`, em três zonas.
+- **`Breadcrumb`** derivado do pathname — é ele que substitui a prop `eyebrow`
+  removida na 0.20.0. Segmentos dinâmicos (UUID) são omitidos; estáticos ganham
+  rótulo em PT-BR por mapa, e um segmento não mapeado também é omitido.
+- **`CommandPalette`** (Ctrl/⌘+K), sem `cmdk`: Dialog + Input + lista filtrada,
+  com navegação por ↑/↓ e agrupamento "Páginas"/"Ações". Diverge do People, que
+  indexa só páginas: aqui entram 8 ações rápidas, cada uma condicionada ao
+  módulo e ao papel via `src/lib/permissoes.ts`.
+- **`MobileNav`** — gaveta sobre o `Dialog` do Base UI, substituindo a barra
+  inferior que reaproveitava a lista vertical da sidebar num `overflow-x-auto`.
+- **`AuthShell`** — split-screen para `/login`, `/auth/recuperar` e
+  `/auth/nova-senha`, com o cartão em `data-theme="light"` (escopo criado na
+  0.20.0 e que estreia aqui).
+- **`loading.tsx` por rota** em 8 listagens e 3 telas de detalhe, com as formas
+  em `src/components/shared/skeletons.tsx`.
+- **`(app)/not-found.tsx`** — não existia. `notFound()` caía no 404 padrão do
+  Next: página branca, sem shell e em inglês.
+
+### Alterado
+
+- **`src/lib/nav.ts` vira dado puro**: `icon` passa de `LucideIcon` a uma união
+  de strings, com o lookup em `src/components/layout/nav-icon.tsx`, e a
+  filtragem por permissão sai do client para o server. Não conserta bug — a
+  sidebar era client e importava `NAV_ITEMS` ela mesma, então o boundary nunca
+  era cruzado. É escolha de arquitetura: filtra uma vez em vez de duas, o bundle
+  do cliente deixa de listar `/configuracoes` para todo mundo, e o arquivo fica
+  utilizável em qualquer runtime, como `src/lib/modulos.ts` já era.
+- **`UserMenu` reconstruído sobre `ui/dropdown-menu.tsx`**, que estava no
+  projeto com 268 linhas e zero imports. Absorveu o rodapé rico da sidebar
+  (avatar, nome, papel, "Meu perfil", "Sair"), que não caberia em 72px. `w-64` é
+  obrigatório no `Content`: o primitivo usa `w-(--anchor-width)`, ou seja,
+  dimensiona pela largura do gatilho — aqui um avatar de 32px.
+- **`main` perde o `overflow-y-auto`**: quem rola é o documento. Com ele, `main`
+  seria um segundo container de scroll — barra dupla e momentum scroll quebrado
+  no iOS.
+- `(app)/loading.tsx` deixa de ser um esqueleto de tabela em `max-w-5xl`, que
+  disparava em toda navegação do grupo (inclusive nas 17 páginas de formulário),
+  e passa a ser o spinner neutro.
+- `(app)/error.tsx` ganha o painel do People, o `error.digest` em monoespaçada,
+  `render={<Link/>}` no lugar de `window.location.href` e log pelo `logger.ts`.
+- `/offline` recebe a paleta nova e modo escuro via `<style>` com
+  `prefers-color-scheme` — não via classe `.dark`, porque a folha de CSS não
+  está no PRECACHE e o script do next-themes não roda offline.
+- `bar-chart.tsx` e a barra horizontal de `/relatorios` passam de `bg-primary`
+  para `bg-foreground` com opacidade: com a paleta nova o primary inverte para
+  slate-50 no tema escuro, o que daria barras de branco puro.
+- `public/sw.js`: `CACHE` de `loca-v1` para `loca-v2`, obrigatório porque
+  `/offline` mudou e o `install` só refaz o PRECACHE quando o nome do cache muda.
+
+### Removido
+
+- `src/components/layout/sidebar.tsx`, substituída por `nav-link.tsx` mais a
+  `<aside>` do layout.
+- O `<Card>` de dentro dos três forms de autenticação: a moldura precisa ser
+  dona do wrapper para aplicar o `data-theme` nele.
+- O branch morto de item "em breve" no nav (todos os itens estão implementados).
+
+### Interno
+
+- `MobileNav` fecha ao trocar de rota ajustando estado durante o render, o
+  padrão que o React documenta. Um `useEffect` seria reprovado por
+  `react-hooks/set-state-in-effect` e custaria um render extra; um `onClick` no
+  `Link` deixaria a gaveta aberta quando a navegação vem do botão voltar.
+- A gaveta é montada sobre os primitivos do Base UI, não sobre `ui/dialog.tsx`:
+  o `DialogContent` dele embute `top-1/2 -translate-y-1/2`, e o `tailwind-merge`
+  não considera `top-1/2` conflitante com `inset-y-0` — as duas viriam.
+- Verificado com uma rota de inspeção temporária e screenshots em light/dark,
+  desktop/mobile: `scrollWidth === clientWidth`, sem overflow horizontal, com a
+  tabela de 7 colunas contida pelo `overflow-x-auto`. Isso confirma que
+  `TableCell p-4` (0.20.0) cabe e não precisa virar `p-3`.
+
 ## [0.20.0] — 2026-08-06
 
 Fase 1 da migração para a identidade e a construção do **Sistenge People**

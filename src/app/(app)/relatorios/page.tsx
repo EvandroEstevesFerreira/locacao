@@ -183,9 +183,13 @@ export default async function RelatoriosPage({
                   <span>{g.label}</span>
                   <span className="font-medium">{formatarValor("moeda", g.valor)}</span>
                 </div>
-                <div className="h-3 border border-border bg-muted">
+                {/* Trilha e preenchimento arredondados: a borda reta sem raio
+                    era artefato do antigo --radius: 0. A cor acompanha o
+                    BarChart (foreground com opacidade em vez de primary, que no
+                    tema escuro viraria branco puro). */}
+                <div className="h-3 overflow-hidden rounded-full bg-muted">
                   <div
-                    className="h-full bg-primary"
+                    className="h-full rounded-full bg-foreground/80"
                     style={{
                       width: `${maxGrafico > 0 ? (g.valor / maxGrafico) * 100 : 0}%`,
                     }}

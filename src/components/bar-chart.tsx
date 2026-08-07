@@ -1,5 +1,11 @@
 // Gráfico de barras simples em CSS (sem dependências). Server-safe.
 // Alturas em pixels (não em %) para não depender da altura do contêiner flex.
+//
+// As barras usam `--foreground` com opacidade, não `--primary`. Com a paleta
+// Sistenge 2026 o primary é slate-900 no claro e inverte para slate-50 no
+// escuro — o que daria barras de branco puro sobre o card escuro, agressivo
+// demais. O foreground com opacidade dá a mesma hierarquia (mês corrente forte,
+// demais apagados) e se comporta nos dois temas.
 
 export type BarPoint = { label: string; value: number; destaque?: boolean };
 
@@ -35,7 +41,7 @@ export function BarChart({
                 {d.value > 0 ? formatValue(d.value) : ""}
               </span>
               <div
-                className={`w-full rounded-t ${d.destaque ? "bg-primary" : "bg-primary/55"}`}
+                className={`w-full rounded-t-sm ${d.destaque ? "bg-foreground/90" : "bg-foreground/40"}`}
                 style={{ height: alturaPx }}
                 title={`${d.label}: ${formatValue(d.value)}`}
               />

@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.20.0";
+export const APP_VERSION = "0.21.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,24 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.21.0",
+    data: "2026-08-06",
+    titulo: "Nova navegação",
+    mudancas: [
+      { tipo: "novo", texto: "O menu lateral agora fica recolhido, só com os ícones, e se abre quando você passa o mouse — sobra bem mais espaço para as tabelas e os relatórios." },
+      { tipo: "novo", texto: "Busca rápida: aperte Ctrl+K (ou ⌘+K no Mac) em qualquer tela para pular direto para um módulo ou começar um cadastro, navegando pelas setas do teclado." },
+      { tipo: "novo", texto: "Uma trilha no topo mostra onde você está — por exemplo “Início › Contratos › Novo” — e leva de volta com um clique." },
+      { tipo: "novo", texto: "No celular e no tablet o menu virou uma gaveta que abre pelo botão de três linhas, em vez da faixa de ícones que rolava para o lado no pé da tela." },
+      { tipo: "melhoria", texto: "Seu nome, perfil, “Meu perfil” e “Sair” ficam reunidos no menu do avatar, no canto superior direito." },
+      { tipo: "melhoria", texto: "O topo da tela acompanha a rolagem, então a busca e o menu do usuário estão sempre à mão." },
+      { tipo: "melhoria", texto: "As telas de entrar, recuperar senha e definir nova senha ganharam uma apresentação em duas colunas." },
+      { tipo: "melhoria", texto: "Ao abrir uma listagem ou um imóvel, contrato ou vistoria, aparece um esboço da própria tela em vez de um indicador genérico — a página deixa de “saltar” quando os dados chegam." },
+      { tipo: "novo", texto: "Endereço inexistente passa a mostrar uma tela própria, dentro do sistema, com atalho de volta ao Início." },
+      { tipo: "melhoria", texto: "A tela de erro mostra um código do ocorrido, que você pode informar ao pedir suporte." },
+      { tipo: "melhoria", texto: "A tela de “sem conexão” acompanha o tema claro ou escuro do seu aparelho." },
+    ],
+  },
   {
     versao: "0.20.0",
     data: "2026-08-06",
