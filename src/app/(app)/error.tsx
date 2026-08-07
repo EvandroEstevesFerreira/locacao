@@ -17,11 +17,11 @@ export default function AppError({
 
   return (
     <div className="mx-auto flex max-w-md flex-col items-center gap-4 py-24 text-center">
-      <div className="flex size-12 items-center justify-center border border-destructive/40 text-destructive">
+      <div className="flex size-12 items-center justify-center rounded-full bg-destructive/10 text-destructive">
         <AlertTriangle className="size-6" />
       </div>
       <div>
-        <h1 className="font-heading text-2xl font-semibold">
+        <h1 className="text-2xl font-semibold tracking-tight">
           Algo deu errado
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">

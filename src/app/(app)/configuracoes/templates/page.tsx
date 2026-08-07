@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { ChevronRight, FileText } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeConfigurarSistema } from "@/lib/auth";
-import { PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -25,7 +25,6 @@ export default async function TemplatesPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <PageHeader
-        eyebrow="Configurações"
         titulo="Templates de documentos"
         descricao="Edite o texto dos contratos e termos com variáveis que o sistema preenche."
       />

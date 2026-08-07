@@ -9,7 +9,7 @@ import {
   type Cadencia,
   type StatusContrato,
 } from "@/lib/locacao";
-import { PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/components/shared/page-header";
 import { ObraFilter } from "@/components/obra-filter";
 import { ListSearch } from "@/components/list-search";
 import { Pagination } from "@/components/pagination";
@@ -80,17 +80,17 @@ export default async function ContratosPage({
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <PageHeader
-        eyebrow="Locação"
         titulo="Contratos"
         descricao="Contratos de locação por obra e fornecedor."
-      >
-        {podeEditar ? (
-          <Button render={<Link href="/contratos/novo" />}>
-            <Plus className="size-4" />
-            Novo contrato
-          </Button>
-        ) : null}
-      </PageHeader>
+        acoes={
+          podeEditar ? (
+            <Button render={<Link href="/contratos/novo" />}>
+              <Plus className="size-4" />
+              Novo contrato
+            </Button>
+          ) : null
+        }
+      />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <ListSearch placeholder="Buscar por número…" ariaLabel="Buscar contrato" />

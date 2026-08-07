@@ -8,7 +8,7 @@ import {
   PAPEL_INFO,
   type Papel,
 } from "@/lib/auth";
-import { PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -36,15 +36,15 @@ export default async function UsuariosPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <PageHeader
-        eyebrow="Equipe"
         titulo="Usuários"
         descricao="Perfis e acesso por obra dos usuários da organização."
-      >
-        <Button render={<Link href="/usuarios/novo" />}>
-          <Plus className="size-4" />
-          Novo usuário
-        </Button>
-      </PageHeader>
+        acoes={
+          <Button render={<Link href="/usuarios/novo" />}>
+            <Plus className="size-4" />
+            Novo usuário
+          </Button>
+        }
+      />
 
       <Card>
         <CardContent className="p-0">

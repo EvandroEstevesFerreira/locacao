@@ -19,7 +19,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/components/shared/page-header";
 import { ObraFilter } from "@/components/obra-filter";
 import { BarChart } from "@/components/bar-chart";
 
@@ -152,12 +152,10 @@ export default async function HomePage({
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <PageHeader
-        eyebrow={`Painel · ${formatarData(hojeStr)}`}
         titulo="Início"
-        descricao="Visão geral das locações ativas, custos e devoluções."
-      >
-        <ObraFilter obras={obrasLista ?? []} value={obra} basePath="/" />
-      </PageHeader>
+        descricao={`Visão geral das locações ativas, custos e devoluções · ${formatarData(hojeStr)}`}
+        acoes={<ObraFilter obras={obrasLista ?? []} value={obra} basePath="/" />}
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {kpis.map((k) => {
@@ -172,7 +170,7 @@ export default async function HomePage({
                   <Icon className="size-4 text-primary" strokeWidth={1.5} />
                 </CardHeader>
                 <CardContent>
-                  <div className="font-heading text-5xl leading-none font-semibold">
+                  <div className="text-2xl font-semibold tracking-tight tabular-nums">
                     {k.valor}
                   </div>
                 </CardContent>

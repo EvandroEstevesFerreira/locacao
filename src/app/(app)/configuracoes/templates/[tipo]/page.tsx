@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeConfigurarSistema } from "@/lib/auth";
-import { PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { TemplateEditor } from "../../template-editor";
 import {
@@ -38,7 +38,7 @@ export default async function EditarTemplatePage({
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <PageHeader eyebrow="Templates" titulo={doc.label} descricao={doc.descricao} />
+      <PageHeader titulo={doc.label} descricao={doc.descricao} />
       <Card>
         <CardContent className="pt-6">
           <TemplateEditor

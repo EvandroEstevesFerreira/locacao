@@ -38,10 +38,12 @@ export default async function AppLayout({
       {/* Barra lateral (desktop) */}
       <aside className="hidden border-r bg-card md:flex md:flex-col">
         <div className="border-b px-4 py-4">
-          <div className="font-heading text-xl leading-none font-semibold tracking-wide">
+          <div className="text-xl leading-none font-semibold tracking-tight">
             SISTENGE
           </div>
-          <div className="eyebrow mt-1.5">Locações de obra</div>
+          <div className="mt-1.5 text-xs text-muted-foreground">
+            Locações de obra
+          </div>
         </div>
         <div className="flex-1 overflow-y-auto">
           <Sidebar isMaster={isMaster} modulos={modulos} />
@@ -94,7 +96,7 @@ export default async function AppLayout({
         {/* Topo */}
         <header className="flex h-14 items-center justify-between border-b bg-card px-4">
           <BackButton />
-          <span className="font-heading text-lg font-semibold tracking-wide md:hidden">
+          <span className="text-lg font-semibold tracking-tight md:hidden">
             SISTENGE
           </span>
           <div className="ml-auto">

@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeGerenciarFinanceiro } from "@/lib/auth";
 import { calcularEncargos } from "@/lib/financeiro";
 import { hojeISOSaoPaulo } from "@/lib/locacao";
-import { PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { BaixaForm } from "../../baixa-form";
 
@@ -43,7 +43,7 @@ export default async function BaixaPage({
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <PageHeader eyebrow="Financeiro" titulo="Dar baixa" descricao="Conciliação: valor efetivo, encargos e comprovante." />
+      <PageHeader titulo="Dar baixa" descricao="Conciliação: valor efetivo, encargos e comprovante." />
       <Card>
         <CardContent className="pt-6">
           <BaixaForm lancamento={lanc} orgId={perfil.org_id} encargos={encargos} />

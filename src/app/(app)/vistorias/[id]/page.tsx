@@ -10,7 +10,7 @@ import {
   type StatusAvaria,
   type TipoVistoria,
 } from "@/lib/vistoria";
-import { PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -106,36 +106,38 @@ export default async function VistoriaDetalhePage({
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <PageHeader
-        eyebrow="Relatório de vistoria"
         titulo="Vistoria"
         descricao={
           contrato
             ? `Contrato ${contrato.numero}${contrato.obra ? ` · ${contrato.obra.codigo}` : ""}`
             : undefined
         }
-      >
-        <Button
-          variant="secondary"
-          render={
-            <a
-              href={`/api/vistorias/${vistoria.id}/pdf`}
-              target="_blank"
-              rel="noopener noreferrer"
-            />
-          }
-        >
-          <FileDown className="size-4" />
-          Gerar PDF
-        </Button>
-        {podeEditar ? (
-          <form action={excluirVistoria}>
-            <input type="hidden" name="id" value={vistoria.id} />
-            <Button variant="outline" type="submit" className="text-destructive">
-              Excluir vistoria
+        acoes={
+          <>
+            <Button
+              variant="secondary"
+              render={
+                <a
+                  href={`/api/vistorias/${vistoria.id}/pdf`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                />
+              }
+            >
+              <FileDown className="size-4" />
+              Gerar PDF
             </Button>
-          </form>
-        ) : null}
-      </PageHeader>
+            {podeEditar ? (
+              <form action={excluirVistoria}>
+                <input type="hidden" name="id" value={vistoria.id} />
+                <Button variant="outline" type="submit" className="text-destructive">
+                  Excluir vistoria
+                </Button>
+              </form>
+            ) : null}
+          </>
+        }
+      />
 
       {contextoDevolucao ? (
         <p className="text-sm text-muted-foreground">{contextoDevolucao}</p>

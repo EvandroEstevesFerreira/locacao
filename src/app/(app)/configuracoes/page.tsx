@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeConfigurarSistema } from "@/lib/auth";
-import { PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/components/shared/page-header";
 import {
   Card,
   CardContent,
@@ -59,7 +59,6 @@ export default async function ConfiguracoesPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-8">
       <PageHeader
-        eyebrow="Preferências"
         titulo="Configurações"
         descricao="Cadastros da organização, documentos e automações de e-mail."
       />

@@ -10,7 +10,7 @@ import {
   tipoImovelLabel,
   type StatusImovel,
 } from "@/lib/imoveis";
-import { PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/components/shared/page-header";
 import { Pagination } from "@/components/pagination";
 import { SortHeader } from "@/components/sort-header";
 import { PAGE_SIZE, parseListParams, termoOr } from "@/lib/lista";
@@ -102,21 +102,23 @@ export default async function ImoveisPage({
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <PageHeader
-        eyebrow="Patrimônio locado"
         titulo="Imóveis"
         descricao="Kitnets, apartamentos, casas, galpões e escritórios locados pela Sistenge."
-      >
-        <Button variant="outline" render={<Link href="/imoveis/documentos" />}>
-          <FileText className="size-4" />
-          Documentos
-        </Button>
-        {podeEditar ? (
-          <Button render={<Link href="/imoveis/novo" />}>
-            <Plus className="size-4" />
-            Novo imóvel
-          </Button>
-        ) : null}
-      </PageHeader>
+        acoes={
+          <>
+            <Button variant="outline" render={<Link href="/imoveis/documentos" />}>
+              <FileText className="size-4" />
+              Documentos
+            </Button>
+            {podeEditar ? (
+              <Button render={<Link href="/imoveis/novo" />}>
+                <Plus className="size-4" />
+                Novo imóvel
+              </Button>
+            ) : null}
+          </>
+        }
+      />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Kpi label="Imóveis" valor={String(total)} />

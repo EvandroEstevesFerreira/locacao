@@ -22,7 +22,7 @@ import {
   type Cadencia,
   type StatusContrato,
 } from "@/lib/locacao";
-import { PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/components/shared/page-header";
 import { AtividadeTimeline } from "@/components/atividade-timeline";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -201,33 +201,35 @@ export default async function ContratoDetalhePage({
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6">
       <PageHeader
-        eyebrow="Contrato de locação"
         titulo={`Contrato ${contrato.numero}`}
-      >
-        <Button variant="outline" render={<a href={`/api/contratos/${contrato.id}/pdf`} target="_blank" rel="noopener noreferrer" />}>
-          <FileText className="size-4" />
-          Gerar contrato (PDF)
-        </Button>
-        {podeEditar ? (
+        acoes={
           <>
-            <Button
-              variant="outline"
-              render={<Link href={`/contratos/${contrato.id}/editar`} />}
-            >
-              <Pencil className="size-4" />
-              Editar
+            <Button variant="outline" render={<a href={`/api/contratos/${contrato.id}/pdf`} target="_blank" rel="noopener noreferrer" />}>
+              <FileText className="size-4" />
+              Gerar contrato (PDF)
             </Button>
-            {podeExcluir ? (
-              <ConfirmDelete
-                action={excluirContrato}
-                id={contrato.id}
-                rotulo="Excluir"
-                mensagem="Excluir este contrato? Ele deixa de aparecer nas listas e relatórios."
-              />
+            {podeEditar ? (
+              <>
+                <Button
+                  variant="outline"
+                  render={<Link href={`/contratos/${contrato.id}/editar`} />}
+                >
+                  <Pencil className="size-4" />
+                  Editar
+                </Button>
+                {podeExcluir ? (
+                  <ConfirmDelete
+                    action={excluirContrato}
+                    id={contrato.id}
+                    rotulo="Excluir"
+                    mensagem="Excluir este contrato? Ele deixa de aparecer nas listas e relatórios."
+                  />
+                ) : null}
+              </>
             ) : null}
           </>
-        ) : null}
-      </PageHeader>
+        }
+      />
 
       <Card className="order-1">
         <CardContent className="grid gap-4 pt-6 sm:grid-cols-2 lg:grid-cols-4">

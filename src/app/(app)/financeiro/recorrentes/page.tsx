@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeGerenciarFinanceiro } from "@/lib/auth";
 import { formatarBRL, periodosPorMes, type Cadencia } from "@/lib/locacao";
-import { PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { gerarRecorrentes } from "../actions";
@@ -89,14 +89,14 @@ export default async function RecorrentesPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <PageHeader
-        eyebrow="Financeiro"
         titulo="Gerar contas a pagar recorrentes"
         descricao="Materializa uma conta por mês (aluguel/locação) para dar baixa individual. Não duplica meses já gerados."
-      >
-        <Button variant="outline" render={<Link href="/financeiro" />}>
-          Voltar
-        </Button>
-      </PageHeader>
+        acoes={
+          <Button variant="outline" render={<Link href="/financeiro" />}>
+            Voltar
+          </Button>
+        }
+      />
 
       <Card>
         <CardHeader className="pb-2">

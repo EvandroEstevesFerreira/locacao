@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { formatarBRL } from "@/lib/locacao";
 import { gerarFluxoCaixa } from "@/lib/fluxo";
-import { PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/components/shared/page-header";
 import { ObraFilter } from "@/components/obra-filter";
 import {
   Card,
@@ -39,7 +39,6 @@ export default async function FluxoCaixaPage({
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <PageHeader
-        eyebrow="Financeiro"
         titulo="Fluxo de caixa"
         descricao="Projeção de desembolsos por mês: lançamentos + contratos de equipamento e imóveis."
       />
@@ -58,7 +57,7 @@ export default async function FluxoCaixaPage({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="font-heading text-4xl leading-none font-semibold">
+            <div className="text-2xl font-semibold tracking-tight tabular-nums">
               {formatarBRL(fluxo.totalPrevisto)}
             </div>
           </CardContent>
@@ -70,7 +69,7 @@ export default async function FluxoCaixaPage({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="font-heading text-4xl leading-none font-semibold">
+            <div className="text-2xl font-semibold tracking-tight tabular-nums">
               {formatarBRL(prox3)}
             </div>
           </CardContent>

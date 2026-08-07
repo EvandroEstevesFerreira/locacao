@@ -1,7 +1,7 @@
 import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeOperar } from "@/lib/auth";
-import { PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { ImovelForm } from "../../imovel-form";
 
@@ -25,7 +25,7 @@ export default async function EditarImovelPage({
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <PageHeader eyebrow="Imóveis" titulo="Editar imóvel" descricao={imovel.apelido} />
+      <PageHeader titulo="Editar imóvel" descricao={imovel.apelido} />
       <Card>
         <CardContent className="pt-6">
           <ImovelForm imovel={imovel} obras={obras ?? []} />

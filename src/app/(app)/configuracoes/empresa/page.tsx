@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeConfigurarSistema } from "@/lib/auth";
-import { PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmpresaForm, type EmpresaDados } from "../empresa-form";
 
@@ -21,7 +21,6 @@ export default async function EmpresaPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <PageHeader
-        eyebrow="Configurações"
         titulo="Dados da empresa"
         descricao="Cadastro completo da organização — usado nos contratos e documentos."
       />

@@ -12,7 +12,7 @@ import {
   type StatusImovel,
   type StatusCaucao,
 } from "@/lib/imoveis";
-import { PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -185,19 +185,25 @@ export default async function ImovelDetalhePage({
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <PageHeader eyebrow="Imóvel" titulo={imovel.apelido} descricao={tipoImovelLabel(imovel.tipo)}>
-        <Button variant="outline" render={<a href={`/api/imoveis/${id}/contrato-pdf`} />}>
-          <FileText className="size-4" /> Gerar contrato
-        </Button>
-        {podeEditar ? (
+      <PageHeader
+        titulo={imovel.apelido}
+        descricao={tipoImovelLabel(imovel.tipo)}
+        acoes={
           <>
-            <Button variant="outline" render={<Link href={`/imoveis/${id}/editar`} />}>
-              <Pencil className="size-4" /> Editar
+            <Button variant="outline" render={<a href={`/api/imoveis/${id}/contrato-pdf`} />}>
+              <FileText className="size-4" /> Gerar contrato
             </Button>
-            <ConfirmDelete action={excluirImovel} id={id} mensagem="Excluir este imóvel e todos os seus contratos? Esta ação não pode ser desfeita." />
+            {podeEditar ? (
+              <>
+                <Button variant="outline" render={<Link href={`/imoveis/${id}/editar`} />}>
+                  <Pencil className="size-4" /> Editar
+                </Button>
+                <ConfirmDelete action={excluirImovel} id={id} mensagem="Excluir este imóvel e todos os seus contratos? Esta ação não pode ser desfeita." />
+              </>
+            ) : null}
           </>
-        ) : null}
-      </PageHeader>
+        }
+      />
 
       {/* Dados */}
       <Card>

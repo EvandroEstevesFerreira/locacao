@@ -5,7 +5,7 @@ import {
   CATEGORIAS_BIBLIOTECA,
   CATEGORIA_BIBLIOTECA_INFO,
 } from "@/lib/biblioteca";
-import { PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/components/shared/page-header";
 import {
   Card,
   CardContent,
@@ -49,7 +49,6 @@ export default async function DocumentosPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <PageHeader
-        eyebrow="Imóveis"
         titulo="Documentos do alojamento"
         descricao="Normativos, formulários e placas padronizadas — para consultar, baixar e imprimir."
       />

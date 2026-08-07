@@ -2,7 +2,7 @@ import Link from "next/link";
 import { HardHat, Plus, Pencil } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeEditarCadastros } from "@/lib/auth";
-import { PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -60,17 +60,17 @@ export default async function ObrasPage({
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <PageHeader
-        eyebrow="Canteiros"
         titulo="Obras"
         descricao="Obras e contratos da organização."
-      >
-        {podeEditar ? (
-          <Button render={<Link href="/obras/nova" />}>
-            <Plus className="size-4" />
-            Nova obra
-          </Button>
-        ) : null}
-      </PageHeader>
+        acoes={
+          podeEditar ? (
+            <Button render={<Link href="/obras/nova" />}>
+              <Plus className="size-4" />
+              Nova obra
+            </Button>
+          ) : null
+        }
+      />
 
       {temObras || buscando ? (
         <>

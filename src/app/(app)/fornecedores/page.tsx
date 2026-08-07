@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Truck, Plus, Pencil } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeEditarCadastros } from "@/lib/auth";
-import { PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -75,17 +75,17 @@ export default async function FornecedoresPage({
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <PageHeader
-        eyebrow="Locadores"
         titulo="Fornecedores"
         descricao="Locadoras e fornecedores de quem a organização aluga."
-      >
-        {podeEditar ? (
-          <Button render={<Link href="/fornecedores/novo" />}>
-            <Plus className="size-4" />
-            Novo fornecedor
-          </Button>
-        ) : null}
-      </PageHeader>
+        acoes={
+          podeEditar ? (
+            <Button render={<Link href="/fornecedores/novo" />}>
+              <Plus className="size-4" />
+              Novo fornecedor
+            </Button>
+          ) : null
+        }
+      />
 
       <FornecedoresToolbar obras={obrasData ?? []} q={q} obra={obra} />
 

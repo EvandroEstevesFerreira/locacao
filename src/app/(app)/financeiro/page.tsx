@@ -3,7 +3,7 @@ import { Plus, Pencil, Undo2, Coins, RefreshCw } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeGerenciarFinanceiro } from "@/lib/auth";
 import { formatarBRL, formatarData } from "@/lib/locacao";
-import { PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -92,29 +92,31 @@ export default async function FinanceiroPage({
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <PageHeader
-        eyebrow="Contas a pagar"
         titulo="Financeiro"
         descricao="Contas a pagar das locações, por obra e vencimento."
-      >
-        <Button
-          variant="secondary"
-          render={<Link href="/financeiro/fluxo" />}
-        >
-          Fluxo de caixa
-        </Button>
-        {podeEditar ? (
+        acoes={
           <>
-            <Button variant="secondary" render={<Link href="/financeiro/recorrentes" />}>
-              <RefreshCw className="size-4" />
-              Gerar recorrentes
+            <Button
+              variant="secondary"
+              render={<Link href="/financeiro/fluxo" />}
+            >
+              Fluxo de caixa
             </Button>
-            <Button render={<Link href="/financeiro/novo" />}>
-              <Plus className="size-4" />
-              Novo lançamento
-            </Button>
+            {podeEditar ? (
+              <>
+                <Button variant="secondary" render={<Link href="/financeiro/recorrentes" />}>
+                  <RefreshCw className="size-4" />
+                  Gerar recorrentes
+                </Button>
+                <Button render={<Link href="/financeiro/novo" />}>
+                  <Plus className="size-4" />
+                  Novo lançamento
+                </Button>
+              </>
+            ) : null}
           </>
-        ) : null}
-      </PageHeader>
+        }
+      />
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Kpi label="A pagar (pendente)" valor={formatarBRL(totalPendente)} />

@@ -3,7 +3,7 @@ import { Package, Plus, Pencil } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeEditarCadastros } from "@/lib/auth";
 import { TIPO_ITEM, type TipoItem } from "@/lib/itens";
-import { PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -62,17 +62,17 @@ export default async function ItensPage({
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <PageHeader
-        eyebrow="Catálogo"
         titulo="Itens"
         descricao="Catálogo de equipamentos e materiais que a organização aluga."
-      >
-        {podeEditar ? (
-          <Button render={<Link href="/itens/novo" />}>
-            <Plus className="size-4" />
-            Novo item
-          </Button>
-        ) : null}
-      </PageHeader>
+        acoes={
+          podeEditar ? (
+            <Button render={<Link href="/itens/novo" />}>
+              <Plus className="size-4" />
+              Novo item
+            </Button>
+          ) : null
+        }
+      />
 
       {tem || buscando ? (
         <>

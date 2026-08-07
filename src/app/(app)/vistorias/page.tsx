@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeOperar } from "@/lib/auth";
 import { formatarData } from "@/lib/locacao";
 import { TIPO_VISTORIA, type TipoVistoria } from "@/lib/vistoria";
-import { PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/components/shared/page-header";
 import { ObraFilter } from "@/components/obra-filter";
 import { Pagination } from "@/components/pagination";
 import { SortHeader } from "@/components/sort-header";
@@ -71,17 +71,17 @@ export default async function VistoriasPage({
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <PageHeader
-        eyebrow="Retirada e devolução"
         titulo="Vistorias"
         descricao="Registros de retirada e devolução com fotos e avarias."
-      >
-        {podeEditar ? (
-          <Button render={<Link href="/vistorias/nova" />}>
-            <Plus className="size-4" />
-            Nova vistoria
-          </Button>
-        ) : null}
-      </PageHeader>
+        acoes={
+          podeEditar ? (
+            <Button render={<Link href="/vistorias/nova" />}>
+              <Plus className="size-4" />
+              Nova vistoria
+            </Button>
+          ) : null
+        }
+      />
 
       <ObraFilter obras={obrasData ?? []} value={obra} basePath="/vistorias" />
 
