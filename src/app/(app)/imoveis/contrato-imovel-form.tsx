@@ -1,17 +1,34 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { salvarContratoImovel, type ImovelFormState } from "./actions";
-import { STATUS_CAUCAO_INFO, type StatusCaucao } from "@/lib/imoveis";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import {
+  STATUS_CAUCAO,
+  STATUS_CAUCAO_INFO,
+  contratoImovelSchema,
+  type ContratoImovelDados,
+  type ContratoImovelInput,
+  type StatusCaucao,
+} from "@/lib/imoveis";
 import { formatarBRL } from "@/lib/locacao";
+import { FormError } from "@/components/shared/form-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { NativeSelect } from "@/components/ui/native-select";
+import { salvarContratoImovel } from "./actions";
 
-
-export type ContratoImovelDados = {
+/**
+ * Contrato já gravado, como vem do banco. Nome distinto do
+ * `ContratoImovelDados` de src/lib/imoveis.ts, que é a SAÍDA do schema — os dois
+ * são parecidos mas não iguais (aqui os números podem ser null).
+ */
+export type ContratoImovelExistente = {
   id?: string;
   data_inicio?: string | null;
   data_fim?: string | null;
@@ -29,126 +46,283 @@ export type ContratoImovelDados = {
   observacoes?: string | null;
 };
 
+const paraCampo = (v: number | null | undefined) =>
+  v === null || v === undefined ? "" : String(v);
+
 export function ContratoImovelForm({
   imovelId,
   contrato,
   onDoneLabel = "Salvar contrato",
 }: {
   imovelId: string;
-  contrato?: ContratoImovelDados;
+  contrato?: ContratoImovelExistente;
   onDoneLabel?: string;
 }) {
-  const [state, formAction, isPending] = useActionState<ImovelFormState, FormData>(
-    salvarContratoImovel,
-    {},
-  );
+  const router = useRouter();
+  const [erroServidor, setErroServidor] = useState<string | null>(null);
+  const [pendente, startTransition] = useTransition();
 
-  const [aluguel, setAluguel] = useState(contrato?.valor_aluguel ?? 0);
-  const [condominio, setCondominio] = useState(contrato?.valor_condominio ?? 0);
-  const [iptu, setIptu] = useState(contrato?.valor_iptu ?? 0);
-  const [seguro, setSeguro] = useState(contrato?.seguro_fianca ?? 0);
-  const [seguroMensal, setSeguroMensal] = useState(
-    contrato?.seguro_fianca_mensal ?? true,
-  );
+  const {
+    register,
+    handleSubmit,
+    control,
+    formState: { errors },
+  } = useForm<ContratoImovelInput, unknown, ContratoImovelDados>({
+    resolver: zodResolver(contratoImovelSchema),
+    defaultValues: {
+      id: contrato?.id,
+      imovel_id: imovelId,
+      data_inicio: contrato?.data_inicio ?? "",
+      data_fim: contrato?.data_fim ?? "",
+      valor_aluguel: paraCampo(contrato?.valor_aluguel),
+      valor_condominio: paraCampo(contrato?.valor_condominio),
+      valor_iptu: paraCampo(contrato?.valor_iptu),
+      seguro_fianca: paraCampo(contrato?.seguro_fianca),
+      seguro_fianca_mensal: contrato?.seguro_fianca_mensal ?? true,
+      dia_vencimento: paraCampo(contrato?.dia_vencimento),
+      indice_reajuste: contrato?.indice_reajuste ?? "",
+      data_reajuste: contrato?.data_reajuste ?? "",
+      caucao_valor: paraCampo(contrato?.caucao_valor),
+      caucao_status: contrato?.caucao_status ?? "",
+      vigente: contrato?.vigente ?? true,
+      observacoes: contrato?.observacoes ?? "",
+    },
+  });
+
+  // `useWatch` e não `watch()`: o React Compiler não memoiza a função de `watch`
+  // e por causa dela pula a otimização do componente inteiro.
+  const [aluguel, condominio, iptu, seguro, seguroMensal] = useWatch({
+    control,
+    name: [
+      "valor_aluguel",
+      "valor_condominio",
+      "valor_iptu",
+      "seguro_fianca",
+      "seguro_fianca_mensal",
+    ],
+  });
+
+  const numero = (v: unknown) => Number(String(v ?? "").replace(",", ".")) || 0;
   const totalMensal =
-    (Number(aluguel) || 0) +
-    (Number(condominio) || 0) +
-    (Number(iptu) || 0) +
-    (seguroMensal ? Number(seguro) || 0 : 0);
+    numero(aluguel) +
+    numero(condominio) +
+    numero(iptu) +
+    (seguroMensal ? numero(seguro) : 0);
+
+  function onSubmit(values: ContratoImovelDados) {
+    setErroServidor(null);
+    startTransition(async () => {
+      const r = await salvarContratoImovel(values);
+      if (!r.ok) {
+        setErroServidor(r.erro);
+        return;
+      }
+      toast.success(contrato?.id ? "Contrato atualizado." : "Contrato cadastrado.");
+      // `router.refresh()` é essencial: a action fazia `redirect()` para a MESMA
+      // URL só para provocar o re-render. Sem ele, o contrato salvo não
+      // apareceria na tela.
+      router.refresh();
+    });
+  }
 
   return (
-    <form action={formAction} className="space-y-4">
-      <input type="hidden" name="imovel_id" value={imovelId} />
-      {contrato?.id ? <input type="hidden" name="id" value={contrato.id} /> : null}
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <input type="hidden" {...register("imovel_id")} />
+      <input type="hidden" {...register("id")} />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <Label htmlFor="data_inicio">Início</Label>
-          <Input id="data_inicio" name="data_inicio" type="date" defaultValue={contrato?.data_inicio ?? ""} />
+          <Input
+            id="data_inicio"
+            type="date"
+            disabled={pendente}
+            {...register("data_inicio")}
+          />
         </div>
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <Label htmlFor="data_fim">Fim</Label>
-          <Input id="data_fim" name="data_fim" type="date" defaultValue={contrato?.data_fim ?? ""} />
+          <Input
+            id="data_fim"
+            type="date"
+            aria-invalid={!!errors.data_fim}
+            disabled={pendente}
+            {...register("data_fim")}
+          />
+          {errors.data_fim ? (
+            <p className="text-xs text-destructive">{errors.data_fim.message}</p>
+          ) : null}
         </div>
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <Label htmlFor="valor_aluguel">Aluguel (R$)</Label>
-          <Input id="valor_aluguel" name="valor_aluguel" type="number" step="0.01" min={0} value={aluguel} onChange={(e) => setAluguel(e.target.value === "" ? 0 : Number(e.target.value))} />
+          <Input
+            id="valor_aluguel"
+            type="number"
+            step="0.01"
+            min="0"
+            aria-invalid={!!errors.valor_aluguel}
+            disabled={pendente}
+            {...register("valor_aluguel")}
+          />
         </div>
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <Label htmlFor="valor_condominio">Condomínio (R$)</Label>
-          <Input id="valor_condominio" name="valor_condominio" type="number" step="0.01" min={0} value={condominio} onChange={(e) => setCondominio(e.target.value === "" ? 0 : Number(e.target.value))} />
+          <Input
+            id="valor_condominio"
+            type="number"
+            step="0.01"
+            min="0"
+            disabled={pendente}
+            {...register("valor_condominio")}
+          />
         </div>
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <Label htmlFor="valor_iptu">IPTU (R$)</Label>
-          <Input id="valor_iptu" name="valor_iptu" type="number" step="0.01" min={0} value={iptu} onChange={(e) => setIptu(e.target.value === "" ? 0 : Number(e.target.value))} />
+          <Input
+            id="valor_iptu"
+            type="number"
+            step="0.01"
+            min="0"
+            disabled={pendente}
+            {...register("valor_iptu")}
+          />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="seguro_fianca">Seguro fiança (R$)</Label>
-          <Input id="seguro_fianca" name="seguro_fianca" type="number" step="0.01" min={0} value={seguro} onChange={(e) => setSeguro(e.target.value === "" ? 0 : Number(e.target.value))} />
+        <div className="space-y-1.5">
+          <Label htmlFor="seguro_fianca">Seguro-fiança (R$)</Label>
+          <Input
+            id="seguro_fianca"
+            type="number"
+            step="0.01"
+            min="0"
+            disabled={pendente}
+            {...register("seguro_fianca")}
+          />
         </div>
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <Label htmlFor="dia_vencimento">Dia de vencimento</Label>
-          <Input id="dia_vencimento" name="dia_vencimento" type="number" min={1} max={31} defaultValue={contrato?.dia_vencimento ?? ""} />
+          <Input
+            id="dia_vencimento"
+            type="number"
+            min="1"
+            max="31"
+            aria-invalid={!!errors.dia_vencimento}
+            disabled={pendente}
+            {...register("dia_vencimento")}
+          />
+          {/* Antes aceitava 45: o `num()` da action só checava se era número. */}
+          {errors.dia_vencimento ? (
+            <p className="text-xs text-destructive">
+              {errors.dia_vencimento.message}
+            </p>
+          ) : null}
         </div>
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <Label htmlFor="indice_reajuste">Índice de reajuste</Label>
-          <Input id="indice_reajuste" name="indice_reajuste" placeholder="IGP-M / IPCA" defaultValue={contrato?.indice_reajuste ?? ""} />
+          <Input
+            id="indice_reajuste"
+            placeholder="IGP-M / IPCA"
+            disabled={pendente}
+            {...register("indice_reajuste")}
+          />
         </div>
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <Label htmlFor="data_reajuste">Próximo reajuste</Label>
-          <Input id="data_reajuste" name="data_reajuste" type="date" defaultValue={contrato?.data_reajuste ?? ""} />
+          <Input
+            id="data_reajuste"
+            type="date"
+            disabled={pendente}
+            {...register("data_reajuste")}
+          />
         </div>
       </div>
 
       <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"
-          name="seguro_fianca_mensal"
-          checked={seguroMensal}
-          onChange={(e) => setSeguroMensal(e.target.checked)}
           className="size-4"
+          disabled={pendente}
+          {...register("seguro_fianca_mensal")}
         />
-        Somar o seguro fiança na parcela mensal
+        Somar o seguro-fiança na parcela mensal
       </label>
 
-      <div className="flex items-center justify-between rounded-lg bg-muted/50 px-4 py-3 text-sm">
+      {/* Total calculado ao vivo. Antes essa soma só aparecia DEPOIS de salvar,
+          no card de detalhe do imóvel. */}
+      <div className="flex items-center justify-between rounded-md bg-muted/50 px-4 py-3 text-sm">
         <span className="text-muted-foreground">
-          Total mensal (aluguel + condomínio + IPTU{seguroMensal ? " + seguro fiança" : ""})
+          Total mensal (aluguel + condomínio + IPTU
+          {seguroMensal ? " + seguro-fiança" : ""})
         </span>
-        <span className="text-base font-semibold">{formatarBRL(totalMensal)}</span>
+        <span className="text-base font-semibold tabular-nums">
+          {formatarBRL(totalMensal)}
+        </span>
       </div>
 
       <fieldset className="grid gap-4 border-t pt-4 sm:grid-cols-2">
         <legend className="text-sm font-medium">Caução</legend>
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <Label htmlFor="caucao_valor">Valor da caução (R$)</Label>
-          <Input id="caucao_valor" name="caucao_valor" type="number" step="0.01" min={0} defaultValue={contrato?.caucao_valor ?? ""} />
+          <Input
+            id="caucao_valor"
+            type="number"
+            step="0.01"
+            min="0"
+            disabled={pendente}
+            {...register("caucao_valor")}
+          />
         </div>
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <Label htmlFor="caucao_status">Situação da caução</Label>
-          <NativeSelect id="caucao_status" name="caucao_status" defaultValue={contrato?.caucao_status ?? ""}>
+          <NativeSelect
+            id="caucao_status"
+            disabled={pendente}
+            {...register("caucao_status")}
+          >
             <option value="">— Não aplicável —</option>
-            {(Object.keys(STATUS_CAUCAO_INFO) as StatusCaucao[]).map((s) => (
-              <option key={s} value={s}>{STATUS_CAUCAO_INFO[s]}</option>
+            {STATUS_CAUCAO.map((s) => (
+              <option key={s} value={s}>
+                {STATUS_CAUCAO_INFO[s as StatusCaucao]}
+              </option>
             ))}
           </NativeSelect>
+          {/* Regra cruzada: caução com valor precisa de situação, senão o
+              dinheiro fica sem rastro de devolvida/retida no encerramento. */}
+          {errors.caucao_status ? (
+            <p className="text-xs text-destructive">
+              {errors.caucao_status.message}
+            </p>
+          ) : null}
         </div>
       </fieldset>
 
-      <div className="space-y-2">
-        <Label htmlFor="observacoes">Observações</Label>
-        <Textarea id="observacoes" name="observacoes" rows={2} defaultValue={contrato?.observacoes ?? ""} />
+      <div className="space-y-1.5">
+        <Label htmlFor="observacoes">
+          Observações{" "}
+          <span className="font-normal text-muted-foreground">(opcional)</span>
+        </Label>
+        <Textarea
+          id="observacoes"
+          rows={2}
+          disabled={pendente}
+          {...register("observacoes")}
+        />
       </div>
 
       <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" name="vigente" defaultChecked={contrato?.vigente ?? true} className="size-4" />
+        <input
+          type="checkbox"
+          className="size-4"
+          disabled={pendente}
+          {...register("vigente")}
+        />
         Este é o contrato vigente (os demais deste imóvel deixam de ser vigentes)
       </label>
 
-      {state.error ? <p className="text-sm text-destructive">{state.error}</p> : null}
+      <FormError>{erroServidor}</FormError>
 
-      <Button type="submit" disabled={isPending}>
-        {isPending ? "Salvando…" : onDoneLabel}
+      <Button type="submit" disabled={pendente}>
+        {pendente ? <Loader2 className="size-4 animate-spin" /> : null}
+        {pendente ? "Salvando…" : onDoneLabel}
       </Button>
     </form>
   );

@@ -4,7 +4,10 @@ import { useState, type ReactNode } from "react";
 import { Pencil, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ContratoImovelForm, type ContratoImovelDados } from "./contrato-imovel-form";
+import {
+  ContratoImovelForm,
+  type ContratoImovelExistente,
+} from "./contrato-imovel-form";
 
 /**
  * Card de um contrato do imóvel. Alterna entre a visão de leitura
@@ -21,7 +24,7 @@ export function ContratoImovelCard({
   children,
 }: {
   imovelId: string;
-  contrato: ContratoImovelDados;
+  contrato: ContratoImovelExistente;
   dataLabel: string;
   vigente: boolean;
   podeEditar: boolean;
