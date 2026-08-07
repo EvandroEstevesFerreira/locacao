@@ -2,6 +2,11 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/* Documentação não é fonte de classes. Sem isto, um exemplo de código num
+   .md — `bg-[url(...)]`, `from-[#1A1D24]` — é lido como utility real e o
+   Turbopack tenta resolver `url(...)` como módulo, quebrando o build. */
+@source not "../../docs";
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
