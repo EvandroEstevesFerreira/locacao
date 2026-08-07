@@ -419,10 +419,14 @@ export default async function ContratoDetalhePage({
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {/* `key` já não é necessário para forçar remount — o form se limpa
+                sozinho depois de salvar. Cadência e pró-rata entram para o
+                custo estimado aparecer antes de gravar. */}
             <AddItemLocadoForm
-              key={linhasCalc.length}
               contratoId={contrato.id}
               itens={itens ?? []}
+              cadencia={cadencia}
+              prorata={prorata}
             />
           </CardContent>
         </Card>

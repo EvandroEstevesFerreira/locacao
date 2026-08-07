@@ -137,3 +137,28 @@ export const lancamentoSchema = z
 
 export type LancamentoInput = z.input<typeof lancamentoSchema>;
 export type LancamentoDados = z.output<typeof lancamentoSchema>;
+
+/**
+ * Baixa (conciliação) de um lançamento. Já era chamada com um objeto tipado
+ * direto do cliente, então o schema aqui só formaliza as checagens que estavam
+ * espalhadas em `if`s dentro da action.
+ */
+export const baixaSchema = z.object({
+  id: z.string().uuid(),
+  valorPago: z.coerce.number().positive("Informe o valor pago."),
+  multa: z.coerce.number().min(0, "Multa inválida.").default(0),
+  juros: z.coerce.number().min(0, "Juros inválidos.").default(0),
+  nfNumero: z
+    .string()
+    .trim()
+    .max(60)
+    .optional()
+    .transform((v) => (v && v.length > 0 ? v : null)),
+  dataPagamento: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Data de pagamento inválida."),
+  comprovantePath: z.string().nullable().optional(),
+});
+
+export type BaixaInput = z.input<typeof baixaSchema>;
+export type BaixaDados = z.output<typeof baixaSchema>;

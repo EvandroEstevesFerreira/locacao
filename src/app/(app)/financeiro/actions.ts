@@ -9,7 +9,11 @@ import {
   podeExcluirCritico,
 } from "@/lib/auth";
 import { periodosPorMes, type Cadencia, hojeISOSaoPaulo } from "@/lib/locacao";
-import { mesesRecorrentes, lancamentoSchema } from "@/lib/financeiro";
+import {
+  mesesRecorrentes,
+  lancamentoSchema,
+  baixaSchema,
+} from "@/lib/financeiro";
 import { falha, primeiroErro, type ActionResult } from "@/lib/acoes";
 
 export async function salvarLancamento(raw: unknown): Promise<ActionResult> {
@@ -182,44 +186,38 @@ export async function gerarRecorrentes(formData: FormData) {
  * Baixa (conciliação) de um lançamento: valor efetivamente pago, multa/juros,
  * nº da NF e comprovante (já enviado ao Storage pelo client).
  */
-export async function darBaixa(input: {
-  id: string;
-  valorPago: number;
-  multa: number;
-  juros: number;
-  nfNumero: string;
-  dataPagamento: string;
-  comprovantePath: string | null;
-}): Promise<{ error?: string }> {
+export async function darBaixa(raw: unknown): Promise<ActionResult> {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id) return { error: "Sessão inválida." };
-  if (!podeGerenciarFinanceiro(perfil.papel)) return { error: "Sem permissão." };
+  if (!perfil?.org_id) return falha("Sessão inválida. Entre novamente.");
+  if (!podeGerenciarFinanceiro(perfil.papel)) {
+    return falha("Você não tem permissão para dar baixa em lançamentos.");
+  }
 
-  const id = input.id?.trim();
-  if (!id) return { error: "Lançamento inválido." };
-  if (!(input.valorPago > 0)) return { error: "Informe o valor pago." };
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.dataPagamento))
-    return { error: "Data de pagamento inválida." };
+  const parsed = baixaSchema.safeParse(raw);
+  if (!parsed.success) return falha(primeiroErro(parsed.error.issues));
 
-  const supabase = await createClient();
+  const d = parsed.data;
   const patch: Record<string, unknown> = {
     status: "pago",
-    valor_pago: input.valorPago,
-    multa: Math.max(0, input.multa || 0),
-    juros: Math.max(0, input.juros || 0),
-    nf_numero: input.nfNumero?.trim() || null,
-    data_pagamento: input.dataPagamento,
+    valor_pago: d.valorPago,
+    multa: d.multa,
+    juros: d.juros,
+    nf_numero: d.nfNumero,
+    data_pagamento: d.dataPagamento,
   };
-  if (input.comprovantePath) patch.comprovante_path = input.comprovantePath;
+  // Só sobrescreve o comprovante quando houve upload novo — senão uma segunda
+  // baixa sem anexo apagaria o arquivo já enviado.
+  if (d.comprovantePath) patch.comprovante_path = d.comprovantePath;
 
+  const supabase = await createClient();
   const { error } = await supabase
     .from("lancamento_financeiro")
     .update(patch)
-    .eq("id", id);
-  if (error) return { error: "Não foi possível registrar a baixa." };
+    .eq("id", d.id);
+  if (error) return falha("Não foi possível registrar a baixa.");
 
   revalidatePath("/financeiro");
-  return {};
+  return { ok: true, id: d.id };
 }
 
 export async function excluirLancamento(

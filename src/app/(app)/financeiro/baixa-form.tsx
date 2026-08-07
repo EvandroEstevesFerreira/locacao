@@ -10,6 +10,7 @@ import { darBaixa } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { FormError } from "@/components/shared/form-error";
 
 function nomeSeguro(nome: string) {
   return nome.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-80);
@@ -81,8 +82,8 @@ export function BaixaForm({
         dataPagamento,
         comprovantePath,
       });
-      if (res.error) {
-        setErro(res.error);
+      if (!res.ok) {
+        setErro(res.erro);
         return;
       }
       toast.success("Baixa registrada.");
@@ -158,7 +159,7 @@ export function BaixaForm({
         </div>
       </div>
 
-      {erro ? <p className="text-sm text-destructive">{erro}</p> : null}
+      <FormError>{erro}</FormError>
 
       <div className="flex gap-2">
         <Button type="submit" disabled={enviando}>

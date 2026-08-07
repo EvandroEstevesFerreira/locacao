@@ -184,3 +184,34 @@ export const contratoSchema = z
 
 export type ContratoInput = z.input<typeof contratoSchema>;
 export type ContratoDados = z.output<typeof contratoSchema>;
+
+export const itemLocadoSchema = z
+  .object({
+    contrato_id: z.string().uuid(),
+    item_id: z.string().uuid("Selecione o item."),
+    quantidade: z.coerce.number().positive("A quantidade deve ser maior que zero."),
+    valor_unitario_periodo: z.coerce.number().min(0, "Valor inválido."),
+    data_retirada: z.string().min(1, "Informe a data de retirada."),
+    data_devolucao_prevista: z
+      .string()
+      .optional()
+      .transform((v) => (v && v.length > 0 ? v : null)),
+    identificacao: z
+      .string()
+      .trim()
+      .max(120)
+      .optional()
+      .transform((v) => (v && v.length > 0 ? v : null)),
+  })
+  // Regra cruzada: devolver antes de retirar não existe, e o custo por período
+  // sairia negativo.
+  .refine(
+    (d) => !d.data_devolucao_prevista || d.data_devolucao_prevista >= d.data_retirada,
+    {
+      message: "A devolução prevista não pode ser anterior à retirada.",
+      path: ["data_devolucao_prevista"],
+    },
+  );
+
+export type ItemLocadoInput = z.input<typeof itemLocadoSchema>;
+export type ItemLocadoDados = z.output<typeof itemLocadoSchema>;

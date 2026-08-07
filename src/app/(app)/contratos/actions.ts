@@ -10,13 +10,8 @@ import {
   podeExcluirCritico,
 } from "@/lib/auth";
 import { falha, primeiroErro, type ActionResult } from "@/lib/acoes";
-import { contratoSchema } from "@/lib/locacao";
+import { contratoSchema, itemLocadoSchema } from "@/lib/locacao";
 
-/** Campo de texto/data opcional vazio precisa virar NULL no banco. */
-function nuloSeVazio(v: string | undefined) {
-  const t = (v ?? "").trim();
-  return t === "" ? null : t;
-}
 
 export async function salvarContrato(raw: unknown): Promise<ActionResult> {
   const perfil = await getCurrentPerfil();
@@ -75,54 +70,27 @@ export async function excluirContrato(
   revalidatePath("/contratos");
 }
 
-const itemLocadoSchema = z.object({
-  contrato_id: z.string().uuid(),
-  item_id: z.string().uuid("Selecione o item."),
-  quantidade: z.coerce.number().positive("Quantidade deve ser maior que zero."),
-  valor_unitario_periodo: z.coerce.number().min(0, "Valor inválido."),
-  data_retirada: z.string().min(1, "Informe a data de retirada."),
-  data_devolucao_prevista: z.string().optional(),
-  identificacao: z.string().trim().max(120).optional(),
-});
-
-export type ItemLocadoFormState = { error?: string };
-
 export async function adicionarItemLocado(
-  _prev: ItemLocadoFormState,
-  formData: FormData,
-): Promise<ItemLocadoFormState> {
+  raw: unknown,
+): Promise<ActionResult> {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id) return { error: "Sessão inválida." };
-  if (!podeOperar(perfil.papel)) return { error: "Sem permissão." };
-
-  const parsed = itemLocadoSchema.safeParse({
-    contrato_id: formData.get("contrato_id"),
-    item_id: formData.get("item_id"),
-    quantidade: formData.get("quantidade"),
-    valor_unitario_periodo: formData.get("valor_unitario_periodo"),
-    data_retirada: formData.get("data_retirada"),
-    data_devolucao_prevista: formData.get("data_devolucao_prevista") ?? undefined,
-    identificacao: formData.get("identificacao") ?? undefined,
-  });
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  if (!perfil?.org_id) return falha("Sessão inválida. Entre novamente.");
+  if (!podeOperar(perfil.papel)) {
+    return falha("Você não tem permissão para adicionar itens.");
   }
+
+  const parsed = itemLocadoSchema.safeParse(raw);
+  if (!parsed.success) return falha(primeiroErro(parsed.error.issues));
 
   const supabase = await createClient();
   const { error } = await supabase.from("item_locado").insert({
     org_id: perfil.org_id,
-    contrato_id: parsed.data.contrato_id,
-    item_id: parsed.data.item_id,
-    quantidade: parsed.data.quantidade,
-    valor_unitario_periodo: parsed.data.valor_unitario_periodo,
-    data_retirada: parsed.data.data_retirada,
-    data_devolucao_prevista: nuloSeVazio(parsed.data.data_devolucao_prevista),
-    identificacao: nuloSeVazio(parsed.data.identificacao),
+    ...parsed.data,
   });
-  if (error) return { error: "Não foi possível adicionar o item." };
+  if (error) return falha("Não foi possível adicionar o item.");
 
   revalidatePath(`/contratos/${parsed.data.contrato_id}`);
-  return {};
+  return { ok: true };
 }
 
 export async function excluirItemLocado(formData: FormData) {
