@@ -59,3 +59,48 @@ export function BarChart({
     </div>
   );
 }
+
+/**
+ * Barras horizontais para ranking de categorias — o gráfico de /relatorios, que
+ * antes era montado à mão na própria página.
+ *
+ * É um componente separado, e não um prop `orientation` no BarChart, de
+ * propósito: os dois são gráficos genuinamente diferentes. O BarChart é série
+ * temporal com destaque do mês corrente e o valor sobre a coluna; este é
+ * ranking com o valor na linha do rótulo, sem noção de "agora". Um booleano de
+ * orientação seria a proliferação de prop que o Sistenge People evita — mas o
+ * cálculo do máximo e o vocabulário de cor ficam compartilhados aqui.
+ */
+export function HBarChart({
+  data,
+  formatValue = (n) => String(n),
+}: {
+  data: { label: string; valor: number }[];
+  formatValue?: (n: number) => string;
+}) {
+  if (data.length === 0) return null;
+  const max = data.reduce((m, d) => Math.max(m, d.valor), 0);
+
+  return (
+    <div className="space-y-3">
+      {data.map((d, i) => (
+        <div key={i}>
+          <div className="mb-1 flex justify-between gap-3 text-sm">
+            <span className="min-w-0 truncate">{d.label}</span>
+            <span className="shrink-0 font-medium tabular-nums">
+              {formatValue(d.valor)}
+            </span>
+          </div>
+          {/* Trilha e preenchimento arredondados: a borda reta sem raio era
+              artefato do antigo --radius: 0. */}
+          <div className="h-3 overflow-hidden rounded-full bg-muted">
+            <div
+              className="h-full rounded-full bg-foreground/80"
+              style={{ width: `${max > 0 ? (d.valor / max) * 100 : 0}%` }}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { PAGE_SIZE, parseListParams, termoOr } from "./lista";
+import { PAGE_SIZE, contagem, parseListParams, termoOr } from "./lista";
 
 // `parseListParams` e `termoOr` são controles de segurança, não conveniências:
 // a coluna de ordenação vai direto para o `.order()` do PostgREST e o termo de
@@ -83,5 +83,18 @@ describe("termoOr — sanitização do ilike", () => {
 
   it("apara espaços das pontas", () => {
     expect(termoOr(["nome"], "  aurora  ")).toBe("nome.ilike.%aurora%");
+  });
+});
+
+describe("contagem", () => {
+  it("usa o singular só para 1", () => {
+    expect(contagem(1, "contrato", "contratos")).toBe("1 contrato");
+    expect(contagem(2, "contrato", "contratos")).toBe("2 contratos");
+    expect(contagem(0, "contrato", "contratos")).toBe("0 contratos");
+  });
+
+  it("aceita plural irregular", () => {
+    expect(contagem(3, "fornecedor", "fornecedores")).toBe("3 fornecedores");
+    expect(contagem(1, "fornecedor", "fornecedores")).toBe("1 fornecedor");
   });
 });

@@ -1,13 +1,5 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import {
-  Users,
-  Building,
-  FileText,
-  History,
-  ChevronRight,
-  type LucideIcon,
-} from "lucide-react";
+import { Users, Building, FileText, History } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeConfigurarSistema } from "@/lib/auth";
 import { PageHeader } from "@/components/shared/page-header";
@@ -20,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { ConfigAlertaForm } from "./config-form";
 import { ConfigRelatorioForm } from "./config-relatorio-form";
+import { ConfigRow, SecaoTitulo } from "@/components/shared/config-row";
 
 export const metadata = { title: "Configurações — Loca" };
 
@@ -68,25 +61,25 @@ export default async function ConfiguracoesPage() {
         <SecaoTitulo>Organização</SecaoTitulo>
         <Card>
           <CardContent className="divide-y p-0">
-            <LinkRow
+            <ConfigRow
               href="/configuracoes/empresa"
               icon={Building}
               titulo="Dados da empresa"
               descricao="CNPJ, endereço, contatos e representante — usados nos contratos."
             />
-            <LinkRow
+            <ConfigRow
               href="/configuracoes/templates"
               icon={FileText}
               titulo="Templates de documentos"
               descricao="Texto dos contratos e termos com variáveis preenchidas ao gerar o PDF."
             />
-            <LinkRow
+            <ConfigRow
               href="/usuarios"
               icon={Users}
               titulo="Usuários"
               descricao="Papéis e acesso por obra dos usuários da organização."
             />
-            <LinkRow
+            <ConfigRow
               href="/configuracoes/auditoria"
               icon={History}
               titulo="Auditoria"
@@ -130,38 +123,4 @@ export default async function ConfiguracoesPage() {
   );
 }
 
-function SecaoTitulo({ children }: { children: React.ReactNode }) {
-  return (
-    <h2 className="px-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-      {children}
-    </h2>
-  );
-}
 
-function LinkRow({
-  href,
-  icon: Icon,
-  titulo,
-  descricao,
-}: {
-  href: string;
-  icon: LucideIcon;
-  titulo: string;
-  descricao: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none"
-    >
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-        <Icon className="size-4" />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium">{titulo}</p>
-        <p className="text-xs text-muted-foreground">{descricao}</p>
-      </div>
-      <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-    </Link>
-  );
-}

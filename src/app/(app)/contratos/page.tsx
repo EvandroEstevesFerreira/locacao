@@ -12,7 +12,7 @@ import {
 import { PageHeader } from "@/components/shared/page-header";
 import { Pagination } from "@/components/pagination";
 import { SortHeader } from "@/components/sort-header";
-import { PAGE_SIZE, parseListParams, termoOr } from "@/lib/lista";
+import { PAGE_SIZE, contagem, parseListParams, termoOr } from "@/lib/lista";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -81,7 +81,7 @@ export default async function ContratosPage({
     <div className="mx-auto max-w-6xl space-y-6">
       <PageHeader
         titulo="Contratos"
-        descricao="Contratos de locação por obra e fornecedor."
+        descricao={`Contratos de locação por obra e fornecedor. · ${contagem(total, "contrato", "contratos")} no filtro`}
         acoes={
           podeEditar ? (
             <Button render={<Link href="/contratos/novo" />}>

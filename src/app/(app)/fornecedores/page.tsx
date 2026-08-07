@@ -17,7 +17,7 @@ import {
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { Pagination } from "@/components/pagination";
 import { SortHeader } from "@/components/sort-header";
-import { PAGE_SIZE, parseListParams, termoOr } from "@/lib/lista";
+import { PAGE_SIZE, contagem, parseListParams, termoOr } from "@/lib/lista";
 import { FornecedoresToolbar } from "./fornecedores-toolbar";
 import { excluirFornecedor } from "./actions";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -78,7 +78,7 @@ export default async function FornecedoresPage({
     <div className="mx-auto max-w-5xl space-y-6">
       <PageHeader
         titulo="Fornecedores"
-        descricao="Locadoras e fornecedores de quem a organização aluga."
+        descricao={`Locadoras e fornecedores de quem a organização aluga. · ${contagem(total, "fornecedor", "fornecedores")} no filtro`}
         acoes={
           podeEditar ? (
             <Button render={<Link href="/fornecedores/novo" />}>

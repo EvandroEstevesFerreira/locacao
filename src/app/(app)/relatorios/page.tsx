@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/table";
 import { NativeSelect } from "@/components/ui/native-select";
 import { listarObrasParaFiltro } from "@/lib/data/obras";
+import { HBarChart } from "@/components/bar-chart";
 
 export const metadata = { title: "Relatórios — Loca" };
 
@@ -68,7 +69,6 @@ export default async function RelatoriosPage({
   const query = qs.toString();
 
   const grafico = dadosGrafico(relatorio);
-  const maxGrafico = grafico.reduce((m, g) => Math.max(m, g.valor), 0);
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -178,26 +178,10 @@ export default async function RelatoriosPage({
             <p className="text-xs tracking-wide text-muted-foreground uppercase">
               {relatorio.titulo} — visão em barras
             </p>
-            {grafico.map((g, i) => (
-              <div key={i}>
-                <div className="mb-1 flex justify-between text-sm">
-                  <span>{g.label}</span>
-                  <span className="font-medium">{formatarValor("moeda", g.valor)}</span>
-                </div>
-                {/* Trilha e preenchimento arredondados: a borda reta sem raio
-                    era artefato do antigo --radius: 0. A cor acompanha o
-                    BarChart (foreground com opacidade em vez de primary, que no
-                    tema escuro viraria branco puro). */}
-                <div className="h-3 overflow-hidden rounded-full bg-muted">
-                  <div
-                    className="h-full rounded-full bg-foreground/80"
-                    style={{
-                      width: `${maxGrafico > 0 ? (g.valor / maxGrafico) * 100 : 0}%`,
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
+            <HBarChart
+              data={grafico}
+              formatValue={(n) => formatarValor("moeda", n)}
+            />
           </CardContent>
         </Card>
       ) : null}

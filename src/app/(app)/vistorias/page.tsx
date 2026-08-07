@@ -7,7 +7,7 @@ import { TIPO_VISTORIA, type TipoVistoria } from "@/lib/vistoria";
 import { PageHeader } from "@/components/shared/page-header";
 import { Pagination } from "@/components/pagination";
 import { SortHeader } from "@/components/sort-header";
-import { PAGE_SIZE, parseListParams } from "@/lib/lista";
+import { PAGE_SIZE, contagem, parseListParams } from "@/lib/lista";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -72,7 +72,7 @@ export default async function VistoriasPage({
     <div className="mx-auto max-w-5xl space-y-6">
       <PageHeader
         titulo="Vistorias"
-        descricao="Registros de retirada e devolução com fotos e avarias."
+        descricao={`Registros de retirada e devolução com fotos e avarias. · ${contagem(total, "vistoria", "vistorias")} no filtro`}
         acoes={
           podeEditar ? (
             <Button render={<Link href="/vistorias/nova" />}>

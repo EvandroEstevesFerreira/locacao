@@ -19,7 +19,7 @@ import { ConfirmDelete } from "@/components/confirm-delete";
 import { ListSearch } from "@/components/shared/list-search";
 import { Pagination } from "@/components/pagination";
 import { SortHeader } from "@/components/sort-header";
-import { PAGE_SIZE, parseListParams, termoOr } from "@/lib/lista";
+import { PAGE_SIZE, contagem, parseListParams, termoOr } from "@/lib/lista";
 import { excluirItem } from "./actions";
 import { EmptyState } from "@/components/shared/empty-state";
 
@@ -64,7 +64,7 @@ export default async function ItensPage({
     <div className="mx-auto max-w-5xl space-y-6">
       <PageHeader
         titulo="Itens"
-        descricao="Catálogo de equipamentos e materiais que a organização aluga."
+        descricao={`Catálogo de equipamentos e materiais que a organização aluga. · ${contagem(total, "item", "itens")} no filtro`}
         acoes={
           podeEditar ? (
             <Button render={<Link href="/itens/novo" />}>
