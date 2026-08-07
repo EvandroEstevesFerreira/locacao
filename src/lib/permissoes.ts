@@ -1,6 +1,8 @@
 // Tipos, rótulos e helpers de permissão — SEM dependências de servidor.
 // Pode ser importado tanto por Server Components quanto por Client Components.
 
+import { z } from "zod";
+
 export type Papel = "master" | "administrador" | "gestor" | "operador";
 
 export type Perfil = {
@@ -74,3 +76,28 @@ export function podeConfigurarSistema(papel: Papel | undefined): boolean {
 export function podeExcluirCritico(papel: Papel | undefined): boolean {
   return papel === "master";
 }
+
+// ── Schemas ──────────────────────────────────────────────────────────────────
+// Ficam aqui, e não dentro de um `actions.ts`, porque um arquivo "use server"
+// não pode ser importado por componente cliente — e o formulário precisa do
+// schema para validar por campo com o zodResolver. Este arquivo é puro e
+// client-safe, então serve aos dois lados. (Ver AGENTS.md § Formulários.)
+
+
+export const SENHA_MINIMA = 8;
+
+export const trocarSenhaSchema = z
+  .object({
+    senha: z
+      .string()
+      .min(SENHA_MINIMA, `A senha deve ter ao menos ${SENHA_MINIMA} caracteres.`),
+    confirmar: z.string().min(1, "Confirme a nova senha."),
+  })
+  // O `.refine` canônico: a comparação entre dois campos é exatamente o que o
+  // zodResolver resolve bem e que a validação campo-a-campo do HTML não pega.
+  .refine((d) => d.senha === d.confirmar, {
+    message: "As senhas não conferem.",
+    path: ["confirmar"],
+  });
+
+export type TrocarSenhaInput = z.infer<typeof trocarSenhaSchema>;

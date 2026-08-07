@@ -21,17 +21,9 @@ import { SortHeader } from "@/components/sort-header";
 import { PAGE_SIZE, contagem, parseListParams, termoOr } from "@/lib/lista";
 import { excluirObra } from "./actions";
 import { EmptyState } from "@/components/shared/empty-state";
+import { STATUS_OBRA_INFO, type StatusObra } from "@/lib/obra";
 
 export const metadata = { title: "Obras — Loca" };
-
-const STATUS: Record<
-  string,
-  { label: string; variant: "default" | "secondary" | "outline" }
-> = {
-  ativa: { label: "Ativa", variant: "default" },
-  pausada: { label: "Pausada", variant: "secondary" },
-  encerrada: { label: "Encerrada", variant: "outline" },
-};
 
 export default async function ObrasPage({
   searchParams,
@@ -97,7 +89,7 @@ export default async function ObrasPage({
                   </TableRow>
                 ) : null}
                 {obras!.map((obra) => {
-                  const s = STATUS[obra.status] ?? STATUS.ativa;
+                  const s = STATUS_OBRA_INFO[obra.status as StatusObra] ?? STATUS_OBRA_INFO.ativa;
                   return (
                     <TableRow key={obra.id}>
                       <TableCell className="font-medium">{obra.codigo}</TableCell>
