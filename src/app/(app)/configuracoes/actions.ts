@@ -4,60 +4,29 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeConfigurarSistema } from "@/lib/auth";
-import { TIPOS_RELATORIO } from "@/lib/relatorios";
+import { configRelatorioSchema, empresaSchema } from "@/lib/config";
+import { falha, primeiroErro, type ActionResult } from "@/lib/acoes";
 
 export type ConfigFormState = { error?: string; ok?: boolean };
 
 // ---------------------------------------------------------------------------
 // Dados da empresa (organização) — usados nos contratos/documentos.
 // ---------------------------------------------------------------------------
-function txtEmpresa(formData: FormData, campo: string): string | null {
-  const v = String(formData.get(campo) ?? "").trim();
-  return v === "" ? null : v;
-}
-
-const CAMPOS_EMPRESA = [
-  "nome",
-  "razao_social",
-  "nome_fantasia",
-  "cnpj",
-  "inscricao_estadual",
-  "inscricao_municipal",
-  "endereco",
-  "cidade",
-  "uf",
-  "cep",
-  "telefone",
-  "email",
-  "site",
-  "representante_nome",
-  "representante_cargo",
-  "representante_cpf",
-  "responsaveis",
-  "observacoes",
-] as const;
-
-export async function salvarEmpresa(
-  _prev: ConfigFormState,
-  formData: FormData,
-): Promise<ConfigFormState> {
+export async function salvarEmpresa(raw: unknown): Promise<ActionResult> {
   const perfil = await getCurrentPerfil();
   if (!perfil?.org_id || !podeConfigurarSistema(perfil.papel)) {
-    return { error: "Apenas o Master pode alterar os dados da empresa." };
+    return falha("Apenas o Master pode alterar os dados da empresa.");
   }
 
-  const nome = txtEmpresa(formData, "nome");
-  if (!nome) return { error: "Informe ao menos o nome da empresa." };
-
-  const dados: Record<string, string | null> = {};
-  for (const campo of CAMPOS_EMPRESA) dados[campo] = txtEmpresa(formData, campo);
+  const parsed = empresaSchema.safeParse(raw);
+  if (!parsed.success) return falha(primeiroErro(parsed.error.issues));
 
   const supabase = await createClient();
   const { error } = await supabase
     .from("organizacao")
-    .update({ ...dados, updated_at: new Date().toISOString() })
+    .update({ ...parsed.data, updated_at: new Date().toISOString() })
     .eq("id", perfil.org_id);
-  if (error) return { error: "Não foi possível salvar. Tente novamente." };
+  if (error) return falha("Não foi possível salvar. Tente novamente.");
 
   revalidatePath("/configuracoes/empresa");
   return { ok: true };
@@ -134,63 +103,27 @@ export async function salvarConfigAlerta(
   return { ok: true };
 }
 
-const schemaRelatorio = z.object({
-  ativo: z.boolean(),
-  tipo: z.enum(TIPOS_RELATORIO.map((t) => t.valor) as [string, ...string[]]),
-  frequencia: z.enum(["semanal", "mensal"]),
-  dia: z.coerce.number().int().min(1).max(28),
-  destinatarios: z.array(z.string().email()),
-});
-
 export async function salvarConfigRelatorioEmail(
-  _prev: ConfigFormState,
-  formData: FormData,
-): Promise<ConfigFormState> {
+  raw: unknown,
+): Promise<ActionResult> {
   const perfil = await getCurrentPerfil();
   if (!perfil?.org_id || !podeConfigurarSistema(perfil.papel)) {
-    return { error: "Apenas o Master pode alterar as configurações." };
+    return falha("Apenas o Master pode alterar as configurações.");
   }
 
-  const destinatarios = String(formData.get("destinatarios") ?? "")
-    .split(/[\n,;]+/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-
-  const parsed = schemaRelatorio.safeParse({
-    ativo: formData.get("ativo") === "on" || formData.get("ativo") === "true",
-    tipo: formData.get("tipo"),
-    frequencia: formData.get("frequencia"),
-    dia: formData.get("dia"),
-    destinatarios,
-  });
-  if (!parsed.success) {
-    const msg = parsed.error.issues[0];
-    return {
-      error:
-        msg?.path[0] === "destinatarios"
-          ? "Há um e-mail inválido na lista de destinatários."
-          : msg?.path[0] === "dia"
-            ? "Dia inválido. Use 1 a 7 (semanal) ou 1 a 28 (mensal)."
-            : (msg?.message ?? "Dados inválidos."),
-    };
-  }
-
-  // Coerência: no semanal, o dia vai de 1 a 7.
-  if (parsed.data.frequencia === "semanal" && parsed.data.dia > 7) {
-    return { error: "No modo semanal, o dia deve ser de 1 (segunda) a 7 (domingo)." };
-  }
+  // O schema já divide a lista de destinatários e valida cada e-mail, e a
+  // coerência entre frequência e dia virou `.superRefine` — antes era um `if`
+  // solto depois do parse, e só cobria o caso semanal.
+  const parsed = configRelatorioSchema.safeParse(raw);
+  if (!parsed.success) return falha(primeiroErro(parsed.error.issues));
 
   const supabase = await createClient();
   const { error } = await supabase.from("config_relatorio_email").upsert({
     org_id: perfil.org_id,
-    ativo: parsed.data.ativo,
-    tipo: parsed.data.tipo,
-    frequencia: parsed.data.frequencia,
-    dia: parsed.data.dia,
-    destinatarios: parsed.data.destinatarios,
+    ...parsed.data,
     updated_at: new Date().toISOString(),
   });
-  if (error) return { error: "Não foi possível salvar. Tente novamente." };
+  if (error) return falha("Não foi possível salvar. Tente novamente.");
 
   revalidatePath("/configuracoes");
   return { ok: true };

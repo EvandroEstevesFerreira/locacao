@@ -9,9 +9,8 @@ import { salvarContratoDoc } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 
-const selectClasses =
-  "flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm outline-none focus-visible:border-ring";
 
 function nomeSeguro(nome: string) {
   return nome.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-80);
@@ -63,16 +62,15 @@ export function ContratoDocsUploader({
     <div className="grid gap-3 rounded-lg border border-dashed p-3 sm:grid-cols-3">
       <div className="space-y-1.5">
         <Label htmlFor="doc_tipo">Tipo</Label>
-        <select
+        <NativeSelect
           id="doc_tipo"
           value={tipo}
           onChange={(e) => setTipo(e.target.value)}
-          className={selectClasses}
         >
           <option value="aditivo">Aditivo</option>
           <option value="renovacao">Renovação</option>
           <option value="outro">Outro</option>
-        </select>
+        </NativeSelect>
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="doc_descricao">Descrição</Label>

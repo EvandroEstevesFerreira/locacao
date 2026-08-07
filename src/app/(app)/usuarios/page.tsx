@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Pencil, Plus } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
 import {
   getCurrentPerfil,
   podeGerenciarUsuarios,
   PAPEL_INFO,
   type Papel,
 } from "@/lib/auth";
-import { PageHeader } from "@/components/page-header";
+import { listarUsuarios } from "@/lib/data/usuarios";
+import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -27,24 +27,20 @@ export default async function UsuariosPage() {
   const perfil = await getCurrentPerfil();
   if (!podeGerenciarUsuarios(perfil?.papel)) redirect("/");
 
-  const supabase = await createClient();
-  const { data: usuarios } = await supabase
-    .from("perfil")
-    .select("id, nome, email, papel, ativo")
-    .order("nome");
+  const usuarios = await listarUsuarios();
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <PageHeader
-        eyebrow="Equipe"
         titulo="Usuários"
         descricao="Perfis e acesso por obra dos usuários da organização."
-      >
-        <Button render={<Link href="/usuarios/novo" />}>
-          <Plus className="size-4" />
-          Novo usuário
-        </Button>
-      </PageHeader>
+        acoes={
+          <Button render={<Link href="/usuarios/novo" />}>
+            <Plus className="size-4" />
+            Novo usuário
+          </Button>
+        }
+      />
 
       <Card>
         <CardContent className="p-0">
@@ -59,7 +55,7 @@ export default async function UsuariosPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {(usuarios ?? []).map((u) => (
+              {usuarios.map((u) => (
                 <TableRow key={u.id}>
                   <TableCell className="font-medium">{u.nome ?? "—"}</TableCell>
                   <TableCell className="text-muted-foreground">

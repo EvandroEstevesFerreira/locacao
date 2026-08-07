@@ -49,3 +49,6 @@ apresentacao-loca.html
 
 # Supabase CLI — estado local do `supabase link`
 supabase/.temp/
+
+# Superpowers — mockups locais do brainstorming
+.superpowers/

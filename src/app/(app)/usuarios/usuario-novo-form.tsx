@@ -1,68 +1,126 @@
 "use client";
 
-import { useActionState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
-import { criarUsuario, type UsuarioFormState } from "./actions";
-import { PAPEIS, PAPEL_INFO } from "@/lib/permissoes";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import {
+  PAPEIS,
+  PAPEL_INFO,
+  criarUsuarioSchema,
+  type CriarUsuarioInput,
+} from "@/lib/permissoes";
 import { MODULOS } from "@/lib/modulos";
+import { FormError } from "@/components/shared/form-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
-const selectClasses =
-  "flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
+import { NativeSelect } from "@/components/ui/native-select";
+import { criarUsuario } from "./actions";
 
 export function UsuarioNovoForm({
   obras,
 }: {
   obras: { id: string; codigo: string; nome: string }[];
 }) {
-  const [state, formAction, isPending] = useActionState<
-    UsuarioFormState,
-    FormData
-  >(criarUsuario, {});
+  const router = useRouter();
+  const [erroServidor, setErroServidor] = useState<string | null>(null);
+  const [pendente, startTransition] = useTransition();
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<CriarUsuarioInput>({
+    resolver: zodResolver(criarUsuarioSchema),
+    defaultValues: {
+      nome: "",
+      email: "",
+      papel: "operador",
+      senha: "",
+      obras: [],
+      // Todos os módulos marcados por padrão, como antes.
+      modulos: MODULOS.map((m) => m.chave),
+    },
+  });
+
+  function onSubmit(values: CriarUsuarioInput) {
+    setErroServidor(null);
+    startTransition(async () => {
+      const r = await criarUsuario(values);
+      if (!r.ok) {
+        setErroServidor(r.erro);
+        return;
+      }
+      toast.success("Usuário criado.", {
+        description: "Um e-mail com os dados de acesso foi enviado.",
+      });
+      router.replace("/usuarios");
+      router.refresh();
+    });
+  }
 
   return (
-    <form action={formAction} className="space-y-5">
-      <div className="space-y-2">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      <div className="space-y-1.5">
         <Label htmlFor="nome">Nome</Label>
-        <Input id="nome" name="nome" required maxLength={120} />
+        <Input
+          id="nome"
+          aria-invalid={!!errors.nome}
+          disabled={pendente}
+          {...register("nome")}
+        />
+        {errors.nome ? (
+          <p className="text-xs text-destructive">{errors.nome.message}</p>
+        ) : null}
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         <Label htmlFor="email">E-mail</Label>
-        <Input id="email" name="email" type="email" required />
+        <Input
+          id="email"
+          type="email"
+          aria-invalid={!!errors.email}
+          disabled={pendente}
+          {...register("email")}
+        />
+        {errors.email ? (
+          <p className="text-xs text-destructive">{errors.email.message}</p>
+        ) : null}
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         <Label htmlFor="papel">Perfil</Label>
-        <select
-          id="papel"
-          name="papel"
-          defaultValue="operador"
-          className={selectClasses}
-        >
+        <NativeSelect id="papel" disabled={pendente} {...register("papel")}>
           {PAPEIS.map((p) => (
             <option key={p} value={p}>
               {PAPEL_INFO[p].label} — {PAPEL_INFO[p].descricao}
             </option>
           ))}
-        </select>
+        </NativeSelect>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         <Label htmlFor="senha">Senha temporária</Label>
         <Input
           id="senha"
-          name="senha"
           type="text"
-          required
-          minLength={8}
           placeholder="Ao menos 8 caracteres"
+          aria-invalid={!!errors.senha}
+          disabled={pendente}
+          {...register("senha")}
         />
-        <p className="text-xs text-muted-foreground">
-          O usuário entra com esta senha e pode trocá-la depois.
-        </p>
+        {errors.senha ? (
+          <p className="text-xs text-destructive">{errors.senha.message}</p>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            O usuário entra com esta senha e é obrigado a trocá-la no primeiro
+            acesso.
+          </p>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -76,10 +134,10 @@ export function UsuarioNovoForm({
             <label key={m.chave} className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
-                name="modulos"
                 value={m.chave}
-                defaultChecked
+                disabled={pendente}
                 className="size-4"
+                {...register("modulos")}
               />
               <span className="font-medium">{m.label}</span>
             </label>
@@ -94,18 +152,17 @@ export function UsuarioNovoForm({
           obras.
         </p>
         {obras.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Nenhuma obra cadastrada.
-          </p>
+          <p className="text-sm text-muted-foreground">Nenhuma obra cadastrada.</p>
         ) : (
           <div className="grid gap-2 rounded-md border p-3 sm:grid-cols-2">
             {obras.map((o) => (
               <label key={o.id} className="flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"
-                  name="obras"
                   value={o.id}
+                  disabled={pendente}
                   className="size-4"
+                  {...register("obras")}
                 />
                 <span>
                   <span className="font-medium">{o.codigo}</span> — {o.nome}
@@ -116,20 +173,15 @@ export function UsuarioNovoForm({
         )}
       </div>
 
-      {state.error ? (
-        <p className="text-sm text-destructive">{state.error}</p>
-      ) : null}
+      <FormError>{erroServidor}</FormError>
 
-      <div className="flex gap-2">
-        <Button type="submit" disabled={isPending}>
-          {isPending ? "Criando…" : "Criar usuário"}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          render={<Link href="/usuarios" />}
-        >
+      <div className="flex justify-end gap-2 pt-2">
+        <Button type="button" variant="outline" render={<Link href="/usuarios" />}>
           Cancelar
+        </Button>
+        <Button type="submit" disabled={pendente}>
+          {pendente ? <Loader2 className="size-4 animate-spin" /> : null}
+          {pendente ? "Criando…" : "Criar usuário"}
         </Button>
       </div>
     </form>

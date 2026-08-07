@@ -4,7 +4,12 @@
 // - demais requisições: repassa para a rede (sem cache).
 // Dados sensíveis/autenticados nunca são cacheados como páginas.
 
-const CACHE = "loca-v1";
+// Bumpar a cada mudança em /offline ou nos ícones: o `install` só refaz o
+// PRECACHE quando o nome do cache muda, e o `activate` apaga os caches antigos.
+// Sem o bump, quem já visitou o app continua vendo a versão anterior dessas
+// respostas indefinidamente.
+// v2 (0.21.0): /offline ganhou a paleta nova e modo escuro.
+const CACHE = "loca-v2";
 const OFFLINE_URL = "/offline";
 const PRECACHE = [OFFLINE_URL, "/icons/icon-192.png", "/icons/icon-512.png", "/manifest.webmanifest"];
 

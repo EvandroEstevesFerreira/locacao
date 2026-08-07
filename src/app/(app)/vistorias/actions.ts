@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeOperar, podeGerenciarFinanceiro } from "@/lib/auth";
+import { hojeSaoPaulo } from "@/lib/locacao";
 
 export type VistoriaFormState = { error?: string; ok?: boolean };
 
@@ -70,7 +71,9 @@ export async function salvarVistoria(
 
 export async function excluirVistoria(formData: FormData) {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) {
+    return { error: "Você não tem permissão para excluir vistorias." };
+  }
   const id = (formData.get("id") as string | null)?.trim();
   if (!id) return;
   const supabase = await createClient();
@@ -100,7 +103,9 @@ export async function registrarFoto(vistoriaId: string, path: string) {
 
 export async function excluirFoto(formData: FormData) {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) {
+    return { error: "Você não tem permissão para excluir fotos." };
+  }
   const id = (formData.get("id") as string | null)?.trim();
   const path = (formData.get("path") as string | null)?.trim();
   const vistoriaId = (formData.get("vistoria_id") as string | null)?.trim();
@@ -193,7 +198,7 @@ export async function gerarLancamentoAvaria(formData: FormData) {
     return;
   }
 
-  const hoje = new Date();
+  const hoje = hojeSaoPaulo();
   const competencia = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-01`;
   const venc = new Date(hoje);
   venc.setDate(venc.getDate() + 30);
@@ -226,7 +231,9 @@ export async function gerarLancamentoAvaria(formData: FormData) {
 
 export async function excluirAvaria(formData: FormData) {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) {
+    return { error: "Você não tem permissão para excluir avarias." };
+  }
   const id = (formData.get("id") as string | null)?.trim();
   const vistoriaId = (formData.get("vistoria_id") as string | null)?.trim();
   if (!id) return;

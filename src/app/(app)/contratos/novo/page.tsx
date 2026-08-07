@@ -1,9 +1,11 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeOperar } from "@/lib/auth";
-import { PageHeader } from "@/components/page-header";
+import { hojeSaoPaulo } from "@/lib/locacao";
+import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { ContratoForm } from "../contrato-form";
+import { listarObrasParaFiltro } from "@/lib/data/obras";
 
 export const metadata = { title: "Novo contrato — Loca" };
 
@@ -12,9 +14,9 @@ export default async function NovoContratoPage() {
   if (!podeOperar(perfil?.papel)) redirect("/contratos");
 
   const supabase = await createClient();
-  const ano = new Date().getFullYear();
-  const [{ data: obras }, { data: fornecedores }, { data: nums }] = await Promise.all([
-    supabase.from("obra").select("id, codigo, nome").eq("status", "ativa").order("codigo"),
+  const ano = hojeSaoPaulo().getFullYear();
+  const [obras, { data: fornecedores }, { data: nums }] = await Promise.all([
+    listarObrasParaFiltro(true),
     supabase.from("fornecedor").select("id, nome").eq("ativo", true).order("nome"),
     supabase.from("contrato_locacao").select("numero").ilike("numero", `CT-${ano}-%`),
   ]);
@@ -35,7 +37,7 @@ export default async function NovoContratoPage() {
       />
       <Card>
         <CardContent className="pt-6">
-          <ContratoForm obras={obras ?? []} fornecedores={fornecedores ?? []} numeroSugerido={numeroSugerido} />
+          <ContratoForm obras={obras} fornecedores={fornecedores ?? []} numeroSugerido={numeroSugerido} />
         </CardContent>
       </Card>
     </div>

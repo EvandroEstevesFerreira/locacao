@@ -35,3 +35,14 @@ export function termoOr(campos: string[], q: string): string {
   const safe = q.replace(/[,()*%\\]/g, " ").trim();
   return campos.map((c) => `${c}.ilike.%${safe}%`).join(",");
 }
+
+/**
+ * "12 contratos" / "1 contrato" — a frase de contagem dos cabeçalhos de lista.
+ *
+ * Recebe as duas formas em vez de acrescentar "s": em PT-BR o plural não é
+ * regular (fornecedor → fornecedores, usuário → usuários). O Sistenge People
+ * escreve o ternário inline em cada página; aqui fica num lugar, testável.
+ */
+export function contagem(n: number, singular: string, plural: string): string {
+  return `${n} ${n === 1 ? singular : plural}`;
+}

@@ -5,6 +5,13 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeOperar, podeEditarCadastros } from "@/lib/auth";
 import { CATEGORIAS_BIBLIOTECA } from "@/lib/biblioteca";
+import {
+  contaConsumoSchema,
+  contratoImovelSchema,
+  imovelSchema,
+  reparoSchema,
+} from "@/lib/imoveis";
+import { falha, primeiroErro, type ActionResult } from "@/lib/acoes";
 
 export type ImovelFormState = { error?: string; ok?: boolean };
 
@@ -19,64 +26,30 @@ function num(v: FormDataEntryValue | null): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-const TIPOS = ["kitnet", "apartamento", "casa", "galpao", "escritorio", "outro"];
-const STATUS = ["ativo", "desocupacao", "encerrado"];
-const STATUS_CAUCAO = ["em_aberto", "devolvida", "retida"];
 
 // ---------------------------------------------------------------------------
 // Imóvel
 // ---------------------------------------------------------------------------
-export async function salvarImovel(
-  _prev: ImovelFormState,
-  formData: FormData,
-): Promise<ImovelFormState> {
+export async function salvarImovel(raw: unknown): Promise<ActionResult> {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id) return { error: "Sessão inválida. Entre novamente." };
+  if (!perfil?.org_id) return falha("Sessão inválida. Entre novamente.");
   if (!podeOperar(perfil.papel)) {
-    return { error: "Você não tem permissão para gerenciar imóveis." };
+    return falha("Você não tem permissão para gerenciar imóveis.");
   }
 
-  const apelido = txt(formData.get("apelido"));
-  if (!apelido) return { error: "Informe uma identificação (apelido) do imóvel." };
+  const parsed = imovelSchema.safeParse(raw);
+  if (!parsed.success) return falha(primeiroErro(parsed.error.issues));
 
-  const tipo = String(formData.get("tipo") ?? "outro");
-  const status = String(formData.get("status") ?? "ativo");
-  const dados = {
-    tipo: TIPOS.includes(tipo) ? tipo : "outro",
-    apelido,
-    endereco: txt(formData.get("endereco")),
-    cidade: txt(formData.get("cidade")),
-    uf: txt(formData.get("uf")),
-    capacidade_pessoas: num(formData.get("capacidade_pessoas")),
-    area_m2: num(formData.get("area_m2")),
-    obra_id: txt(formData.get("obra_id")),
-    status: STATUS.includes(status) ? status : "ativo",
-    proprietario_nome: txt(formData.get("proprietario_nome")),
-    proprietario_telefone: txt(formData.get("proprietario_telefone")),
-    proprietario_email: txt(formData.get("proprietario_email")),
-    imobiliaria_nome: txt(formData.get("imobiliaria_nome")),
-    imobiliaria_telefone: txt(formData.get("imobiliaria_telefone")),
-    imobiliaria_email: txt(formData.get("imobiliaria_email")),
-    banco: txt(formData.get("banco")),
-    agencia: txt(formData.get("agencia")),
-    conta: txt(formData.get("conta")),
-    tipo_conta: ["corrente", "poupanca"].includes(String(formData.get("tipo_conta")))
-      ? String(formData.get("tipo_conta"))
-      : null,
-    titular_conta: txt(formData.get("titular_conta")),
-    pix_chave: txt(formData.get("pix_chave")),
-    observacoes: txt(formData.get("observacoes")),
-  };
+  const { id, ...dados } = parsed.data;
 
-  const id = txt(formData.get("id"));
   const supabase = await createClient();
   const { error } = id
     ? await supabase.from("imovel").update(dados).eq("id", id)
     : await supabase.from("imovel").insert({ org_id: perfil.org_id, ...dados });
-  if (error) return { error: "Não foi possível salvar. Tente novamente." };
+  if (error) return falha("Não foi possível salvar. Tente novamente.");
 
   revalidatePath("/imoveis");
-  redirect(id ? `/imoveis/${id}` : "/imoveis");
+  return { ok: true, id: id ?? undefined };
 }
 
 export async function excluirImovel(formData: FormData): Promise<ImovelFormState | void> {
@@ -104,45 +77,23 @@ export async function excluirImovel(formData: FormData): Promise<ImovelFormState
 // Contrato do imóvel
 // ---------------------------------------------------------------------------
 export async function salvarContratoImovel(
-  _prev: ImovelFormState,
-  formData: FormData,
-): Promise<ImovelFormState> {
+  raw: unknown,
+): Promise<ActionResult> {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id) return { error: "Sessão inválida." };
+  if (!perfil?.org_id) return falha("Sessão inválida. Entre novamente.");
   if (!podeOperar(perfil.papel)) {
-    return { error: "Você não tem permissão para gerenciar contratos." };
+    return falha("Você não tem permissão para gerenciar contratos.");
   }
 
-  const imovelId = txt(formData.get("imovel_id"));
-  if (!imovelId) return { error: "Imóvel inválido." };
+  const parsed = contratoImovelSchema.safeParse(raw);
+  if (!parsed.success) return falha(primeiroErro(parsed.error.issues));
 
-  const caucaoStatus = String(formData.get("caucao_status") ?? "");
-  const vigente =
-    formData.get("vigente") === "on" || formData.get("vigente") === "true";
-  const dados = {
-    data_inicio: txt(formData.get("data_inicio")),
-    data_fim: txt(formData.get("data_fim")),
-    valor_aluguel: num(formData.get("valor_aluguel")) ?? 0,
-    valor_condominio: num(formData.get("valor_condominio")) ?? 0,
-    valor_iptu: num(formData.get("valor_iptu")) ?? 0,
-    seguro_fianca: num(formData.get("seguro_fianca")) ?? 0,
-    seguro_fianca_mensal:
-      formData.get("seguro_fianca_mensal") === "on" ||
-      formData.get("seguro_fianca_mensal") === "true",
-    dia_vencimento: num(formData.get("dia_vencimento")),
-    indice_reajuste: txt(formData.get("indice_reajuste")),
-    data_reajuste: txt(formData.get("data_reajuste")),
-    caucao_valor: num(formData.get("caucao_valor")),
-    caucao_status: STATUS_CAUCAO.includes(caucaoStatus) ? caucaoStatus : null,
-    vigente,
-    observacoes: txt(formData.get("observacoes")),
-  };
+  const { id, imovel_id: imovelId, ...dados } = parsed.data;
 
-  const id = txt(formData.get("id"));
   const supabase = await createClient();
 
   // Só um contrato vigente por imóvel.
-  if (vigente) {
+  if (dados.vigente) {
     await supabase
       .from("contrato_imovel")
       .update({ vigente: false })
@@ -154,15 +105,17 @@ export async function salvarContratoImovel(
     : await supabase
         .from("contrato_imovel")
         .insert({ org_id: perfil.org_id, imovel_id: imovelId, ...dados });
-  if (error) return { error: "Não foi possível salvar o contrato." };
+  if (error) return falha("Não foi possível salvar o contrato.");
 
   revalidatePath(`/imoveis/${imovelId}`);
-  redirect(`/imoveis/${imovelId}`);
+  return { ok: true, id: id ?? undefined };
 }
 
 export async function excluirContratoImovel(formData: FormData) {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) {
+    return { error: "Você não tem permissão para excluir contratos de imóvel." };
+  }
   const id = txt(formData.get("id"));
   const imovelId = txt(formData.get("imovel_id"));
   if (!id) return;
@@ -352,31 +305,34 @@ export async function encerrarContrato(
 // ---------------------------------------------------------------------------
 // Contas de consumo (Fase 2) — mês a mês, com integração opcional ao financeiro
 // ---------------------------------------------------------------------------
-const TIPOS_CONSUMO = ["agua", "luz", "gas", "internet", "iptu", "outro"];
 const CONSUMO_LABEL: Record<string, string> = {
   agua: "Água", luz: "Luz", gas: "Gás", internet: "Internet", iptu: "IPTU", outro: "Consumo",
 };
 
 export async function salvarContaConsumo(
-  _prev: ImovelFormState,
-  formData: FormData,
-): Promise<ImovelFormState> {
+  raw: unknown,
+): Promise<ActionResult> {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id) return { error: "Sessão inválida." };
-  if (!podeOperar(perfil.papel)) return { error: "Sem permissão." };
+  if (!perfil?.org_id) return falha("Sessão inválida. Entre novamente.");
+  if (!podeOperar(perfil.papel)) {
+    return falha("Você não tem permissão para lançar contas de consumo.");
+  }
 
-  const imovelId = txt(formData.get("imovel_id"));
-  if (!imovelId) return { error: "Imóvel inválido." };
-  const competencia = txt(formData.get("competencia")); // yyyy-MM (input month) ou yyyy-MM-dd
-  if (!competencia) return { error: "Informe a competência (mês)." };
-  const competenciaData = competencia.length === 7 ? `${competencia}-01` : competencia;
+  const parsed = contaConsumoSchema.safeParse(raw);
+  if (!parsed.success) return falha(primeiroErro(parsed.error.issues));
 
-  const tipoRaw = String(formData.get("tipo") ?? "outro");
-  const tipo = TIPOS_CONSUMO.includes(tipoRaw) ? tipoRaw : "outro";
-  const valor = num(formData.get("valor")) ?? 0;
-  const vencimento = txt(formData.get("vencimento"));
-  const pago = formData.get("pago") === "on" || formData.get("pago") === "true";
-  const lancar = formData.get("lancar") === "on" || formData.get("lancar") === "true";
+  const {
+    imovel_id: imovelId,
+    competencia,
+    tipo,
+    valor,
+    vencimento,
+    pago,
+    lancar,
+    observacoes,
+  } = parsed.data;
+  const competenciaData =
+    competencia.length === 7 ? `${competencia}-01` : competencia;
 
   const supabase = await createClient();
 
@@ -389,10 +345,9 @@ export async function salvarContaConsumo(
       .eq("id", imovelId)
       .single();
     if (!imv?.obra_id) {
-      return {
-        error:
-          "Para lançar no financeiro, o imóvel precisa estar vinculado a uma obra/centro de custo.",
-      };
+      return falha(
+        "Para lançar no financeiro, o imóvel precisa estar vinculado a uma obra/centro de custo.",
+      );
     }
     const mm = competenciaData.slice(0, 7).split("-").reverse().join("/");
     const { data: lanc, error: eLanc } = await supabase
@@ -409,7 +364,7 @@ export async function salvarContaConsumo(
       })
       .select("id")
       .single();
-    if (eLanc) return { error: "Não foi possível criar o lançamento financeiro." };
+    if (eLanc) return falha("Não foi possível criar o lançamento financeiro.");
     lancamentoId = lanc?.id ?? null;
   }
 
@@ -422,12 +377,12 @@ export async function salvarContaConsumo(
     vencimento,
     pago,
     lancamento_id: lancamentoId,
-    observacoes: txt(formData.get("observacoes")),
+    observacoes,
   });
-  if (error) return { error: "Não foi possível salvar a conta." };
+  if (error) return falha("Não foi possível salvar a conta.");
 
   revalidatePath(`/imoveis/${imovelId}`);
-  redirect(`/imoveis/${imovelId}`);
+  return { ok: true };
 }
 
 export async function alternarPagoConsumo(formData: FormData) {
@@ -444,7 +399,9 @@ export async function alternarPagoConsumo(formData: FormData) {
 
 export async function excluirContaConsumo(formData: FormData) {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) {
+    return { error: "Você não tem permissão para excluir contas de consumo." };
+  }
   const id = txt(formData.get("id"));
   const imovelId = txt(formData.get("imovel_id"));
   if (!id) return;
@@ -458,34 +415,36 @@ export async function excluirContaConsumo(formData: FormData) {
 // ---------------------------------------------------------------------------
 const TIPOS_OCORRENCIA = ["avaria", "reparo", "desentendimento", "outro"];
 
-export async function salvarReparo(
-  _prev: ImovelFormState,
-  formData: FormData,
-): Promise<ImovelFormState> {
+export async function salvarReparo(raw: unknown): Promise<ActionResult> {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !podeOperar(perfil.papel)) return { error: "Sem permissão." };
-  const imovelId = txt(formData.get("imovel_id"));
-  const data = txt(formData.get("data"));
-  const descricao = txt(formData.get("descricao"));
-  if (!imovelId || !data || !descricao)
-    return { error: "Preencha data e descrição do reparo." };
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) {
+    return falha("Você não tem permissão para registrar reparos.");
+  }
+
+  const parsed = reparoSchema.safeParse(raw);
+  if (!parsed.success) return falha(primeiroErro(parsed.error.issues));
+  const { imovel_id, ...campos } = parsed.data;
+
   const supabase = await createClient();
   const { error } = await supabase.from("reparo_imovel").insert({
     org_id: perfil.org_id,
-    imovel_id: imovelId,
-    data,
-    descricao,
-    valor: num(formData.get("valor")) ?? 0,
-    executor: txt(formData.get("executor")),
+    imovel_id,
+    ...campos,
   });
-  if (error) return { error: "Não foi possível salvar o reparo." };
-  revalidatePath(`/imoveis/${imovelId}`);
-  redirect(`/imoveis/${imovelId}`);
+  if (error) return falha("Não foi possível salvar o reparo.");
+
+  // Sem `redirect()`: a action devolve {ok} e o form chama router.refresh().
+  // Um redirect aqui faria o NEXT_REDIRECT propagar e matar todo o código
+  // depois do await no client.
+  revalidatePath(`/imoveis/${imovel_id}`);
+  return { ok: true };
 }
 
 export async function excluirReparo(formData: FormData) {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) {
+    return { error: "Você não tem permissão para excluir reparos." };
+  }
   const id = txt(formData.get("id"));
   const imovelId = txt(formData.get("imovel_id"));
   if (!id) return;
@@ -521,7 +480,9 @@ export async function salvarOcorrencia(
 
 export async function excluirOcorrencia(formData: FormData) {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) {
+    return { error: "Você não tem permissão para excluir ocorrências." };
+  }
   const id = txt(formData.get("id"));
   const imovelId = txt(formData.get("imovel_id"));
   if (!id) return;
@@ -554,7 +515,9 @@ export async function salvarVistoriaImovel(
 
 export async function excluirVistoriaImovel(formData: FormData) {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) {
+    return { error: "Você não tem permissão para excluir vistorias do imóvel." };
+  }
   const id = txt(formData.get("id"));
   const imovelId = txt(formData.get("imovel_id"));
   if (!id) return;
@@ -630,7 +593,9 @@ export async function salvarOcupante(
 
 export async function excluirOcupante(formData: FormData) {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) {
+    return { error: "Você não tem permissão para excluir ocupantes." };
+  }
   const id = txt(formData.get("id"));
   const imovelId = txt(formData.get("imovel_id"));
   if (!id) return;
@@ -708,7 +673,9 @@ export async function atualizarDocumentoBiblioteca(
 
 export async function excluirDocumentoBiblioteca(formData: FormData) {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !podeEditarCadastros(perfil.papel)) return;
+  if (!perfil?.org_id || !podeEditarCadastros(perfil.papel)) {
+    return { error: "Você não tem permissão para excluir documentos." };
+  }
   const id = txt(formData.get("id"));
   const path = txt(formData.get("path"));
   if (!id) return;
@@ -720,7 +687,9 @@ export async function excluirDocumentoBiblioteca(formData: FormData) {
 
 export async function removerAnexoImovelContrato(formData: FormData) {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) {
+    return { error: "Você não tem permissão para remover anexos do imóvel." };
+  }
   const contratoId = txt(formData.get("contrato_id"));
   const imovelId = txt(formData.get("imovel_id"));
   const campo = String(formData.get("campo") ?? "") as CampoAnexo;

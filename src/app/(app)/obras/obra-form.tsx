@@ -1,11 +1,26 @@
 "use client";
 
-import { useActionState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
-import { salvarObra, type ObraFormState } from "./actions";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import {
+  STATUS_OBRA,
+  STATUS_OBRA_INFO,
+  obraSchema,
+  type ObraDados,
+  type ObraInput,
+  type StatusObra,
+} from "@/lib/obra";
+import { FormError } from "@/components/shared/form-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
+import { salvarObra } from "./actions";
 
 type Obra = {
   id: string;
@@ -14,102 +29,136 @@ type Obra = {
   endereco: string | null;
   responsavel: string | null;
   centro_custo: string | null;
-  status: "ativa" | "pausada" | "encerrada";
+  status: StatusObra;
 };
 
-const selectClasses =
-  "flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
-
 export function ObraForm({ obra }: { obra?: Obra }) {
-  const [state, formAction, isPending] = useActionState<ObraFormState, FormData>(
-    salvarObra,
-    {},
-  );
+  const router = useRouter();
+  const [erroServidor, setErroServidor] = useState<string | null>(null);
+  const [pendente, startTransition] = useTransition();
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    // Três parâmetros de tipo porque o schema TRANSFORMA: os campos opcionais
+    // viram `null` na saída (ver textoOpcional em src/lib/obra.ts). Entrada é o
+    // que o formulário guarda, saída é o que a action recebe — sem os três, o
+    // TypeScript reclama que os Resolver são "dois tipos diferentes com o mesmo
+    // nome".
+  } = useForm<ObraInput, unknown, ObraDados>({
+    resolver: zodResolver(obraSchema),
+    defaultValues: {
+      id: obra?.id,
+      codigo: obra?.codigo ?? "",
+      nome: obra?.nome ?? "",
+      endereco: obra?.endereco ?? "",
+      responsavel: obra?.responsavel ?? "",
+      centro_custo: obra?.centro_custo ?? "",
+      status: obra?.status ?? "ativa",
+    },
+  });
+
+  function onSubmit(values: ObraDados) {
+    setErroServidor(null);
+    startTransition(async () => {
+      const r = await salvarObra(values);
+      if (!r.ok) {
+        setErroServidor(r.erro);
+        return;
+      }
+      toast.success(obra ? "Obra atualizada." : "Obra cadastrada.");
+      router.replace("/obras");
+      router.refresh();
+    });
+  }
 
   return (
-    <form action={formAction} className="space-y-5">
-      {obra ? <input type="hidden" name="id" value={obra.id} /> : null}
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      {/* `id` é campo do schema, não mais um <input hidden>. */}
+      <input type="hidden" {...register("id")} />
 
       <div className="grid gap-5 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="codigo">Código *</Label>
+        <div className="space-y-1.5">
+          {/* Sem o "*": quem diz que o campo falta é o zod, com a mensagem
+              embaixo do próprio campo — é a razão de existir da migração. */}
+          <Label htmlFor="codigo">Código</Label>
           <Input
             id="codigo"
-            name="codigo"
-            required
-            maxLength={50}
-            defaultValue={obra?.codigo ?? ""}
             placeholder="Ex.: OB-001"
+            aria-invalid={!!errors.codigo}
+            disabled={pendente}
+            {...register("codigo")}
           />
+          {errors.codigo ? (
+            <p className="text-xs text-destructive">{errors.codigo.message}</p>
+          ) : null}
         </div>
-        <div className="space-y-2">
+
+        <div className="space-y-1.5">
           <Label htmlFor="status">Status</Label>
-          <select
-            id="status"
-            name="status"
-            defaultValue={obra?.status ?? "ativa"}
-            className={selectClasses}
-          >
-            <option value="ativa">Ativa</option>
-            <option value="pausada">Pausada</option>
-            <option value="encerrada">Encerrada</option>
-          </select>
+          <NativeSelect id="status" disabled={pendente} {...register("status")}>
+            {STATUS_OBRA.map((s) => (
+              <option key={s} value={s}>
+                {STATUS_OBRA_INFO[s].label}
+              </option>
+            ))}
+          </NativeSelect>
         </div>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="nome">Nome *</Label>
+      <div className="space-y-1.5">
+        <Label htmlFor="nome">Nome</Label>
         <Input
           id="nome"
-          name="nome"
-          required
-          maxLength={200}
-          defaultValue={obra?.nome ?? ""}
           placeholder="Ex.: Edifício Aurora"
+          aria-invalid={!!errors.nome}
+          disabled={pendente}
+          {...register("nome")}
         />
+        {errors.nome ? (
+          <p className="text-xs text-destructive">{errors.nome.message}</p>
+        ) : null}
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="endereco">Endereço</Label>
-        <Input
-          id="endereco"
-          name="endereco"
-          maxLength={300}
-          defaultValue={obra?.endereco ?? ""}
-        />
+      <div className="space-y-1.5">
+        <Label htmlFor="endereco">
+          Endereço{" "}
+          <span className="font-normal text-muted-foreground">(opcional)</span>
+        </Label>
+        <Input id="endereco" disabled={pendente} {...register("endereco")} />
       </div>
 
       <div className="grid gap-5 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="responsavel">Responsável</Label>
-          <Input
-            id="responsavel"
-            name="responsavel"
-            maxLength={200}
-            defaultValue={obra?.responsavel ?? ""}
-          />
+        <div className="space-y-1.5">
+          <Label htmlFor="responsavel">
+            Responsável{" "}
+            <span className="font-normal text-muted-foreground">(opcional)</span>
+          </Label>
+          <Input id="responsavel" disabled={pendente} {...register("responsavel")} />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="centro_custo">Centro de custo</Label>
+        <div className="space-y-1.5">
+          <Label htmlFor="centro_custo">
+            Centro de custo{" "}
+            <span className="font-normal text-muted-foreground">(opcional)</span>
+          </Label>
           <Input
             id="centro_custo"
-            name="centro_custo"
-            maxLength={100}
-            defaultValue={obra?.centro_custo ?? ""}
+            disabled={pendente}
+            {...register("centro_custo")}
           />
         </div>
       </div>
 
-      {state.error ? (
-        <p className="text-sm text-destructive">{state.error}</p>
-      ) : null}
+      <FormError>{erroServidor}</FormError>
 
-      <div className="flex gap-2">
-        <Button type="submit" disabled={isPending}>
-          {isPending ? "Salvando…" : "Salvar"}
-        </Button>
+      <div className="flex justify-end gap-2 pt-2">
         <Button type="button" variant="outline" render={<Link href="/obras" />}>
           Cancelar
+        </Button>
+        <Button type="submit" disabled={pendente}>
+          {pendente ? <Loader2 className="size-4 animate-spin" /> : null}
+          {pendente ? "Salvando…" : "Salvar"}
         </Button>
       </div>
     </form>

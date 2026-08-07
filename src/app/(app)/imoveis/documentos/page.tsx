@@ -5,7 +5,7 @@ import {
   CATEGORIAS_BIBLIOTECA,
   CATEGORIA_BIBLIOTECA_INFO,
 } from "@/lib/biblioteca";
-import { PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/components/shared/page-header";
 import {
   Card,
   CardContent,
@@ -15,6 +15,9 @@ import {
 } from "@/components/ui/card";
 import { BibliotecaUploader } from "../biblioteca-uploader";
 import { BibliotecaItem } from "../biblioteca-item";
+import { assinarUrls } from "@/lib/data/storage";
+import { EmptyState } from "@/components/shared/empty-state";
+import { FileText } from "lucide-react";
 
 export const metadata = { title: "Documentos do alojamento — Loca" };
 
@@ -38,18 +41,11 @@ export default async function DocumentosPage() {
     .order("created_at", { ascending: false });
   const docs = (data ?? []) as Doc[];
 
-  const url = new Map<string, string>();
-  await Promise.all(
-    docs.map(async (d) => {
-      const { data } = await supabase.storage.from("imoveis").createSignedUrl(d.path, 3600);
-      if (data?.signedUrl) url.set(d.path, data.signedUrl);
-    }),
-  );
+  const url = await assinarUrls("imoveis", docs.map((d) => d.path));
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <PageHeader
-        eyebrow="Imóveis"
         titulo="Documentos do alojamento"
         descricao="Normativos, formulários e placas padronizadas — para consultar, baixar e imprimir."
       />
@@ -70,11 +66,11 @@ export default async function DocumentosPage() {
       ) : null}
 
       {docs.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="py-16 text-center text-sm text-muted-foreground">
-            Nenhum documento na biblioteca ainda.
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={<FileText />}
+          titulo="Nenhum documento na biblioteca"
+          descricao="Normativos, formulários e placas ficam aqui para consultar, baixar e imprimir."
+        />
       ) : (
         CATEGORIAS_BIBLIOTECA.map((cat) => {
           const doList = docs.filter((d) => d.categoria === cat);

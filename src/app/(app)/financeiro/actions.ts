@@ -1,6 +1,5 @@
 "use server";
 
-import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -9,64 +8,32 @@ import {
   podeGerenciarFinanceiro,
   podeExcluirCritico,
 } from "@/lib/auth";
-import { periodosPorMes, type Cadencia } from "@/lib/locacao";
-import { mesesRecorrentes } from "@/lib/financeiro";
+import { periodosPorMes, type Cadencia, hojeISOSaoPaulo } from "@/lib/locacao";
+import {
+  mesesRecorrentes,
+  lancamentoSchema,
+  baixaSchema,
+} from "@/lib/financeiro";
+import { falha, primeiroErro, type ActionResult } from "@/lib/acoes";
 
-export type LancamentoFormState = { error?: string };
-
-const schema = z.object({
-  obra_id: z.string().uuid("Selecione a obra."),
-  contrato_id: z.string().uuid().optional().or(z.literal("")),
-  descricao: z.string().trim().min(1, "Informe a descrição.").max(200),
-  competencia: z
-    .string()
-    .regex(/^\d{4}-\d{2}(-\d{2})?$/, "Competência inválida (use AAAA-MM)."),
-  valor: z.coerce.number().positive("Valor deve ser maior que zero."),
-  vencimento: z.string().min(1, "Informe o vencimento."),
-  status: z.enum(["pendente", "pago"]),
-});
-
-/** 'yyyy-mm' (input month) ou 'yyyy-mm-dd' → 'yyyy-mm-01'. */
-function competenciaParaData(v: string) {
-  const base = v.length === 7 ? `${v}-01` : v;
-  return `${base.slice(0, 7)}-01`;
-}
-
-export async function salvarLancamento(
-  _prev: LancamentoFormState,
-  formData: FormData,
-): Promise<LancamentoFormState> {
+export async function salvarLancamento(raw: unknown): Promise<ActionResult> {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id) return { error: "Sessão inválida." };
-  if (!podeGerenciarFinanceiro(perfil.papel)) return { error: "Sem permissão." };
-
-  const parsed = schema.safeParse({
-    obra_id: formData.get("obra_id"),
-    contrato_id: formData.get("contrato_id") ?? "",
-    descricao: formData.get("descricao"),
-    competencia: formData.get("competencia"),
-    valor: formData.get("valor"),
-    vencimento: formData.get("vencimento"),
-    status: formData.get("status"),
-  });
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  if (!perfil?.org_id) return falha("Sessão inválida. Entre novamente.");
+  if (!podeGerenciarFinanceiro(perfil.papel)) {
+    return falha("Você não tem permissão para lançar contas a pagar.");
   }
 
-  const id = (formData.get("id") as string | null)?.trim() || null;
+  const parsed = lancamentoSchema.safeParse(raw);
+  if (!parsed.success) return falha(primeiroErro(parsed.error.issues));
+
+  const { id, ...campos } = parsed.data;
   const dados = {
-    obra_id: parsed.data.obra_id,
-    contrato_id: parsed.data.contrato_id ? parsed.data.contrato_id : null,
-    descricao: parsed.data.descricao,
-    competencia: competenciaParaData(parsed.data.competencia),
-    valor: parsed.data.valor,
-    vencimento: parsed.data.vencimento,
-    status: parsed.data.status,
-    // Consistente com alternarPago: sem data informada, usa hoje (pagamento agora).
+    ...campos,
+    // Consistente com alternarPago: marcado como pago sem data informada, usa
+    // hoje (no fuso de Brasília — ver o fix da 0.22.0).
     data_pagamento:
-      parsed.data.status === "pago"
-        ? (formData.get("data_pagamento") as string | null) ||
-          new Date().toISOString().slice(0, 10)
+      campos.status === "pago"
+        ? campos.data_pagamento ?? hojeISOSaoPaulo()
         : null,
   };
 
@@ -76,10 +43,10 @@ export async function salvarLancamento(
     : await supabase
         .from("lancamento_financeiro")
         .insert({ org_id: perfil.org_id, ...dados });
-  if (error) return { error: "Não foi possível salvar. Tente novamente." };
+  if (error) return falha("Não foi possível salvar. Tente novamente.");
 
   revalidatePath("/financeiro");
-  redirect("/financeiro");
+  return { ok: true, id: id ?? undefined };
 }
 
 export async function alternarPago(formData: FormData) {
@@ -90,7 +57,7 @@ export async function alternarPago(formData: FormData) {
   if (!id || !["pendente", "pago"].includes(novo ?? "")) return;
 
   const supabase = await createClient();
-  const hoje = new Date().toISOString().slice(0, 10);
+  const hoje = hojeISOSaoPaulo();
   await supabase
     .from("lancamento_financeiro")
     .update({
@@ -219,49 +186,43 @@ export async function gerarRecorrentes(formData: FormData) {
  * Baixa (conciliação) de um lançamento: valor efetivamente pago, multa/juros,
  * nº da NF e comprovante (já enviado ao Storage pelo client).
  */
-export async function darBaixa(input: {
-  id: string;
-  valorPago: number;
-  multa: number;
-  juros: number;
-  nfNumero: string;
-  dataPagamento: string;
-  comprovantePath: string | null;
-}): Promise<{ error?: string }> {
+export async function darBaixa(raw: unknown): Promise<ActionResult> {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id) return { error: "Sessão inválida." };
-  if (!podeGerenciarFinanceiro(perfil.papel)) return { error: "Sem permissão." };
+  if (!perfil?.org_id) return falha("Sessão inválida. Entre novamente.");
+  if (!podeGerenciarFinanceiro(perfil.papel)) {
+    return falha("Você não tem permissão para dar baixa em lançamentos.");
+  }
 
-  const id = input.id?.trim();
-  if (!id) return { error: "Lançamento inválido." };
-  if (!(input.valorPago > 0)) return { error: "Informe o valor pago." };
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.dataPagamento))
-    return { error: "Data de pagamento inválida." };
+  const parsed = baixaSchema.safeParse(raw);
+  if (!parsed.success) return falha(primeiroErro(parsed.error.issues));
 
-  const supabase = await createClient();
+  const d = parsed.data;
   const patch: Record<string, unknown> = {
     status: "pago",
-    valor_pago: input.valorPago,
-    multa: Math.max(0, input.multa || 0),
-    juros: Math.max(0, input.juros || 0),
-    nf_numero: input.nfNumero?.trim() || null,
-    data_pagamento: input.dataPagamento,
+    valor_pago: d.valorPago,
+    multa: d.multa,
+    juros: d.juros,
+    nf_numero: d.nfNumero,
+    data_pagamento: d.dataPagamento,
   };
-  if (input.comprovantePath) patch.comprovante_path = input.comprovantePath;
+  // Só sobrescreve o comprovante quando houve upload novo — senão uma segunda
+  // baixa sem anexo apagaria o arquivo já enviado.
+  if (d.comprovantePath) patch.comprovante_path = d.comprovantePath;
 
+  const supabase = await createClient();
   const { error } = await supabase
     .from("lancamento_financeiro")
     .update(patch)
-    .eq("id", id);
-  if (error) return { error: "Não foi possível registrar a baixa." };
+    .eq("id", d.id);
+  if (error) return falha("Não foi possível registrar a baixa.");
 
   revalidatePath("/financeiro");
-  return {};
+  return { ok: true, id: d.id };
 }
 
 export async function excluirLancamento(
   formData: FormData,
-): Promise<LancamentoFormState | void> {
+): Promise<{ error?: string } | void> {
   const perfil = await getCurrentPerfil();
   if (!perfil?.org_id || !podeExcluirCritico(perfil.papel)) {
     return { error: "Somente o Master pode excluir lançamentos." };

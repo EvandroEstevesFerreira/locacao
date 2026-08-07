@@ -2,78 +2,55 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeEditarCadastros } from "@/lib/auth";
+import { falha, primeiroErro, type ActionResult } from "@/lib/acoes";
+import { itemSchema } from "@/lib/itens";
 
-export type ItemFormState = { error?: string };
-
-const itemSchema = z.object({
-  tipo: z.enum(["equipamento", "material_retornavel", "consumivel"]),
-  descricao: z.string().trim().min(1, "Informe a descrição do item.").max(200),
-  unidade: z.string().trim().max(10).optional(),
-});
-
-function vazioParaNulo(v: string | undefined) {
-  const t = (v ?? "").trim();
-  return t === "" ? null : t;
-}
-
-export async function salvarItem(
-  _prev: ItemFormState,
-  formData: FormData,
-): Promise<ItemFormState> {
+/**
+ * Salva item do catálogo.
+ *
+ * Devolve o `id` no sucesso porque o cliente precisa dele: ao criar um
+ * EQUIPAMENTO, a navegação é para a tela de edição, onde se cadastram as
+ * unidades. Antes isso era um `redirect()` condicional aqui dentro; agora quem
+ * decide o destino é o formulário, que tem o `id` de volta.
+ */
+export async function salvarItem(raw: unknown): Promise<ActionResult> {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id) return { error: "Sessão inválida. Entre novamente." };
+  if (!perfil?.org_id) return falha("Sessão inválida. Entre novamente.");
   if (!podeEditarCadastros(perfil.papel)) {
-    return { error: "Você não tem permissão para editar itens." };
+    return falha("Você não tem permissão para editar itens.");
   }
 
-  const parsed = itemSchema.safeParse({
-    tipo: formData.get("tipo"),
-    descricao: formData.get("descricao"),
-    unidade: formData.get("unidade") ?? undefined,
-  });
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
-  }
+  const parsed = itemSchema.safeParse(raw);
+  if (!parsed.success) return falha(primeiroErro(parsed.error.issues));
 
-  const id = (formData.get("id") as string | null)?.trim() || null;
-  const ativo =
-    formData.get("ativo") === "on" || formData.get("ativo") === "true";
-  const dados = {
-    tipo: parsed.data.tipo,
-    descricao: parsed.data.descricao,
-    unidade: vazioParaNulo(parsed.data.unidade),
-    ativo,
-  };
+  const { id, ...dados } = parsed.data;
 
   const supabase = await createClient();
-  let itemId = id;
+  let itemId = id ?? null;
   if (id) {
     const { error } = await supabase.from("item_catalogo").update(dados).eq("id", id);
-    if (error) return { error: "Não foi possível salvar. Tente novamente." };
+    if (error) return falha("Não foi possível salvar. Tente novamente.");
   } else {
     const { data, error } = await supabase
       .from("item_catalogo")
       .insert({ org_id: perfil.org_id, ...dados })
       .select("id")
       .single();
-    if (error || !data) return { error: "Não foi possível salvar. Tente novamente." };
+    if (error || !data) return falha("Não foi possível salvar. Tente novamente.");
     itemId = data.id;
   }
 
   revalidatePath("/itens");
-  // Equipamento abre a edição para cadastrar as unidades; senão volta à lista.
-  if (!id && dados.tipo === "equipamento") {
-    redirect(`/itens/${itemId}`);
-  }
-  redirect("/itens");
+  return { ok: true, id: itemId ?? undefined };
 }
 
 export async function excluirItem(formData: FormData) {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !podeEditarCadastros(perfil.papel)) return;
+  if (!perfil?.org_id || !podeEditarCadastros(perfil.papel)) {
+    return { error: "Você não tem permissão para excluir itens do catálogo." };
+  }
   const id = (formData.get("id") as string | null)?.trim();
   if (!id) return;
   const supabase = await createClient();
@@ -84,7 +61,14 @@ export async function excluirItem(formData: FormData) {
 const unidadeSchema = z.object({
   item_id: z.string().uuid(),
   identificador: z.string().trim().min(1, "Informe o identificador.").max(80),
-  observacoes: z.string().trim().max(300).optional(),
+  observacoes: z
+    .string()
+    .trim()
+    .max(300)
+    .optional()
+    // "" precisa virar NULL, senão "sem observação" fica gravado como string
+    // vazia e qualquer `is null` deixa de encontrá-la.
+    .transform((v) => (v && v.length > 0 ? v : null)),
 });
 
 export type UnidadeFormState = { error?: string };
@@ -113,7 +97,7 @@ export async function adicionarUnidade(
     org_id: perfil.org_id,
     item_id: parsed.data.item_id,
     identificador: parsed.data.identificador,
-    observacoes: vazioParaNulo(parsed.data.observacoes),
+    observacoes: parsed.data.observacoes,
   });
   if (error) {
     if (error.code === "23505") {
@@ -128,7 +112,9 @@ export async function adicionarUnidade(
 
 export async function excluirUnidade(formData: FormData) {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !podeEditarCadastros(perfil.papel)) return;
+  if (!perfil?.org_id || !podeEditarCadastros(perfil.papel)) {
+    return { error: "Você não tem permissão para excluir unidades." };
+  }
   const id = (formData.get("id") as string | null)?.trim();
   const itemId = (formData.get("item_id") as string | null)?.trim();
   if (!id) return;

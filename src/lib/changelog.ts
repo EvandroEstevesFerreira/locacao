@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.19.4";
+export const APP_VERSION = "0.23.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,73 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.23.0",
+    data: "2026-08-07",
+    titulo: "Telas de detalhe mais rápidas e correção na cobrança por período",
+    mudancas: [
+      { tipo: "correcao", texto: "Entre 21h e a meia-noite, o custo estimado do contrato cobrava um período inteiro a mais, e a coluna \"Custo até hoje\" dos relatórios saía com um dia extra de locação. A causa era a mesma da versão anterior — o sistema já considerava o dia seguinte —, mas em outro ponto do cálculo. O dia passa a ser sempre o de Brasília também aqui." },
+      { tipo: "correcao", texto: "No último dia do mês, depois das 21h, a projeção do fluxo de caixa começava do mês seguinte e deixava o mês corrente de fora." },
+      { tipo: "correcao", texto: "No dia 31 de dezembro, depois das 21h, um contrato novo era numerado com o ano seguinte." },
+      { tipo: "melhoria", texto: "As telas de imóvel, contrato e vistoria abrem muito mais rápido. Antes elas esperavam TODAS as informações — contratos, contas, reparos, fotos, anexos — antes de mostrar qualquer coisa. Agora o cabeçalho e o resumo aparecem de imediato e cada bloco vai chegando à medida que fica pronto." },
+      { tipo: "correcao", texto: "Na tela do contrato, o histórico de auditoria aparecia logo abaixo do título, antes do resumo do contrato. Voltou para o fim da página." },
+      { tipo: "seguranca", texto: "Nas listas de reparos e ocorrências do imóvel, quem tem acesso somente de leitura via os botões de anexar e de excluir. Eles não funcionavam, mas não deviam estar visíveis — as demais listas da mesma tela já os escondiam." },
+      { tipo: "melhoria", texto: "O formulário de reparo do imóvel passou a validar os campos na hora, e o valor não aceita mais texto inválido: antes qualquer coisa que não fosse número era gravada como R$ 0,00, sem avisar." },
+      { tipo: "correcao", texto: "Os avisos em amarelo (relatório sem assinatura, CNPJ já cadastrado) estavam com o texto claro demais sobre o fundo e ficavam difíceis de ler." },
+      { tipo: "correcao", texto: "Em Financeiro e Imóveis, os indicadores do topo podiam discordar da tabela: as condições dos filtros eram aplicadas em dois lugares separados, e bastava um deles ficar de fora para os totais somarem um recorte diferente do que a lista mostrava." },
+      { tipo: "correcao", texto: "Digitar um endereço que não existe levava a uma página em branco com texto em inglês. Agora aparece uma tela em português com um botão para voltar ao início." },
+    ],
+  },
+  {
+    versao: "0.22.0",
+    data: "2026-08-06",
+    titulo: "Filtros ao vivo e correção no cálculo de datas",
+    mudancas: [
+      { tipo: "correcao", texto: "Entre 21h e a meia-noite o sistema considerava o dia seguinte. Isso fazia contas com vencimento para hoje aparecerem como vencidas, cobrava um dia a mais no cálculo de multa e juros da baixa, e imprimia os contratos, termos e laudos com a data de amanhã. O dia passa a ser sempre o de Brasília." },
+      { tipo: "melhoria", texto: "A busca das listagens aplica sozinha enquanto você digita, com um botão para limpar — antes era preciso apertar Enter. Quem preferir, Enter continua funcionando." },
+      { tipo: "melhoria", texto: "Os filtros ficaram iguais em todas as listas e aplicam na hora, sem botão \"Filtrar\". Um botão \"Limpar\" aparece quando há algum filtro ativo." },
+      { tipo: "correcao", texto: "Filtrar por obra deixava de considerar a busca que você já tinha digitado. Agora os filtros se somam." },
+      { tipo: "correcao", texto: "Mudar um filtro estando na página 3 mantinha o pedido pela página 3 de um resultado que passou a ter uma só, e a lista aparecia vazia. Agora volta para a primeira página." },
+      { tipo: "melhoria", texto: "As telas de imóvel, contrato e vistoria abrem mais rápido: os anexos passaram a ser liberados de uma vez, em vez de um por um." },
+      { tipo: "melhoria", texto: "Todas as telas abrem mais rápido: os dados do seu usuário e a lista de obras eram consultados várias vezes para montar uma única página, e agora são consultados uma vez só." },
+      { tipo: "melhoria", texto: "As telas sem nenhum registro agora explicam para que serve aquele cadastro, em vez de só dizer que está vazio." },
+      { tipo: "melhoria", texto: "Os indicadores de Financeiro e Imóveis ganharam ícone e cor conforme a situação — vencido em vermelho, pago em verde." },
+    ],
+  },
+  {
+    versao: "0.21.0",
+    data: "2026-08-06",
+    titulo: "Nova navegação",
+    mudancas: [
+      { tipo: "novo", texto: "O menu lateral agora fica recolhido, só com os ícones, e se abre quando você passa o mouse — sobra bem mais espaço para as tabelas e os relatórios." },
+      { tipo: "novo", texto: "Busca rápida: aperte Ctrl+K (ou ⌘+K no Mac) em qualquer tela para pular direto para um módulo ou começar um cadastro, navegando pelas setas do teclado." },
+      { tipo: "novo", texto: "Uma trilha no topo mostra onde você está — por exemplo “Início › Contratos › Novo” — e leva de volta com um clique." },
+      { tipo: "novo", texto: "No celular e no tablet o menu virou uma gaveta que abre pelo botão de três linhas, em vez da faixa de ícones que rolava para o lado no pé da tela." },
+      { tipo: "melhoria", texto: "Seu nome, perfil, “Meu perfil” e “Sair” ficam reunidos no menu do avatar, no canto superior direito." },
+      { tipo: "melhoria", texto: "O topo da tela acompanha a rolagem, então a busca e o menu do usuário estão sempre à mão." },
+      { tipo: "melhoria", texto: "As telas de entrar, recuperar senha e definir nova senha ganharam uma apresentação em duas colunas." },
+      { tipo: "melhoria", texto: "Ao abrir uma listagem ou um imóvel, contrato ou vistoria, aparece um esboço da própria tela em vez de um indicador genérico — a página deixa de “saltar” quando os dados chegam." },
+      { tipo: "novo", texto: "Endereço inexistente passa a mostrar uma tela própria, dentro do sistema, com atalho de volta ao Início." },
+      { tipo: "melhoria", texto: "A tela de erro mostra um código do ocorrido, que você pode informar ao pedir suporte." },
+      { tipo: "melhoria", texto: "A tela de “sem conexão” acompanha o tema claro ou escuro do seu aparelho." },
+    ],
+  },
+  {
+    versao: "0.20.0",
+    data: "2026-08-06",
+    titulo: "Nova identidade visual",
+    mudancas: [
+      { tipo: "novo", texto: "O Loca passa a ter a mesma cara do Sistenge People: fundo claro, cartões brancos com sombra leve, cantos arredondados e o vermelho da Sistenge reservado ao logotipo e às marcações de urgência." },
+      { tipo: "novo", texto: "Modo escuro. O botão de sol/lua no topo da tela alterna entre claro e escuro, e por padrão o sistema segue a preferência do seu computador ou celular." },
+      { tipo: "melhoria", texto: "Textos e números em tipografia nova (Inter), com os valores em dinheiro alinhados em coluna para facilitar a comparação entre linhas." },
+      { tipo: "melhoria", texto: "Campos, botões e listas de seleção ficaram maiores e do mesmo tamanho em todas as telas — antes uma lista de seleção podia aparecer menor que o campo ao lado." },
+      { tipo: "melhoria", texto: "Tabelas com mais respiro entre as linhas, ficando mais fáceis de ler em telas grandes." },
+      { tipo: "melhoria", texto: "Excluir um registro abre uma janela de confirmação dentro do sistema, e o motivo aparece ali mesmo quando a exclusão é recusada — antes era o aviso cinza do navegador e o motivo surgia num canto da tela." },
+      { tipo: "melhoria", texto: "A tela de erro passa a mostrar um código do ocorrido, que você pode informar ao pedir suporte." },
+      { tipo: "melhoria", texto: "Contratos, termos e e-mails do sistema seguem a mesma paleta das telas." },
+      { tipo: "seguranca", texto: "O sistema passa a enviar cabeçalhos de segurança que impedem que suas telas sejam embutidas em outros sites e restringem de onde o navegador pode carregar conteúdo." },
+    ],
+  },
   {
     versao: "0.19.4",
     data: "2026-07-29",

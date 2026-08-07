@@ -1,58 +1,22 @@
 "use server";
 
-import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeEditarCadastros } from "@/lib/auth";
+import { falha, primeiroErro, type ActionResult } from "@/lib/acoes";
+import { obraSchema } from "@/lib/obra";
 
-export type ObraFormState = { error?: string };
-
-const obraSchema = z.object({
-  codigo: z.string().trim().min(1, "Informe o código da obra.").max(50),
-  nome: z.string().trim().min(1, "Informe o nome da obra.").max(200),
-  endereco: z.string().trim().max(300).optional(),
-  responsavel: z.string().trim().max(200).optional(),
-  centro_custo: z.string().trim().max(100).optional(),
-  status: z.enum(["ativa", "pausada", "encerrada"]),
-});
-
-function vazioParaNulo(v: string | undefined) {
-  const t = (v ?? "").trim();
-  return t === "" ? null : t;
-}
-
-export async function salvarObra(
-  _prev: ObraFormState,
-  formData: FormData,
-): Promise<ObraFormState> {
+export async function salvarObra(raw: unknown): Promise<ActionResult> {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id) return { error: "Sessão inválida. Entre novamente." };
+  if (!perfil?.org_id) return falha("Sessão inválida. Entre novamente.");
   if (!podeEditarCadastros(perfil.papel)) {
-    return { error: "Você não tem permissão para editar obras." };
+    return falha("Você não tem permissão para editar obras.");
   }
 
-  const parsed = obraSchema.safeParse({
-    codigo: formData.get("codigo"),
-    nome: formData.get("nome"),
-    endereco: formData.get("endereco") ?? undefined,
-    responsavel: formData.get("responsavel") ?? undefined,
-    centro_custo: formData.get("centro_custo") ?? undefined,
-    status: formData.get("status"),
-  });
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
-  }
+  const parsed = obraSchema.safeParse(raw);
+  if (!parsed.success) return falha(primeiroErro(parsed.error.issues));
 
-  const id = (formData.get("id") as string | null)?.trim() || null;
-  const dados = {
-    codigo: parsed.data.codigo,
-    nome: parsed.data.nome,
-    endereco: vazioParaNulo(parsed.data.endereco),
-    responsavel: vazioParaNulo(parsed.data.responsavel),
-    centro_custo: vazioParaNulo(parsed.data.centro_custo),
-    status: parsed.data.status,
-  };
+  const { id, ...dados } = parsed.data;
 
   const supabase = await createClient();
   const { error } = id
@@ -60,17 +24,25 @@ export async function salvarObra(
     : await supabase.from("obra").insert({ org_id: perfil.org_id, ...dados });
 
   if (error) {
-    if (error.code === "23505") {
-      return { error: "Já existe uma obra com esse código." };
-    }
-    return { error: "Não foi possível salvar. Tente novamente." };
+    if (error.code === "23505") return falha("Já existe uma obra com esse código.");
+    return falha("Não foi possível salvar. Tente novamente.");
   }
 
+  // Fica como está: `revalidatePath` invalida o cache do servidor para a rota
+  // inteira. O `router.refresh()` do cliente só re-busca a rota atual, então
+  // sem isto a listagem ficaria com dado velho.
   revalidatePath("/obras");
-  redirect("/obras");
+  return { ok: true, id: id ?? undefined };
 }
 
-export async function excluirObra(formData: FormData): Promise<ObraFormState | void> {
+/**
+ * Exclusão continua recebendo FormData: é chamada pelo ConfirmDelete, que monta
+ * um FormData, e não por um formulário RHF. Manter a assinatura evita mexer nos
+ * 18 call sites do ConfirmDelete.
+ */
+export async function excluirObra(
+  formData: FormData,
+): Promise<{ error?: string } | void> {
   const perfil = await getCurrentPerfil();
   if (!perfil?.org_id || !podeEditarCadastros(perfil.papel)) {
     return { error: "Você não tem permissão para excluir obras." };
@@ -81,6 +53,7 @@ export async function excluirObra(formData: FormData): Promise<ObraFormState | v
   const supabase = await createClient();
   // Soft-delete pela função `soft_delete` (migration 0041): a policy de SELECT
   // esconde linhas com deleted_at, o que faz o RLS recusar um UPDATE direto.
+  // `soft_delete` devolve true/false — `data !== true` também é falha.
   const { data, error } = await supabase.rpc("soft_delete", {
     p_entidade: "obra",
     p_id: id,

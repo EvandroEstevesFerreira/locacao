@@ -1,86 +1,48 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import {
-  Pencil,
-  Camera,
-  ChevronRight,
-  AlertTriangle,
-  Paperclip,
-  Download,
-  FileText,
-} from "lucide-react";
+import { FileText, Pencil } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeOperar, podeExcluirCritico } from "@/lib/auth";
 import {
   CADENCIA,
   STATUS_CONTRATO,
-  custoLinhaLocado,
-  dataDeISO,
-  formatarBRL,
   formatarData,
-  periodosEntre,
   type Cadencia,
   type StatusContrato,
 } from "@/lib/locacao";
-import { PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/components/shared/page-header";
+import { Campo } from "@/components/shared/campo";
+import { SecaoSkeleton } from "@/components/shared/skeletons";
 import { AtividadeTimeline } from "@/components/atividade-timeline";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmDelete } from "@/components/confirm-delete";
-import { AddItemLocadoForm } from "../add-item-locado-form";
-import { DevolucaoForm } from "../devolucao-form";
-import { AnexoUploader } from "../anexo-uploader";
-import { ContratoDocsUploader } from "../contrato-docs-uploader";
+import { excluirContrato } from "../actions";
 import {
-  excluirContrato,
-  excluirItemLocado,
-  criarRelatorioRetirada,
-  removerAnexoContrato,
-  removerContratoDoc,
-} from "../actions";
+  ContratoCusto,
+  ContratoCustoSkeleton,
+} from "./_components/contrato-custo";
+import { ContratoItens } from "./_components/contrato-itens";
+import { ContratoRetirada, type VistoriaDeRetirada } from "./_components/contrato-retirada";
+import { ContratoDocumentos } from "./_components/contrato-documentos";
+import { ContratoDevolucoes } from "./_components/contrato-devolucoes";
 
 export const metadata = { title: "Contrato — Loca" };
 
-type Mov = {
-  id: string;
-  quantidade: number;
-  tipo: string;
-  data: string;
-  vistoria_id: string | null;
-  vistoria: { vistoria_foto: { count: number }[] } | null;
-};
-type Linha = {
-  id: string;
-  quantidade: number;
-  valor_unitario_periodo: number;
-  data_retirada: string;
-  data_devolucao_prevista: string | null;
-  data_devolucao: string | null;
-  status: "em_aberto" | "devolvido";
-  identificacao: string | null;
-  item: { descricao: string; unidade: string | null } | null;
-  movimentacao: Mov[];
-};
-
-function contaFotos(v: { vistoria_foto: { count: number }[] } | null): number {
-  return v?.vistoria_foto?.[0]?.count ?? 0;
-}
-
+/**
+ * Detalhe do contrato.
+ *
+ * A página `await`ta só a linha de contrato — identidade, obra, fornecedor,
+ * cadência e status. Cada seção busca o que precisa dentro do próprio
+ * `<Suspense>`, incluindo a célula de custo acumulado do resumo.
+ *
+ * As seções aparecem aqui na ordem em que devem ser lidas. Antes a ordem visual
+ * era dada por classes `order-1..order-6` sobre uma ordem de DOM diferente, e
+ * `AtividadeTimeline` — sem classe de ordem, portanto `order: 0` — acabava
+ * renderizada acima do resumo do contrato.
+ */
 export default async function ContratoDetalhePage({
   params,
 }: {
@@ -90,7 +52,6 @@ export default async function ContratoDetalhePage({
   // Operar (operador incluso) cobre editar contrato, itens e movimentação;
   // excluir o contrato inteiro é exclusivo do master.
   const podeEditar = podeOperar(perfil?.papel);
-  const podeMovimentar = podeEditar;
   const podeExcluir = podeExcluirCritico(perfil?.papel);
 
   const { id } = await params;
@@ -105,134 +66,61 @@ export default async function ContratoDetalhePage({
     .single();
 
   if (!contrato) notFound();
+
   const cadencia = contrato.cadencia as Cadencia;
+  const prorata = !!contrato.cobranca_prorata;
   const statusC = STATUS_CONTRATO[contrato.status as StatusContrato];
   const obra = contrato.obra as unknown as { codigo: string; nome: string } | null;
   const fornecedor = contrato.fornecedor as unknown as { nome: string } | null;
-  const retirada = contrato.vistoria_retirada as unknown as {
-    id: string;
-    vistoria_foto: { count: number }[];
-  } | null;
-
-  const anexoPath = (contrato.anexo_path as string | null) ?? null;
-  const anexoUrl = anexoPath
-    ? (await supabase.storage.from("contratos").createSignedUrl(anexoPath, 600))
-        .data?.signedUrl ?? null
-    : null;
-
-  // Documentos adicionais (aditivos / renovações).
-  const { data: docsRaw } = await supabase
-    .from("contrato_anexo")
-    .select("id, tipo, descricao, path, data")
-    .eq("contrato_id", id)
-    .order("data", { ascending: false, nullsFirst: false })
-    .order("created_at", { ascending: false });
-  type Doc = { id: string; tipo: string; descricao: string | null; path: string; data: string | null };
-  const docs = (docsRaw ?? []) as Doc[];
-  const docUrl = new Map<string, string>();
-  await Promise.all(
-    docs.map(async (d) => {
-      const { data } = await supabase.storage.from("contratos").createSignedUrl(d.path, 600);
-      if (data?.signedUrl) docUrl.set(d.path, data.signedUrl);
-    }),
-  );
-  const DOC_LABEL: Record<string, string> = {
-    aditivo: "Aditivo",
-    renovacao: "Renovação",
-    outro: "Documento",
-  };
-
-  const { data: linhasRaw } = await supabase
-    .from("item_locado")
-    .select(
-      "id, quantidade, valor_unitario_periodo, data_retirada, data_devolucao_prevista, data_devolucao, status, identificacao, item:item_id(descricao,unidade), movimentacao(id, quantidade, tipo, data, vistoria_id, vistoria:vistoria_id(vistoria_foto(count)))",
-    )
-    .eq("contrato_id", id)
-    .order("created_at");
-
-  const linhas = (linhasRaw ?? []) as unknown as Linha[];
-  const hoje = new Date();
-  const prorata = !!contrato.cobranca_prorata;
-
-  const linhasCalc = linhas.map((l) => {
-    const retirada = dataDeISO(l.data_retirada);
-    const fim = l.data_devolucao ? dataDeISO(l.data_devolucao) : hoje;
-    const devolucoes = (l.movimentacao ?? [])
-      .filter((m) => m.tipo === "devolucao")
-      .map((m) => ({ quantidade: Number(m.quantidade), data: dataDeISO(m.data) }));
-    // Custo respeita devoluções parciais: cada unidade é cobrada até voltar.
-    const { saldo, custo } = custoLinhaLocado({
-      quantidade: Number(l.quantidade),
-      valorUnitarioPeriodo: Number(l.valor_unitario_periodo),
-      cadencia,
-      retirada,
-      devolucoes,
-      fim,
-      prorata,
-    });
-    const periodos = periodosEntre(cadencia, retirada, fim, prorata);
-    return { ...l, saldo, periodos, custo };
-  });
-
-  const custoTotal = linhasCalc.reduce((s, l) => s + l.custo, 0);
-
-  // Histórico de devoluções (achatado, mais recente primeiro).
-  const devolucoes = linhasCalc
-    .flatMap((l) =>
-      (l.movimentacao ?? [])
-        .filter((m) => m.tipo === "devolucao")
-        .map((m) => ({
-          id: m.id,
-          item: l.item?.descricao ?? "—",
-          quantidade: Number(m.quantidade),
-          data: m.data,
-          vistoria_id: m.vistoria_id,
-          fotos: contaFotos(m.vistoria),
-        })),
-    )
-    .sort((a, b) => (a.data < b.data ? 1 : -1));
-
-  const { data: itens } = await supabase
-    .from("item_catalogo")
-    .select("id, descricao, unidade")
-    .eq("ativo", true)
-    .order("descricao");
+  const retirada = contrato.vistoria_retirada as unknown as VistoriaDeRetirada | null;
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6">
       <PageHeader
-        eyebrow="Contrato de locação"
         titulo={`Contrato ${contrato.numero}`}
-      >
-        <Button variant="outline" render={<a href={`/api/contratos/${contrato.id}/pdf`} target="_blank" rel="noopener noreferrer" />}>
-          <FileText className="size-4" />
-          Gerar contrato (PDF)
-        </Button>
-        {podeEditar ? (
+        descricao={obra ? `${obra.codigo} — ${obra.nome}` : undefined}
+        acoes={
           <>
             <Button
               variant="outline"
-              render={<Link href={`/contratos/${contrato.id}/editar`} />}
+              render={
+                <a
+                  href={`/api/contratos/${contrato.id}/pdf`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                />
+              }
             >
-              <Pencil className="size-4" />
-              Editar
+              <FileText className="size-4" />
+              Gerar contrato (PDF)
             </Button>
-            {podeExcluir ? (
-              <ConfirmDelete
-                action={excluirContrato}
-                id={contrato.id}
-                rotulo="Excluir"
-                mensagem="Excluir este contrato? Ele deixa de aparecer nas listas e relatórios."
-              />
+            {podeEditar ? (
+              <>
+                <Button
+                  variant="outline"
+                  render={<Link href={`/contratos/${contrato.id}/editar`} />}
+                >
+                  <Pencil className="size-4" />
+                  Editar
+                </Button>
+                {podeExcluir ? (
+                  <ConfirmDelete
+                    action={excluirContrato}
+                    id={contrato.id}
+                    rotulo="Excluir"
+                    mensagem="Excluir este contrato? Ele deixa de aparecer nas listas e relatórios."
+                  />
+                ) : null}
+              </>
             ) : null}
           </>
-        ) : null}
-      </PageHeader>
+        }
+      />
 
-      <Card className="order-1">
+      <Card>
         <CardContent className="grid gap-4 pt-6 sm:grid-cols-2 lg:grid-cols-4">
-          <Info label="Obra" valor={obra ? `${obra.codigo} — ${obra.nome}` : "—"} />
-          <Info label="Fornecedor" valor={fornecedor?.nome ?? "—"} />
+          <Campo label="Obra" valor={obra ? `${obra.codigo} — ${obra.nome}` : "—"} />
+          <Campo label="Fornecedor" valor={fornecedor?.nome ?? "—"} />
           <div>
             <p className="text-xs text-muted-foreground">Cadência</p>
             <p className="flex items-center gap-2 font-medium">
@@ -248,378 +136,54 @@ export default async function ContratoDetalhePage({
             <p className="text-xs text-muted-foreground">Status</p>
             <Badge variant={statusC.variant}>{statusC.label}</Badge>
           </div>
-          <Info label="Início" valor={formatarData(contrato.data_inicio)} />
-          <Info
+          <Campo label="Início" valor={formatarData(contrato.data_inicio)} />
+          <Campo
             label="Fim previsto"
             valor={formatarData(contrato.data_fim_prevista)}
           />
-          <Info
-            label="Custo estimado acumulado"
-            valor={formatarBRL(custoTotal)}
-            destaque
-          />
-        </CardContent>
-      </Card>
-
-      {/* Contrato de locação (original + aditivos) */}
-      <Card className="order-5">
-        <CardHeader className="flex-row items-center justify-between space-y-0">
-          <div>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Paperclip className="size-4" /> Contrato de locação (original)
-            </CardTitle>
-            <CardDescription>
-              Arquivo do contrato assinado com o fornecedor (PDF ou imagem).
-            </CardDescription>
-          </div>
-          <div className="flex items-center gap-2">
-            {anexoUrl ? (
-              <>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  render={
-                    <a href={anexoUrl} target="_blank" rel="noopener noreferrer" />
-                  }
-                >
-                  <Download className="size-4" /> Abrir
-                </Button>
-                {podeEditar ? (
-                  <form action={removerAnexoContrato}>
-                    <input type="hidden" name="contrato_id" value={contrato.id} />
-                    <input type="hidden" name="path" value={anexoPath ?? ""} />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      type="submit"
-                      className="text-destructive"
-                    >
-                      Remover
-                    </Button>
-                  </form>
-                ) : null}
-              </>
-            ) : (
-              <span className="text-sm text-muted-foreground">Nenhum arquivo</span>
-            )}
-            {podeEditar ? (
-              <AnexoUploader
-                contratoId={contrato.id}
-                orgId={perfil?.org_id ?? ""}
-                tem={!!anexoUrl}
-              />
-            ) : null}
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-3 border-t pt-4">
-          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            Aditivos e renovações
-          </p>
-          {docs.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Nenhum aditivo ou renovação anexado.
-            </p>
-          ) : (
-            <ul className="space-y-2">
-              {docs.map((d) => (
-                <li
-                  key={d.id}
-                  className="flex flex-wrap items-center justify-between gap-2 border-b pb-2 last:border-0"
-                >
-                  <div className="min-w-0">
-                    <span className="font-medium">{DOC_LABEL[d.tipo] ?? d.tipo}</span>
-                    {d.descricao ? (
-                      <span className="text-muted-foreground"> — {d.descricao}</span>
-                    ) : null}
-                    {d.data ? (
-                      <span className="block text-xs text-muted-foreground">
-                        {formatarData(d.data)}
-                      </span>
-                    ) : null}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {docUrl.get(d.path) ? (
-                      <a
-                        href={docUrl.get(d.path)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
-                      >
-                        <Download className="size-4" /> Abrir
-                      </a>
-                    ) : null}
-                    {podeEditar ? (
-                      <form action={removerContratoDoc}>
-                        <input type="hidden" name="id" value={d.id} />
-                        <input type="hidden" name="contrato_id" value={contrato.id} />
-                        <input type="hidden" name="path" value={d.path} />
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          type="submit"
-                          className="text-muted-foreground hover:text-destructive"
-                        >
-                          Remover
-                        </Button>
-                      </form>
-                    ) : null}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-          {podeEditar ? (
-            <ContratoDocsUploader
+          <Suspense fallback={<ContratoCustoSkeleton />}>
+            <ContratoCusto
               contratoId={contrato.id}
-              orgId={perfil?.org_id ?? ""}
+              cadencia={cadencia}
+              prorata={prorata}
             />
-          ) : null}
+          </Suspense>
         </CardContent>
       </Card>
 
-      {/* Relatório fotográfico de retirada */}
-      <Card className="order-4">
-        <CardHeader className="flex-row items-center justify-between space-y-0">
-          <div>
-            <CardTitle className="text-base">
-              Relatório fotográfico de retirada
-            </CardTitle>
-            <CardDescription>
-              Documente com fotos todos os itens no início do contrato.
-            </CardDescription>
-          </div>
-          {retirada ? (
-            <div className="flex items-center gap-2">
-              {contaFotos(retirada) === 0 ? (
-                <Badge variant="destructive">
-                  <AlertTriangle className="size-3" /> Pendente de fotos
-                </Badge>
-              ) : (
-                <Badge variant="secondary">{contaFotos(retirada)} foto(s)</Badge>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                render={<Link href={`/vistorias/${retirada.id}`} />}
-              >
-                Abrir relatório
-                <ChevronRight className="size-4" />
-              </Button>
-            </div>
-          ) : podeMovimentar ? (
-            <form action={criarRelatorioRetirada}>
-              <input type="hidden" name="contrato_id" value={contrato.id} />
-              <Button type="submit" variant="outline" size="sm">
-                <Camera className="size-4" />
-                Criar relatório de retirada
-              </Button>
-            </form>
-          ) : (
-            <span className="text-sm text-muted-foreground">Não criado</span>
-          )}
-        </CardHeader>
-      </Card>
+      <Suspense fallback={<SecaoSkeleton linhas={5} />}>
+        <ContratoItens
+          contratoId={contrato.id}
+          cadencia={cadencia}
+          prorata={prorata}
+          podeEditar={podeEditar}
+        />
+      </Suspense>
 
-      {/* Adicionar item (antes da lista) */}
-      {podeEditar ? (
-        <Card className="order-2">
-          <CardHeader>
-            <CardTitle className="text-base">Adicionar item</CardTitle>
-            <CardDescription>
-              Inclua um item locado neste contrato.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <AddItemLocadoForm
-              key={linhasCalc.length}
-              contratoId={contrato.id}
-              itens={itens ?? []}
-            />
-          </CardContent>
-        </Card>
-      ) : null}
+      <ContratoRetirada
+        contratoId={contrato.id}
+        retirada={retirada}
+        podeMovimentar={podeEditar}
+      />
 
-      {/* Itens locados */}
-      <Card className="order-3">
-        <CardHeader>
-          <CardTitle className="text-base">Itens locados</CardTitle>
-          <CardDescription>
-            Custo estimado = quantidade × valor por período × períodos decorridos
-            (cadência {CADENCIA[cadencia].label.toLowerCase()}). A devolução pode
-            ser parcial, até zerar o saldo.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {linhasCalc.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Item</TableHead>
-                  <TableHead className="text-right">Qtd.</TableHead>
-                  <TableHead className="text-right">Valor/período</TableHead>
-                  <TableHead>Retirada</TableHead>
-                  <TableHead>Devol. prevista</TableHead>
-                  <TableHead className="text-right">Saldo</TableHead>
-                  <TableHead className="text-right">Custo est.</TableHead>
-                  <TableHead>Status</TableHead>
-                  {podeMovimentar ? <TableHead>Devolver</TableHead> : null}
-                  {podeEditar ? <TableHead /> : null}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {linhasCalc.map((l) => (
-                  <TableRow key={l.id}>
-                    <TableCell className="font-medium">
-                      {l.item?.descricao ?? "—"}
-                      {l.item?.unidade ? (
-                        <span className="text-muted-foreground">
-                          {" "}
-                          ({l.item.unidade})
-                        </span>
-                      ) : null}
-                      {l.identificacao ? (
-                        <span className="block text-xs font-normal text-muted-foreground">
-                          nº {l.identificacao}
-                        </span>
-                      ) : null}
-                    </TableCell>
-                    <TableCell className="text-right">{l.quantidade}</TableCell>
-                    <TableCell className="text-right">
-                      {formatarBRL(Number(l.valor_unitario_periodo))}
-                    </TableCell>
-                    <TableCell>{formatarData(l.data_retirada)}</TableCell>
-                    <TableCell>
-                      {formatarData(l.data_devolucao_prevista)}
-                    </TableCell>
-                    <TableCell className="text-right">{l.saldo}</TableCell>
-                    <TableCell className="text-right font-medium">
-                      {formatarBRL(l.custo)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={l.status === "devolvido" ? "secondary" : "default"}>
-                        {l.status === "devolvido" ? "Devolvido" : "Em aberto"}
-                      </Badge>
-                    </TableCell>
-                    {podeMovimentar ? (
-                      <TableCell>
-                        {l.status === "em_aberto" && l.saldo > 0 ? (
-                          <DevolucaoForm
-                            key={l.saldo}
-                            itemLocadoId={l.id}
-                            contratoId={contrato.id}
-                            saldo={l.saldo}
-                          />
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                    ) : null}
-                    {podeEditar ? (
-                      <TableCell>
-                        <ConfirmDeleteItem itemId={l.id} contratoId={contrato.id} />
-                      </TableCell>
-                    ) : null}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Nenhum item locado neste contrato.
-            </p>
-          )}
-        </CardContent>
-      </Card>
+      <Suspense fallback={<SecaoSkeleton linhas={3} />}>
+        <ContratoDocumentos
+          contratoId={contrato.id}
+          anexoPath={(contrato.anexo_path as string | null) ?? null}
+          orgId={perfil?.org_id ?? ""}
+          podeEditar={podeEditar}
+        />
+      </Suspense>
 
-      {/* Histórico de devoluções */}
-      {devolucoes.length > 0 ? (
-        <Card className="order-6">
-          <CardHeader>
-            <CardTitle className="text-base">Histórico de devoluções</CardTitle>
-            <CardDescription>
-              Cada devolução gera um relatório fotográfico.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Item</TableHead>
-                  <TableHead className="text-right">Qtd. devolvida</TableHead>
-                  <TableHead>Relatório fotográfico</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {devolucoes.map((d) => (
-                  <TableRow key={d.id}>
-                    <TableCell>{formatarData(d.data)}</TableCell>
-                    <TableCell className="font-medium">{d.item}</TableCell>
-                    <TableCell className="text-right">{d.quantidade}</TableCell>
-                    <TableCell>
-                      {d.vistoria_id ? (
-                        <div className="flex items-center gap-2">
-                          {d.fotos === 0 ? (
-                            <Badge variant="destructive">
-                              <AlertTriangle className="size-3" /> Pendente de fotos
-                            </Badge>
-                          ) : (
-                            <Badge variant="secondary">{d.fotos} foto(s)</Badge>
-                          )}
-                          <Link
-                            href={`/vistorias/${d.vistoria_id}`}
-                            className="text-sm text-primary hover:underline"
-                          >
-                            Abrir
-                          </Link>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      ) : null}
+      <Suspense fallback={null}>
+        <ContratoDevolucoes
+          contratoId={contrato.id}
+          cadencia={cadencia}
+          prorata={prorata}
+        />
+      </Suspense>
 
       <AtividadeTimeline entidade="contrato_locacao" registroId={contrato.id} />
     </div>
-  );
-}
-
-function Info({
-  label,
-  valor,
-  destaque,
-}: {
-  label: string;
-  valor: string;
-  destaque?: boolean;
-}) {
-  return (
-    <div>
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className={destaque ? "text-lg font-semibold" : "font-medium"}>{valor}</p>
-    </div>
-  );
-}
-
-function ConfirmDeleteItem({
-  itemId,
-  contratoId,
-}: {
-  itemId: string;
-  contratoId: string;
-}) {
-  return (
-    <ConfirmDelete
-      action={excluirItemLocado}
-      id={itemId}
-      hidden={{ contrato_id: contratoId }}
-      mensagem="Remover este item do contrato?"
-    />
   );
 }

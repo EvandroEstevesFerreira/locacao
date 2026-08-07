@@ -1,29 +1,36 @@
+// Primitivo de card, no modelo do Sistenge People (shadcn clássico).
+//
+// A versão anterior era construída para a identidade "blueprint": `bg-transparent`,
+// marcas de registro (+) nos quatro cantos e um sistema de spacing próprio via
+// `--card-spacing`. Tudo isso existia para funcionar com `--radius: 0`.
+//
+// A troca não é só estética: os call sites do Loca já estavam escritos contra o
+// Card clássico. Havia 21 `<CardContent className="pt-6">` (só faz sentido se
+// CardContent for `p-6 pt-0`) e 5 `<CardHeader className="flex-row space-y-0">`
+// (só faz sentido se CardHeader for `flex flex-col space-y-1.5`) — inertes no
+// modelo antigo. Migrar conserta 26 chamadas que eram no-ops.
+//
+// Saíram também `CardAction` e a prop `size`, sem nenhum call site.
+//
+// Efeito colateral bem-vindo: como o Card deixa de ter padding vertical
+// próprio, os 12 `<CardContent className="p-0">` que embrulham tabelas ficam
+// flush com a borda — que é exatamente o `<div className="rounded-md border">`
+// que o People usa em volta das tabelas. O Loca ganha isso sem o wrapper.
+
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
-function Card({
-  className,
-  size = "default",
-  children,
-  ...props
-}: React.ComponentProps<"div"> & { size?: "default" | "sm" }) {
+function Card({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card"
-      data-size={size}
       className={cn(
-        "blueprint group/card flex flex-col gap-(--card-spacing) border border-border bg-transparent py-(--card-spacing) text-sm text-card-foreground [--card-spacing:--spacing(4)] has-data-[slot=card-footer]:pb-0 data-[size=sm]:[--card-spacing:--spacing(3)] data-[size=sm]:has-data-[slot=card-footer]:pb-0",
+        "rounded-lg border bg-card text-card-foreground shadow-sm",
         className
       )}
       {...props}
-    >
-      <i className="corner tl" aria-hidden />
-      <i className="corner tr" aria-hidden />
-      <i className="corner bl" aria-hidden />
-      <i className="corner br" aria-hidden />
-      {children}
-    </div>
+    />
   )
 }
 
@@ -31,10 +38,7 @@ function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-header"
-      className={cn(
-        "group/card-header @container/card-header grid auto-rows-min items-start gap-1 rounded-t-xl px-(--card-spacing) has-data-[slot=card-action]:grid-cols-[1fr_auto] has-data-[slot=card-description]:grid-rows-[auto_auto] [.border-b]:pb-(--card-spacing)",
-        className
-      )}
+      className={cn("flex flex-col space-y-1.5 p-6", className)}
       {...props}
     />
   )
@@ -45,7 +49,7 @@ function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card-title"
       className={cn(
-        "font-heading text-base leading-snug font-medium group-data-[size=sm]/card:text-sm",
+        "text-2xl font-semibold leading-none tracking-tight",
         className
       )}
       {...props}
@@ -63,24 +67,11 @@ function CardDescription({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
-function CardAction({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="card-action"
-      className={cn(
-        "col-start-2 row-span-2 row-start-1 self-start justify-self-end",
-        className
-      )}
-      {...props}
-    />
-  )
-}
-
 function CardContent({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-content"
-      className={cn("px-(--card-spacing)", className)}
+      className={cn("p-6 pt-0", className)}
       {...props}
     />
   )
@@ -90,10 +81,7 @@ function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-footer"
-      className={cn(
-        "flex items-center rounded-b-xl border-t bg-muted/50 p-(--card-spacing)",
-        className
-      )}
+      className={cn("flex items-center p-6 pt-0", className)}
       {...props}
     />
   )
@@ -104,7 +92,6 @@ export {
   CardHeader,
   CardFooter,
   CardTitle,
-  CardAction,
   CardDescription,
   CardContent,
 }

@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { Package, Plus, Pencil } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeEditarCadastros } from "@/lib/auth";
-import { TIPO_ITEM, type TipoItem } from "@/lib/itens";
-import { PageHeader } from "@/components/page-header";
+import { TIPO_ITEM } from "@/lib/itens";
+import { listarItens } from "@/lib/data/itens";
+import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,22 +16,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ConfirmDelete } from "@/components/confirm-delete";
-import { ListSearch } from "@/components/list-search";
+import { ListSearch } from "@/components/shared/list-search";
 import { Pagination } from "@/components/pagination";
 import { SortHeader } from "@/components/sort-header";
-import { PAGE_SIZE, parseListParams, termoOr } from "@/lib/lista";
+import { PAGE_SIZE, contagem, parseListParams } from "@/lib/lista";
 import { excluirItem } from "./actions";
+import { EmptyState } from "@/components/shared/empty-state";
 
 export const metadata = { title: "Itens — Loca" };
-
-type Row = {
-  id: string;
-  tipo: TipoItem;
-  descricao: string;
-  unidade: string | null;
-  ativo: boolean;
-  equipamento_unidade: { count: number }[];
-};
 
 export default async function ItensPage({
   searchParams,
@@ -46,33 +38,24 @@ export default async function ItensPage({
     defaultSort: "descricao",
   });
 
-  const supabase = await createClient();
-  let query = supabase
-    .from("item_catalogo")
-    .select("id, tipo, descricao, unidade, ativo, equipamento_unidade(count)", { count: "exact" });
-  if (q) query = query.or(termoOr(["descricao", "unidade"], q));
-  query = query.order(sort, { ascending }).range(from, to);
-  const { data, count } = await query;
-
-  const itens = (data ?? []) as Row[];
-  const total = count ?? 0;
+  const { itens, total } = await listarItens({ q, sort, ascending, from, to });
   const tem = itens.length > 0;
   const buscando = q.length > 0;
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <PageHeader
-        eyebrow="Catálogo"
         titulo="Itens"
-        descricao="Catálogo de equipamentos e materiais que a organização aluga."
-      >
-        {podeEditar ? (
-          <Button render={<Link href="/itens/novo" />}>
-            <Plus className="size-4" />
-            Novo item
-          </Button>
-        ) : null}
-      </PageHeader>
+        descricao={`Catálogo de equipamentos e materiais que a organização aluga. · ${contagem(total, "item", "itens")} no filtro`}
+        acoes={
+          podeEditar ? (
+            <Button render={<Link href="/itens/novo" />}>
+              <Plus className="size-4" />
+              Novo item
+            </Button>
+          ) : null
+        }
+      />
 
       {tem || buscando ? (
         <>
@@ -99,7 +82,7 @@ export default async function ItensPage({
                 ) : null}
                 {itens.map((item) => {
                   const t = TIPO_ITEM[item.tipo];
-                  const qtdUnidades = item.equipamento_unidade?.[0]?.count ?? 0;
+                  const qtdUnidades = item.unidades;
                   return (
                     <TableRow key={item.id}>
                       <TableCell className="font-medium">
@@ -146,20 +129,12 @@ export default async function ItensPage({
           <Pagination page={page} pageSize={PAGE_SIZE} total={total} />
         </>
       ) : (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-            <div className="flex size-12 items-center justify-center rounded-full bg-muted">
-              <Package className="size-6 text-muted-foreground" />
-            </div>
-            <p className="font-medium">Nenhum item cadastrado ainda</p>
-            {podeEditar ? (
-              <Button render={<Link href="/itens/novo" />}>
-                <Plus className="size-4" />
-                Cadastrar primeiro item
-              </Button>
-            ) : null}
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={<Package />}
+          titulo="Nenhum item cadastrado ainda"
+          descricao="O catálogo alimenta os contratos: cadastre os equipamentos e materiais que a organização aluga."
+          acao={podeEditar ? { label: "Novo item", href: "/itens/novo" } : undefined}
+        />
       )}
     </div>
   );

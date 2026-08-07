@@ -1,8 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeGerenciarUsuarios } from "@/lib/auth";
-import { PageHeader } from "@/components/page-header";
-import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/shared/page-header";
 import {
   Card,
   CardContent,
@@ -12,6 +11,8 @@ import {
 } from "@/components/ui/card";
 import { UsuarioForm } from "../usuario-form";
 import { excluirUsuario } from "../actions";
+import { listarObrasParaFiltro } from "@/lib/data/obras";
+import { ConfirmDelete } from "@/components/confirm-delete";
 
 export const metadata = { title: "Editar usuário — Loca" };
 
@@ -26,10 +27,10 @@ export default async function EditarUsuarioPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const [{ data: usuario }, { data: obras }, { data: vinculos }] =
+  const [{ data: usuario }, obras, { data: vinculos }] =
     await Promise.all([
       supabase.from("perfil").select("id, nome, email, papel, ativo, modulos").eq("id", id).single(),
-      supabase.from("obra").select("id, codigo, nome").order("codigo"),
+      listarObrasParaFiltro(),
       supabase.from("obra_usuario").select("obra_id").eq("perfil_id", id),
     ]);
 
@@ -51,7 +52,7 @@ export default async function EditarUsuarioPage({
               papel: usuario.papel,
               ativo: usuario.ativo,
             }}
-            obras={obras ?? []}
+            obras={obras}
             obrasDoUsuario={(vinculos ?? []).map((v) => v.obra_id)}
             modulosDoUsuario={(usuario.modulos as string[] | null) ?? null}
           />
@@ -69,12 +70,12 @@ export default async function EditarUsuarioPage({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form action={excluirUsuario}>
-              <input type="hidden" name="id" value={usuario.id} />
-              <Button type="submit" variant="outline" className="text-destructive">
-                Excluir {usuario.nome ?? usuario.email ?? "usuário"}
-              </Button>
-            </form>
+            <ConfirmDelete
+              action={excluirUsuario}
+              id={usuario.id}
+              rotulo={`Excluir ${usuario.nome ?? usuario.email ?? "usuário"}`}
+              mensagem="Remover o acesso desta pessoa em definitivo? Não pode ser desfeito."
+            />
           </CardContent>
         </Card>
       ) : null}

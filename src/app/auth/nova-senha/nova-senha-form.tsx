@@ -5,16 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
-import { SistengeLogo } from "@/components/sistenge-logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-} from "@/components/ui/card";
 
 export function NovaSenhaForm() {
   const router = useRouter();
@@ -60,68 +53,62 @@ export function NovaSenhaForm() {
     });
   }
 
+  // Devolve só o conteúdo: o cartão e o título são da AuthShell.
+  if (pronto === false) {
+    return (
+      <div className="space-y-4 text-sm">
+        <p>
+          Este link é inválido ou expirou. Solicite um novo link de redefinição.
+        </p>
+        <Button
+          variant="outline"
+          className="w-full"
+          render={<Link href="/auth/recuperar" />}
+        >
+          Solicitar novo link
+        </Button>
+      </div>
+    );
+  }
+
   return (
-    <Card className="w-full max-w-sm">
-      <CardHeader className="space-y-3 text-center">
-        <SistengeLogo className="mx-auto h-9 w-auto" />
-        <CardDescription>Definir nova senha</CardDescription>
-      </CardHeader>
-      <CardContent>
-        {pronto === false ? (
-          <div className="space-y-4 text-sm">
-            <p>
-              Este link é inválido ou expirou. Solicite um novo link de
-              redefinição.
-            </p>
-            <Button
-              variant="outline"
-              className="w-full"
-              render={<Link href="/auth/recuperar" />}
-            >
-              Solicitar novo link
-            </Button>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="senha">Nova senha</Label>
-              <Input
-                id="senha"
-                type="password"
-                autoComplete="new-password"
-                required
-                value={senha}
-                onChange={(e) => setSenha(e.target.value)}
-                placeholder="Pelo menos 8 caracteres"
-                disabled={pronto === null}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirmar">Confirmar nova senha</Label>
-              <Input
-                id="confirmar"
-                type="password"
-                autoComplete="new-password"
-                required
-                value={confirmar}
-                onChange={(e) => setConfirmar(e.target.value)}
-                disabled={pronto === null}
-              />
-            </div>
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isPending || pronto === null}
-            >
-              {pronto === null
-                ? "Validando link…"
-                : isPending
-                  ? "Salvando…"
-                  : "Salvar nova senha"}
-            </Button>
-          </form>
-        )}
-      </CardContent>
-    </Card>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-1.5">
+        <Label htmlFor="senha">Nova senha</Label>
+        <Input
+          id="senha"
+          type="password"
+          autoComplete="new-password"
+          required
+          value={senha}
+          onChange={(e) => setSenha(e.target.value)}
+          placeholder="Pelo menos 8 caracteres"
+          disabled={pronto === null}
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="confirmar">Confirmar nova senha</Label>
+        <Input
+          id="confirmar"
+          type="password"
+          autoComplete="new-password"
+          required
+          value={confirmar}
+          onChange={(e) => setConfirmar(e.target.value)}
+          disabled={pronto === null}
+        />
+      </div>
+      <Button
+        type="submit"
+        className="w-full"
+        disabled={isPending || pronto === null}
+      >
+        {pronto === null
+          ? "Validando link…"
+          : isPending
+            ? "Salvando…"
+            : "Salvar nova senha"}
+      </Button>
+    </form>
   );
 }

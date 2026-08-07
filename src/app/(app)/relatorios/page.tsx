@@ -8,9 +8,10 @@ import {
   formatarValor,
   type TipoRelatorio,
 } from "@/lib/relatorios";
-import { PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -19,11 +20,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { NativeSelect } from "@/components/ui/native-select";
+import { listarObrasParaFiltro } from "@/lib/data/obras";
+import { HBarChart } from "@/components/bar-chart";
 
 export const metadata = { title: "Relatórios — Loca" };
 
-const selectClasses =
-  "h-9 rounded-lg border border-input bg-transparent px-3 text-sm outline-none";
 
 export default async function RelatoriosPage({
   searchParams,
@@ -44,8 +46,8 @@ export default async function RelatoriosPage({
   const meta = TIPOS_RELATORIO.find((t) => t.valor === tipo)!;
 
   const supabase = await createClient();
-  const [{ data: obras }, { data: fornecedores }] = await Promise.all([
-    supabase.from("obra").select("id, codigo, nome").order("codigo"),
+  const [obras, { data: fornecedores }] = await Promise.all([
+    listarObrasParaFiltro(),
     supabase.from("fornecedor").select("id, nome").order("nome"),
   ]);
 
@@ -67,12 +69,10 @@ export default async function RelatoriosPage({
   const query = qs.toString();
 
   const grafico = dadosGrafico(relatorio);
-  const maxGrafico = grafico.reduce((m, g) => Math.max(m, g.valor), 0);
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <PageHeader
-        eyebrow="Análise"
         titulo="Relatórios"
         descricao="Gere relatórios com filtros e exporte em PDF ou Excel."
       />
@@ -83,32 +83,31 @@ export default async function RelatoriosPage({
           <form className="flex flex-wrap items-end gap-3" method="get">
             <div className="flex flex-col gap-1">
               <label htmlFor="f-tipo" className="text-xs text-muted-foreground">Relatório</label>
-              <select id="f-tipo" name="tipo" defaultValue={tipo} className={selectClasses}>
+              <NativeSelect className="w-auto" id="f-tipo" name="tipo" defaultValue={tipo}>
                 {TIPOS_RELATORIO.map((t) => (
                   <option key={t.valor} value={t.valor}>
                     {t.label}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
             </div>
             <div className="flex flex-col gap-1">
               <label htmlFor="f-obra" className="text-xs text-muted-foreground">Obra</label>
-              <select id="f-obra" name="obra" defaultValue={sp.obra ?? ""} className={selectClasses}>
+              <NativeSelect className="w-auto" id="f-obra" name="obra" defaultValue={sp.obra ?? ""}>
                 <option value="">Todas</option>
-                {(obras ?? []).map((o) => (
+                {obras.map((o) => (
                   <option key={o.id} value={o.id}>
                     {o.codigo} — {o.nome}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
             </div>
             <div className="flex flex-col gap-1">
               <label htmlFor="f-fornecedor" className="text-xs text-muted-foreground">Fornecedor</label>
-              <select
+              <NativeSelect className="w-auto"
                 id="f-fornecedor"
                 name="fornecedor"
                 defaultValue={sp.fornecedor ?? ""}
-                className={selectClasses}
               >
                 <option value="">Todos</option>
                 {(fornecedores ?? []).map((f) => (
@@ -116,34 +115,34 @@ export default async function RelatoriosPage({
                     {f.nome}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
             </div>
             <div className="flex flex-col gap-1">
               <label htmlFor="f-status" className="text-xs text-muted-foreground">Status</label>
-              <select id="f-status" name="status" defaultValue={sp.status ?? ""} className={selectClasses}>
+              <NativeSelect className="w-auto" id="f-status" name="status" defaultValue={sp.status ?? ""}>
                 <option value="">Todos</option>
                 <option value="pendente">Pendente</option>
                 <option value="pago">Pago</option>
-              </select>
+              </NativeSelect>
             </div>
             <div className="flex flex-col gap-1">
               <label htmlFor="f-inicio" className="text-xs text-muted-foreground">De</label>
-              <input
+              <Input
                 id="f-inicio"
                 type="date"
                 name="inicio"
                 defaultValue={sp.inicio ?? ""}
-                className={selectClasses}
+                className="w-auto"
               />
             </div>
             <div className="flex flex-col gap-1">
               <label htmlFor="f-fim" className="text-xs text-muted-foreground">Até</label>
-              <input
+              <Input
                 id="f-fim"
                 type="date"
                 name="fim"
                 defaultValue={sp.fim ?? ""}
-                className={selectClasses}
+                className="w-auto"
               />
             </div>
             <Button type="submit" variant="outline">
@@ -179,22 +178,10 @@ export default async function RelatoriosPage({
             <p className="text-xs tracking-wide text-muted-foreground uppercase">
               {relatorio.titulo} — visão em barras
             </p>
-            {grafico.map((g, i) => (
-              <div key={i}>
-                <div className="mb-1 flex justify-between text-sm">
-                  <span>{g.label}</span>
-                  <span className="font-medium">{formatarValor("moeda", g.valor)}</span>
-                </div>
-                <div className="h-3 border border-border bg-muted">
-                  <div
-                    className="h-full bg-primary"
-                    style={{
-                      width: `${maxGrafico > 0 ? (g.valor / maxGrafico) * 100 : 0}%`,
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
+            <HBarChart
+              data={grafico}
+              formatValue={(n) => formatarValor("moeda", n)}
+            />
           </CardContent>
         </Card>
       ) : null}

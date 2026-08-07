@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { SLATE_900 } from "@/lib/brand-colors";
 
 /**
  * Bloco de assinatura desenhada. Guarda o traço como data URI PNG num input
@@ -28,7 +29,11 @@ export function SignaturePad({
     ctx.lineWidth = 2;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
-    ctx.strokeStyle = "#1d1f20";
+    // Traço sempre escuro, independente do tema: o canvas é exportado com
+    // toDataURL() e embutido no PDF, que tem fundo branco. Por isso o canvas
+    // também é sempre branco (ver className abaixo) — ele é papel, não
+    // interface.
+    ctx.strokeStyle = SLATE_900;
     if (defaultValue) {
       const img = new window.Image();
       img.onload = () => ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
@@ -87,7 +92,7 @@ export function SignaturePad({
         ref={canvasRef}
         width={500}
         height={140}
-        className="h-[110px] w-full touch-none border border-border bg-background"
+        className="h-[110px] w-full touch-none rounded-md border border-border bg-white"
         onPointerDown={iniciar}
         onPointerMove={mover}
         onPointerUp={terminar}

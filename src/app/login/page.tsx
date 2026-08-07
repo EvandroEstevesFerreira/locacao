@@ -1,3 +1,5 @@
+import { AuthShell } from "@/components/shared/auth-shell";
+import { APP_VERSION } from "@/lib/changelog";
 import { LoginForm } from "./login-form";
 
 export const metadata = {
@@ -6,8 +8,12 @@ export const metadata = {
 
 export default function LoginPage() {
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-muted/40 p-4">
+    <AuthShell
+      titulo="Bem-vindo de volta"
+      descricao="Entre com sua conta corporativa para continuar."
+      versao={APP_VERSION}
+    >
       <LoginForm />
-    </main>
+    </AuthShell>
   );
 }

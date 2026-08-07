@@ -1,140 +1,252 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+/* Obrigatório: fornece os @custom-variant data-open / data-closed /
+   data-checked / data-horizontal / data-vertical que todos os primitivos
+   Base UI usam (dialog, select, separator, avatar). Não remover. */
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
+/* Markdown nunca é fonte de classes. Sem isto, um exemplo de código num .md
+   (CHANGELOG.md, docs/, AGENTS.md) é lido como utility real: uma linha citando
+   `bg-[url(...)]` faz o Tailwind emitir `background-image:url(...)` e o
+   Turbopack tenta resolver `url(...)` como módulo, quebrando o build. */
+@source not "../../**/*.md";
+
+/* Variante dark ciente de escopo. Dois detalhes deliberados:
+   - `:where(.dark, .dark *)` também casa o próprio elemento que carrega a
+     classe (o next-themes a põe em <html>), não só os descendentes.
+   - o `:not(...)` neutraliza `dark:` dentro de regiões marcadas
+     [data-theme="light"] (ex.: o card do /login sobre fundo escuro). Sem
+     isso, tokens light e utilities dark: brigam — problema que o People
+     precisa contornar à mão. */
+@custom-variant dark (&:where(.dark, .dark *):not(:where([data-theme="light"], [data-theme="light"] *)));
 
 @theme inline {
+  /* ── Tipografia ──────────────────────────────────────────────────────
+     Os nomes das variáveis de fonte são --font-inter / --font-jetbrains-mono
+     e NÃO --font-sans / --font-mono como no People. Lá funciona porque o
+     tailwind.config.ts v3 faz a ponte; aqui `--font-sans: var(--font-sans)`
+     seria auto-referência circular. Não "consertar" para o padrão People. */
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains-mono);
+
+  /* ── Superfícies ─────────────────────────────────────────────────── */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-barlow);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-barlow-condensed);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  /* ── Primary + neutros ───────────────────────────────────────────── */
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  /* ── Status ──────────────────────────────────────────────────────── */
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  /* Variante escura do aviso, legível SOBRE o próprio tint (bg-warning/10).
+     O --warning puro tem contraste ~1.9:1 nesse fundo e falha. */
+  --color-warning-strong: var(--warning-strong);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+
+  /* ── Marca ───────────────────────────────────────────────────────────
+     Vermelho oficial Sistenge. USO RESTRITO: logo e badges de
+     "crítico/urgente". NÃO usar em CTAs, links ou estados de foco. */
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+
+  /* ── Bordas / inputs / foco ──────────────────────────────────────── */
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* ── Séries de gráfico (categórica, não rampa monocromática) ─────── */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* ── Raio: escala subtrativa, como no People (a anterior era
+        multiplicativa para funcionar com --radius: 0).
+        xs 4px · sm 6px · md 8px · lg 10px · xl 14px ───────────────── */
+  --radius-xs: calc(var(--radius) - 6px);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  /* ── Animações ───────────────────────────────────────────────────────
+     `tw-animate-css` oferece `fade-in` como MODIFICADOR de `animate-in`
+     (seta --tw-enter-opacity), não como animação nomeada. Estas são as do
+     People e não colidem. Use sempre a classe nomeada
+     (`animate-fade-in`), nunca a arbitrária — o Tailwind v4 não detecta
+     @keyframes referenciados só de dentro de `animate-[...]`. */
+  --animate-fade-in: fade-in 0.2s ease-out;
+  --animate-slide-in-left: slide-in-left 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+  --animate-progress-indeterminate: progress-indeterminate 1.4s ease-in-out infinite;
+
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes slide-in-left {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(0); }
+  }
+  @keyframes progress-indeterminate {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(400%); }
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   Tema Sistenge — wireframe sobre papel, acento vermelho da marca.
-   Cantos quadrados (--radius:0), acento #BE3A31, molduras blueprint.
+   Design System Sistenge — alinhado ao Sistenge People.
+   - Primary: preto/cinza profundo slate-900 (#0F172A)
+   - Neutros: rampa slate
+   - Cards brancos com shadow-sm; elevação por sombra no light e por
+     luminosidade no dark (o card é MAIS CLARO que o fundo)
+   - Marca: vermelho #BE3A31 restrito a logo e badges de crítico
+   - Tipografia: Inter (sans) + JetBrains Mono (números/códigos)
+
+   Valores em hsl() COMPLETO, nunca triplet cru: o Tailwind v4 compila
+   `bg-x/10` para color-mix(), que exige um <color> válido no primeiro
+   termo. Com triplet a declaração é descartada em silêncio e todo o
+   vocabulário de opacidade dos primitivos deixa de pintar.
    ═══════════════════════════════════════════════════════════════════════ */
 :root {
-  --background: #f2f2f3;
-  --foreground: #1d1f20;
-  --surface: #e9e9ea;
+  --background: hsl(0 0% 100%);
+  --foreground: hsl(222.2 47.4% 11.2%);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(222.2 47.4% 11.2%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(222.2 47.4% 11.2%);
 
-  --card: transparent;
-  --card-foreground: #1d1f20;
-  --popover: #f2f2f3;
-  --popover-foreground: #1d1f20;
+  --primary: hsl(222.2 47.4% 11.2%);
+  --primary-foreground: hsl(210 40% 98%);
 
-  --primary: #BE3A31;
-  --primary-foreground: #f2f2f3;
-  --secondary: #e9e9ea;
-  --secondary-foreground: #1d1f20;
-  --muted: #f5f5f8;
-  --muted-foreground: #5d5d60;
-  --accent: #e7e7ea;
-  --accent-foreground: #1d1f20;
-  --destructive: #9a2a22;
+  --secondary: hsl(210 40% 96.1%);
+  --secondary-foreground: hsl(222.2 47.4% 11.2%);
+  --muted: hsl(210 40% 96.1%);
+  --muted-foreground: hsl(215.4 16.3% 46.9%);
+  --accent: hsl(210 40% 96.1%);
+  --accent-foreground: hsl(222.2 47.4% 11.2%);
 
-  --border: color-mix(in srgb, #1d1f20 16%, transparent);
-  --input: color-mix(in srgb, #1d1f20 16%, transparent);
-  --ring: #BE3A31;
+  --destructive: hsl(0 72% 51%);
+  --destructive-foreground: hsl(0 0% 98%);
+  --success: hsl(142 71% 36%);
+  --success-foreground: hsl(0 0% 98%);
+  --warning: hsl(38 92% 50%);
+  --warning-foreground: hsl(0 0% 98%);
+  --warning-strong: hsl(26 90% 37%);
+  --info: hsl(199 89% 48%);
+  --info-foreground: hsl(0 0% 98%);
 
-  /* rampa de acento vermelho Sistenge (uso pontual em custom CSS) */
-  --accent-300: #eab8b4;
-  --accent-600: #a5322a;
-  --accent-700: #8f2a23;
-  --accent-800: #6f211b;
-  --neutral-100: #f5f5f8;
-  --neutral-200: #e7e7ea;
-  --neutral-300: #d4d4d7;
+  /* #BE3A31 — vermelho do Manual de Identidade Visual Sistenge.
+     O People declara `1 68% 48%` (≈ #CE2A27, o vermelho dos SVGs) apesar de
+     o comentário dele citar #BE3A31. Aqui usamos o valor do Manual. */
+  --brand: hsl(4 59% 47%);
+  --brand-foreground: hsl(0 0% 100%);
 
-  --chart-1: #BE3A31;
-  --chart-2: #8f2a23;
-  --chart-3: #eab8b4;
-  --chart-4: #d98c86;
-  --chart-5: #6f211b;
+  --border: hsl(214.3 31.8% 91.4%);
+  --input: hsl(214.3 31.8% 91.4%);
+  --ring: hsl(222.2 47.4% 11.2%);
 
-  --radius: 0px;
+  --radius: 0.625rem;
 
-  --sidebar: #f5f5f8;
-  --sidebar-foreground: #1d1f20;
-  --sidebar-primary: #BE3A31;
-  --sidebar-primary-foreground: #f2f2f3;
-  --sidebar-accent: #e7e7ea;
-  --sidebar-accent-foreground: #1d1f20;
-  --sidebar-border: color-mix(in srgb, #1d1f20 16%, transparent);
-  --sidebar-ring: #BE3A31;
+  /* Categórica: série principal slate-900 e as demais derivadas das
+     famílias de status, para que qualquer gráfico novo já nasça na
+     identidade em vez de inventar uma paleta ad-hoc. */
+  --chart-1: hsl(222.2 47.4% 11.2%);
+  --chart-2: hsl(199 89% 48%);
+  --chart-3: hsl(142 71% 36%);
+  --chart-4: hsl(38 92% 50%);
+  --chart-5: hsl(215.4 16.3% 46.9%);
 }
 
+/* Força tokens light dentro de uma região específica (ex.: card branco sobre
+   o hero escuro do /login). Duplica :root de propósito — sem isto, o card
+   herda os tokens .dark quando o usuário está em modo escuro e os campos
+   ficam com contraste invertido dentro dele. */
+[data-theme="light"] {
+  color-scheme: light;
+
+  --background: hsl(0 0% 100%);
+  --foreground: hsl(222.2 47.4% 11.2%);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(222.2 47.4% 11.2%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(222.2 47.4% 11.2%);
+  --primary: hsl(222.2 47.4% 11.2%);
+  --primary-foreground: hsl(210 40% 98%);
+  --secondary: hsl(210 40% 96.1%);
+  --secondary-foreground: hsl(222.2 47.4% 11.2%);
+  --muted: hsl(210 40% 96.1%);
+  --muted-foreground: hsl(215.4 16.3% 46.9%);
+  --accent: hsl(210 40% 96.1%);
+  --accent-foreground: hsl(222.2 47.4% 11.2%);
+  --destructive: hsl(0 72% 51%);
+  --destructive-foreground: hsl(0 0% 98%);
+  --border: hsl(214.3 31.8% 91.4%);
+  --input: hsl(214.3 31.8% 91.4%);
+  --ring: hsl(222.2 47.4% 11.2%);
+}
+
+/* Dark: elevação por luminosidade — o card é MAIS CLARO que o fundo, e o
+   primary inverte para branco. */
 .dark {
-  --background: #1a1d1f;
-  --foreground: #eceded;
-  --surface: #232729;
+  color-scheme: dark;
 
-  --card: transparent;
-  --card-foreground: #eceded;
-  --popover: #232729;
-  --popover-foreground: #eceded;
+  --background: hsl(222.2 47% 5%);
+  --foreground: hsl(210 40% 98%);
+  --card: hsl(222.2 47% 8%);
+  --card-foreground: hsl(210 40% 98%);
+  --popover: hsl(222.2 47% 8%);
+  --popover-foreground: hsl(210 40% 98%);
 
-  --primary: #e4695f;
-  --primary-foreground: #14181b;
-  --secondary: #2b3033;
-  --secondary-foreground: #eceded;
-  --muted: #232729;
-  --muted-foreground: #9aa3ab;
-  --accent: #2b3033;
-  --accent-foreground: #eceded;
-  --destructive: #e4695f;
+  --primary: hsl(210 40% 98%);
+  --primary-foreground: hsl(222.2 47.4% 11.2%);
 
-  --border: color-mix(in srgb, #eceded 16%, transparent);
-  --input: color-mix(in srgb, #eceded 18%, transparent);
-  --ring: #e4695f;
+  --secondary: hsl(217.2 32.6% 14%);
+  --secondary-foreground: hsl(210 40% 98%);
+  --muted: hsl(217.2 32.6% 14%);
+  --muted-foreground: hsl(215 20.2% 65.1%);
+  --accent: hsl(217.2 32.6% 14%);
+  --accent-foreground: hsl(210 40% 98%);
 
-  --sidebar: #14181b;
-  --sidebar-foreground: #eceded;
-  --sidebar-primary: #e4695f;
-  --sidebar-primary-foreground: #14181b;
-  --sidebar-accent: #2b3033;
-  --sidebar-accent-foreground: #eceded;
-  --sidebar-border: color-mix(in srgb, #eceded 16%, transparent);
-  --sidebar-ring: #e4695f;
+  --destructive: hsl(0 62.8% 50%);
+  --destructive-foreground: hsl(210 40% 98%);
+  --success: hsl(142 71% 45%);
+  --success-foreground: hsl(0 0% 98%);
+  --warning: hsl(38 92% 55%);
+  --warning-foreground: hsl(0 0% 98%);
+  --warning-strong: hsl(43 96% 66%);
+  --info: hsl(199 89% 55%);
+  --info-foreground: hsl(0 0% 98%);
+
+  --brand: hsl(0 84% 60%);
+  --brand-foreground: hsl(0 0% 100%);
+
+  --border: hsl(217.2 32.6% 17.5%);
+  --input: hsl(217.2 32.6% 17.5%);
+  --ring: hsl(212.7 26.8% 83.9%);
+
+  --chart-1: hsl(210 40% 98%);
+  --chart-2: hsl(199 89% 55%);
+  --chart-3: hsl(142 71% 45%);
+  --chart-4: hsl(38 92% 55%);
+  --chart-5: hsl(215 20.2% 65.1%);
 }
 
 @layer base {
@@ -142,47 +254,55 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
-    font-family: var(--font-barlow), system-ui, sans-serif;
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
   html {
     @apply font-sans;
   }
-  h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-barlow-condensed), system-ui, sans-serif;
-    letter-spacing: -0.015em;
+  code, kbd, samp, pre {
+    font-family: var(--font-mono), ui-monospace, SFMono-Regular, monospace;
   }
 }
 
-/* ── Moldura blueprint: cantos quadrados, borda fina e marcas de registro (+)
-      nos quatro cantos. Aplicada aos cards via o componente Card. ── */
-.blueprint {
-  position: relative;
+/* ── Tabelas: números alinhados em colunas ─────────────────────────── */
+table tbody td.font-mono,
+table tbody td .font-mono {
+  font-variant-numeric: tabular-nums;
 }
-.blueprint > .corner {
-  position: absolute;
-  width: 11px;
-  height: 11px;
-  color: color-mix(in srgb, var(--foreground) 55%, transparent);
-  pointer-events: none;
-}
-.blueprint > .corner::before,
-.blueprint > .corner::after {
-  content: "";
-  position: absolute;
-  background: currentColor;
-}
-.blueprint > .corner::before { left: 5px; top: 0; width: 1px; height: 100%; }
-.blueprint > .corner::after { top: 5px; left: 0; width: 100%; height: 1px; }
-.blueprint > .corner.tl { top: -6px; left: -6px; }
-.blueprint > .corner.tr { top: -6px; right: -6px; }
-.blueprint > .corner.bl { bottom: -6px; left: -6px; }
-.blueprint > .corner.br { bottom: -6px; right: -6px; }
 
-/* ── Eyebrow: rótulo de seção em maiúsculas no acento (cabeçalhos de página) ── */
-.eyebrow {
-  font-size: 11px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--primary);
+/* ── Scrollbar discreta global ────────────────────────────────────────
+   Os tokens aqui já são cores completas — não envolver em hsl() como faz o
+   People, onde eles são triplets. */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--muted); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklab, var(--muted-foreground) 50%, transparent);
+}
+
+/* ── scrollbar-sutil: quase invisível, aparece no hover do pai.
+      Usar em painéis estreitos (sidebar, listas internas), onde a barra
+      cinza de 10px do default fica intrusiva. ────────────────────────── */
+@utility scrollbar-sutil {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color 200ms ease;
+
+  &:hover {
+    scrollbar-color: color-mix(in oklab, var(--muted-foreground) 25%, transparent) transparent;
+  }
+  &::-webkit-scrollbar { width: 6px; height: 6px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 9999px;
+    transition: background-color 200ms ease;
+  }
+  &:hover::-webkit-scrollbar-thumb {
+    background: color-mix(in oklab, var(--muted-foreground) 20%, transparent);
+  }
+  &::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in oklab, var(--muted-foreground) 40%, transparent);
+  }
 }

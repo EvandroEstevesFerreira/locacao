@@ -1,16 +1,27 @@
 "use client";
 
-import { useActionState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
-import { salvarUsuario, type UsuarioFormState } from "./actions";
-import { PAPEIS, PAPEL_INFO, type Papel } from "@/lib/permissoes";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import {
+  PAPEIS,
+  PAPEL_INFO,
+  editarUsuarioSchema,
+  type EditarUsuarioDados,
+  type EditarUsuarioInput,
+  type Papel,
+} from "@/lib/permissoes";
 import { MODULOS } from "@/lib/modulos";
+import { FormError } from "@/components/shared/form-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
-const selectClasses =
-  "flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
+import { NativeSelect } from "@/components/ui/native-select";
+import { salvarUsuario } from "./actions";
 
 export function UsuarioForm({
   usuario,
@@ -24,58 +35,107 @@ export function UsuarioForm({
   /** null = acesso a todos os módulos (padrão retrocompatível). */
   modulosDoUsuario: string[] | null;
 }) {
+  const router = useRouter();
+  const [erroServidor, setErroServidor] = useState<string | null>(null);
+  const [pendente, startTransition] = useTransition();
+
   // null → todos liberados por padrão (marca todas as caixas).
-  const todosMarcados = modulosDoUsuario == null;
-  const [state, formAction, isPending] = useActionState<
-    UsuarioFormState,
-    FormData
-  >(salvarUsuario, {});
+  const modulosIniciais =
+    modulosDoUsuario == null ? MODULOS.map((m) => m.chave) : modulosDoUsuario;
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    // Três parâmetros: `nova_senha` transforma "" em null, então a entrada e a
+    // saída do schema divergem.
+  } = useForm<EditarUsuarioInput, unknown, EditarUsuarioDados>({
+    resolver: zodResolver(editarUsuarioSchema),
+    defaultValues: {
+      id: usuario.id,
+      nome: usuario.nome,
+      papel: usuario.papel,
+      ativo: usuario.ativo,
+      obras: obrasDoUsuario,
+      modulos: modulosIniciais,
+      nova_senha: "",
+    },
+  });
+
+  function onSubmit(values: EditarUsuarioDados) {
+    setErroServidor(null);
+    startTransition(async () => {
+      const r = await salvarUsuario(values);
+      if (!r.ok) {
+        setErroServidor(r.erro);
+        return;
+      }
+      toast.success("Usuário atualizado.");
+      router.replace("/usuarios");
+      router.refresh();
+    });
+  }
 
   return (
-    <form action={formAction} className="space-y-5">
-      <input type="hidden" name="id" value={usuario.id} />
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      <input type="hidden" {...register("id")} />
 
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         <Label htmlFor="nome">Nome</Label>
-        <Input id="nome" name="nome" defaultValue={usuario.nome} required maxLength={120} />
-        <p className="text-xs text-muted-foreground">{usuario.email}</p>
+        <Input
+          id="nome"
+          aria-invalid={!!errors.nome}
+          disabled={pendente}
+          {...register("nome")}
+        />
+        {errors.nome ? (
+          <p className="text-xs text-destructive">{errors.nome.message}</p>
+        ) : (
+          <p className="text-xs text-muted-foreground">{usuario.email}</p>
+        )}
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         <Label htmlFor="papel">Perfil</Label>
-        <select
-          id="papel"
-          name="papel"
-          defaultValue={usuario.papel}
-          className={selectClasses}
-        >
+        <NativeSelect id="papel" disabled={pendente} {...register("papel")}>
           {PAPEIS.map((p) => (
             <option key={p} value={p}>
               {PAPEL_INFO[p].label} — {PAPEL_INFO[p].descricao}
             </option>
           ))}
-        </select>
+        </NativeSelect>
       </div>
 
       <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"
-          name="ativo"
-          defaultChecked={usuario.ativo}
+          disabled={pendente}
           className="size-4"
+          {...register("ativo")}
         />
         Usuário ativo
       </label>
 
-      <div className="space-y-2">
-        <Label htmlFor="nova_senha">Redefinir senha (opcional)</Label>
+      <div className="space-y-1.5">
+        <Label htmlFor="nova_senha">
+          Redefinir senha{" "}
+          <span className="font-normal text-muted-foreground">(opcional)</span>
+        </Label>
         <Input
           id="nova_senha"
-          name="nova_senha"
           type="text"
-          minLength={8}
           placeholder="Deixe em branco para manter a senha atual"
+          aria-invalid={!!errors.nova_senha}
+          disabled={pendente}
+          {...register("nova_senha")}
         />
+        {errors.nova_senha ? (
+          <p className="text-xs text-destructive">{errors.nova_senha.message}</p>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            A senha definida aqui é temporária: o usuário troca no próximo acesso.
+          </p>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -89,10 +149,10 @@ export function UsuarioForm({
             <label key={m.chave} className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
-                name="modulos"
                 value={m.chave}
-                defaultChecked={todosMarcados || (modulosDoUsuario?.includes(m.chave) ?? false)}
+                disabled={pendente}
                 className="size-4"
+                {...register("modulos")}
               />
               <span className="font-medium">{m.label}</span>
             </label>
@@ -107,19 +167,17 @@ export function UsuarioForm({
           obras.
         </p>
         {obras.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Nenhuma obra cadastrada.
-          </p>
+          <p className="text-sm text-muted-foreground">Nenhuma obra cadastrada.</p>
         ) : (
           <div className="grid gap-2 rounded-md border p-3 sm:grid-cols-2">
             {obras.map((o) => (
               <label key={o.id} className="flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"
-                  name="obras"
                   value={o.id}
-                  defaultChecked={obrasDoUsuario.includes(o.id)}
+                  disabled={pendente}
                   className="size-4"
+                  {...register("obras")}
                 />
                 <span>
                   <span className="font-medium">{o.codigo}</span> — {o.nome}
@@ -130,16 +188,15 @@ export function UsuarioForm({
         )}
       </div>
 
-      {state.error ? (
-        <p className="text-sm text-destructive">{state.error}</p>
-      ) : null}
+      <FormError>{erroServidor}</FormError>
 
-      <div className="flex gap-2">
-        <Button type="submit" disabled={isPending}>
-          {isPending ? "Salvando…" : "Salvar"}
-        </Button>
+      <div className="flex justify-end gap-2 pt-2">
         <Button type="button" variant="outline" render={<Link href="/usuarios" />}>
           Cancelar
+        </Button>
+        <Button type="submit" disabled={pendente}>
+          {pendente ? <Loader2 className="size-4 animate-spin" /> : null}
+          {pendente ? "Salvando…" : "Salvar"}
         </Button>
       </div>
     </form>

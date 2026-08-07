@@ -1,20 +1,15 @@
 import Link from "next/link";
 import { FileText, Plus, ChevronRight } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeOperar } from "@/lib/auth";
 import {
   CADENCIA,
   STATUS_CONTRATO,
   formatarData,
-  type Cadencia,
-  type StatusContrato,
 } from "@/lib/locacao";
-import { PageHeader } from "@/components/page-header";
-import { ObraFilter } from "@/components/obra-filter";
-import { ListSearch } from "@/components/list-search";
+import { PageHeader } from "@/components/shared/page-header";
 import { Pagination } from "@/components/pagination";
 import { SortHeader } from "@/components/sort-header";
-import { PAGE_SIZE, parseListParams, termoOr } from "@/lib/lista";
+import { PAGE_SIZE, contagem, parseListParams } from "@/lib/lista";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,19 +21,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { SelectFilter } from "@/components/shared/select-filter";
+import { ListSearch } from "@/components/shared/list-search";
+import { ListFilters } from "@/components/shared/list-filters";
+import { EmptyState } from "@/components/shared/empty-state";
+import { listarObrasParaFiltro } from "@/lib/data/obras";
+import { listarContratos } from "@/lib/data/contratos";
 
 export const metadata = { title: "Contratos — Loca" };
-
-type Row = {
-  id: string;
-  numero: string;
-  cadencia: Cadencia;
-  data_inicio: string;
-  data_fim_prevista: string | null;
-  status: StatusContrato;
-  obra: { codigo: string; nome: string } | null;
-  fornecedor: { nome: string } | null;
-};
 
 export default async function ContratosPage({
   searchParams,
@@ -55,47 +45,37 @@ export default async function ContratosPage({
     defaultDir: "desc",
   });
 
-  const supabase = await createClient();
-  let query = supabase
-    .from("contrato_locacao")
-    .select(
-      "id, numero, cadencia, data_inicio, data_fim_prevista, status, obra:obra_id(codigo,nome), fornecedor:fornecedor_id(nome)",
-      { count: "exact" },
-    );
-  if (obra) query = query.eq("obra_id", obra);
-  if (q) query = query.or(termoOr(["numero"], q));
-  query = query.order(sort, { ascending }).range(from, to);
-  const { data, count } = await query;
-
-  const { data: obrasData } = await supabase
-    .from("obra")
-    .select("id, codigo, nome")
-    .order("codigo");
-
-  const contratos = (data ?? []) as unknown as Row[];
-  const total = count ?? 0;
+  const [{ itens: contratos, total }, obrasData] = await Promise.all([
+    listarContratos({ q, sort, ascending, from, to, obraId: obra }),
+    listarObrasParaFiltro(),
+  ]);
   const tem = contratos.length > 0;
   const buscando = q.length > 0 || Boolean(obra);
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <PageHeader
-        eyebrow="Locação"
         titulo="Contratos"
-        descricao="Contratos de locação por obra e fornecedor."
-      >
-        {podeEditar ? (
-          <Button render={<Link href="/contratos/novo" />}>
-            <Plus className="size-4" />
-            Novo contrato
-          </Button>
-        ) : null}
-      </PageHeader>
+        descricao={`Contratos de locação por obra e fornecedor. · ${contagem(total, "contrato", "contratos")} no filtro`}
+        acoes={
+          podeEditar ? (
+            <Button render={<Link href="/contratos/novo" />}>
+              <Plus className="size-4" />
+              Novo contrato
+            </Button>
+          ) : null
+        }
+      />
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <ListFilters>
         <ListSearch placeholder="Buscar por número…" ariaLabel="Buscar contrato" />
-        <ObraFilter obras={obrasData ?? []} value={obra} basePath="/contratos" />
-      </div>
+        <SelectFilter
+          param="obra"
+          label="Obra"
+          placeholder="Todas as obras"
+          opcoes={obrasData.map((o) => ({ value: o.id, label: `${o.codigo} — ${o.nome}` }))}
+        />
+      </ListFilters>
 
       {tem || buscando ? (
         <>
@@ -127,9 +107,9 @@ export default async function ContratosPage({
                     <TableRow key={c.id}>
                       <TableCell className="font-medium">{c.numero}</TableCell>
                       <TableCell>
-                        {c.obra ? `${c.obra.codigo} — ${c.obra.nome}` : "—"}
+                        {c.obraCodigo ? `${c.obraCodigo} — ${c.obraNome}` : "—"}
                       </TableCell>
-                      <TableCell>{c.fornecedor?.nome ?? "—"}</TableCell>
+                      <TableCell>{c.fornecedorNome ?? "—"}</TableCell>
                       <TableCell>{CADENCIA[c.cadencia].label}</TableCell>
                       <TableCell className="text-muted-foreground">
                         {formatarData(c.data_inicio)} –{" "}
@@ -158,20 +138,12 @@ export default async function ContratosPage({
           <Pagination page={page} pageSize={PAGE_SIZE} total={total} />
         </>
       ) : (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-            <div className="flex size-12 items-center justify-center rounded-full bg-muted">
-              <FileText className="size-6 text-muted-foreground" />
-            </div>
-            <p className="font-medium">Nenhum contrato cadastrado ainda</p>
-            {podeEditar ? (
-              <Button render={<Link href="/contratos/novo" />}>
-                <Plus className="size-4" />
-                Cadastrar primeiro contrato
-              </Button>
-            ) : null}
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={<FileText />}
+          titulo="Nenhum contrato cadastrado ainda"
+          descricao="Cadastre o primeiro contrato de locação para começar a acompanhar itens e devoluções."
+          acao={podeEditar ? { label: "Novo contrato", href: "/contratos/novo" } : undefined}
+        />
       )}
     </div>
   );

@@ -1,0 +1,49 @@
+name: CI
+
+# O Loca não tinha nenhum CI. O ritual de fechamento (typecheck → lint → test →
+# build) existia só como disciplina manual, e o AGENTS.md o descreve mas nada
+# obrigava. Aqui ele passa a rodar em todo push e PR.
+#
+# As envs são placeholders: o `next build` precisa que elas EXISTAM porque
+# src/lib/supabase/* as lê no import, mas nenhuma requisição é feita durante o
+# build. Não há segredo neste arquivo.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # 22 LTS: o Loca é Next 16 / React 19. O Sistenge People usa 20, que
+          # também funciona, mas 22 é o alinhado ao runtime da Vercel hoje.
+          node-version: "22"
+          cache: npm
+
+      # `npm ci` exige o package-lock.json em sincronia com o package.json —
+      # todo commit que muda dependência precisa levar o lock junto.
+      - run: npm ci
+
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://exemplo.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
+          SUPABASE_SERVICE_ROLE_KEY: ci-placeholder
+          RESEND_API_KEY: ci-placeholder
+          EMAIL_FROM: ci@exemplo.com
+          CRON_SECRET: ci-placeholder
+          NEXT_PUBLIC_APP_URL: http://localhost:3000

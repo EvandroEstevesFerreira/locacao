@@ -1,6 +1,6 @@
 import { formatarData } from "@/lib/locacao";
 import { CHANGELOG, APP_VERSION, TIPO_MUDANCA_INFO } from "@/lib/changelog";
-import { PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -10,9 +10,9 @@ export default function NovidadesPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <PageHeader
-        eyebrow={`Versão atual · v${APP_VERSION}`}
         titulo="Novidades"
         descricao="Histórico de versões e melhorias do Loca, da mais recente para a mais antiga."
+        acoes={<Badge variant="secondary">Versão atual · v{APP_VERSION}</Badge>}
       />
 
       <div className="space-y-4">

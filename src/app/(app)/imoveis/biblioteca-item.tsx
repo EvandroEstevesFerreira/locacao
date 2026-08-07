@@ -15,9 +15,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ConfirmDelete } from "@/components/confirm-delete";
+import { NativeSelect } from "@/components/ui/native-select";
 
-const selectClasses =
-  "flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm outline-none focus-visible:border-ring";
 
 export function BibliotecaItem({
   doc,
@@ -61,11 +60,11 @@ export function BibliotecaItem({
         </div>
         <div className="space-y-1">
           <Label htmlFor={`c-${doc.id}`}>Categoria</Label>
-          <select id={`c-${doc.id}`} name="categoria" defaultValue={doc.categoria} className={selectClasses}>
+          <NativeSelect id={`c-${doc.id}`} name="categoria" defaultValue={doc.categoria}>
             {CATEGORIAS_BIBLIOTECA.map((c) => (
               <option key={c} value={c}>{CATEGORIA_BIBLIOTECA_INFO[c].label}</option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
         {state.error ? (
           <p className="text-sm text-destructive sm:col-span-3">{state.error}</p>

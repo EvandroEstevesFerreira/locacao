@@ -1,13 +1,24 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
-import { salvarFornecedor, type FornecedorFormState } from "./actions";
+import { useRouter } from "next/navigation";
+import { useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { formatarCnpj } from "@/lib/cnpj";
+import {
+  fornecedorSchema,
+  type FornecedorDados,
+  type FornecedorInput,
+} from "@/lib/fornecedor";
+import { FormError } from "@/components/shared/form-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { salvarFornecedor } from "./actions";
 
 type Fornecedor = {
   id: string;
@@ -29,85 +40,146 @@ export function FornecedorForm({
   obras?: { id: string; codigo: string; nome: string }[];
   obrasDoFornecedor?: string[];
 }) {
-  const [state, formAction, isPending] = useActionState<
-    FornecedorFormState,
-    FormData
-  >(salvarFornecedor, {});
-  const [cnpj, setCnpj] = useState(fornecedor?.cnpj ?? "");
+  const router = useRouter();
+  const [erroServidor, setErroServidor] = useState<string | null>(null);
+  const [duplicado, setDuplicado] = useState(false);
+  const [pendente, startTransition] = useTransition();
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    control,
+    formState: { errors },
+  } = useForm<FornecedorInput, unknown, FornecedorDados>({
+    resolver: zodResolver(fornecedorSchema),
+    defaultValues: {
+      id: fornecedor?.id,
+      nome: fornecedor?.nome ?? "",
+      cnpj: fornecedor?.cnpj ?? "",
+      contato_nome: fornecedor?.contato_nome ?? "",
+      contato_telefone: fornecedor?.contato_telefone ?? "",
+      contato_email: fornecedor?.contato_email ?? "",
+      observacoes: fornecedor?.observacoes ?? "",
+      ativo: fornecedor?.ativo ?? true,
+      obras: obrasDoFornecedor,
+      confirmar_duplicado: false,
+    },
+  });
+
+  // `useWatch` em vez de `watch()`: o React Compiler não consegue memoizar a
+  // função devolvida por `watch` e por isso pula a otimização do componente
+  // inteiro (lint react-hooks/incompatible-library). `useWatch` é a API
+  // observável do RHF e não tem esse problema.
+  const cnpj = useWatch({ control, name: "cnpj" }) ?? "";
+
+  function onSubmit(values: FornecedorDados) {
+    setErroServidor(null);
+    startTransition(async () => {
+      const r = await salvarFornecedor(values);
+      if (!r.ok) {
+        setErroServidor(r.erro);
+        // CNPJ repetido não é erro de validação: pode haver matriz e filial com
+        // o mesmo raiz. Libera a caixa de "salvar mesmo assim".
+        if (r.duplicado) setDuplicado(true);
+        return;
+      }
+      toast.success(fornecedor ? "Fornecedor atualizado." : "Fornecedor cadastrado.");
+      router.replace("/fornecedores");
+      router.refresh();
+    });
+  }
 
   return (
-    <form action={formAction} className="space-y-5">
-      {fornecedor ? <input type="hidden" name="id" value={fornecedor.id} /> : null}
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      <input type="hidden" {...register("id")} />
 
       <div className="grid gap-5 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="nome">Nome *</Label>
+        <div className="space-y-1.5">
+          <Label htmlFor="nome">Nome</Label>
           <Input
             id="nome"
-            name="nome"
-            required
-            maxLength={200}
-            defaultValue={fornecedor?.nome ?? ""}
             placeholder="Ex.: Locadora Alfa"
+            aria-invalid={!!errors.nome}
+            disabled={pendente}
+            {...register("nome")}
           />
+          {errors.nome ? (
+            <p className="text-xs text-destructive">{errors.nome.message}</p>
+          ) : null}
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="cnpj">CNPJ</Label>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="cnpj">
+            CNPJ{" "}
+            <span className="font-normal text-muted-foreground">(opcional)</span>
+          </Label>
+          {/* Controlado para aplicar a máscara enquanto digita. O dígito
+              verificador é validado pelo zodResolver a cada mudança, então o
+              erro aparece antes do submit — antes só chegava depois. */}
           <Input
             id="cnpj"
-            name="cnpj"
             inputMode="text"
             autoCapitalize="characters"
             maxLength={18}
-            value={cnpj}
-            onChange={(e) => setCnpj(formatarCnpj(e.target.value))}
             placeholder="12.ABC.345/01DE-35"
+            aria-invalid={!!errors.cnpj}
+            disabled={pendente}
+            value={cnpj}
+            onChange={(e) =>
+              setValue("cnpj", formatarCnpj(e.target.value), {
+                shouldValidate: true,
+              })
+            }
           />
-          <p className="text-xs text-muted-foreground">
-            Aceita o CNPJ alfanumérico (letras e números).
-          </p>
+          {errors.cnpj ? (
+            <p className="text-xs text-destructive">{errors.cnpj.message}</p>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Aceita o CNPJ alfanumérico (letras e números).
+            </p>
+          )}
         </div>
       </div>
 
       <div className="grid gap-5 sm:grid-cols-3">
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <Label htmlFor="contato_nome">Contato</Label>
-          <Input
-            id="contato_nome"
-            name="contato_nome"
-            maxLength={200}
-            defaultValue={fornecedor?.contato_nome ?? ""}
-          />
+          <Input id="contato_nome" disabled={pendente} {...register("contato_nome")} />
         </div>
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <Label htmlFor="contato_telefone">Telefone</Label>
           <Input
             id="contato_telefone"
-            name="contato_telefone"
-            maxLength={40}
-            defaultValue={fornecedor?.contato_telefone ?? ""}
+            disabled={pendente}
+            {...register("contato_telefone")}
           />
         </div>
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <Label htmlFor="contato_email">E-mail</Label>
           <Input
             id="contato_email"
-            name="contato_email"
             type="email"
-            maxLength={200}
-            defaultValue={fornecedor?.contato_email ?? ""}
+            aria-invalid={!!errors.contato_email}
+            disabled={pendente}
+            {...register("contato_email")}
           />
+          {errors.contato_email ? (
+            <p className="text-xs text-destructive">{errors.contato_email.message}</p>
+          ) : null}
         </div>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="observacoes">Observações</Label>
+      <div className="space-y-1.5">
+        <Label htmlFor="observacoes">
+          Observações{" "}
+          <span className="font-normal text-muted-foreground">(opcional)</span>
+        </Label>
         <Textarea
           id="observacoes"
-          name="observacoes"
-          maxLength={1000}
           rows={3}
-          defaultValue={fornecedor?.observacoes ?? ""}
+          disabled={pendente}
+          {...register("observacoes")}
         />
       </div>
 
@@ -126,10 +198,10 @@ export function FornecedorForm({
               <label key={o.id} className="flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"
-                  name="obras"
                   value={o.id}
-                  defaultChecked={obrasDoFornecedor.includes(o.id)}
+                  disabled={pendente}
                   className="size-4"
+                  {...register("obras")}
                 />
                 <span>
                   <span className="font-medium">{o.codigo}</span> — {o.nome}
@@ -143,34 +215,38 @@ export function FornecedorForm({
       <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"
-          name="ativo"
-          defaultChecked={fornecedor?.ativo ?? true}
+          disabled={pendente}
           className="size-4"
+          {...register("ativo")}
         />
         Fornecedor ativo
       </label>
 
-      {state.error ? (
-        <p className="text-sm text-destructive">{state.error}</p>
-      ) : null}
+      <FormError>{erroServidor}</FormError>
 
-      {state.duplicado ? (
-        <label className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-800 dark:bg-amber-950/40">
-          <input type="checkbox" name="confirmar_duplicado" value="true" className="size-4" />
+      {duplicado ? (
+        <label className="flex items-center gap-2 rounded-md border border-warning/40 bg-warning/10 p-3 text-sm text-warning-strong">
+          <input
+            type="checkbox"
+            className="size-4"
+            disabled={pendente}
+            {...register("confirmar_duplicado")}
+          />
           Salvar mesmo assim (CNPJ já cadastrado em outro fornecedor)
         </label>
       ) : null}
 
-      <div className="flex gap-2">
-        <Button type="submit" disabled={isPending}>
-          {isPending ? "Salvando…" : "Salvar"}
-        </Button>
+      <div className="flex justify-end gap-2 pt-2">
         <Button
           type="button"
           variant="outline"
           render={<Link href="/fornecedores" />}
         >
           Cancelar
+        </Button>
+        <Button type="submit" disabled={pendente}>
+          {pendente ? <Loader2 className="size-4 animate-spin" /> : null}
+          {pendente ? "Salvando…" : "Salvar"}
         </Button>
       </div>
     </form>

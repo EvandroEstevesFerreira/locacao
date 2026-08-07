@@ -1,33 +1,42 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+// Menu do usuário, no canto superior direito.
+//
+// Duas mudanças na v0.21:
+//
+// 1. Deixou de ser um dropdown feito à mão (useState + listeners de mousedown e
+//    Esc) e passou a usar ui/dropdown-menu.tsx, que já estava no projeto com 268
+//    linhas e zero imports. De graça vêm navegação por setas, trap e restauração
+//    de foco, e portal — este último é essencial agora, porque o header tem
+//    backdrop-blur e um popup `absolute` declarado dentro dele ficaria preso no
+//    containing block criado pelo filtro.
+// 2. Absorveu o rodapé rico que a sidebar tinha (avatar, nome, papel, "Meu
+//    perfil" e "Sair"). Com a sidebar em 72px aquele bloco não caberia — o
+//    conteúdo não foi cortado, foi movido para onde já existia um menu.
+
 import Link from "next/link";
-import { LogOut, UserRound } from "lucide-react";
+import { LogOut, Sparkles, UserRound } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { PAPEL_INFO, type Papel } from "@/lib/permissoes";
 
-const PAPEL_LABEL: Record<string, string> = {
-  master: "Master",
-  administrador: "Administrador",
-  gestor: "Gestor",
-  operador: "Operador",
-};
-
-/**
- * Menu do usuário (canto superior). Dropdown próprio (sem Base UI Menu),
- * fecha ao clicar fora ou apertar Esc. Espelha os atalhos do rodapé da sidebar.
- */
 export function UserMenu({
   nome,
   email,
   papel,
+  versao,
 }: {
   nome: string;
   email: string;
   papel: string;
+  versao: string;
 }) {
-  const [aberto, setAberto] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
   const iniciais = (nome || email)
     .split(" ")
     .map((p) => p[0])
@@ -35,72 +44,58 @@ export function UserMenu({
     .join("")
     .toUpperCase();
 
-  useEffect(() => {
-    if (!aberto) return;
-    function onClickFora(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setAberto(false);
-      }
-    }
-    function onEsc(e: KeyboardEvent) {
-      if (e.key === "Escape") setAberto(false);
-    }
-    document.addEventListener("mousedown", onClickFora);
-    document.addEventListener("keydown", onEsc);
-    return () => {
-      document.removeEventListener("mousedown", onClickFora);
-      document.removeEventListener("keydown", onEsc);
-    };
-  }, [aberto]);
+  const papelLabel = PAPEL_INFO[papel as Papel]?.label ?? papel;
 
   return (
-    <div className="relative" ref={ref}>
-      <button
-        type="button"
-        onClick={() => setAberto((v) => !v)}
-        aria-haspopup="menu"
-        aria-expanded={aberto}
-        className="flex items-center gap-2 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        aria-label="Abrir menu do usuário"
+        className="flex items-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <Avatar className="size-8">
           <AvatarFallback>{iniciais}</AvatarFallback>
         </Avatar>
-      </button>
+      </DropdownMenuTrigger>
 
-      {aberto ? (
-        <div
-          role="menu"
-          className="absolute right-0 z-50 mt-2 w-56 rounded-lg bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10"
-        >
-          <div className="flex flex-col px-2 py-1.5">
-            <span className="text-sm font-medium">{nome || email}</span>
-            <span className="text-xs text-muted-foreground">{email}</span>
-            <span className="mt-1 text-xs text-primary">
-              {PAPEL_LABEL[papel] ?? papel}
-            </span>
-          </div>
-          <div className="-mx-1 my-1 h-px bg-border" />
-          <Link
-            href="/perfil"
-            role="menuitem"
-            onClick={() => setAberto(false)}
-            className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"
-          >
-            <UserRound className="size-4" />
-            Meu perfil
-          </Link>
-          <form action="/auth/signout" method="post">
-            <button
-              type="submit"
-              role="menuitem"
-              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-destructive hover:bg-destructive/10"
-            >
-              <LogOut className="size-4" />
-              Sair
-            </button>
-          </form>
+      {/* w-64 é obrigatório: o Content do primitivo usa w-(--anchor-width),
+          ou seja, dimensiona pela largura do gatilho — que aqui é um avatar
+          de 32px. */}
+      <DropdownMenuContent align="end" className="w-64">
+        <div className="flex flex-col px-2 py-1.5">
+          <span className="truncate text-sm font-medium">{nome || email}</span>
+          <span className="truncate text-xs text-muted-foreground">{email}</span>
+          <span className="mt-1 text-xs text-muted-foreground">{papelLabel}</span>
         </div>
-      ) : null}
-    </div>
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuItem render={<Link href="/perfil" />}>
+          <UserRound />
+          Meu perfil
+        </DropdownMenuItem>
+        <DropdownMenuItem render={<Link href="/novidades" />}>
+          <Sparkles />
+          Novidades
+          <span className="ml-auto font-mono text-[11px] text-muted-foreground">
+            v{versao}
+          </span>
+        </DropdownMenuItem>
+
+        <DropdownMenuSeparator />
+
+        {/* Sair continua sendo um POST para /auth/signout — o item do menu só
+            envia o formulário, para não trocar uma mutação por um GET. */}
+        <form action="/auth/signout" method="post">
+          <DropdownMenuItem
+            variant="destructive"
+            render={<button type="submit" className="w-full" />}
+            closeOnClick={false}
+          >
+            <LogOut />
+            Sair
+          </DropdownMenuItem>
+        </form>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
