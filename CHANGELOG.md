@@ -7,6 +7,70 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.23.0] — 2026-08-07
+
+Conclusão da Fase 3 da migração para a construção do **Sistenge People**
+(referência: `docs/superpowers/plans/people-fase3-paginas-data-forms.md`).
+
+### Corrigido
+
+- **Segunda forma do bug de fuso, agora no cálculo de dinheiro.** A 0.22.0
+  corrigiu `new Date().toISOString().slice(0, 10)`; esta corrige passar
+  `new Date()` cru para funções que comparam **dia de calendário** com uma data
+  vinda do banco. `new Date()` é um instante, as datas do banco chegam por
+  `dataDeISO` (meia-noite), e o dia de calendário do instante é lido no fuso do
+  runtime — que na Vercel é UTC. Das 21h à meia-noite em Brasília,
+  `differenceInCalendarDays` conta um dia a mais. Efeitos: **um período inteiro
+  a mais no custo estimado do contrato**; a coluna "Custo até hoje" e "dias em
+  atraso" de dois relatórios (que vão para Excel e para a diretoria); a projeção
+  do fluxo de caixa começando do mês seguinte no último dia do mês; a janela
+  "vence nos próximos 7 dias" do painel deslocada; competência e vencimento da
+  cobrança de avaria; e a numeração anual do contrato em 31/12.
+  Novo `hojeSaoPaulo()` com quatro testes de relógio fixo, incluindo o que trava
+  a cobrança do período extra.
+- **Ordem das seções na tela do contrato.** A ordem visual vinha de classes
+  `order-1..order-6` sobre uma ordem de DOM diferente, e `AtividadeTimeline` —
+  sem classe de ordem, portanto `order: 0` — era renderizada acima do resumo do
+  contrato. Agora a ordem de DOM é a ordem de leitura.
+- **Contraste dos avisos em amarelo.** Usavam `text-warning` sobre
+  `bg-warning/10`: o mesmo amber a 50% de luminosidade sobre um tint de 10% dele
+  mesmo, ~1,9:1. Novo token `--warning-strong` como a variante legível sobre o
+  próprio tint, em light e dark.
+
+### Segurança
+
+- **Vazamento de UI de permissão em `imoveis/[id]`.** Nas listas de reparos e
+  ocorrências, "Anexar" e o botão de excluir apareciam para quem só tem leitura
+  — as duas únicas listas da página sem o gate `podeEditar`. As actions já
+  recusavam, mas os controles não deviam estar visíveis.
+
+### Alterado
+
+- **As três páginas gigantes foram decompostas** em `_components/` + `<Suspense>`,
+  cada seção buscando os próprios dados: `imoveis/[id]` 684 → 117 linhas + 6
+  seções, `contratos/[id]` 602 → 189 + 5, `vistorias/[id]` 410 → 178 + 3. Antes
+  cada página esperava todas as consultas em série antes do primeiro byte de
+  HTML.
+- **`obterItensLocadosCalculados`** (`src/lib/data/contratos.ts`) sob `cache()`:
+  três seções de `contratos/[id]` consomem o mesmo resultado (custo do resumo,
+  tabela de itens, histórico de devoluções), então sem o cache a decomposição
+  triplicaria a consulta mais pesada da rota. Chaveado por três primitivos de
+  propósito — `cache()` compara identidade de argumento.
+- **URLs assinadas por seção** em `imoveis/[id]`: três lotes em vez de um, mas
+  correndo em paralelo em vez de depois de todas as consultas. O que importava
+  era não voltar a assinar uma URL por arquivo, e cada lote continua em lote.
+- **`ReparoForm` em react-hook-form** — último dos 13 forms do plano, fechando 14
+  em RHF + zodResolver. `salvarReparo` passa a `(raw) => ActionResult` e perde o
+  `redirect()`. `reparoSchema` novo: o `valor` era gravado por
+  `num(...) ?? 0`, que transformava texto inválido em R$ 0,00 em silêncio num
+  campo de dinheiro.
+- **Regra do `createAdminClient()` no `AGENTS.md` corrigida.** Estava absoluta
+  demais ("só em `api/cron/*`") e proibia um uso legítimo e necessário: as
+  chamadas `auth.admin.*` de `usuarios/actions.ts` exigem service role e
+  `auth.users` não é tabela da aplicação. O invariante real é que o client admin
+  nunca faz `.from(...)` em tabela da aplicação, porque é aí que o RLS — e com
+  ele o isolamento por organização — desaparece.
+
 ## [0.22.0] — 2026-08-06
 
 Primeira parte da Fase 3 da migração para a construção do **Sistenge People**

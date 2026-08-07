@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.22.0";
+export const APP_VERSION = "0.23.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,21 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.23.0",
+    data: "2026-08-07",
+    titulo: "Telas de detalhe mais rápidas e correção na cobrança por período",
+    mudancas: [
+      { tipo: "correcao", texto: "Entre 21h e a meia-noite, o custo estimado do contrato cobrava um período inteiro a mais, e a coluna \"Custo até hoje\" dos relatórios saía com um dia extra de locação. A causa era a mesma da versão anterior — o sistema já considerava o dia seguinte —, mas em outro ponto do cálculo. O dia passa a ser sempre o de Brasília também aqui." },
+      { tipo: "correcao", texto: "No último dia do mês, depois das 21h, a projeção do fluxo de caixa começava do mês seguinte e deixava o mês corrente de fora." },
+      { tipo: "correcao", texto: "No dia 31 de dezembro, depois das 21h, um contrato novo era numerado com o ano seguinte." },
+      { tipo: "melhoria", texto: "As telas de imóvel, contrato e vistoria abrem muito mais rápido. Antes elas esperavam TODAS as informações — contratos, contas, reparos, fotos, anexos — antes de mostrar qualquer coisa. Agora o cabeçalho e o resumo aparecem de imediato e cada bloco vai chegando à medida que fica pronto." },
+      { tipo: "correcao", texto: "Na tela do contrato, o histórico de auditoria aparecia logo abaixo do título, antes do resumo do contrato. Voltou para o fim da página." },
+      { tipo: "seguranca", texto: "Nas listas de reparos e ocorrências do imóvel, quem tem acesso somente de leitura via os botões de anexar e de excluir. Eles não funcionavam, mas não deviam estar visíveis — as demais listas da mesma tela já os escondiam." },
+      { tipo: "melhoria", texto: "O formulário de reparo do imóvel passou a validar os campos na hora, e o valor não aceita mais texto inválido: antes qualquer coisa que não fosse número era gravada como R$ 0,00, sem avisar." },
+      { tipo: "correcao", texto: "Os avisos em amarelo (relatório sem assinatura, CNPJ já cadastrado) estavam com o texto claro demais sobre o fundo e ficavam difíceis de ler." },
+    ],
+  },
   {
     versao: "0.22.0",
     data: "2026-08-06",

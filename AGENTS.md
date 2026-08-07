@@ -66,10 +66,23 @@ grep -rEn "(nao|usuario|permissao|funcao|endereco|numero|voce|tambem)" src/app s
 - Leituras compartilhadas vivem em `src/lib/data/<dominio>.ts`, com
   `import "server-only"` no topo e tipos de retorno **planos** (nunca expor a
   ambiguidade `T | T[] | null` do PostgREST).
-- **`createAdminClient()` só em `src/app/api/cron/*`.** Nunca em `src/lib/data/`
-  nem em action: ele bypassa RLS, e o isolamento por organização e o escopo por
-  obra do Loca dependem de RLS. Usar admin numa leitura faz todo tenant ver tudo
-  em silêncio, e nenhum teste pega.
+- **`createAdminClient()` nunca toca tabela da aplicação.** O que ele bypassa é
+  RLS, e o isolamento por organização e o escopo por obra do Loca dependem de
+  RLS: um `.from(...)` com client admin faz todo tenant ver tudo em silêncio, e
+  nenhum teste pega. Onde é permitido:
+  - `src/app/api/cron/*` — roda sem sessão de usuário, não há RLS a respeitar;
+  - `auth.admin.*` (criar/excluir/atualizar usuário), como em
+    `usuarios/actions.ts` — a Admin API do Supabase Auth exige service role e
+    `auth.users` não é tabela da aplicação.
+
+  Fora disso, e **sempre** em `src/lib/data/`, use `createClient()`.
+- **"Hoje" nunca é `new Date()`** quando a data vai ser comparada com coluna
+  `date` do banco — use `hojeSaoPaulo()` (ou `hojeISOSaoPaulo()` para string).
+  `new Date()` é um instante e o Vercel roda em UTC, então das 21h à meia-noite
+  em Brasília a contagem de dias de calendário sai um dia maior — e em cima dela
+  está o cálculo de custo de locação. `new Date()` continua correto para
+  timestamp completo (`updated_at`) e em componente `"use client"`, onde o fuso
+  já é o do usuário.
 - Erro em leitura de lista: `console.error` e devolve vazio. Erro em detalhe:
   devolve `null` e a página chama `notFound()`.
 - **Agregado que gera documento nunca engole erro.** `gerarRelatorio` e
