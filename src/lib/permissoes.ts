@@ -101,3 +101,54 @@ export const trocarSenhaSchema = z
   });
 
 export type TrocarSenhaInput = z.infer<typeof trocarSenhaSchema>;
+
+/**
+ * Papel como enum do zod. `PAPEIS` é um array mutável, então o cast é
+ * necessário para o `z.enum` aceitar a tupla.
+ */
+export const papelSchema = z.enum(PAPEIS as unknown as [Papel, ...Papel[]]);
+
+/** Criar usuário: exige e-mail e senha temporária. */
+export const criarUsuarioSchema = z.object({
+  nome: z.string().trim().min(1, "Informe o nome.").max(120),
+  email: z.string().trim().email("E-mail inválido."),
+  papel: papelSchema,
+  senha: z
+    .string()
+    .min(SENHA_MINIMA, `A senha deve ter ao menos ${SENHA_MINIMA} caracteres.`),
+  /** IDs das obras a que o usuário tem acesso. */
+  obras: z.array(z.string().uuid()),
+  /**
+   * Módulos liberados. Lista VAZIA vira `null` no servidor, que significa
+   * acesso a todos — evita trancar o usuário fora de tudo por engano.
+   */
+  modulos: z.array(z.string()),
+});
+
+/** Editar usuário: sem e-mail (é a identidade) e sem senha. */
+export const editarUsuarioSchema = z.object({
+  id: z.string().uuid(),
+  nome: z.string().trim().min(1, "Informe o nome.").max(120),
+  papel: papelSchema,
+  ativo: z.boolean(),
+  obras: z.array(z.string().uuid()),
+  modulos: z.array(z.string()),
+  /**
+   * Redefinição opcional pelo master. Vazio = não mexer na senha; preenchido,
+   * tem de respeitar o mínimo. O `.refine` cobre exatamente o caso que a
+   * validação por campo do HTML não pega: "opcional, mas se vier tem regra".
+   */
+  nova_senha: z
+    .string()
+    .optional()
+    .refine((v) => !v || v.length >= SENHA_MINIMA, {
+      message: `A nova senha deve ter ao menos ${SENHA_MINIMA} caracteres.`,
+    })
+    .transform((v) => (v && v.length > 0 ? v : null)),
+});
+
+export type CriarUsuarioInput = z.infer<typeof criarUsuarioSchema>;
+
+// Entrada e saída divergem porque `nova_senha` transforma "" em null.
+export type EditarUsuarioInput = z.input<typeof editarUsuarioSchema>;
+export type EditarUsuarioDados = z.output<typeof editarUsuarioSchema>;
