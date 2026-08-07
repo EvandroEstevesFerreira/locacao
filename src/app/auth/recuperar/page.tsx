@@ -1,3 +1,5 @@
+import { AuthShell } from "@/components/shared/auth-shell";
+import { APP_VERSION } from "@/lib/changelog";
 import { RecuperarForm } from "./recuperar-form";
 
 export const metadata = {
@@ -6,8 +8,12 @@ export const metadata = {
 
 export default function RecuperarPage() {
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-muted/40 p-4">
+    <AuthShell
+      titulo="Recuperar acesso"
+      descricao="Informe seu e-mail e enviaremos um link para você criar uma nova senha."
+      versao={APP_VERSION}
+    >
       <RecuperarForm />
-    </main>
+    </AuthShell>
   );
 }
