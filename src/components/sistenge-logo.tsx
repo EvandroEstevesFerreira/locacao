@@ -38,13 +38,17 @@ export function SistengeLogo({ className }: { className?: string }) {
 
 /**
  * Apenas o símbolo da Sistenge, sem o wordmark — para espaços estreitos
- * (sidebar colapsada, header em mobile). O viewBox recorta o grupo vermelho do
- * logotipo completo, então os dois ficam alinhados pixel a pixel.
+ * (sidebar colapsada, header em mobile).
+ *
+ * O viewBox recorta o grupo vermelho do logotipo completo, então os dois ficam
+ * alinhados pixel a pixel. Os limites vêm dos próprios paths: x de 95,63 a
+ * 578,29 e y de 76,75 a 305,28 — daí `95 76 484 230`. Errar isso por pouco
+ * corta a ponta de uma das barras.
  */
 export function SistengeIcon({ className }: { className?: string }) {
   return (
     <svg
-      viewBox="76 76 500 230"
+      viewBox="95 76 484 230"
       role="img"
       aria-label="Sistenge"
       className={className}
