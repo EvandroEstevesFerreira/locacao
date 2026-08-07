@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Pencil, Plus } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
 import {
   getCurrentPerfil,
   podeGerenciarUsuarios,
   PAPEL_INFO,
   type Papel,
 } from "@/lib/auth";
+import { listarUsuarios } from "@/lib/data/usuarios";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,11 +27,7 @@ export default async function UsuariosPage() {
   const perfil = await getCurrentPerfil();
   if (!podeGerenciarUsuarios(perfil?.papel)) redirect("/");
 
-  const supabase = await createClient();
-  const { data: usuarios } = await supabase
-    .from("perfil")
-    .select("id, nome, email, papel, ativo")
-    .order("nome");
+  const usuarios = await listarUsuarios();
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -59,7 +55,7 @@ export default async function UsuariosPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {(usuarios ?? []).map((u) => (
+              {usuarios.map((u) => (
                 <TableRow key={u.id}>
                   <TableCell className="font-medium">{u.nome ?? "—"}</TableCell>
                   <TableCell className="text-muted-foreground">

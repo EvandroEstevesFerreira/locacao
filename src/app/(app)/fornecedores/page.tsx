@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Truck, Plus, Pencil } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeEditarCadastros } from "@/lib/auth";
+import { listarFornecedores } from "@/lib/data/fornecedores";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,23 +17,13 @@ import {
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { Pagination } from "@/components/pagination";
 import { SortHeader } from "@/components/sort-header";
-import { PAGE_SIZE, contagem, parseListParams, termoOr } from "@/lib/lista";
+import { PAGE_SIZE, contagem, parseListParams } from "@/lib/lista";
 import { FornecedoresToolbar } from "./fornecedores-toolbar";
 import { excluirFornecedor } from "./actions";
 import { EmptyState } from "@/components/shared/empty-state";
 import { listarObrasParaFiltro } from "@/lib/data/obras";
 
 export const metadata = { title: "Fornecedores — Loca" };
-
-type Forn = {
-  id: string;
-  nome: string;
-  cnpj: string | null;
-  contato_nome: string | null;
-  contato_telefone: string | null;
-  ativo: boolean;
-  fornecedor_obra: { obra: { id: string; codigo: string } | null }[];
-};
 
 export default async function FornecedoresPage({
   searchParams,
@@ -49,28 +39,10 @@ export default async function FornecedoresPage({
   const perfil = await getCurrentPerfil();
   const podeEditar = podeEditarCadastros(perfil?.papel);
 
-  const supabase = await createClient();
-  // Filtro por obra vira join interno (server-side) para paginar corretamente.
-  const embed = obra
-    ? "fornecedor_obra!inner(obra:obra_id(id, codigo))"
-    : "fornecedor_obra(obra:obra_id(id, codigo))";
-  const [{ data: fornecedoresData, count }, obrasData] = await Promise.all([
-    (() => {
-      let query = supabase
-        .from("fornecedor")
-        .select(
-          `id, nome, cnpj, contato_nome, contato_telefone, ativo, ${embed}`,
-          { count: "exact" },
-        );
-      if (obra) query = query.eq("fornecedor_obra.obra_id", obra);
-      if (q) query = query.or(termoOr(["nome", "cnpj"], q));
-      return query.order(sort, { ascending }).range(from, to);
-    })(),
+  const [{ itens: fornecedores, total }, obrasData] = await Promise.all([
+    listarFornecedores({ q, sort, ascending, from, to, obraId: obra }),
     listarObrasParaFiltro(),
   ]);
-
-  const fornecedores = (fornecedoresData ?? []) as unknown as Forn[];
-  const total = count ?? 0;
   const tem = fornecedores.length > 0;
   const filtrando = Boolean(q || obra);
 
@@ -108,9 +80,7 @@ export default async function FornecedoresPage({
               </TableHeader>
               <TableBody>
                 {fornecedores.map((f) => {
-                  const codigos = (f.fornecedor_obra ?? [])
-                    .map((fo) => fo.obra?.codigo)
-                    .filter(Boolean);
+                  const codigos = f.obras.map((o) => o.codigo);
                   return (
                     <TableRow key={f.id}>
                       <TableCell className="font-medium">{f.nome}</TableCell>

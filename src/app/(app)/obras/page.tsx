@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { HardHat, Plus, Pencil } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeEditarCadastros } from "@/lib/auth";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
@@ -18,7 +17,8 @@ import { ConfirmDelete } from "@/components/confirm-delete";
 import { ListSearch } from "@/components/shared/list-search";
 import { Pagination } from "@/components/pagination";
 import { SortHeader } from "@/components/sort-header";
-import { PAGE_SIZE, contagem, parseListParams, termoOr } from "@/lib/lista";
+import { PAGE_SIZE, contagem, parseListParams } from "@/lib/lista";
+import { listarObras } from "@/lib/data/obras";
 import { excluirObra } from "./actions";
 import { EmptyState } from "@/components/shared/empty-state";
 import { STATUS_OBRA_INFO, type StatusObra } from "@/lib/obra";
@@ -38,16 +38,14 @@ export default async function ObrasPage({
     defaultSort: "codigo",
   });
 
-  const supabase = await createClient();
-  let query = supabase
-    .from("obra")
-    .select("id, codigo, nome, responsavel, status", { count: "exact" });
-  if (q) query = query.or(termoOr(["codigo", "nome", "responsavel"], q));
-  query = query.order(sort, { ascending }).range(from, to);
-  const { data: obras, count } = await query;
-
-  const total = count ?? 0;
-  const temObras = (obras?.length ?? 0) > 0;
+  const { itens: obras, total } = await listarObras({
+    q,
+    sort,
+    ascending,
+    from,
+    to,
+  });
+  const temObras = obras.length > 0;
   const buscando = q.length > 0;
 
   return (
@@ -88,7 +86,7 @@ export default async function ObrasPage({
                     </TableCell>
                   </TableRow>
                 ) : null}
-                {obras!.map((obra) => {
+                {obras.map((obra) => {
                   const s = STATUS_OBRA_INFO[obra.status as StatusObra] ?? STATUS_OBRA_INFO.ativa;
                   return (
                     <TableRow key={obra.id}>

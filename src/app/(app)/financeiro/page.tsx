@@ -9,7 +9,6 @@ import {
   AlertTriangle,
   CheckCircle2,
 } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeGerenciarFinanceiro } from "@/lib/auth";
 import { formatarBRL, formatarData, hojeISOSaoPaulo} from "@/lib/locacao";
 import { PageHeader } from "@/components/shared/page-header";
@@ -27,26 +26,20 @@ import {
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { Pagination } from "@/components/pagination";
 import { SortHeader } from "@/components/sort-header";
-import { PAGE_SIZE, parseListParams, termoOr } from "@/lib/lista";
+import { PAGE_SIZE, parseListParams } from "@/lib/lista";
 import { alternarPago, excluirLancamento } from "./actions";
 import { KpiCard } from "@/components/shared/kpi-card";
 import { ListFilters } from "@/components/shared/list-filters";
 import { ListSearch } from "@/components/shared/list-search";
 import { SelectFilter } from "@/components/shared/select-filter";
 import { listarObrasParaFiltro } from "@/lib/data/obras";
+import {
+  listarLancamentos,
+  obterTotaisFinanceiro,
+} from "@/lib/data/financeiro";
 
 export const metadata = { title: "Financeiro — Loca" };
 
-
-type Row = {
-  id: string;
-  descricao: string;
-  competencia: string;
-  valor: number;
-  vencimento: string;
-  status: "pendente" | "pago";
-  obra: { codigo: string } | null;
-};
 
 export default async function FinanceiroPage({
   searchParams,
@@ -62,43 +55,18 @@ export default async function FinanceiroPage({
     defaultSort: "vencimento",
   });
 
-  const supabase = await createClient();
-  const [obras] = await Promise.all([
+  const [{ itens: lancamentos, total }, totais, obras] = await Promise.all([
+    listarLancamentos({ q, sort, ascending, from, to, status, obraId: obra }),
+    // Os totais somam TODOS os lançamentos do filtro, não só os da página — por
+    // isso é consulta separada, e por isso o recorte de filtro é compartilhado
+    // com a listagem dentro de `lib/data/financeiro.ts`. Antes as duas condições
+    // estavam escritas duas vezes aqui, e um filtro novo esquecido num dos lados
+    // fazia os indicadores discordarem da tabela em silêncio.
+    obterTotaisFinanceiro({ q, status, obraId: obra }),
     listarObrasParaFiltro(),
   ]);
 
-  let query = supabase
-    .from("lancamento_financeiro")
-    .select("id, descricao, competencia, valor, vencimento, status, obra:obra_id(codigo)", { count: "exact" });
-  if (status === "pendente" || status === "pago") query = query.eq("status", status);
-  if (obra) query = query.eq("obra_id", obra);
-  if (q) query = query.or(termoOr(["descricao"], q));
-  query = query.order(sort, { ascending }).range(from, to);
-
-  const { data, count } = await query;
-  const lancamentos = (data ?? []) as unknown as Row[];
-  const total = count ?? 0;
-
-  // KPIs sobre TODOS os lançamentos que casam com os filtros (não só a página).
-  let kpiQuery = supabase
-    .from("lancamento_financeiro")
-    .select("valor, vencimento, status");
-  if (status === "pendente" || status === "pago") kpiQuery = kpiQuery.eq("status", status);
-  if (obra) kpiQuery = kpiQuery.eq("obra_id", obra);
-  if (q) kpiQuery = kpiQuery.or(termoOr(["descricao"], q));
-  const { data: kpiData } = await kpiQuery;
-  const todos = (kpiData ?? []) as { valor: number; vencimento: string; status: string }[];
-
   const hojeStr = hojeISOSaoPaulo();
-  const totalPendente = todos
-    .filter((l) => l.status === "pendente")
-    .reduce((s, l) => s + Number(l.valor), 0);
-  const totalPago = todos
-    .filter((l) => l.status === "pago")
-    .reduce((s, l) => s + Number(l.valor), 0);
-  const totalVencido = todos
-    .filter((l) => l.status === "pendente" && l.vencimento < hojeStr)
-    .reduce((s, l) => s + Number(l.valor), 0);
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -133,19 +101,19 @@ export default async function FinanceiroPage({
         <KpiCard
           icon={<Clock />}
           label="A pagar (pendente)"
-          value={formatarBRL(totalPendente)}
+          value={formatarBRL(totais.pendente)}
           variant="warning"
         />
         <KpiCard
           icon={<AlertTriangle />}
           label="Vencido"
-          value={formatarBRL(totalVencido)}
+          value={formatarBRL(totais.vencido)}
           variant="danger"
         />
         <KpiCard
           icon={<CheckCircle2 />}
           label="Pago"
-          value={formatarBRL(totalPago)}
+          value={formatarBRL(totais.pago)}
           variant="success"
         />
       </div>
@@ -197,7 +165,7 @@ export default async function FinanceiroPage({
                     <TableRow key={l.id}>
                       <TableCell className="font-medium">{l.descricao}</TableCell>
                       <TableCell className="text-muted-foreground">
-                        {l.obra?.codigo ?? "—"}
+                        {l.obraCodigo ?? "—"}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {l.competencia.slice(0, 7).split("-").reverse().join("/")}

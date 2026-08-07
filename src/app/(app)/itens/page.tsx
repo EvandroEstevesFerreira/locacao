@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { Package, Plus, Pencil } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeEditarCadastros } from "@/lib/auth";
-import { TIPO_ITEM, type TipoItem } from "@/lib/itens";
+import { TIPO_ITEM } from "@/lib/itens";
+import { listarItens } from "@/lib/data/itens";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,20 +19,11 @@ import { ConfirmDelete } from "@/components/confirm-delete";
 import { ListSearch } from "@/components/shared/list-search";
 import { Pagination } from "@/components/pagination";
 import { SortHeader } from "@/components/sort-header";
-import { PAGE_SIZE, contagem, parseListParams, termoOr } from "@/lib/lista";
+import { PAGE_SIZE, contagem, parseListParams } from "@/lib/lista";
 import { excluirItem } from "./actions";
 import { EmptyState } from "@/components/shared/empty-state";
 
 export const metadata = { title: "Itens — Loca" };
-
-type Row = {
-  id: string;
-  tipo: TipoItem;
-  descricao: string;
-  unidade: string | null;
-  ativo: boolean;
-  equipamento_unidade: { count: number }[];
-};
 
 export default async function ItensPage({
   searchParams,
@@ -47,16 +38,7 @@ export default async function ItensPage({
     defaultSort: "descricao",
   });
 
-  const supabase = await createClient();
-  let query = supabase
-    .from("item_catalogo")
-    .select("id, tipo, descricao, unidade, ativo, equipamento_unidade(count)", { count: "exact" });
-  if (q) query = query.or(termoOr(["descricao", "unidade"], q));
-  query = query.order(sort, { ascending }).range(from, to);
-  const { data, count } = await query;
-
-  const itens = (data ?? []) as Row[];
-  const total = count ?? 0;
+  const { itens, total } = await listarItens({ q, sort, ascending, from, to });
   const tem = itens.length > 0;
   const buscando = q.length > 0;
 
@@ -100,7 +82,7 @@ export default async function ItensPage({
                 ) : null}
                 {itens.map((item) => {
                   const t = TIPO_ITEM[item.tipo];
-                  const qtdUnidades = item.equipamento_unidade?.[0]?.count ?? 0;
+                  const qtdUnidades = item.unidades;
                   return (
                     <TableRow key={item.id}>
                       <TableCell className="font-medium">

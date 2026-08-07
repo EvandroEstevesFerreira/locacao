@@ -2,6 +2,8 @@ import "server-only";
 
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
+import { termoOr } from "@/lib/lista";
+import type { ListaParams, Pagina } from "./lista-params";
 
 /** Forma plana de obra usada em filtros e selects de formulário. */
 export type ObraOpcao = {
@@ -39,3 +41,29 @@ export const listarObrasParaFiltro = cache(
     return (data ?? []) as ObraOpcao[];
   },
 );
+
+/** Uma linha da listagem de obras. */
+export type ObraListItem = {
+  id: string;
+  codigo: string;
+  nome: string;
+  responsavel: string | null;
+  status: string;
+};
+
+export async function listarObras(
+  p: ListaParams,
+): Promise<Pagina<ObraListItem>> {
+  const supabase = await createClient();
+  let query = supabase
+    .from("obra")
+    .select("id, codigo, nome, responsavel, status", { count: "exact" });
+  if (p.q) query = query.or(termoOr(["codigo", "nome", "responsavel"], p.q));
+
+  const { data, count, error } = await query
+    .order(p.sort, { ascending: p.ascending })
+    .range(p.from, p.to);
+  if (error) console.error("listarObras", error.message);
+
+  return { itens: (data ?? []) as ObraListItem[], total: count ?? 0 };
+}

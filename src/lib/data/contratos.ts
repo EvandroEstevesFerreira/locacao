@@ -7,7 +7,10 @@ import {
   hojeSaoPaulo,
   periodosEntre,
   type Cadencia,
+  type StatusContrato,
 } from "@/lib/locacao";
+import { termoOr } from "@/lib/lista";
+import type { ListaParams, Pagina } from "./lista-params";
 
 export type MovimentacaoDaLinha = {
   id: string;
@@ -104,4 +107,65 @@ export function contaFotos(
   v: { vistoria_foto: { count: number }[] } | null,
 ): number {
   return v?.vistoria_foto?.[0]?.count ?? 0;
+}
+
+/** Uma linha da listagem de contratos, já plana. */
+export type ContratoListItem = {
+  id: string;
+  numero: string;
+  cadencia: Cadencia;
+  data_inicio: string;
+  data_fim_prevista: string | null;
+  status: StatusContrato;
+  obraCodigo: string | null;
+  obraNome: string | null;
+  fornecedorNome: string | null;
+};
+
+export async function listarContratos(
+  p: ListaParams & { obraId?: string },
+): Promise<Pagina<ContratoListItem>> {
+  const supabase = await createClient();
+  let query = supabase
+    .from("contrato_locacao")
+    .select(
+      "id, numero, cadencia, data_inicio, data_fim_prevista, status, obra:obra_id(codigo,nome), fornecedor:fornecedor_id(nome)",
+      { count: "exact" },
+    );
+  if (p.obraId) query = query.eq("obra_id", p.obraId);
+  if (p.q) query = query.or(termoOr(["numero"], p.q));
+
+  const { data, count, error } = await query
+    .order(p.sort, { ascending: p.ascending })
+    .range(p.from, p.to);
+
+  // Lista vazia é a resposta semanticamente correta quando o RLS nega — mas
+  // registramos, porque um erro de query silencioso é indistinguível disso.
+  if (error) console.error("listarContratos", error.message);
+
+  type Bruto = {
+    id: string;
+    numero: string;
+    cadencia: Cadencia;
+    data_inicio: string;
+    data_fim_prevista: string | null;
+    status: StatusContrato;
+    obra: { codigo: string; nome: string } | null;
+    fornecedor: { nome: string } | null;
+  };
+
+  return {
+    itens: ((data ?? []) as unknown as Bruto[]).map((c) => ({
+      id: c.id,
+      numero: c.numero,
+      cadencia: c.cadencia,
+      data_inicio: c.data_inicio,
+      data_fim_prevista: c.data_fim_prevista,
+      status: c.status,
+      obraCodigo: c.obra?.codigo ?? null,
+      obraNome: c.obra?.nome ?? null,
+      fornecedorNome: c.fornecedor?.nome ?? null,
+    })),
+    total: count ?? 0,
+  };
 }

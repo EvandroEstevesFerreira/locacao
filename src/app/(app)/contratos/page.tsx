@@ -1,18 +1,15 @@
 import Link from "next/link";
 import { FileText, Plus, ChevronRight } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeOperar } from "@/lib/auth";
 import {
   CADENCIA,
   STATUS_CONTRATO,
   formatarData,
-  type Cadencia,
-  type StatusContrato,
 } from "@/lib/locacao";
 import { PageHeader } from "@/components/shared/page-header";
 import { Pagination } from "@/components/pagination";
 import { SortHeader } from "@/components/sort-header";
-import { PAGE_SIZE, contagem, parseListParams, termoOr } from "@/lib/lista";
+import { PAGE_SIZE, contagem, parseListParams } from "@/lib/lista";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -29,19 +26,9 @@ import { ListSearch } from "@/components/shared/list-search";
 import { ListFilters } from "@/components/shared/list-filters";
 import { EmptyState } from "@/components/shared/empty-state";
 import { listarObrasParaFiltro } from "@/lib/data/obras";
+import { listarContratos } from "@/lib/data/contratos";
 
 export const metadata = { title: "Contratos — Loca" };
-
-type Row = {
-  id: string;
-  numero: string;
-  cadencia: Cadencia;
-  data_inicio: string;
-  data_fim_prevista: string | null;
-  status: StatusContrato;
-  obra: { codigo: string; nome: string } | null;
-  fornecedor: { nome: string } | null;
-};
 
 export default async function ContratosPage({
   searchParams,
@@ -58,22 +45,10 @@ export default async function ContratosPage({
     defaultDir: "desc",
   });
 
-  const supabase = await createClient();
-  let query = supabase
-    .from("contrato_locacao")
-    .select(
-      "id, numero, cadencia, data_inicio, data_fim_prevista, status, obra:obra_id(codigo,nome), fornecedor:fornecedor_id(nome)",
-      { count: "exact" },
-    );
-  if (obra) query = query.eq("obra_id", obra);
-  if (q) query = query.or(termoOr(["numero"], q));
-  query = query.order(sort, { ascending }).range(from, to);
-  const { data, count } = await query;
-
-  const obrasData = await listarObrasParaFiltro();
-
-  const contratos = (data ?? []) as unknown as Row[];
-  const total = count ?? 0;
+  const [{ itens: contratos, total }, obrasData] = await Promise.all([
+    listarContratos({ q, sort, ascending, from, to, obraId: obra }),
+    listarObrasParaFiltro(),
+  ]);
   const tem = contratos.length > 0;
   const buscando = q.length > 0 || Boolean(obra);
 
@@ -132,9 +107,9 @@ export default async function ContratosPage({
                     <TableRow key={c.id}>
                       <TableCell className="font-medium">{c.numero}</TableCell>
                       <TableCell>
-                        {c.obra ? `${c.obra.codigo} — ${c.obra.nome}` : "—"}
+                        {c.obraCodigo ? `${c.obraCodigo} — ${c.obraNome}` : "—"}
                       </TableCell>
-                      <TableCell>{c.fornecedor?.nome ?? "—"}</TableCell>
+                      <TableCell>{c.fornecedorNome ?? "—"}</TableCell>
                       <TableCell>{CADENCIA[c.cadencia].label}</TableCell>
                       <TableCell className="text-muted-foreground">
                         {formatarData(c.data_inicio)} –{" "}

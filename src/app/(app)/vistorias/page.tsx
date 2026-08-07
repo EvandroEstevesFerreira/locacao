@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { ClipboardCheck, Plus, ChevronRight } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeOperar } from "@/lib/auth";
 import { formatarData } from "@/lib/locacao";
-import { TIPO_VISTORIA, type TipoVistoria } from "@/lib/vistoria";
+import { TIPO_VISTORIA } from "@/lib/vistoria";
+import { listarVistorias } from "@/lib/data/vistorias";
 import { PageHeader } from "@/components/shared/page-header";
 import { Pagination } from "@/components/pagination";
 import { SortHeader } from "@/components/sort-header";
@@ -26,15 +26,6 @@ import { listarObrasParaFiltro } from "@/lib/data/obras";
 
 export const metadata = { title: "Vistorias — Loca" };
 
-type Row = {
-  id: string;
-  tipo: TipoVistoria;
-  data: string;
-  contrato: { numero: string; obra: { codigo: string } | null } | null;
-  vistoria_foto: { count: number }[];
-  avaria: { count: number }[];
-};
-
 export default async function VistoriasPage({
   searchParams,
 }: {
@@ -50,21 +41,10 @@ export default async function VistoriasPage({
     defaultDir: "desc",
   });
 
-  const supabase = await createClient();
-  let q = supabase
-    .from("vistoria")
-    .select(
-      "id, tipo, data, contrato:contrato_id!inner(numero, obra_id, obra:obra_id(codigo)), vistoria_foto(count), avaria(count)",
-      { count: "exact" },
-    );
-  if (obra) q = q.eq("contrato.obra_id", obra);
-  q = q.order(sort, { ascending }).range(from, to);
-  const { data, count } = await q;
-
-  const obrasData = await listarObrasParaFiltro();
-
-  const vistorias = (data ?? []) as unknown as Row[];
-  const total = count ?? 0;
+  const [{ itens: vistorias, total }, obrasData] = await Promise.all([
+    listarVistorias({ sort, ascending, from, to, obraId: obra }),
+    listarObrasParaFiltro(),
+  ]);
   const tem = vistorias.length > 0;
   const buscando = Boolean(obra);
 
@@ -119,11 +99,11 @@ export default async function VistoriasPage({
                   <TableRow key={v.id}>
                     <TableCell>{formatarData(v.data)}</TableCell>
                     <TableCell className="font-medium">
-                      {v.contrato?.numero ?? "—"}
-                      {v.contrato?.obra ? (
+                      {v.contratoNumero ?? "—"}
+                      {v.obraCodigo ? (
                         <span className="text-muted-foreground">
                           {" "}
-                          · {v.contrato.obra.codigo}
+                          · {v.obraCodigo}
                         </span>
                       ) : null}
                     </TableCell>
@@ -133,14 +113,14 @@ export default async function VistoriasPage({
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      {(v.vistoria_foto?.[0]?.count ?? 0) === 0 ? (
+                      {v.fotos === 0 ? (
                         <Badge variant="destructive">Pendente</Badge>
                       ) : (
-                        (v.vistoria_foto?.[0]?.count ?? 0)
+                        v.fotos
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      {v.avaria?.[0]?.count ?? 0}
+                      {v.avarias}
                     </TableCell>
                     <TableCell className="text-right">
                       <Button

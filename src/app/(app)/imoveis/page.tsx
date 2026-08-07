@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Plus, Pencil, FileText, Building2, Coins } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeOperar } from "@/lib/auth";
 import { formatarBRL } from "@/lib/locacao";
 import {
@@ -13,7 +12,7 @@ import {
 import { PageHeader } from "@/components/shared/page-header";
 import { Pagination } from "@/components/pagination";
 import { SortHeader } from "@/components/sort-header";
-import { PAGE_SIZE, parseListParams, termoOr } from "@/lib/lista";
+import { PAGE_SIZE, parseListParams } from "@/lib/lista";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -30,21 +29,10 @@ import { ListFilters } from "@/components/shared/list-filters";
 import { ListSearch } from "@/components/shared/list-search";
 import { SelectFilter } from "@/components/shared/select-filter";
 import { listarObrasParaFiltro } from "@/lib/data/obras";
+import { listarImoveis, somarAluguelVigente } from "@/lib/data/imoveis";
 
 export const metadata = { title: "Imóveis — Loca" };
 
-
-type Contrato = { valor_aluguel: number; valor_condominio: number; vigente: boolean };
-type Row = {
-  id: string;
-  tipo: string;
-  apelido: string;
-  cidade: string | null;
-  uf: string | null;
-  status: StatusImovel;
-  obra: { codigo: string } | null;
-  contrato_imovel: Contrato[] | null;
-};
 
 export default async function ImoveisPage({
   searchParams,
@@ -60,46 +48,13 @@ export default async function ImoveisPage({
     defaultSort: "apelido",
   });
 
-  const supabase = await createClient();
-  const [obras, imoveisRes, kpiRes] = await Promise.all([
+  const [{ itens: imoveis, total }, aluguelTotal, obras] = await Promise.all([
+    listarImoveis({ q, sort, ascending, from, to, tipo, status, obraId: obra }),
+    // Consulta própria: o KPI soma TODOS os imóveis do filtro, não só os 20 da
+    // página. Com `range()` o indicador mentiria conforme se navegasse.
+    somarAluguelVigente({ q, tipo, status, obraId: obra }),
     listarObrasParaFiltro(),
-    (() => {
-      let qq = supabase
-        .from("imovel")
-        .select(
-          "id, tipo, apelido, cidade, uf, status, obra:obra_id(codigo), contrato_imovel(valor_aluguel, valor_condominio, vigente)",
-          { count: "exact" },
-        )
-        .is("deleted_at", null);
-      if (tipo) qq = qq.eq("tipo", tipo);
-      if (status) qq = qq.eq("status", status);
-      if (obra) qq = qq.eq("obra_id", obra);
-      if (q) qq = qq.or(termoOr(["apelido", "cidade"], q));
-      return qq.order(sort, { ascending }).range(from, to);
-    })(),
-    (() => {
-      let qq = supabase
-        .from("imovel")
-        .select("contrato_imovel(valor_aluguel, valor_condominio, vigente)")
-        .is("deleted_at", null);
-      if (tipo) qq = qq.eq("tipo", tipo);
-      if (status) qq = qq.eq("status", status);
-      if (obra) qq = qq.eq("obra_id", obra);
-      if (q) qq = qq.or(termoOr(["apelido", "cidade"], q));
-      return qq;
-    })(),
   ]);
-
-  const imoveis = (imoveisRes.data ?? []) as unknown as Row[];
-  const total = imoveisRes.count ?? 0;
-
-  const vigenteDe = (r: Row) =>
-    (r.contrato_imovel ?? []).find((c) => c.vigente) ?? null;
-
-  const aluguelTotal = ((kpiRes.data ?? []) as unknown as Row[]).reduce((s, r) => {
-    const v = vigenteDe(r);
-    return s + (v ? Number(v.valor_aluguel) + Number(v.valor_condominio) : 0);
-  }, 0);
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -179,7 +134,6 @@ export default async function ImoveisPage({
                 </TableRow>
               ) : (
                 imoveis.map((r) => {
-                  const v = vigenteDe(r);
                   const st = STATUS_IMOVEL_INFO[r.status];
                   return (
                     <TableRow key={r.id}>
@@ -195,7 +149,7 @@ export default async function ImoveisPage({
                         {[r.cidade, r.uf].filter(Boolean).join("/") || "—"}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {r.obra?.codigo ?? "—"}
+                        {r.obraCodigo ?? "—"}
                       </TableCell>
                       <TableCell>
                         <Badge variant={st?.variant ?? "secondary"}>
@@ -203,8 +157,8 @@ export default async function ImoveisPage({
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        {v
-                          ? formatarBRL(Number(v.valor_aluguel) + Number(v.valor_condominio))
+                        {r.mensalVigente > 0
+                          ? formatarBRL(r.mensalVigente)
                           : "—"}
                       </TableCell>
                       {podeEditar ? (
