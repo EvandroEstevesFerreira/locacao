@@ -1,18 +1,23 @@
 import type { Metadata, Viewport } from "next";
-import { Barlow, Barlow_Condensed } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { ThemeProvider } from "@/components/providers/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 
-const barlow = Barlow({
-  variable: "--font-barlow",
+// Inter para a interface, JetBrains Mono para números, valores e códigos.
+// Os nomes das variáveis são --font-inter / --font-jetbrains-mono, e o mapa
+// para --font-sans / --font-mono vive no @theme de globals.css. No Tailwind v4
+// nomear a variável de fonte como --font-sans criaria auto-referência.
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  display: "swap",
 });
 
-const barlowCondensed = Barlow_Condensed({
-  variable: "--font-barlow-condensed",
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains-mono",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -36,7 +41,13 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#BE3A31",
+  // Antes era o vermelho #BE3A31. Na identidade Sistenge 2026 o vermelho é da
+  // marca, não da interface — a cor da barra do sistema segue o slate-900, que
+  // é o que public/manifest.webmanifest já declarava.
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0f172a" },
+  ],
 };
 
 export default function RootLayout({
@@ -45,13 +56,26 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
+    // suppressHydrationWarning é obrigatório com next-themes: o script dele
+    // altera a className do <html> antes da hidratação.
     <html
       lang="pt-BR"
-      className={`${barlow.variable} ${barlowCondensed.variable} h-full antialiased`}
+      suppressHydrationWarning
+      className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="min-h-full">
-        {children}
-        <Toaster richColors position="top-right" />
+        {/* O Toaster fica DENTRO do provider: ui/sonner.tsx usa useTheme()
+            para escolher a skin, e como irmão de {children} ficaria fora do
+            contexto. */}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+          <Toaster richColors position="top-right" />
+        </ThemeProvider>
       </body>
     </html>
   );
