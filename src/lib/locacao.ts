@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { differenceInCalendarDays } from "date-fns";
 
 export type Cadencia = "diaria" | "semanal" | "quinzenal" | "mensal";
@@ -139,3 +140,47 @@ export function formatarDataHora(iso: string | null): string {
     timeStyle: "short",
   });
 }
+
+// ── Schemas ──────────────────────────────────────────────────────────────────
+// Ficam aqui, e não em `contratos/actions.ts`, para poderem ser importados pelo
+// formulário — um arquivo "use server" não atravessa para o cliente.
+
+export const CADENCIAS = ["diaria", "semanal", "quinzenal", "mensal"] as const;
+export const STATUS_CONTRATOS = ["ativo", "encerrado", "cancelado"] as const;
+
+const dataOpcional = z
+  .string()
+  .optional()
+  .transform((v) => (v && v.trim().length > 0 ? v.trim() : null));
+
+export const contratoSchema = z
+  .object({
+    id: z.string().uuid().optional(),
+    obra_id: z.string().uuid("Selecione a obra."),
+    fornecedor_id: z.string().uuid("Selecione o fornecedor."),
+    numero: z.string().trim().min(1, "Informe o número do contrato.").max(60),
+    cadencia: z.enum(CADENCIAS),
+    data_inicio: z.string().min(1, "Informe a data de início."),
+    data_fim_prevista: dataOpcional,
+    status: z.enum(STATUS_CONTRATOS),
+    observacoes: z
+      .string()
+      .trim()
+      .max(1000)
+      .optional()
+      .transform((v) => (v && v.length > 0 ? v : null)),
+    cobranca_prorata: z.boolean(),
+  })
+  // Regra cruzada: só o zod pega, porque depende de dois campos. Antes um
+  // contrato podia ser salvo terminando antes de começar, e o erro só apareceria
+  // no cálculo de custo, muito depois.
+  .refine(
+    (d) => !d.data_fim_prevista || d.data_fim_prevista >= d.data_inicio,
+    {
+      message: "A data de término não pode ser anterior à de início.",
+      path: ["data_fim_prevista"],
+    },
+  );
+
+export type ContratoInput = z.input<typeof contratoSchema>;
+export type ContratoDados = z.output<typeof contratoSchema>;

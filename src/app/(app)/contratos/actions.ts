@@ -9,88 +9,53 @@ import {
   podeOperar,
   podeExcluirCritico,
 } from "@/lib/auth";
+import { falha, primeiroErro, type ActionResult } from "@/lib/acoes";
+import { contratoSchema } from "@/lib/locacao";
 
-export type ContratoFormState = { error?: string };
-
-const contratoSchema = z.object({
-  obra_id: z.string().uuid("Selecione a obra."),
-  fornecedor_id: z.string().uuid("Selecione o fornecedor."),
-  numero: z.string().trim().min(1, "Informe o número do contrato.").max(60),
-  cadencia: z.enum(["diaria", "semanal", "quinzenal", "mensal"]),
-  data_inicio: z.string().min(1, "Informe a data de início."),
-  data_fim_prevista: z.string().optional(),
-  status: z.enum(["ativo", "encerrado", "cancelado"]),
-  observacoes: z.string().trim().max(1000).optional(),
-});
-
+/** Campo de texto/data opcional vazio precisa virar NULL no banco. */
 function nuloSeVazio(v: string | undefined) {
   const t = (v ?? "").trim();
   return t === "" ? null : t;
 }
 
-export async function salvarContrato(
-  _prev: ContratoFormState,
-  formData: FormData,
-): Promise<ContratoFormState> {
+export async function salvarContrato(raw: unknown): Promise<ActionResult> {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id) return { error: "Sessão inválida." };
+  if (!perfil?.org_id) return falha("Sessão inválida. Entre novamente.");
   if (!podeOperar(perfil.papel)) {
-    return { error: "Você não tem permissão para editar contratos." };
+    return falha("Você não tem permissão para editar contratos.");
   }
 
-  const parsed = contratoSchema.safeParse({
-    obra_id: formData.get("obra_id"),
-    fornecedor_id: formData.get("fornecedor_id"),
-    numero: formData.get("numero"),
-    cadencia: formData.get("cadencia"),
-    data_inicio: formData.get("data_inicio"),
-    data_fim_prevista: formData.get("data_fim_prevista") ?? undefined,
-    status: formData.get("status"),
-    observacoes: formData.get("observacoes") ?? undefined,
-  });
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
-  }
+  const parsed = contratoSchema.safeParse(raw);
+  if (!parsed.success) return falha(primeiroErro(parsed.error.issues));
 
-  const id = (formData.get("id") as string | null)?.trim() || null;
-  const dados = {
-    obra_id: parsed.data.obra_id,
-    fornecedor_id: parsed.data.fornecedor_id,
-    numero: parsed.data.numero,
-    cadencia: parsed.data.cadencia,
-    data_inicio: parsed.data.data_inicio,
-    data_fim_prevista: nuloSeVazio(parsed.data.data_fim_prevista),
-    status: parsed.data.status,
-    observacoes: nuloSeVazio(parsed.data.observacoes),
-    cobranca_prorata: formData.get("cobranca_prorata") === "on",
-  };
+  const { id, ...dados } = parsed.data;
 
   const supabase = await createClient();
-  let contratoId = id;
+  let contratoId = id ?? null;
   if (id) {
     const { error } = await supabase
       .from("contrato_locacao")
       .update(dados)
       .eq("id", id);
-    if (error) return { error: "Não foi possível salvar. Tente novamente." };
+    if (error) return falha("Não foi possível salvar. Tente novamente.");
   } else {
     const { data, error } = await supabase
       .from("contrato_locacao")
       .insert({ org_id: perfil.org_id, ...dados })
       .select("id")
       .single();
-    if (error || !data)
-      return { error: "Não foi possível salvar. Tente novamente." };
+    if (error || !data) return falha("Não foi possível salvar. Tente novamente.");
     contratoId = data.id;
   }
 
   revalidatePath("/contratos");
-  redirect(`/contratos/${contratoId}`);
+  // Devolve o id: o cliente navega para o detalhe, onde se adicionam os itens.
+  return { ok: true, id: contratoId ?? undefined };
 }
 
 export async function excluirContrato(
   formData: FormData,
-): Promise<ContratoFormState | void> {
+): Promise<{ error?: string } | void> {
   const perfil = await getCurrentPerfil();
   if (!perfil?.org_id || !podeExcluirCritico(perfil.papel)) {
     return { error: "Somente o Master pode excluir contratos." };
@@ -108,7 +73,6 @@ export async function excluirContrato(
     return { error: "Não foi possível excluir o contrato. Tente novamente." };
   }
   revalidatePath("/contratos");
-  redirect("/contratos");
 }
 
 const itemLocadoSchema = z.object({
