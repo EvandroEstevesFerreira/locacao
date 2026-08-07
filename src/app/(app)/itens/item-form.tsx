@@ -7,6 +7,7 @@ import { TIPO_ITEM, UNIDADES, type TipoItem } from "@/lib/itens";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 
 type Item = {
   id: string;
@@ -16,8 +17,6 @@ type Item = {
   ativo: boolean;
 };
 
-const selectClasses =
-  "flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 export function ItemForm({ item }: { item?: Item }) {
   const [state, formAction, isPending] = useActionState<ItemFormState, FormData>(
@@ -31,18 +30,17 @@ export function ItemForm({ item }: { item?: Item }) {
 
       <div className="space-y-2">
         <Label htmlFor="tipo">Tipo *</Label>
-        <select
+        <NativeSelect
           id="tipo"
           name="tipo"
           defaultValue={item?.tipo ?? "equipamento"}
-          className={selectClasses}
         >
           {(Object.keys(TIPO_ITEM) as TipoItem[]).map((t) => (
             <option key={t} value={t}>
               {TIPO_ITEM[t].label}
             </option>
           ))}
-        </select>
+        </NativeSelect>
         <p className="text-xs text-muted-foreground">
           Equipamentos são controlados por unidade; materiais retornáveis por
           quantidade; consumíveis não retornam.

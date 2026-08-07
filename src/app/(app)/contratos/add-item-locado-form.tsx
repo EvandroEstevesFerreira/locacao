@@ -9,9 +9,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 
-const selectClasses =
-  "flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 export function AddItemLocadoForm({
   contratoId,
@@ -31,7 +30,7 @@ export function AddItemLocadoForm({
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1.5 sm:col-span-2">
           <Label htmlFor="item_id">Item *</Label>
-          <select id="item_id" name="item_id" required defaultValue="" className={selectClasses}>
+          <NativeSelect id="item_id" name="item_id" required defaultValue="">
             <option value="" disabled>
               Selecione o item…
             </option>
@@ -41,7 +40,7 @@ export function AddItemLocadoForm({
                 {i.unidade ? ` (${i.unidade})` : ""}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="quantidade">Quantidade *</Label>

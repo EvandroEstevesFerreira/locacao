@@ -11,9 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { NativeSelect } from "@/components/ui/native-select";
 
-const selectClasses =
-  "h-9 w-full rounded-lg border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring";
 
 export function ReparoForm({ imovelId }: { imovelId: string }) {
   const [state, formAction, isPending] = useActionState<ImovelFormState, FormData>(salvarReparo, {});
@@ -56,12 +55,12 @@ export function OcorrenciaForm({ imovelId }: { imovelId: string }) {
         </div>
         <div className="space-y-2">
           <Label htmlFor="o_tipo">Tipo</Label>
-          <select id="o_tipo" name="tipo" defaultValue="outro" className={selectClasses}>
+          <NativeSelect id="o_tipo" name="tipo" defaultValue="outro">
             <option value="avaria">Avaria</option>
             <option value="reparo">Reparo</option>
             <option value="desentendimento">Desentendimento</option>
             <option value="outro">Outro</option>
-          </select>
+          </NativeSelect>
         </div>
         <div className="space-y-2 lg:col-span-2">
           <Label htmlFor="o_desc">Descrição</Label>

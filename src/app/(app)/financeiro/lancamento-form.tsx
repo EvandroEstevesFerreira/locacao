@@ -6,6 +6,7 @@ import { salvarLancamento, type LancamentoFormState } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 
 type Lancamento = {
   id: string;
@@ -18,8 +19,6 @@ type Lancamento = {
   status: "pendente" | "pago";
 };
 
-const selectClasses =
-  "flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 export function LancamentoForm({
   lancamento,
@@ -42,12 +41,11 @@ export function LancamentoForm({
       <div className="grid gap-5 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="obra_id">Obra *</Label>
-          <select
+          <NativeSelect
             id="obra_id"
             name="obra_id"
             required
             defaultValue={lancamento?.obra_id ?? ""}
-            className={selectClasses}
           >
             <option value="" disabled>
               Selecione…
@@ -57,15 +55,14 @@ export function LancamentoForm({
                 {o.codigo} — {o.nome}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
         <div className="space-y-2">
           <Label htmlFor="contrato_id">Contrato (opcional)</Label>
-          <select
+          <NativeSelect
             id="contrato_id"
             name="contrato_id"
             defaultValue={lancamento?.contrato_id ?? ""}
-            className={selectClasses}
           >
             <option value="">—</option>
             {contratos.map((c) => (
@@ -73,7 +70,7 @@ export function LancamentoForm({
                 {c.numero}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
       </div>
 
@@ -126,15 +123,15 @@ export function LancamentoForm({
 
       <div className="space-y-2">
         <Label htmlFor="status">Status</Label>
-        <select
+        <NativeSelect
           id="status"
           name="status"
           defaultValue={lancamento?.status ?? "pendente"}
-          className={`${selectClasses} max-w-48`}
+          className="max-w-48"
         >
           <option value="pendente">Pendente</option>
           <option value="pago">Pago</option>
-        </select>
+        </NativeSelect>
       </div>
 
       {state.error ? (

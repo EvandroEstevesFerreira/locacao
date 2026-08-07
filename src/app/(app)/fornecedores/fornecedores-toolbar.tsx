@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
 
 /** Busca (nome/CNPJ) + filtro por obra, sincronizados na querystring. */
 export function FornecedoresToolbar({
@@ -49,10 +50,10 @@ export function FornecedoresToolbar({
       {obras.length > 0 ? (
         <label className="flex items-center gap-2 text-sm">
           <span className="text-muted-foreground">Obra</span>
-          <select
+          <NativeSelect
+            className="w-auto"
             value={obra}
             onChange={(e) => navegar(texto, e.target.value)}
-            className="h-9 rounded-md border border-input bg-transparent px-2 text-sm outline-none focus-visible:border-ring"
           >
             <option value="">Todas as obras</option>
             {obras.map((o) => (
@@ -60,7 +61,7 @@ export function FornecedoresToolbar({
                 {o.codigo} — {o.nome}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </label>
       ) : null}
     </div>

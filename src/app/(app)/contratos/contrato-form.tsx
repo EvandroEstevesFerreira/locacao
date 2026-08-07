@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { NativeSelect } from "@/components/ui/native-select";
 
 type Contrato = {
   id: string;
@@ -22,8 +23,6 @@ type Contrato = {
   cobranca_prorata?: boolean;
 };
 
-const selectClasses =
-  "flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 export function ContratoForm({
   contrato,
@@ -48,12 +47,11 @@ export function ContratoForm({
       <div className="grid gap-5 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="obra_id">Obra *</Label>
-          <select
+          <NativeSelect
             id="obra_id"
             name="obra_id"
             required
             defaultValue={contrato?.obra_id ?? ""}
-            className={selectClasses}
           >
             <option value="" disabled>
               Selecione…
@@ -63,16 +61,15 @@ export function ContratoForm({
                 {o.codigo} — {o.nome}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
         <div className="space-y-2">
           <Label htmlFor="fornecedor_id">Fornecedor *</Label>
-          <select
+          <NativeSelect
             id="fornecedor_id"
             name="fornecedor_id"
             required
             defaultValue={contrato?.fornecedor_id ?? ""}
-            className={selectClasses}
           >
             <option value="" disabled>
               Selecione…
@@ -82,7 +79,7 @@ export function ContratoForm({
                 {f.nome}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
       </div>
 
@@ -100,18 +97,17 @@ export function ContratoForm({
         </div>
         <div className="space-y-2">
           <Label htmlFor="cadencia">Cadência de cobrança *</Label>
-          <select
+          <NativeSelect
             id="cadencia"
             name="cadencia"
             defaultValue={contrato?.cadencia ?? "mensal"}
-            className={selectClasses}
           >
             {(Object.keys(CADENCIA) as Cadencia[]).map((c) => (
               <option key={c} value={c}>
                 {CADENCIA[c].label}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
       </div>
 
@@ -137,16 +133,15 @@ export function ContratoForm({
         </div>
         <div className="space-y-2">
           <Label htmlFor="status">Status</Label>
-          <select
+          <NativeSelect
             id="status"
             name="status"
             defaultValue={contrato?.status ?? "ativo"}
-            className={selectClasses}
           >
             <option value="ativo">Ativo</option>
             <option value="encerrado">Encerrado</option>
             <option value="cancelado">Cancelado</option>
-          </select>
+          </NativeSelect>
         </div>
       </div>
 

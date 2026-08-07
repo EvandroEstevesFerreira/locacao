@@ -11,6 +11,7 @@ import {
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -19,11 +20,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { NativeSelect } from "@/components/ui/native-select";
 
 export const metadata = { title: "Relatórios — Loca" };
 
-const selectClasses =
-  "h-9 rounded-lg border border-input bg-transparent px-3 text-sm outline-none";
 
 export default async function RelatoriosPage({
   searchParams,
@@ -82,32 +82,31 @@ export default async function RelatoriosPage({
           <form className="flex flex-wrap items-end gap-3" method="get">
             <div className="flex flex-col gap-1">
               <label htmlFor="f-tipo" className="text-xs text-muted-foreground">Relatório</label>
-              <select id="f-tipo" name="tipo" defaultValue={tipo} className={selectClasses}>
+              <NativeSelect className="w-auto" id="f-tipo" name="tipo" defaultValue={tipo}>
                 {TIPOS_RELATORIO.map((t) => (
                   <option key={t.valor} value={t.valor}>
                     {t.label}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
             </div>
             <div className="flex flex-col gap-1">
               <label htmlFor="f-obra" className="text-xs text-muted-foreground">Obra</label>
-              <select id="f-obra" name="obra" defaultValue={sp.obra ?? ""} className={selectClasses}>
+              <NativeSelect className="w-auto" id="f-obra" name="obra" defaultValue={sp.obra ?? ""}>
                 <option value="">Todas</option>
                 {(obras ?? []).map((o) => (
                   <option key={o.id} value={o.id}>
                     {o.codigo} — {o.nome}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
             </div>
             <div className="flex flex-col gap-1">
               <label htmlFor="f-fornecedor" className="text-xs text-muted-foreground">Fornecedor</label>
-              <select
+              <NativeSelect className="w-auto"
                 id="f-fornecedor"
                 name="fornecedor"
                 defaultValue={sp.fornecedor ?? ""}
-                className={selectClasses}
               >
                 <option value="">Todos</option>
                 {(fornecedores ?? []).map((f) => (
@@ -115,34 +114,34 @@ export default async function RelatoriosPage({
                     {f.nome}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
             </div>
             <div className="flex flex-col gap-1">
               <label htmlFor="f-status" className="text-xs text-muted-foreground">Status</label>
-              <select id="f-status" name="status" defaultValue={sp.status ?? ""} className={selectClasses}>
+              <NativeSelect className="w-auto" id="f-status" name="status" defaultValue={sp.status ?? ""}>
                 <option value="">Todos</option>
                 <option value="pendente">Pendente</option>
                 <option value="pago">Pago</option>
-              </select>
+              </NativeSelect>
             </div>
             <div className="flex flex-col gap-1">
               <label htmlFor="f-inicio" className="text-xs text-muted-foreground">De</label>
-              <input
+              <Input
                 id="f-inicio"
                 type="date"
                 name="inicio"
                 defaultValue={sp.inicio ?? ""}
-                className={selectClasses}
+                className="w-auto"
               />
             </div>
             <div className="flex flex-col gap-1">
               <label htmlFor="f-fim" className="text-xs text-muted-foreground">Até</label>
-              <input
+              <Input
                 id="f-fim"
                 type="date"
                 name="fim"
                 defaultValue={sp.fim ?? ""}
-                className={selectClasses}
+                className="w-auto"
               />
             </div>
             <Button type="submit" variant="outline">

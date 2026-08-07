@@ -32,11 +32,10 @@ import {
   excluirVistoria,
   gerarLancamentoAvaria,
 } from "../actions";
+import { NativeSelect } from "@/components/ui/native-select";
 
 export const metadata = { title: "Vistoria — Loca" };
 
-const selectClasses =
-  "h-8 rounded-md border border-input bg-transparent px-2 text-xs outline-none";
 
 export default async function VistoriaDetalhePage({
   params,
@@ -280,15 +279,14 @@ export default async function VistoriaDetalhePage({
                       <form action={atualizarStatusAvaria} className="flex gap-1">
                         <input type="hidden" name="id" value={a.id} />
                         <input type="hidden" name="vistoria_id" value={vistoria.id} />
-                        <select
+                        <NativeSelect className="w-auto"
                           name="status"
                           defaultValue={a.status}
-                          className={selectClasses}
                         >
                           <option value="aberta">Aberta</option>
                           <option value="cobrada">Cobrada</option>
                           <option value="resolvida">Resolvida</option>
-                        </select>
+                        </NativeSelect>
                         <Button type="submit" size="sm" variant="outline">
                           Salvar
                         </Button>

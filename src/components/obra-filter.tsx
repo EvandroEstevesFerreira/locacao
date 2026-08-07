@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { NativeSelect } from "@/components/ui/native-select";
 
 /** Filtro por obra que navega via querystring (?obra=<id>). */
 export function ObraFilter({
@@ -18,13 +19,13 @@ export function ObraFilter({
   return (
     <label className="flex items-center gap-2 text-sm">
       <span className="text-muted-foreground">Obra</span>
-      <select
+      <NativeSelect
+        className="w-auto"
         value={value ?? ""}
         onChange={(e) => {
           const v = e.target.value;
           router.push(v ? `${basePath}?obra=${v}` : basePath);
         }}
-        className="h-8 rounded-md border border-input bg-transparent px-2 text-sm outline-none focus-visible:border-ring"
       >
         <option value="">Todas as obras</option>
         {obras.map((o) => (
@@ -32,7 +33,7 @@ export function ObraFilter({
             {o.codigo} — {o.nome}
           </option>
         ))}
-      </select>
+      </NativeSelect>
     </label>
   );
 }

@@ -6,9 +6,8 @@ import { TIPOS_CONSUMO, TIPO_CONSUMO_INFO } from "@/lib/imoveis";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 
-const selectClasses =
-  "h-9 w-full rounded-lg border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring";
 
 export function ContaConsumoForm({ imovelId }: { imovelId: string }) {
   const [state, formAction, isPending] = useActionState<ImovelFormState, FormData>(
@@ -22,11 +21,11 @@ export function ContaConsumoForm({ imovelId }: { imovelId: string }) {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="space-y-2">
           <Label htmlFor="tipo_c">Tipo</Label>
-          <select id="tipo_c" name="tipo" defaultValue="luz" className={selectClasses}>
+          <NativeSelect id="tipo_c" name="tipo" defaultValue="luz">
             {TIPOS_CONSUMO.map((t) => (
               <option key={t} value={t}>{TIPO_CONSUMO_INFO[t]}</option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
         <div className="space-y-2">
           <Label htmlFor="competencia">Competência (mês)</Label>

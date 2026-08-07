@@ -8,9 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { NativeSelect } from "@/components/ui/native-select";
 
-const selectClasses =
-  "h-9 w-full rounded-lg border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring";
 
 export type ContratoImovelDados = {
   id?: string;
@@ -127,12 +126,12 @@ export function ContratoImovelForm({
         </div>
         <div className="space-y-2">
           <Label htmlFor="caucao_status">Situação da caução</Label>
-          <select id="caucao_status" name="caucao_status" defaultValue={contrato?.caucao_status ?? ""} className={selectClasses}>
+          <NativeSelect id="caucao_status" name="caucao_status" defaultValue={contrato?.caucao_status ?? ""}>
             <option value="">— Não aplicável —</option>
             {(Object.keys(STATUS_CAUCAO_INFO) as StatusCaucao[]).map((s) => (
               <option key={s} value={s}>{STATUS_CAUCAO_INFO[s]}</option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
       </fieldset>
 

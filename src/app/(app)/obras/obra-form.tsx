@@ -6,6 +6,7 @@ import { salvarObra, type ObraFormState } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 
 type Obra = {
   id: string;
@@ -17,8 +18,6 @@ type Obra = {
   status: "ativa" | "pausada" | "encerrada";
 };
 
-const selectClasses =
-  "flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 export function ObraForm({ obra }: { obra?: Obra }) {
   const [state, formAction, isPending] = useActionState<ObraFormState, FormData>(
@@ -44,16 +43,15 @@ export function ObraForm({ obra }: { obra?: Obra }) {
         </div>
         <div className="space-y-2">
           <Label htmlFor="status">Status</Label>
-          <select
+          <NativeSelect
             id="status"
             name="status"
             defaultValue={obra?.status ?? "ativa"}
-            className={selectClasses}
           >
             <option value="ativa">Ativa</option>
             <option value="pausada">Pausada</option>
             <option value="encerrada">Encerrada</option>
-          </select>
+          </NativeSelect>
         </div>
       </div>
 

@@ -21,11 +21,10 @@ import { Pagination } from "@/components/pagination";
 import { SortHeader } from "@/components/sort-header";
 import { PAGE_SIZE, parseListParams, termoOr } from "@/lib/lista";
 import { alternarPago, excluirLancamento } from "./actions";
+import { NativeSelect } from "@/components/ui/native-select";
 
 export const metadata = { title: "Financeiro — Loca" };
 
-const selectClasses =
-  "h-9 rounded-lg border border-input bg-transparent px-3 text-sm outline-none";
 
 type Row = {
   id: string;
@@ -132,22 +131,22 @@ export default async function FinanceiroPage({
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-xs text-muted-foreground">Obra</label>
-          <select name="obra" defaultValue={obra ?? ""} className={selectClasses}>
+          <NativeSelect className="w-auto" name="obra" defaultValue={obra ?? ""}>
             <option value="">Todas</option>
             {(obras ?? []).map((o) => (
               <option key={o.id} value={o.id}>
                 {o.codigo} — {o.nome}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-xs text-muted-foreground">Status</label>
-          <select name="status" defaultValue={status ?? ""} className={selectClasses}>
+          <NativeSelect className="w-auto" name="status" defaultValue={status ?? ""}>
             <option value="">Todos</option>
             <option value="pendente">Pendente</option>
             <option value="pago">Pago</option>
-          </select>
+          </NativeSelect>
         </div>
         <Button type="submit" variant="outline">
           Filtrar

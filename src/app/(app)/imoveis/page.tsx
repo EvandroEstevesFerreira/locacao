@@ -26,11 +26,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { NativeSelect } from "@/components/ui/native-select";
 
 export const metadata = { title: "Imóveis — Loca" };
 
-const selectClasses =
-  "h-9 rounded-lg border border-input bg-transparent px-3 text-sm outline-none";
 
 type Contrato = { valor_aluguel: number; valor_condominio: number; vigente: boolean };
 type Row = {
@@ -133,36 +132,36 @@ export default async function ImoveisPage({
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-xs text-muted-foreground">Tipo</label>
-          <select name="tipo" defaultValue={tipo ?? ""} className={selectClasses}>
+          <NativeSelect className="w-auto" name="tipo" defaultValue={tipo ?? ""}>
             <option value="">Todos</option>
             {TIPOS_IMOVEL.map((t) => (
               <option key={t} value={t}>
                 {TIPO_IMOVEL_INFO[t]}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-xs text-muted-foreground">Status</label>
-          <select name="status" defaultValue={status ?? ""} className={selectClasses}>
+          <NativeSelect className="w-auto" name="status" defaultValue={status ?? ""}>
             <option value="">Todos</option>
             {(Object.keys(STATUS_IMOVEL_INFO) as StatusImovel[]).map((s) => (
               <option key={s} value={s}>
                 {STATUS_IMOVEL_INFO[s].label}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-xs text-muted-foreground">Obra</label>
-          <select name="obra" defaultValue={obra ?? ""} className={selectClasses}>
+          <NativeSelect className="w-auto" name="obra" defaultValue={obra ?? ""}>
             <option value="">Todas</option>
             {(obras ?? []).map((o) => (
               <option key={o.id} value={o.id}>
                 {o.codigo} — {o.nome}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
         <Button type="submit" variant="outline">
           Filtrar

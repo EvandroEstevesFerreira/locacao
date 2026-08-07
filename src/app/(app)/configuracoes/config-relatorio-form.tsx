@@ -11,9 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { NativeSelect } from "@/components/ui/native-select";
 
-const selectClasses =
-  "h-9 rounded-lg border border-input bg-transparent px-3 text-sm outline-none";
 
 export function ConfigRelatorioForm({
   config,
@@ -50,30 +49,28 @@ export function ConfigRelatorioForm({
       <div className="flex flex-wrap gap-4">
         <div className="flex flex-col gap-1">
           <Label htmlFor="tipo">Relatório</Label>
-          <select
+          <NativeSelect className="w-auto"
             id="tipo"
             name="tipo"
             defaultValue={config.tipo}
-            className={selectClasses}
           >
             {TIPOS_RELATORIO.map((t) => (
               <option key={t.valor} value={t.valor}>
                 {t.label}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
         <div className="flex flex-col gap-1">
           <Label htmlFor="frequencia">Frequência</Label>
-          <select
+          <NativeSelect className="w-auto"
             id="frequencia"
             name="frequencia"
             defaultValue={config.frequencia}
-            className={selectClasses}
           >
             <option value="semanal">Semanal</option>
             <option value="mensal">Mensal</option>
-          </select>
+          </NativeSelect>
         </div>
         <div className="flex flex-col gap-1">
           <Label htmlFor="dia">Dia</Label>

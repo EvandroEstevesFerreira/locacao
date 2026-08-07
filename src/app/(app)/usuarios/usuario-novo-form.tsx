@@ -8,9 +8,8 @@ import { MODULOS } from "@/lib/modulos";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 
-const selectClasses =
-  "flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 export function UsuarioNovoForm({
   obras,
@@ -36,18 +35,17 @@ export function UsuarioNovoForm({
 
       <div className="space-y-2">
         <Label htmlFor="papel">Perfil</Label>
-        <select
+        <NativeSelect
           id="papel"
           name="papel"
           defaultValue="operador"
-          className={selectClasses}
         >
           {PAPEIS.map((p) => (
             <option key={p} value={p}>
               {PAPEL_INFO[p].label} — {PAPEL_INFO[p].descricao}
             </option>
           ))}
-        </select>
+        </NativeSelect>
       </div>
 
       <div className="space-y-2">

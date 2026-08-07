@@ -13,9 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { NativeSelect } from "@/components/ui/native-select";
 
-const selectClasses =
-  "h-9 w-full rounded-lg border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring";
 
 export type ImovelDados = {
   id?: string;
@@ -66,11 +65,11 @@ export function ImovelForm({
         </div>
         <div className="space-y-2">
           <Label htmlFor="tipo">Tipo</Label>
-          <select id="tipo" name="tipo" defaultValue={imovel?.tipo ?? "outro"} className={selectClasses}>
+          <NativeSelect id="tipo" name="tipo" defaultValue={imovel?.tipo ?? "outro"}>
             {TIPOS_IMOVEL.map((t) => (
               <option key={t} value={t}>{TIPO_IMOVEL_INFO[t]}</option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
         <div className="space-y-2 sm:col-span-2">
           <Label htmlFor="endereco">Endereço</Label>
@@ -94,20 +93,20 @@ export function ImovelForm({
         </div>
         <div className="space-y-2">
           <Label htmlFor="obra_id">Obra / centro de custo</Label>
-          <select id="obra_id" name="obra_id" defaultValue={imovel?.obra_id ?? ""} className={selectClasses}>
+          <NativeSelect id="obra_id" name="obra_id" defaultValue={imovel?.obra_id ?? ""}>
             <option value="">— Nenhuma —</option>
             {obras.map((o) => (
               <option key={o.id} value={o.id}>{o.codigo} — {o.nome}</option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
         <div className="space-y-2">
           <Label htmlFor="status">Status</Label>
-          <select id="status" name="status" defaultValue={imovel?.status ?? "ativo"} className={selectClasses}>
+          <NativeSelect id="status" name="status" defaultValue={imovel?.status ?? "ativo"}>
             {(Object.keys(STATUS_IMOVEL_INFO) as StatusImovel[]).map((s) => (
               <option key={s} value={s}>{STATUS_IMOVEL_INFO[s].label}</option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
       </div>
 
@@ -164,11 +163,11 @@ export function ImovelForm({
           </div>
           <div className="space-y-2">
             <Label htmlFor="tipo_conta">Tipo de conta</Label>
-            <select id="tipo_conta" name="tipo_conta" defaultValue={imovel?.tipo_conta ?? ""} className={selectClasses}>
+            <NativeSelect id="tipo_conta" name="tipo_conta" defaultValue={imovel?.tipo_conta ?? ""}>
               <option value="">— Não informado —</option>
               <option value="corrente">Corrente</option>
               <option value="poupanca">Poupança</option>
-            </select>
+            </NativeSelect>
           </div>
           <div className="space-y-2">
             <Label htmlFor="titular_conta">Titular da conta</Label>
