@@ -16,7 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ConfirmDelete } from "@/components/confirm-delete";
-import { ListSearch } from "@/components/list-search";
+import { ListSearch } from "@/components/shared/list-search";
 import { Pagination } from "@/components/pagination";
 import { SortHeader } from "@/components/sort-header";
 import { PAGE_SIZE, parseListParams, termoOr } from "@/lib/lista";

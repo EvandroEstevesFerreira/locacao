@@ -20,8 +20,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { PageHeader } from "@/components/shared/page-header";
-import { ObraFilter } from "@/components/obra-filter";
 import { BarChart } from "@/components/bar-chart";
+import { SelectFilter } from "@/components/shared/select-filter";
 
 type Devolucao = {
   id: string;
@@ -154,7 +154,14 @@ export default async function HomePage({
       <PageHeader
         titulo="Início"
         descricao={`Visão geral das locações ativas, custos e devoluções · ${formatarData(hojeStr)}`}
-        acoes={<ObraFilter obras={obrasLista ?? []} value={obra} basePath="/" />}
+        acoes={
+          <SelectFilter
+            param="obra"
+            label="Obra"
+            placeholder="Todas as obras"
+            opcoes={(obrasLista ?? []).map((o) => ({ value: o.id, label: `${o.codigo} — ${o.nome}` }))}
+          />
+        }
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

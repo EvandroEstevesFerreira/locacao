@@ -10,8 +10,6 @@ import {
   type StatusContrato,
 } from "@/lib/locacao";
 import { PageHeader } from "@/components/shared/page-header";
-import { ObraFilter } from "@/components/obra-filter";
-import { ListSearch } from "@/components/list-search";
 import { Pagination } from "@/components/pagination";
 import { SortHeader } from "@/components/sort-header";
 import { PAGE_SIZE, parseListParams, termoOr } from "@/lib/lista";
@@ -26,6 +24,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { SelectFilter } from "@/components/shared/select-filter";
+import { ListSearch } from "@/components/shared/list-search";
+import { ListFilters } from "@/components/shared/list-filters";
 
 export const metadata = { title: "Contratos — Loca" };
 
@@ -92,10 +93,15 @@ export default async function ContratosPage({
         }
       />
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <ListFilters>
         <ListSearch placeholder="Buscar por número…" ariaLabel="Buscar contrato" />
-        <ObraFilter obras={obrasData ?? []} value={obra} basePath="/contratos" />
-      </div>
+        <SelectFilter
+          param="obra"
+          label="Obra"
+          placeholder="Todas as obras"
+          opcoes={(obrasData ?? []).map((o) => ({ value: o.id, label: `${o.codigo} — ${o.nome}` }))}
+        />
+      </ListFilters>
 
       {tem || buscando ? (
         <>

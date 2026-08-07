@@ -2,7 +2,6 @@ import { createClient } from "@/lib/supabase/server";
 import { formatarBRL } from "@/lib/locacao";
 import { gerarFluxoCaixa } from "@/lib/fluxo";
 import { PageHeader } from "@/components/shared/page-header";
-import { ObraFilter } from "@/components/obra-filter";
 import {
   Card,
   CardContent,
@@ -18,6 +17,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { SelectFilter } from "@/components/shared/select-filter";
+import { ListFilters } from "@/components/shared/list-filters";
 
 export const metadata = { title: "Fluxo de caixa — Loca" };
 
@@ -43,11 +44,14 @@ export default async function FluxoCaixaPage({
         descricao="Projeção de desembolsos por mês: lançamentos + contratos de equipamento e imóveis."
       />
 
-      <ObraFilter
-        obras={obrasData ?? []}
-        value={obra}
-        basePath="/financeiro/fluxo"
-      />
+      <ListFilters>
+        <SelectFilter
+          param="obra"
+          label="Obra"
+          placeholder="Todas as obras"
+          opcoes={(obrasData ?? []).map((o) => ({ value: o.id, label: `${o.codigo} — ${o.nome}` }))}
+        />
+      </ListFilters>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Card>

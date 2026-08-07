@@ -5,7 +5,6 @@ import { getCurrentPerfil, podeOperar } from "@/lib/auth";
 import { formatarData } from "@/lib/locacao";
 import { TIPO_VISTORIA, type TipoVistoria } from "@/lib/vistoria";
 import { PageHeader } from "@/components/shared/page-header";
-import { ObraFilter } from "@/components/obra-filter";
 import { Pagination } from "@/components/pagination";
 import { SortHeader } from "@/components/sort-header";
 import { PAGE_SIZE, parseListParams } from "@/lib/lista";
@@ -20,6 +19,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { SelectFilter } from "@/components/shared/select-filter";
+import { ListFilters } from "@/components/shared/list-filters";
 
 export const metadata = { title: "Vistorias — Loca" };
 
@@ -83,7 +84,14 @@ export default async function VistoriasPage({
         }
       />
 
-      <ObraFilter obras={obrasData ?? []} value={obra} basePath="/vistorias" />
+      <ListFilters>
+        <SelectFilter
+          param="obra"
+          label="Obra"
+          placeholder="Todas as obras"
+          opcoes={(obrasData ?? []).map((o) => ({ value: o.id, label: `${o.codigo} — ${o.nome}` }))}
+        />
+      </ListFilters>
 
       {tem || buscando ? (
         <>
