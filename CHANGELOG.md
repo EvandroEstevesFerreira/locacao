@@ -37,6 +37,17 @@ Conclusão da Fase 3 da migração para a construção do **Sistenge People**
   mesmo, ~1,9:1. Novo token `--warning-strong` como a variante legível sobre o
   próprio tint, em light e dark.
 
+- **Indicadores podiam discordar da tabela em Financeiro e Imóveis.** As duas
+  telas montavam o recorte de filtro **duas vezes** — uma na query paginada da
+  lista, outra na query dos indicadores, que soma o filtro inteiro. Um filtro
+  novo esquecido num dos lados fazia os KPIs somarem um recorte diferente do que
+  a tabela mostrava, sem erro nenhum. Agora as duas passam pelo mesmo
+  `aplicarFiltros` dentro do leitor de domínio.
+- **`not-found.tsx` da raiz não existia.** Uma URL que não casa com nenhuma rota
+  caía na tela padrão do Next — em inglês e sem estilo. A de `(app)` não cobre o
+  caso: ela vive dentro do grupo, atende só ao `notFound()` de uma rota do grupo
+  e herda o shell, que exige sessão.
+
 ### Segurança
 
 - **Vazamento de UI de permissão em `imoveis/[id]`.** Nas listas de reparos e
@@ -64,6 +75,15 @@ Conclusão da Fase 3 da migração para a construção do **Sistenge People**
   `redirect()`. `reparoSchema` novo: o `valor` era gravado por
   `num(...) ?? 0`, que transformava texto inválido em R$ 0,00 em silêncio num
   campo de dinheiro.
+- **Camada de leitura para as 8 listagens** em `src/lib/data/<dominio>.ts`, com
+  `import "server-only"`, tipo de retorno **plano** e `{ itens, total }` — o
+  total vindo do `count: "exact"` do PostgREST, não de `array.length`, porque as
+  listas paginam em 20. Achatar o retorno removeu 6 `as unknown as Row` e um
+  `obras!.map` das páginas: a ambiguidade `T | T[] | null` dos embeds do
+  PostgREST para de atravessar o boundary. Os leitores de lista deliberadamente
+  **não** usam `cache()` — ele chaveia por identidade de argumento e estes
+  recebem um objeto literal montado a cada chamada, então o cache nunca
+  acertaria.
 - **Regra do `createAdminClient()` no `AGENTS.md` corrigida.** Estava absoluta
   demais ("só em `api/cron/*`") e proibia um uso legítimo e necessário: as
   chamadas `auth.admin.*` de `usuarios/actions.ts` exigem service role e

@@ -41,6 +41,8 @@ export const CHANGELOG: Release[] = [
       { tipo: "seguranca", texto: "Nas listas de reparos e ocorrências do imóvel, quem tem acesso somente de leitura via os botões de anexar e de excluir. Eles não funcionavam, mas não deviam estar visíveis — as demais listas da mesma tela já os escondiam." },
       { tipo: "melhoria", texto: "O formulário de reparo do imóvel passou a validar os campos na hora, e o valor não aceita mais texto inválido: antes qualquer coisa que não fosse número era gravada como R$ 0,00, sem avisar." },
       { tipo: "correcao", texto: "Os avisos em amarelo (relatório sem assinatura, CNPJ já cadastrado) estavam com o texto claro demais sobre o fundo e ficavam difíceis de ler." },
+      { tipo: "correcao", texto: "Em Financeiro e Imóveis, os indicadores do topo podiam discordar da tabela: as condições dos filtros eram aplicadas em dois lugares separados, e bastava um deles ficar de fora para os totais somarem um recorte diferente do que a lista mostrava." },
+      { tipo: "correcao", texto: "Digitar um endereço que não existe levava a uma página em branco com texto em inglês. Agora aparece uma tela em português com um botão para voltar ao início." },
     ],
   },
   {
