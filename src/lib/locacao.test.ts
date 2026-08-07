@@ -4,6 +4,8 @@ import {
   periodosPorMes,
   custoLinhaLocado,
   hojeISOSaoPaulo,
+  hojeSaoPaulo,
+  dataDeISO,
   formatarData,
   formatarBRL,
 } from "./locacao";
@@ -149,5 +151,44 @@ describe("formatarBRL", () => {
   it("trata zero e NaN como zero", () => {
     expect(formatarBRL(0)).toBe(`R$${NBSP}0,00`);
     expect(formatarBRL(Number.NaN)).toBe(`R$${NBSP}0,00`);
+  });
+});
+
+describe("hojeSaoPaulo", () => {
+  // Segunda forma do mesmo bug de fuso. A primeira era
+  // `new Date().toISOString().slice(0, 10)`; esta é passar `new Date()` cru para
+  // funções que comparam DIA DE CALENDÁRIO com uma data vinda do banco
+  // (`periodosEntre`, `differenceInCalendarDays`, `format(…, "yyyy-MM-dd")`).
+  //
+  // `new Date()` é um instante; as datas do banco chegam por `dataDeISO`, que
+  // devolve meia-noite. O dia de calendário do instante é lido no fuso do
+  // runtime, e o Vercel roda em UTC — então das 21h à meia-noite em Brasília o
+  // instante já é do dia seguinte. Consequência direta: um período a mais no
+  // custo de locação e um dia a mais em "dias em atraso".
+  const vinteETresHoraEmBrasilia = new Date("2026-08-07T02:30:00Z");
+
+  it("às 23h30 de Brasília ainda é o dia 6, não o 7 de UTC", () => {
+    const h = hojeSaoPaulo(vinteETresHoraEmBrasilia);
+    expect(h.getFullYear()).toBe(2026);
+    expect(h.getMonth()).toBe(7); // agosto
+    expect(h.getDate()).toBe(6);
+  });
+
+  it("devolve meia-noite, comparável com dataDeISO", () => {
+    const h = hojeSaoPaulo(vinteETresHoraEmBrasilia);
+    expect(h.getHours()).toBe(0);
+    expect(h.getMinutes()).toBe(0);
+    expect(h.getTime()).toBe(dataDeISO("2026-08-06").getTime());
+  });
+
+  it("não cobra um período extra: 6 dias de locação diária são 6, não 7", () => {
+    const retirada = dataDeISO("2026-08-01");
+    const dias = periodosEntre("diaria", retirada, hojeSaoPaulo(vinteETresHoraEmBrasilia));
+    expect(dias).toBe(6);
+  });
+
+  it("de manhã não há divergência entre UTC e Brasília", () => {
+    const manha = new Date("2026-08-07T13:00:00Z");
+    expect(hojeSaoPaulo(manha).getTime()).toBe(dataDeISO("2026-08-07").getTime());
   });
 });

@@ -2,7 +2,12 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeGerenciarFinanceiro } from "@/lib/auth";
-import { formatarBRL, periodosPorMes, type Cadencia } from "@/lib/locacao";
+import {
+  formatarBRL,
+  hojeSaoPaulo,
+  periodosPorMes,
+  type Cadencia,
+} from "@/lib/locacao";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,7 +20,7 @@ const inputClasses =
 
 /** Mês atual + 11 (ISO 'yyyy-MM'), limite padrão de materialização. */
 function atePadrao(): string {
-  const d = new Date();
+  const d = hojeSaoPaulo();
   d.setMonth(d.getMonth() + 11);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }

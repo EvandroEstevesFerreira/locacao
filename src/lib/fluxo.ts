@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { addMonths, format, startOfMonth } from "date-fns";
-import { periodosPorMes, type Cadencia } from "@/lib/locacao";
+import { hojeSaoPaulo, periodosPorMes, type Cadencia } from "@/lib/locacao";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type DB = SupabaseClient<any, any, any>;
@@ -68,7 +68,9 @@ export async function gerarFluxoCaixa(
     )
     .eq("vigente", true);
 
-  const hojeMes = startOfMonth(new Date());
+  // Ancorado em São Paulo: com `new Date()`, no último dia do mês depois das
+  // 21h o UTC já virou e a projeção começaria do mês seguinte.
+  const hojeMes = startOfMonth(hojeSaoPaulo());
   let fimMes = addMonths(hojeMes, 1);
 
   // custo mensal estimado por contrato + janela de vigência (em meses)

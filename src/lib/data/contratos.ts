@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   custoLinhaLocado,
   dataDeISO,
+  hojeSaoPaulo,
   periodosEntre,
   type Cadencia,
 } from "@/lib/locacao";
@@ -64,7 +65,10 @@ export const obterItensLocadosCalculados = cache(
 
     type Bruta = Omit<ItemLocadoCalculado, "saldo" | "periodos" | "custo">;
     const linhas = (data ?? []) as unknown as Bruta[];
-    const hoje = new Date();
+    // Nunca `new Date()` aqui: entra em `differenceInCalendarDays` contra datas
+    // do banco, e no runtime UTC do Vercel isso cobra um período a mais depois
+    // das 21h de Brasília.
+    const hoje = hojeSaoPaulo();
 
     return linhas.map((l) => {
       const retirada = dataDeISO(l.data_retirada);

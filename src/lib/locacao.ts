@@ -131,6 +131,23 @@ export function hojeISOSaoPaulo(base: Date = new Date()): string {
   return base.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
 }
 
+/**
+ * "Hoje" como `Date` de meia-noite, ancorado no fuso de São Paulo.
+ *
+ * Use isto — e nunca `new Date()` — sempre que a data for comparada com uma
+ * coluna `date` do banco, seja por `differenceInCalendarDays`, `periodosEntre`
+ * ou `format(…, "yyyy-MM-dd")`.
+ *
+ * Motivo: `new Date()` é um INSTANTE, e as datas do banco chegam por
+ * `dataDeISO`, que devolve meia-noite. Comparar os dois em dia de calendário usa
+ * o fuso do runtime, e o Vercel roda em UTC — então a partir das 21h em Brasília
+ * o instante já pertence ao dia seguinte e a contagem de dias sai um dia maior.
+ * Em cima disso está o cálculo de custo de locação: um período a mais cobrado.
+ */
+export function hojeSaoPaulo(base: Date = new Date()): Date {
+  return dataDeISO(hojeISOSaoPaulo(base));
+}
+
 /** Formata um timestamp ISO como data + hora no fuso de São Paulo. */
 export function formatarDataHora(iso: string | null): string {
   if (!iso) return "—";

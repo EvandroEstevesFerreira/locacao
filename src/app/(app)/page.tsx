@@ -10,7 +10,7 @@ import {
   LineChart,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { formatarBRL, formatarData } from "@/lib/locacao";
+import { formatarBRL, formatarData, hojeSaoPaulo } from "@/lib/locacao";
 import { gerarFluxoCaixa } from "@/lib/fluxo";
 import {
   Card,
@@ -50,7 +50,7 @@ export default async function HomePage({
   const supabase = await createClient();
   const sp = await searchParams;
   const obra = sp.obra;
-  const hoje = new Date();
+  const hoje = hojeSaoPaulo();
   const em7 = format(addDays(hoje, 7), "yyyy-MM-dd");
 
   const contratosQ = supabase

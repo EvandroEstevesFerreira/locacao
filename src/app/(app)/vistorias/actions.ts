@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeOperar, podeGerenciarFinanceiro } from "@/lib/auth";
+import { hojeSaoPaulo } from "@/lib/locacao";
 
 export type VistoriaFormState = { error?: string; ok?: boolean };
 
@@ -197,7 +198,7 @@ export async function gerarLancamentoAvaria(formData: FormData) {
     return;
   }
 
-  const hoje = new Date();
+  const hoje = hojeSaoPaulo();
   const competencia = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-01`;
   const venc = new Date(hoje);
   venc.setDate(venc.getDate() + 30);
