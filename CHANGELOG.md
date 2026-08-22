@@ -7,6 +7,38 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.27.0] — 2026-08-22
+
+Fase 3 dos **documentos do alojamento**: os registros transacionais.
+
+### Adicionado
+
+- Tabelas **`medida_disciplinar`** e **`entrega_ocupante`** (migration `0044`),
+  com os ramos correspondentes em `soft_delete`, triggers de auditoria e RLS.
+- Seção **Alojamento** na tela do imóvel: registro e listagem de medidas
+  disciplinares e de entregas (chaves e kit), em `react-hook-form`.
+- Rota **`/api/medidas/[id]/pdf`** — o FRM-RH-002 preenchido a partir do
+  registro. É o **mesmo componente** que gera a folha em branco: sem `dados`
+  sai vazio, com `dados` sai preenchido. Duplicá-lo garantiria que uma das
+  versões ficasse para trás na primeira revisão de cláusula.
+
+### Segurança
+
+- `medida_disciplinar` é a **primeira tabela do schema cuja leitura é restrita
+  por papel**: só quem gere cadastros lê. Acesso à obra não implica acesso à
+  advertência de um colega. A rota de PDF responde 404 — e não 403 — quando o
+  usuário não pode ler o registro, para não confirmar que ele existe.
+- Excluir medida disciplinar exige master, como contrato e lançamento
+  financeiro: apagar advertência remove prova de pasta funcional.
+- O teto de 30 dias da suspensão (CLT, art. 474) é validado no formulário **e**
+  por `check constraint` no banco.
+
+### Corrigido
+
+- **Caixas marcadas saíam vazias** nos documentos preenchidos: o X era maior que
+  a área interna da caixa e ficava recortado. Segundo defeito de geometria
+  invisível neste primitivo — agora há teste que confere se a marca cabe.
+
 ## [0.26.0] — 2026-08-22
 
 Fecha a fase 2 dos **documentos do alojamento**: a POL-RH-001 gerada pelo sistema.

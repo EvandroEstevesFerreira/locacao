@@ -28,8 +28,26 @@ import { LogoSistenge } from "./pdf-logo";
  */
 export const CAIXA = "☐";
 
+/** Como CAIXA, mas já marcada — para documento preenchido pelo sistema. */
+export const CAIXA_MARCADA = "☒";
+
 /** Acima do piso de 85pt exigido pelo Manual de Identidade Visual. */
 const LOGO_LARGURA = 110;
+
+/**
+ * Geometria da caixa de marcação, exportada para o teste de regressão.
+ *
+ * O X precisa caber DENTRO da caixa: altura menos as duas bordas. Com o X maior
+ * que isso o glifo é recortado e a caixa sai VAZIA mesmo marcada — foi o que
+ * aconteceu na primeira versão do documento preenchido, e nenhum teste de
+ * conteúdo pegaria, porque o X está lá, só invisível.
+ */
+export const CAIXA_GEOMETRIA = {
+  lado: 9,
+  borda: 0.7,
+  marcaFonte: 6,
+  marcaEntrelinha: 1,
+} as const;
 
 /**
  * Estilo da página dos formulários.
@@ -115,17 +133,26 @@ const f = StyleSheet.create({
   listaTexto: { flex: 1, fontSize: 8.5, textAlign: "justify", lineHeight: 1.35 },
   opcao: { flexDirection: "row", alignItems: "flex-start", marginBottom: 4 },
   caixa: {
-    width: 8,
-    height: 8,
-    borderWidth: 0.7,
+    width: CAIXA_GEOMETRIA.lado,
+    height: CAIXA_GEOMETRIA.lado,
+    borderWidth: CAIXA_GEOMETRIA.borda,
     borderColor: SLATE_900,
     borderStyle: "solid",
     marginRight: 5,
     marginTop: 1.5,
   },
+  // O X precisa caber DENTRO da caixa: 9pt menos 1,4 de borda deixam 7,6pt de
+  // altura útil, e sem lineHeight: 1 a linha padrão passa disso e o glifo é
+  // cortado — a caixa saía vazia mesmo com `marcada`.
+  caixaMarca: {
+    fontSize: CAIXA_GEOMETRIA.marcaFonte,
+    lineHeight: CAIXA_GEOMETRIA.marcaEntrelinha,
+    fontFamily: "Helvetica-Bold",
+    textAlign: "center",
+  },
   caixaCelula: {
-    width: 7,
-    height: 7,
+    width: 8,
+    height: 8,
     borderWidth: 0.7,
     borderColor: SLATE_900,
     borderStyle: "solid",
@@ -410,12 +437,12 @@ export function Tabela({
             wrap={false}
           >
             {colunas.map((c, j) =>
-              linha.celulas[j] === CAIXA ? (
+              linha.celulas[j] === CAIXA || linha.celulas[j] === CAIXA_MARCADA ? (
                 <View
                   key={j}
                   style={[f.celulaCentro, { width: `${c.largura}%` }]}
                 >
-                  <Caixa celula />
+                  <Caixa celula marcada={linha.celulas[j] === CAIXA_MARCADA} />
                 </View>
               ) : (
                 <Text
@@ -457,12 +484,28 @@ export function Lista({
   );
 }
 
-/** Caixa de marcação desenhada — independe de glifo de fonte. */
-export function Caixa({ celula = false }: { celula?: boolean }) {
-  return <View style={celula ? f.caixaCelula : f.caixa} />;
+/**
+ * Caixa de marcação desenhada — independe de glifo de fonte.
+ *
+ * `marcada` põe um X dentro, para os documentos que saem PREENCHIDOS com dados
+ * do sistema. O X é Helvetica, que existe em qualquer leitor; um glifo de "check"
+ * repetiria o bug que apagou todos os checkboxes na 0.25.0.
+ */
+export function Caixa({
+  celula = false,
+  marcada = false,
+}: {
+  celula?: boolean;
+  marcada?: boolean;
+}) {
+  return (
+    <View style={celula ? f.caixaCelula : f.caixa}>
+      {marcada ? <Text style={f.caixaMarca}>X</Text> : null}
+    </View>
+  );
 }
 
-export type Opcao = { texto: string; linha?: boolean };
+export type Opcao = { texto: string; linha?: boolean; marcada?: boolean };
 
 /** `☐ texto`, com linha à direita quando a opção continua em branco. */
 export function OpcoesCheck({ opcoes }: { opcoes: Opcao[] }) {
@@ -470,7 +513,7 @@ export function OpcoesCheck({ opcoes }: { opcoes: Opcao[] }) {
     <View>
       {opcoes.map((o, i) => (
         <View key={i} style={f.opcao} wrap={false}>
-          <Caixa />
+          <Caixa marcada={o.marcada} />
           <Text style={f.opcaoTexto}>{o.texto}</Text>
           {o.linha ? <View style={f.opcaoLinha} /> : null}
         </View>

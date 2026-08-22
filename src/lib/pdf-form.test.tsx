@@ -9,6 +9,7 @@ import {
   AreaTexto,
   Tabela,
   ESTILO_PAGINA,
+  CAIXA_GEOMETRIA,
   Assinaturas,
   somaLarguras,
   CAIXA,
@@ -195,5 +196,23 @@ describe("rodapé fixo — regressão", () => {
 
   it("o entrelinhamento vive nos estilos de texto, não na página", () => {
     expect(ESTILO_PAGINA.fontSize).toBe(9);
+  });
+});
+
+describe("caixa de marcação — regressão", () => {
+  // Duas armadilhas já custaram caro neste primitivo:
+  //   1. o glifo ☐ do Helvetica não existe — a caixa é desenhada;
+  //   2. o X maior que a área interna é recortado e a caixa sai VAZIA mesmo
+  //      marcada, sem erro nenhum.
+  // Teste de conteúdo não pega nenhuma das duas: o X está no PDF, só invisível.
+  it("o X cabe dentro da caixa, descontadas as bordas", () => {
+    const { lado, borda, marcaFonte, marcaEntrelinha } = CAIXA_GEOMETRIA;
+    const alturaUtil = lado - borda * 2;
+    const alturaDoX = marcaFonte * marcaEntrelinha;
+    expect(alturaDoX).toBeLessThanOrEqual(alturaUtil);
+  });
+
+  it("a marca declara entrelinha própria, sem herdar da página", () => {
+    expect(CAIXA_GEOMETRIA.marcaEntrelinha).toBe(1);
   });
 });

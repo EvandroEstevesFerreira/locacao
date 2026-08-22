@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.26.0";
+export const APP_VERSION = "0.27.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,17 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.27.0",
+    data: "2026-08-22",
+    titulo: "Medidas disciplinares e entregas ao alojado",
+    mudancas: [
+      { tipo: "novo", texto: "A tela do imóvel ganhou o registro de medidas disciplinares (advertência e suspensão). O sistema recusa suspensão acima de 30 dias, que é o limite do art. 474 da CLT, e gera o FRM-RH-002 já preenchido para assinatura." },
+      { tipo: "novo", texto: "Registro de entregas ao alojado — chaves e kit de alojamento — com data de entrega, data de devolução e tratativa. O que foi entregue e ainda não voltou aparece primeiro na lista." },
+      { tipo: "seguranca", texto: "Medidas disciplinares são visíveis apenas para quem gere cadastros. Quem tem acesso à obra não passa a ter, por isso, acesso à advertência de um colega. Excluir uma medida é permitido só ao master, e a ação fica registrada na auditoria." },
+      { tipo: "correcao", texto: "Nos documentos preenchidos pelo sistema, as caixas marcadas apareciam vazias: o X era maior que a caixa e ficava recortado." },
+    ],
+  },
   {
     versao: "0.26.0",
     data: "2026-08-22",

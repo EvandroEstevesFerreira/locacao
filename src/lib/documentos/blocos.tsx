@@ -22,6 +22,17 @@ const s = StyleSheet.create({
   },
 });
 
+/**
+ * Um parágrafo no corpo do documento.
+ *
+ * Usado onde o texto vem de um REGISTRO, e não do template: a descrição do fato
+ * numa medida disciplinar já emitida, por exemplo, entra no lugar das linhas em
+ * branco que a folha vazia traz.
+ */
+export function Paragrafo({ texto }: { texto: string }) {
+  return <Text style={s.paragrafo}>{texto}</Text>;
+}
+
 export type Bloco = { titulo?: string; texto: string[]; itens: string[] };
 
 /** Um parágrafo do template é título de subseção quando está em caixa alta. */

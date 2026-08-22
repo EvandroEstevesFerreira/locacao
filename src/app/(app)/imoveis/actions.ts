@@ -6,6 +6,10 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeOperar, podeEditarCadastros } from "@/lib/auth";
 import { CATEGORIAS_BIBLIOTECA } from "@/lib/biblioteca";
 import {
+  medidaDisciplinarSchema,
+  entregaOcupanteSchema,
+} from "@/lib/alojamento";
+import {
   contaConsumoSchema,
   contratoImovelSchema,
   imovelSchema,
@@ -706,4 +710,87 @@ export async function removerAnexoImovelContrato(formData: FormData) {
   if (path) await supabase.storage.from("imoveis").remove([path]);
   await supabase.from("contrato_imovel").update({ [campo]: null }).eq("id", contratoId);
   if (imovelId) revalidatePath(`/imoveis/${imovelId}`);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Alojamento — medida disciplinar e entregas ao ocupante (fase 3)
+// ═══════════════════════════════════════════════════════════════════════════
+
+export async function salvarMedidaDisciplinar(raw: unknown): Promise<ActionResult> {
+  const perfil = await getCurrentPerfil();
+  // Registro disciplinar é documento de pasta funcional: só quem gere cadastros
+  // registra. A RLS repete a regra — isto aqui é a mensagem amigável.
+  if (!perfil?.org_id || !podeEditarCadastros(perfil.papel)) {
+    return falha("Você não tem permissão para registrar medidas disciplinares.");
+  }
+
+  const parsed = medidaDisciplinarSchema.safeParse(raw);
+  if (!parsed.success) return falha(primeiroErro(parsed.error.issues));
+  const { imovel_id, ...campos } = parsed.data;
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("medida_disciplinar").insert({
+    org_id: perfil.org_id,
+    imovel_id,
+    ...campos,
+  });
+  if (error) return falha("Não foi possível registrar a medida disciplinar.");
+
+  revalidatePath(`/imoveis/${imovel_id}`);
+  return { ok: true };
+}
+
+export async function excluirMedidaDisciplinar(formData: FormData) {
+  const id = txt(formData.get("id"));
+  const imovelId = txt(formData.get("imovel_id"));
+  if (!id) return;
+  const supabase = await createClient();
+  // Sempre pelo RPC: a policy de SELECT esconde linhas com deleted_at, então um
+  // `.update({ deleted_at })` aborta o próprio comando (incidente da 0.19.4).
+  const { data, error } = await supabase.rpc("soft_delete", {
+    p_entidade: "medida_disciplinar",
+    p_id: id,
+  });
+  if (error || data !== true) {
+    return { error: "Não foi possível excluir a medida disciplinar." };
+  }
+  revalidatePath(`/imoveis/${imovelId}`);
+}
+
+export async function salvarEntregaOcupante(raw: unknown): Promise<ActionResult> {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) {
+    return falha("Você não tem permissão para registrar entregas.");
+  }
+
+  const parsed = entregaOcupanteSchema.safeParse(raw);
+  if (!parsed.success) return falha(primeiroErro(parsed.error.issues));
+  const { imovel_id, itens, ...campos } = parsed.data;
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("entrega_ocupante").insert({
+    org_id: perfil.org_id,
+    imovel_id,
+    itens,
+    ...campos,
+  });
+  if (error) return falha("Não foi possível registrar a entrega.");
+
+  revalidatePath(`/imoveis/${imovel_id}`);
+  return { ok: true };
+}
+
+export async function excluirEntregaOcupante(formData: FormData) {
+  const id = txt(formData.get("id"));
+  const imovelId = txt(formData.get("imovel_id"));
+  if (!id) return;
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("soft_delete", {
+    p_entidade: "entrega_ocupante",
+    p_id: id,
+  });
+  if (error || data !== true) {
+    return { error: "Não foi possível excluir a entrega." };
+  }
+  revalidatePath(`/imoveis/${imovelId}`);
 }
