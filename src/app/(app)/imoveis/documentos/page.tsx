@@ -1,5 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentPerfil, podeEditarCadastros } from "@/lib/auth";
+import {
+  getCurrentPerfil,
+  podeEditarCadastros,
+  podeConfigurarSistema,
+} from "@/lib/auth";
 import { formatarData } from "@/lib/locacao";
 import {
   CATEGORIAS_BIBLIOTECA,
@@ -16,6 +20,8 @@ import {
 import { BibliotecaUploader } from "../biblioteca-uploader";
 import { BibliotecaItem } from "../biblioteca-item";
 import { assinarUrls } from "@/lib/data/storage";
+import { documentosDoModulo } from "@/lib/templates";
+import { DocumentoSistema } from "../documento-sistema";
 import { EmptyState } from "@/components/shared/empty-state";
 import { FileText } from "lucide-react";
 
@@ -33,6 +39,9 @@ type Doc = {
 export default async function DocumentosPage() {
   const perfil = await getCurrentPerfil();
   const podeEditar = podeEditarCadastros(perfil?.papel);
+  // Editar o TEXTO de um documento é ato de configuração do sistema, mais
+  // restrito que gerenciar a biblioteca de arquivos enviados.
+  const podeEditarTexto = podeConfigurarSistema(perfil?.papel);
 
   const supabase = await createClient();
   const { data } = await supabase
@@ -64,6 +73,47 @@ export default async function DocumentosPage() {
           </CardContent>
         </Card>
       ) : null}
+
+      {/* Documentos GERADOS pelo sistema, acima dos enviados. Vêm do mesmo
+          catálogo que alimenta Configurações → Templates de documentos: um só
+          lugar declara título, categoria e módulo. */}
+      {CATEGORIAS_BIBLIOTECA.map((cat) => {
+        const gerados = documentosDoModulo("imoveis").filter(
+          (d) => d.categoria === cat && d.preenchimento === "em_branco",
+        );
+        if (gerados.length === 0) return null;
+        const info = CATEGORIA_BIBLIOTECA_INFO[cat];
+        return (
+          <Card key={`sistema-${cat}`}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">{info.label} do sistema</CardTitle>
+              <CardDescription>
+                Gerados pelo Loca, sempre atualizados. Para mudar o texto, use
+                Configurações → Templates de documentos.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-1">
+              {gerados.map((d) => (
+                <DocumentoSistema
+                  key={d.tipo}
+                  tipo={d.tipo}
+                  titulo={d.label}
+                  descricao={d.descricao}
+                  podeEditar={podeEditarTexto}
+                  variantes={
+                    d.tipo === "checklist_limpeza"
+                      ? [
+                          { rotulo: "Folha semanal", query: "" },
+                          { rotulo: "Folha mensal", query: "?variante=mensal" },
+                        ]
+                      : undefined
+                  }
+                />
+              ))}
+            </CardContent>
+          </Card>
+        );
+      })}
 
       {docs.length === 0 ? (
         <EmptyState
