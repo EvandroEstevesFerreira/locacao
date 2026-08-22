@@ -1,7 +1,38 @@
 # Documentos do alojamento — POL-RH-001 e FRM-RH-001 a 005
 
 **Data:** 2026-08-22
-**Status:** aprovado (design)
+**Status:** fases 1 e 2 entregues (v0.24.0 e v0.25.0); fases 3 a 5 pendentes
+
+## Estado da entrega
+
+| Fase | Estado | Versão |
+|---|---|---|
+| 1 — primitivos + FRM-RH-001 | **entregue** | 0.24.0 |
+| 2 — FRM-RH-002 a 005 em branco + rota + tela | **entregue** | 0.25.0 |
+| 2b — POL-RH-001 | **pendente** — ver "O que falta" | — |
+| 3 — `medida_disciplinar` e `entrega_ocupante` | pendente | — |
+| 4 — rotina semanal de limpeza | pendente | — |
+| 5 — aceite digital | pendente | — |
+
+### Correções de rota que a execução impôs
+
+- **FRM-RH-001 fecha em 3 páginas**, não 2 (medido; ver seção de densidade).
+- **FRM-RH-005 semanal fecha em 3 páginas paisagem**, não 2. O grid de 44 linhas
+  ocupa 2 folhas sozinho e o apêndice a terceira. A folha mensal fecha em 1.
+- Dois bugs de renderização só apareceram ao **olhar** o PDF, nunca em teste:
+  `lineHeight` na `Page` apagando o rodapé fixo, e o Helvetica sem o glifo `☐`
+  apagando todos os checkboxes. **Lição para as fases seguintes: renderizar e
+  inspecionar, não só contar páginas.**
+
+### O que falta na POL-RH-001
+
+A conversão do texto está resolvida (script em
+`scratchpad/gera_politica.py`: 180 parágrafos, 21 seções corretamente
+detectadas). O que trava é que a política tem **duas tabelas** — a matriz de
+responsabilidades (item 10) e a tabela de infrações e penalidades (item 11.3) —
+que o `pdftotext` quebra em fragmentos de célula. Pelo princípio da abordagem C,
+elas são estrutura e vão em código, como `Tabela`, e não no template. É trabalho
+de composição, não de decisão: o desenho já está fechado.
 
 ## Objetivo
 
