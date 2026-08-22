@@ -7,7 +7,12 @@ import {
   Lista,
   OpcoesCheck,
   AreaTexto,
+  Tabela,
+  somaLarguras,
+  CAIXA,
   contarPaginas,
+  type Coluna,
+  type LinhaTabela,
 } from "./pdf-form";
 
 describe("contarPaginas", () => {
@@ -65,5 +70,75 @@ describe("primitivos de texto", () => {
       </Documento>,
     );
     expect(contarPaginas(buffer)).toBe(1);
+  });
+});
+
+const COLUNAS_LIMPEZA: Coluna[] = [
+  { titulo: "Tarefa", largura: 34 },
+  { titulo: "Freq.", largura: 6, alinhar: "center" },
+  { titulo: "Seg", largura: 7, alinhar: "center" },
+  { titulo: "Ter", largura: 7, alinhar: "center" },
+  { titulo: "Qua", largura: 7, alinhar: "center" },
+  { titulo: "Qui", largura: 7, alinhar: "center" },
+  { titulo: "Sex", largura: 7, alinhar: "center" },
+  { titulo: "Sáb", largura: 7, alinhar: "center" },
+  { titulo: "Dom", largura: 7, alinhar: "center" },
+  { titulo: "Rubrica", largura: 11 },
+];
+
+describe("somaLarguras", () => {
+  it("as colunas do checklist de limpeza somam 100%", () => {
+    expect(somaLarguras(COLUNAS_LIMPEZA)).toBe(100);
+  });
+
+  it("as colunas de penalidades somam 100%", () => {
+    expect(
+      somaLarguras([
+        { titulo: "Penalidade", largura: 30 },
+        { titulo: "Como se aplica", largura: 70 },
+      ]),
+    ).toBe(100);
+  });
+});
+
+describe("Tabela", () => {
+  it("o grid de 45 tarefas em paisagem cabe em 2 páginas", async () => {
+    const grupos = [
+      "BANHEIROS",
+      "COZINHA / REFEITÓRIO",
+      "QUARTOS",
+      "SALA",
+      "LAVANDERIA",
+    ];
+    const linhas: LinhaTabela[] = [];
+    for (const g of grupos) {
+      linhas.push({ grupo: g });
+      for (let i = 0; i < 9; i++) {
+        linhas.push({
+          celulas: [
+            `Tarefa ${i + 1} do grupo ${g}, com descrição de tamanho realista`,
+            "D",
+            CAIXA,
+            CAIXA,
+            CAIXA,
+            CAIXA,
+            CAIXA,
+            CAIXA,
+            CAIXA,
+            "",
+          ],
+        });
+      }
+    }
+    const buffer = await renderToBuffer(
+      <Documento
+        codigo="FRM-RH-005"
+        titulo="Checklist semanal de limpeza"
+        orientacao="landscape"
+      >
+        <Tabela colunas={COLUNAS_LIMPEZA} linhas={linhas} />
+      </Documento>,
+    );
+    expect(contarPaginas(buffer)).toBeLessThanOrEqual(2);
   });
 });

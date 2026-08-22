@@ -122,17 +122,17 @@ const f = StyleSheet.create({
   },
   tabelaLinha: {
     flexDirection: "row",
-    minHeight: 14,
+    minHeight: 12,
     borderBottomWidth: 0.5,
     borderBottomColor: SLATE_200,
     borderBottomStyle: "solid",
   },
-  tabelaCelula: { fontSize: 8, paddingVertical: 2.5, paddingHorizontal: 3 },
+  tabelaCelula: { fontSize: 8, paddingVertical: 1.5, paddingHorizontal: 3 },
   tabelaGrupo: {
     fontSize: 7.5,
     fontFamily: "Helvetica-Bold",
     color: SLATE_500,
-    paddingVertical: 2.5,
+    paddingVertical: 1.5,
     paddingHorizontal: 3,
     backgroundColor: SLATE_100,
   },
@@ -223,6 +223,79 @@ export function Secao({
     <View style={f.secao} wrap={quebrar}>
       <Text style={f.secaoTitulo}>{n ? `${n}. ${titulo}` : titulo}</Text>
       {children}
+    </View>
+  );
+}
+
+export type Coluna = {
+  titulo: string;
+  /** Largura em % da tabela. A soma das colunas deve dar 100. */
+  largura: number;
+  alinhar?: "left" | "center";
+};
+
+export type LinhaTabela = { grupo: string } | { celulas: string[] };
+
+/**
+ * Soma das larguras declaradas. Existe para ser testada: uma tabela cujas
+ * colunas não somam 100% desalinha em silêncio, e o erro só aparece impresso.
+ */
+export function somaLarguras(colunas: Coluna[]): number {
+  return colunas.reduce((total, c) => total + c.largura, 0);
+}
+
+/**
+ * Tabela de larguras declaradas. É o primitivo que mais varia entre os
+ * documentos — de 2 colunas de texto (penalidades do FRM-RH-001) a 10 colunas
+ * de checkbox em paisagem (checklist do FRM-RH-005) — e por isso foi construída
+ * validada contra o caso difícil.
+ *
+ * O cabeçalho é `fixed`: numa tabela que atravessa páginas, repetir o cabeçalho
+ * é o que mantém as colunas legíveis na segunda folha.
+ */
+export function Tabela({
+  colunas,
+  linhas,
+}: {
+  colunas: Coluna[];
+  linhas: LinhaTabela[];
+}) {
+  return (
+    <View style={f.tabela}>
+      <View style={f.tabelaCabecalho} fixed>
+        {colunas.map((c, i) => (
+          <Text
+            key={i}
+            style={[
+              f.tabelaCabecalhoCelula,
+              { width: `${c.largura}%`, textAlign: c.alinhar ?? "left" },
+            ]}
+          >
+            {c.titulo}
+          </Text>
+        ))}
+      </View>
+      {linhas.map((linha, i) =>
+        "grupo" in linha ? (
+          <Text key={i} style={f.tabelaGrupo} wrap={false}>
+            {linha.grupo}
+          </Text>
+        ) : (
+          <View key={i} style={f.tabelaLinha} wrap={false}>
+            {colunas.map((c, j) => (
+              <Text
+                key={j}
+                style={[
+                  f.tabelaCelula,
+                  { width: `${c.largura}%`, textAlign: c.alinhar ?? "left" },
+                ]}
+              >
+                {linha.celulas[j] ?? ""}
+              </Text>
+            ))}
+          </View>
+        ),
+      )}
     </View>
   );
 }
