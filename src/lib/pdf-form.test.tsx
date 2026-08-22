@@ -1,6 +1,14 @@
 import { describe, it, expect } from "vitest";
 import { renderToBuffer, Text } from "@react-pdf/renderer";
-import { Documento, Secao, CampoGrid, contarPaginas } from "./pdf-form";
+import {
+  Documento,
+  Secao,
+  CampoGrid,
+  Lista,
+  OpcoesCheck,
+  AreaTexto,
+  contarPaginas,
+} from "./pdf-form";
 
 describe("contarPaginas", () => {
   it("conta as páginas de um PDF renderizado", async () => {
@@ -29,6 +37,30 @@ describe("CampoGrid", () => {
               { label: "Contato de emergência" },
             ]}
           />
+        </Secao>
+      </Documento>,
+    );
+    expect(contarPaginas(buffer)).toBe(1);
+  });
+});
+
+describe("primitivos de texto", () => {
+  it("lista numerada, opções com linha e área de escrita cabem em 1 página", async () => {
+    const buffer = await renderToBuffer(
+      <Documento codigo="TESTE-003" titulo="Texto">
+        <Secao n={1} titulo="Regras">
+          <Lista tipo="numerada" itens={["Primeira regra.", "Segunda regra."]} />
+        </Secao>
+        <Secao n={2} titulo="Tipo de medida">
+          <OpcoesCheck
+            opcoes={[
+              { texto: "Advertência verbal" },
+              { texto: "Suspensão — período:", linha: true },
+            ]}
+          />
+        </Secao>
+        <Secao n={3} titulo="Descrição">
+          <AreaTexto linhas={4} />
         </Secao>
       </Documento>,
     );

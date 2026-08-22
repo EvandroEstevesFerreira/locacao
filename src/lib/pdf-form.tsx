@@ -227,6 +227,55 @@ export function Secao({
   );
 }
 
+export function Lista({
+  itens,
+  tipo = "marcador",
+}: {
+  itens: string[];
+  tipo?: "numerada" | "marcador";
+}) {
+  return (
+    <View>
+      {itens.map((item, i) => (
+        <View key={i} style={f.listaItem} wrap={false}>
+          <Text style={f.listaMarca}>
+            {tipo === "numerada" ? `${i + 1}.` : "•"}
+          </Text>
+          <Text style={f.listaTexto}>{item}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+export type Opcao = { texto: string; linha?: boolean };
+
+/** `☐ texto`, com linha à direita quando a opção continua em branco. */
+export function OpcoesCheck({ opcoes }: { opcoes: Opcao[] }) {
+  return (
+    <View>
+      {opcoes.map((o, i) => (
+        <View key={i} style={f.opcao} wrap={false}>
+          <Text style={f.opcaoCaixa}>{CAIXA}</Text>
+          <Text style={f.opcaoTexto}>{o.texto}</Text>
+          {o.linha ? <View style={f.opcaoLinha} /> : null}
+        </View>
+      ))}
+    </View>
+  );
+}
+
+/** N linhas em branco para escrita à mão. */
+export function AreaTexto({ linhas }: { linhas: number }) {
+  return (
+    <View>
+      {Array.from({ length: linhas }, (_, i) => (
+        <View key={i} style={f.areaLinha} />
+      ))}
+    </View>
+  );
+}
+
 /**
  * Campos label/valor. `valor` ausente ou nulo desenha uma LINHA para preencher
  * à mão — é o que permite o Loca guardar só parte dos dados do alojado sem
