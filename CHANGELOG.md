@@ -39,6 +39,15 @@ em PDF e o FRM-RH-001 provado de ponta a ponta.
 - Contratos e termos passaram a desenhar o logotipo no lugar da palavra
   `SISTENGE`.
 
+### Corrigido
+
+- Rodapé com paginação (`Página 2 de 3`) em documentos de várias folhas. Ele não
+  era desenhado: com `lineHeight` no estilo da `Page`, o `@react-pdf/renderer`
+  4.5 ignora todo filho `position: absolute` + `fixed`, sem erro. O
+  entrelinhamento passou para os estilos de texto e um teste guarda a regra.
+- A tabela de penalidades do FRM-RH-001 quebrava com título e cabeçalho órfãos no
+  pé da página.
+
 ### Notas
 
 - O FRM-RH-001 fecha em **3 páginas**, não nas 2 previstas para formulários: o

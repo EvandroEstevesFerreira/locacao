@@ -27,7 +27,7 @@ import {
 } from "@/lib/pdf-form";
 
 const s = StyleSheet.create({
-  paragrafo: { fontSize: 8.5, textAlign: "justify", marginBottom: 4 },
+  paragrafo: { fontSize: 8.5, textAlign: "justify", marginBottom: 4, lineHeight: 1.35 },
 });
 
 const COLUNAS_PENALIDADE: Coluna[] = [
@@ -133,7 +133,9 @@ export function TermoCompromisso({
         </Secao>
       ))}
 
-      <Secao titulo="Penalidades — estou ciente de que">
+      {/* quebrar={false}: sem isso o título e o cabeçalho da tabela ficam
+          órfãos no pé de uma página e as linhas caem na seguinte. */}
+      <Secao titulo="Penalidades — estou ciente de que" quebrar={false}>
         <Tabela colunas={COLUNAS_PENALIDADE} linhas={PENALIDADES} />
       </Secao>
 

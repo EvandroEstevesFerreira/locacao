@@ -38,6 +38,7 @@ export const CHANGELOG: Release[] = [
       { tipo: "melhoria", texto: "Os templates de documentos, em Configurações, aparecem agrupados por módulo — fica claro de onde cada documento é gerado." },
       { tipo: "melhoria", texto: "Contratos e termos passaram a sair com o logotipo da Sistenge no cabeçalho, no lugar do nome escrito por extenso." },
       { tipo: "melhoria", texto: "Ao cadastrar um ocupante, o sistema agora avisa se a data de saída for anterior à de entrada, em vez de aceitar em silêncio." },
+      { tipo: "correcao", texto: "Os documentos de várias páginas passam a trazer o rodapé com a numeração (\"Página 2 de 3\") em todas as folhas — importante para comprovar que nenhuma página foi retirada." },
     ],
   },
   {

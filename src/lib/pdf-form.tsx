@@ -19,16 +19,29 @@ export const CAIXA = "☐";
 /** Acima do piso de 85pt exigido pelo Manual de Identidade Visual. */
 const LOGO_LARGURA = 110;
 
+/**
+ * Estilo da página dos formulários.
+ *
+ * ARMADILHA — NUNCA declare `lineHeight` aqui. Com `lineHeight` no estilo da
+ * `Page`, o @react-pdf/renderer 4.5 deixa de desenhar QUALQUER filho
+ * `position: absolute` + `fixed`: o rodapé some, sem erro nenhum, em todas as
+ * páginas. Vale para 1.35 e até para 1. O entrelinhamento vive nos estilos de
+ * texto (listaTexto, campoValor, tabelaCelula, opcaoTexto).
+ *
+ * Diagnosticado em 2026-08-22: a paginação do FRM-RH-001 sumia em silêncio, e o
+ * teste de contagem de páginas não pegava. `pdf-form.test.tsx` guarda a regra.
+ */
+export const ESTILO_PAGINA = {
+  paddingTop: 28,
+  paddingHorizontal: 30,
+  paddingBottom: 40,
+  fontSize: 9,
+  fontFamily: "Helvetica",
+  color: SLATE_900,
+} as const;
+
 const f = StyleSheet.create({
-  page: {
-    paddingTop: 28,
-    paddingHorizontal: 30,
-    paddingBottom: 40,
-    fontSize: 9,
-    fontFamily: "Helvetica",
-    color: SLATE_900,
-    lineHeight: 1.35,
-  },
+  page: ESTILO_PAGINA,
   cabecalho: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -48,19 +61,22 @@ const f = StyleSheet.create({
     textAlign: "center",
     marginBottom: 14,
   },
-  rodape: {
+  rodapeEmpresa: {
     position: "absolute",
     bottom: 20,
     left: 30,
     right: 30,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    borderTopWidth: 0.5,
-    borderTopColor: SLATE_200,
-    borderTopStyle: "solid",
-    paddingTop: 4,
     fontSize: 7,
     color: SLATE_400,
+  },
+  rodapePagina: {
+    position: "absolute",
+    bottom: 20,
+    left: 30,
+    right: 30,
+    fontSize: 7,
+    color: SLATE_400,
+    textAlign: "right",
   },
   secao: { marginBottom: 7 },
   secaoTitulo: {
@@ -75,7 +91,7 @@ const f = StyleSheet.create({
   campoGrid: { flexDirection: "row", flexWrap: "wrap" },
   campo: { paddingRight: 10, marginBottom: 6 },
   campoLabel: { fontSize: 7.5, color: SLATE_500, marginBottom: 1 },
-  campoValor: { fontSize: 9 },
+  campoValor: { fontSize: 9, lineHeight: 1.35 },
   campoLinha: {
     marginTop: 7,
     borderBottomWidth: 0.5,
@@ -84,10 +100,10 @@ const f = StyleSheet.create({
   },
   listaItem: { flexDirection: "row", marginBottom: 2.5 },
   listaMarca: { width: 15, fontSize: 8.5 },
-  listaTexto: { flex: 1, fontSize: 8.5, textAlign: "justify" },
+  listaTexto: { flex: 1, fontSize: 8.5, textAlign: "justify", lineHeight: 1.35 },
   opcao: { flexDirection: "row", alignItems: "flex-end", marginBottom: 4 },
   opcaoCaixa: { width: 12, fontSize: 10 },
-  opcaoTexto: { fontSize: 8.5 },
+  opcaoTexto: { fontSize: 8.5, lineHeight: 1.35 },
   opcaoLinha: {
     flex: 1,
     marginLeft: 4,
@@ -127,7 +143,7 @@ const f = StyleSheet.create({
     borderBottomColor: SLATE_200,
     borderBottomStyle: "solid",
   },
-  tabelaCelula: { fontSize: 8, paddingVertical: 1.5, paddingHorizontal: 3 },
+  tabelaCelula: { fontSize: 8, paddingVertical: 1.5, paddingHorizontal: 3, lineHeight: 1.35 },
   tabelaGrupo: {
     fontSize: 7.5,
     fontFamily: "Helvetica-Bold",
@@ -194,14 +210,16 @@ export function Documento({
         <Text style={f.titulo}>{titulo}</Text>
         {subtitulo ? <Text style={f.subtitulo}>{subtitulo}</Text> : null}
         {children}
-        <View style={f.rodape} fixed>
-          <Text>Sistenge Construções e Comércio Ltda — Recursos Humanos</Text>
-          <Text
-            render={({ pageNumber, totalPages }) =>
-              `Página ${pageNumber} de ${totalPages}`
-            }
-          />
-        </View>
+        <Text style={f.rodapeEmpresa} fixed>
+          Sistenge Construções e Comércio Ltda — Recursos Humanos
+        </Text>
+        <Text
+          style={f.rodapePagina}
+          fixed
+          render={({ pageNumber, totalPages }) =>
+            `Página ${pageNumber} de ${totalPages}`
+          }
+        />
       </Page>
     </Document>
   );

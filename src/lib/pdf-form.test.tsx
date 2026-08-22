@@ -8,6 +8,7 @@ import {
   OpcoesCheck,
   AreaTexto,
   Tabela,
+  ESTILO_PAGINA,
   Assinaturas,
   somaLarguras,
   CAIXA,
@@ -178,5 +179,21 @@ describe("Assinaturas", () => {
       </Documento>,
     );
     expect(contarPaginas(buffer)).toBe(1);
+  });
+});
+
+describe("rodapé fixo — regressão", () => {
+  // O rodapé traz a paginação ("Página 2 de 3"), que num documento de várias
+  // folhas é o que prova que nenhuma página foi retirada do processo.
+  //
+  // Com `lineHeight` no estilo da Page, o @react-pdf/renderer 4.5 simplesmente
+  // não desenha filhos `position: absolute` + `fixed`. Some sem erro, e o teste
+  // de contagem de páginas passa igual. Este teste é o guarda dessa regra.
+  it("o estilo da página não declara lineHeight", () => {
+    expect(Object.keys(ESTILO_PAGINA)).not.toContain("lineHeight");
+  });
+
+  it("o entrelinhamento vive nos estilos de texto, não na página", () => {
+    expect(ESTILO_PAGINA.fontSize).toBe(9);
   });
 });
