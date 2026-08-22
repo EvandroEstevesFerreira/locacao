@@ -7,7 +7,11 @@ import type { CategoriaBiblioteca } from "@/lib/biblioteca";
 export type TipoDocumento =
   | "contrato_imovel"
   | "contrato_equipamento"
-  | "termo_responsabilidade";
+  | "termo_responsabilidade"
+  | "medida_disciplinar"
+  | "termo_chaves"
+  | "kit_alojamento"
+  | "checklist_limpeza";
 
 export type VariavelInfo = { chave: string; descricao: string };
 
@@ -97,6 +101,54 @@ export const DOCUMENTOS: DocumentoInfo[] = [
       { chave: "centro_resultado", descricao: "Centro de Resultado (CR)" },
       { chave: "empresa_nome", descricao: "Nome da empresa (cedente)" },
       { chave: "cidade", descricao: "Cidade do alojamento" },
+    ],
+  },
+  {
+    tipo: "medida_disciplinar",
+    label: "Medida disciplinar — advertência e suspensão (FRM-RH-002)",
+    descricao: "Formulário em branco, para imprimir e preencher à mão.",
+    eyebrow: "FRM-RH-002 · Medida disciplinar",
+    modulo: "imoveis",
+    categoria: "formulario",
+    preenchimento: "em_branco",
+    variaveis: [
+      { chave: "empresa_nome", descricao: "Nome da empresa" },
+    ],
+  },
+  {
+    tipo: "termo_chaves",
+    label: "Entrega e devolução de chaves (FRM-RH-003)",
+    descricao: "Formulário em branco, com checklist de conservação.",
+    eyebrow: "FRM-RH-003 · Entrega e devolução de chaves",
+    modulo: "imoveis",
+    categoria: "formulario",
+    preenchimento: "em_branco",
+    variaveis: [
+      { chave: "empresa_nome", descricao: "Nome da empresa" },
+    ],
+  },
+  {
+    tipo: "kit_alojamento",
+    label: "Recebimento e devolução do kit (FRM-RH-004)",
+    descricao: "Formulário em branco, entrega e devolução do enxoval.",
+    eyebrow: "FRM-RH-004 · Kit de alojamento",
+    modulo: "imoveis",
+    categoria: "formulario",
+    preenchimento: "em_branco",
+    variaveis: [
+      { chave: "empresa_nome", descricao: "Nome da empresa" },
+    ],
+  },
+  {
+    tipo: "checklist_limpeza",
+    label: "Checklist semanal de limpeza (FRM-RH-005)",
+    descricao: "Folha semanal em paisagem, para o auxiliar de limpeza.",
+    eyebrow: "FRM-RH-005 · Checklist semanal de limpeza",
+    modulo: "imoveis",
+    categoria: "formulario",
+    preenchimento: "em_branco",
+    variaveis: [
+      { chave: "empresa_nome", descricao: "Nome da empresa" },
     ],
   },
 ];
@@ -200,6 +252,58 @@ export const DEFAULT_TEMPLATES: Record<
       "— Autorizar a empresa, conforme a LGPD, ao tratamento dos meus dados pessoais e imagens captadas pelo CFTV para fins de gestão do alojamento e segurança, com acesso restrito ao RH e ao Encarregado.",
       "— Estar ciente de que, ao desligamento ou término do uso do alojamento, devo devolver as chaves e o ambiente em condições adequadas, sob pena de descontos legais e de responsabilização pelos danos eventualmente causados.",
       "— Estar ciente de que a Sistenge mantém canal próprio de denúncias (https://sistenge-ouvidoria.vercel.app/), com garantia de sigilo, apuração imparcial e vedação de retaliação, conforme a Lei 14.457/2022 e a LGPD.",
+    ].join("\n\n"),
+  },
+  medida_disciplinar: {
+    titulo: "MEDIDA DISCIPLINAR — ADVERTÊNCIA E SUSPENSÃO",
+    corpo: [
+      "Aplicada nos termos da Política de Alojamento POL-RH-001 e da CLT (arts. 474 e 482).",
+      "ORIENTAÇÕES AO EMPREGADO",
+      "Fica o(a) empregado(a) ciente de que:",
+      "— Deve adequar imediatamente sua conduta às regras da Política de Alojamento POL-RH-001 e ao Termo de Compromisso FRM-RH-001 que assinou.",
+      "— A reincidência poderá ensejar penalidade mais grave, inclusive a rescisão por justa causa, nos termos do art. 482 da CLT.",
+      "— Tem o direito de apresentar manifestação por escrito ao RH no prazo de 5 (cinco) dias úteis a contar do recebimento deste documento.",
+      "— Em caso de suspensão, o período não será remunerado (CLT, art. 474) e poderá impactar a contagem para férias proporcionais e demais direitos.",
+    ].join("\n\n"),
+  },
+  termo_chaves: {
+    titulo: "TERMO DE ENTREGA / DEVOLUÇÃO DE CHAVES DO ALOJAMENTO",
+    corpo: [
+      "Vinculado à Política de Alojamento POL-RH-001.",
+      "DECLARAÇÕES — EM CASO DE ENTREGA",
+      "Declaro receber, nesta data, os itens e o ambiente acima descritos, em condições adequadas de uso, ressalvadas as avarias preexistentes registradas no campo de observações. Comprometo-me a zelar pela conservação do alojamento e do armário, comunicar imediatamente qualquer dano ou problema, devolver tudo em condições equivalentes às recebidas no encerramento do uso, não trocar fechaduras ou cadeados sem autorização e cumprir integralmente a Política POL-RH-001 e o Termo de Compromisso FRM-RH-001.",
+      "DECLARAÇÕES — EM CASO DE DEVOLUÇÃO",
+      "Declaro devolver, nesta data, os itens e o ambiente acima descritos. Estou ciente de que:",
+      "— Avarias identificadas e atribuídas à minha responsabilidade (uso indevido, dolo ou culpa) poderão ser objeto de desconto em rescisão ou cobrança, nos termos da legislação e do contrato de trabalho.",
+      "— Pertences pessoais foram retirados; objetos eventualmente esquecidos serão guardados pela empresa por até 30 (trinta) dias, após o que serão considerados abandonados.",
+      "— A não devolução de chaves implica autorização para descontos do custo de reposição ou substituição de fechaduras.",
+    ].join("\n\n"),
+  },
+  kit_alojamento: {
+    titulo: "DECLARAÇÃO DE RECEBIMENTO E DEVOLUÇÃO DO KIT DE ALOJAMENTO",
+    corpo: [
+      "Vinculado à Política de Alojamento POL-RH-001 e ao Termo de Compromisso FRM-RH-001.",
+      "CONDIÇÕES DE USO E HIGIENIZAÇÃO",
+      "— Os itens do kit são de uso pessoal e exclusivo do alojado, sendo vedado o compartilhamento com terceiros.",
+      "— A higienização é semanal, fornecida pela empresa mediante troca dos itens utilizados por itens limpos, em dia e horário a ser comunicado pelo Encarregado.",
+      "— O alojado é corresponsável pela conservação do kit, evitando danos por uso inadequado (rasgos intencionais, queimaduras, manchas decorrentes de produtos não autorizados).",
+      "— Em caso de extravio ou dano causado por uso inadequado, comprovada a responsabilidade do alojado, a reposição poderá ser objeto de desconto em folha ou rescisão, nos termos da legislação e do contrato de trabalho.",
+      "— Solicitações de troca extraordinária (acidente, mancha grave, dano não intencional) devem ser dirigidas ao Encarregado do alojamento, que avaliará e providenciará a substituição.",
+      "— Ao fim do uso do alojamento — desligamento, transferência ou término de contrato — os itens devem ser devolvidos conforme a seção de devolução deste formulário.",
+    ].join("\n\n"),
+  },
+  checklist_limpeza: {
+    titulo: "CHECKLIST SEMANAL DE LIMPEZA DO ALOJAMENTO",
+    corpo: [
+      "Vinculado à Política de Alojamento POL-RH-001 — uso pelo auxiliar de limpeza.",
+      "CUIDADOS E BOAS PRÁTICAS",
+      "— Nunca misturar água sanitária com amoníaco ou detergente — a mistura libera gases tóxicos.",
+      "— Diluir desinfetantes conforme o rótulo. Soluções muito concentradas não limpam melhor, apenas desperdiçam produto.",
+      "— Lavar áreas limpas antes das sujas (por exemplo, dormitórios antes de banheiros).",
+      "— Usar panos separados por ambiente, com cor diferente para banheiro, cozinha e áreas comuns.",
+      "— Recolher o lixo de cada ambiente em saco próprio e trocar diariamente.",
+      "— Respeitar a privacidade dos alojados: não mexer em pertences pessoais dentro dos armários ou nas camas, e não entrar em quartos ocupados sem autorização.",
+      "— Em caso de acidente, contato com produto químico ou indisposição, avisar o Encarregado imediatamente e procurar atendimento.",
     ].join("\n\n"),
   },
 };

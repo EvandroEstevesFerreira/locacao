@@ -144,6 +144,8 @@ const f = StyleSheet.create({
     borderBottomStyle: "solid",
   },
   tabelaCelula: { fontSize: 8, paddingVertical: 1.5, paddingHorizontal: 3, lineHeight: 1.35 },
+  tabelaLinhaDensa: { minHeight: 10 },
+  tabelaCelulaDensa: { fontSize: 7, paddingVertical: 0.5, paddingHorizontal: 2.5, lineHeight: 1.2 },
   tabelaGrupo: {
     fontSize: 7.5,
     fontFamily: "Helvetica-Bold",
@@ -152,6 +154,9 @@ const f = StyleSheet.create({
     paddingHorizontal: 3,
     backgroundColor: SLATE_100,
   },
+  colunas: { flexDirection: "row" },
+  colunaEsq: { width: "50%", paddingRight: 10 },
+  colunaDir: { width: "50%", paddingLeft: 10 },
   localData: { marginTop: 18, marginBottom: 20, fontSize: 9 },
   assGrid: { flexDirection: "row", flexWrap: "wrap" },
   assCol: { width: "50%", paddingRight: 16, marginBottom: 24 },
@@ -245,6 +250,29 @@ export function Secao({
   );
 }
 
+/**
+ * Dois blocos lado a lado.
+ *
+ * Existe por causa da paisagem: uma folha A4 deitada tem só 527pt de altura útil
+ * contra 782pt de largura, então empilhar blocos estreitos (lista de EPI, tabela
+ * de estoque) gasta a dimensão escassa e desperdiça a abundante. Foi o que fez o
+ * FRM-RH-005 sair em 4 páginas na primeira medição.
+ */
+export function Colunas({
+  esquerda,
+  direita,
+}: {
+  esquerda: React.ReactNode;
+  direita: React.ReactNode;
+}) {
+  return (
+    <View style={f.colunas}>
+      <View style={f.colunaEsq}>{esquerda}</View>
+      <View style={f.colunaDir}>{direita}</View>
+    </View>
+  );
+}
+
 export type Assinante = { papel: string; nome?: string | null; detalhe?: string };
 
 /**
@@ -316,9 +344,16 @@ export function somaLarguras(colunas: Coluna[]): number {
 export function Tabela({
   colunas,
   linhas,
+  densa = false,
 }: {
   colunas: Coluna[];
   linhas: LinhaTabela[];
+  /**
+   * Aperta linha e corpo. Existe para o grid do FRM-RH-005: 44 tarefas × 7 dias
+   * numa folha paisagem, onde a altura útil é de apenas 527pt. Fora desse caso a
+   * escala normal é mais legível — use com parcimônia.
+   */
+  densa?: boolean;
 }) {
   return (
     <View style={f.tabela}>
@@ -341,12 +376,16 @@ export function Tabela({
             {linha.grupo}
           </Text>
         ) : (
-          <View key={i} style={f.tabelaLinha} wrap={false}>
+          <View
+            key={i}
+            style={densa ? [f.tabelaLinha, f.tabelaLinhaDensa] : f.tabelaLinha}
+            wrap={false}
+          >
             {colunas.map((c, j) => (
               <Text
                 key={j}
                 style={[
-                  f.tabelaCelula,
+                  densa ? f.tabelaCelulaDensa : f.tabelaCelula,
                   { width: `${c.largura}%`, textAlign: c.alinhar ?? "left" },
                 ]}
               >
