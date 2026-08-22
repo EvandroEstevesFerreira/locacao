@@ -262,3 +262,36 @@ export const reparoSchema = z.object({
 
 export type ReparoInput = z.input<typeof reparoSchema>;
 export type ReparoDados = z.output<typeof reparoSchema>;
+
+/**
+ * Ocupante (alojado) de um imóvel.
+ *
+ * `cargo`, `quarto` e `armario` alimentam o bloco de identificação do
+ * FRM-RH-001. Os demais campos daquele bloco (RG, admissão, encarregado,
+ * contato de emergência) saem em branco no PDF de propósito — ver a migration
+ * 0043 e a spec de 2026-08-22.
+ *
+ * A comparação de datas é lexicográfica sobre `yyyy-mm-dd`, que para esse
+ * formato é idêntica à cronológica. Nada de `new Date()` aqui: seria fuso
+ * errado (o Vercel roda em UTC) e desnecessário.
+ */
+export const ocupanteSchema = z
+  .object({
+    imovel_id: z.string().uuid(),
+    nome: z.string().trim().min(1, "Informe o nome do ocupante.").max(200),
+    cpf: texto(20),
+    contato: texto(40),
+    cargo: texto(120),
+    quarto: texto(40),
+    armario: texto(40),
+    data_entrada: texto(10),
+    data_saida: texto(10),
+    observacoes: texto(1000),
+  })
+  .refine(
+    (v) => !v.data_entrada || !v.data_saida || v.data_saida >= v.data_entrada,
+    { message: "A saída não pode ser anterior à entrada.", path: ["data_saida"] },
+  );
+
+export type OcupanteInput = z.input<typeof ocupanteSchema>;
+export type OcupanteDados = z.output<typeof ocupanteSchema>;

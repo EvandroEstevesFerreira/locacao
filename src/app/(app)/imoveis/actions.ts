@@ -9,6 +9,7 @@ import {
   contaConsumoSchema,
   contratoImovelSchema,
   imovelSchema,
+  ocupanteSchema,
   reparoSchema,
 } from "@/lib/imoveis";
 import { falha, primeiroErro, type ActionResult } from "@/lib/acoes";
@@ -567,28 +568,29 @@ export async function salvarAnexoOcorrencia(
 // ---------------------------------------------------------------------------
 // Fase 4: ocupantes
 // ---------------------------------------------------------------------------
-export async function salvarOcupante(
-  _prev: ImovelFormState,
-  formData: FormData,
-): Promise<ImovelFormState> {
+export async function salvarOcupante(raw: unknown): Promise<ActionResult> {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !podeOperar(perfil.papel)) return { error: "Sem permissão." };
-  const imovelId = txt(formData.get("imovel_id"));
-  const nome = txt(formData.get("nome"));
-  if (!imovelId || !nome) return { error: "Informe o nome do ocupante." };
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) {
+    return falha("Você não tem permissão para cadastrar ocupantes.");
+  }
+
+  const parsed = ocupanteSchema.safeParse(raw);
+  if (!parsed.success) return falha(primeiroErro(parsed.error.issues));
+  const { imovel_id, ...campos } = parsed.data;
+
   const supabase = await createClient();
   const { error } = await supabase.from("ocupante_imovel").insert({
     org_id: perfil.org_id,
-    imovel_id: imovelId,
-    nome,
-    cpf: txt(formData.get("cpf")),
-    contato: txt(formData.get("contato")),
-    data_entrada: txt(formData.get("data_entrada")),
-    data_saida: txt(formData.get("data_saida")),
+    imovel_id,
+    ...campos,
   });
-  if (error) return { error: "Não foi possível salvar o ocupante." };
-  revalidatePath(`/imoveis/${imovelId}`);
-  redirect(`/imoveis/${imovelId}`);
+  if (error) return falha("Não foi possível salvar o ocupante.");
+
+  // Sem `redirect()`: a action devolve {ok} e o form chama router.refresh().
+  // Um redirect aqui faria o NEXT_REDIRECT propagar e matar todo o código
+  // depois do await no client.
+  revalidatePath(`/imoveis/${imovel_id}`);
+  return { ok: true };
 }
 
 export async function excluirOcupante(formData: FormData) {
