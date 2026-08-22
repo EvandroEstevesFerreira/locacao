@@ -13,7 +13,19 @@ import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
 import { SLATE_100, SLATE_200, SLATE_400, SLATE_500, SLATE_900 } from "@/lib/brand-colors";
 import { LogoSistenge } from "./pdf-logo";
 
-/** Caixa de marcação vazia, para preenchimento à mão. */
+/**
+ * Marcador de célula que deve virar uma caixa de marcação.
+ *
+ * NÃO é o caractere impresso. O Helvetica — fonte padrão do PDF, sem embutir
+ * arquivo — não tem o glifo U+2610 (☐), e usá-lo direto fazia TODOS os
+ * checkboxes dos formulários saírem invisíveis: as opções viravam texto solto e
+ * as colunas OK/Avaria saíam em branco. Descoberto ao inspecionar o FRM-RH-003
+ * gerado, em 2026-08-22.
+ *
+ * A caixa é DESENHADA (`<Caixa/>`), o que independe de fonte e ainda dá uma
+ * borda mais firme para marcar à mão. Este valor é só o sinal que `Tabela` e
+ * `OpcoesCheck` reconhecem para trocar o texto pelo desenho.
+ */
 export const CAIXA = "☐";
 
 /** Acima do piso de 85pt exigido pelo Manual de Identidade Visual. */
@@ -101,8 +113,24 @@ const f = StyleSheet.create({
   listaItem: { flexDirection: "row", marginBottom: 2.5 },
   listaMarca: { width: 15, fontSize: 8.5 },
   listaTexto: { flex: 1, fontSize: 8.5, textAlign: "justify", lineHeight: 1.35 },
-  opcao: { flexDirection: "row", alignItems: "flex-end", marginBottom: 4 },
-  opcaoCaixa: { width: 12, fontSize: 10 },
+  opcao: { flexDirection: "row", alignItems: "flex-start", marginBottom: 4 },
+  caixa: {
+    width: 8,
+    height: 8,
+    borderWidth: 0.7,
+    borderColor: SLATE_900,
+    borderStyle: "solid",
+    marginRight: 5,
+    marginTop: 1.5,
+  },
+  caixaCelula: {
+    width: 7,
+    height: 7,
+    borderWidth: 0.7,
+    borderColor: SLATE_900,
+    borderStyle: "solid",
+  },
+  celulaCentro: { alignItems: "center", justifyContent: "center", paddingVertical: 2 },
   opcaoTexto: { fontSize: 8.5, lineHeight: 1.35 },
   opcaoLinha: {
     flex: 1,
@@ -381,17 +409,26 @@ export function Tabela({
             style={densa ? [f.tabelaLinha, f.tabelaLinhaDensa] : f.tabelaLinha}
             wrap={false}
           >
-            {colunas.map((c, j) => (
-              <Text
-                key={j}
-                style={[
-                  densa ? f.tabelaCelulaDensa : f.tabelaCelula,
-                  { width: `${c.largura}%`, textAlign: c.alinhar ?? "left" },
-                ]}
-              >
-                {linha.celulas[j] ?? ""}
-              </Text>
-            ))}
+            {colunas.map((c, j) =>
+              linha.celulas[j] === CAIXA ? (
+                <View
+                  key={j}
+                  style={[f.celulaCentro, { width: `${c.largura}%` }]}
+                >
+                  <Caixa celula />
+                </View>
+              ) : (
+                <Text
+                  key={j}
+                  style={[
+                    densa ? f.tabelaCelulaDensa : f.tabelaCelula,
+                    { width: `${c.largura}%`, textAlign: c.alinhar ?? "left" },
+                  ]}
+                >
+                  {linha.celulas[j] ?? ""}
+                </Text>
+              ),
+            )}
           </View>
         ),
       )}
@@ -420,6 +457,11 @@ export function Lista({
   );
 }
 
+/** Caixa de marcação desenhada — independe de glifo de fonte. */
+export function Caixa({ celula = false }: { celula?: boolean }) {
+  return <View style={celula ? f.caixaCelula : f.caixa} />;
+}
+
 export type Opcao = { texto: string; linha?: boolean };
 
 /** `☐ texto`, com linha à direita quando a opção continua em branco. */
@@ -428,7 +470,7 @@ export function OpcoesCheck({ opcoes }: { opcoes: Opcao[] }) {
     <View>
       {opcoes.map((o, i) => (
         <View key={i} style={f.opcao} wrap={false}>
-          <Text style={f.opcaoCaixa}>{CAIXA}</Text>
+          <Caixa />
           <Text style={f.opcaoTexto}>{o.texto}</Text>
           {o.linha ? <View style={f.opcaoLinha} /> : null}
         </View>
