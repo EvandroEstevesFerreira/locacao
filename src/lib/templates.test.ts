@@ -85,3 +85,42 @@ describe("catálogo de documentos", () => {
     }
   });
 });
+
+describe("termo de compromisso (FRM-RH-001)", () => {
+  const tpl = DEFAULT_TEMPLATES.termo_responsabilidade;
+
+  it("o título é o do FRM-RH-001", () => {
+    expect(tpl.titulo).toContain("COMPROMISSO");
+  });
+
+  it("cobre as regras que sustentam justa causa", () => {
+    for (const termo of ["22h", "drogas", "CFTV", "armário", "cozinhar"]) {
+      expect(tpl.corpo.toLowerCase()).toContain(termo.toLowerCase());
+    }
+  });
+
+  it("declara o canal de denúncias exigido pela Lei 14.457/2022", () => {
+    expect(tpl.corpo).toContain("sistenge-ouvidoria.vercel.app");
+  });
+
+  it("toda variável usada no corpo está declarada no catálogo", () => {
+    const doc = DOCUMENTOS.find((d) => d.tipo === "termo_responsabilidade")!;
+    const declaradas = new Set(doc.variaveis.map((v) => v.chave));
+    const usadas = [...tpl.corpo.matchAll(/\{\{\s*([a-z_]+)\s*\}\}/gi)].map(
+      (m) => m[1],
+    );
+    // Sem isto o teste passaria por vacuidade se o corpo perdesse as chaves.
+    expect(usadas.length).toBeGreaterThan(0);
+    for (const u of usadas) expect(declaradas, `variável {{${u}}}`).toContain(u);
+  });
+
+  it("declara as variáveis do bloco de identificação, ainda que a estrutura as preencha", () => {
+    // Elas não aparecem no corpo — quem as desenha é o CampoGrid do FRM-RH-001.
+    // Ficam declaradas para que o RH possa citá-las numa cláusula, se quiser.
+    const doc = DOCUMENTOS.find((d) => d.tipo === "termo_responsabilidade")!;
+    const chaves = doc.variaveis.map((v) => v.chave);
+    for (const c of ["ocupante", "ocupante_cargo", "quarto", "armario", "obra"]) {
+      expect(chaves).toContain(c);
+    }
+  });
+});
