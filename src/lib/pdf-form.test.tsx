@@ -8,6 +8,7 @@ import {
   OpcoesCheck,
   AreaTexto,
   Tabela,
+  Assinaturas,
   somaLarguras,
   CAIXA,
   contarPaginas,
@@ -140,5 +141,42 @@ describe("Tabela", () => {
       </Documento>,
     );
     expect(contarPaginas(buffer)).toBeLessThanOrEqual(2);
+  });
+});
+
+describe("Assinaturas", () => {
+  it("quatro assinantes em grid 2x2 cabem em 1 página", async () => {
+    const buffer = await renderToBuffer(
+      <Documento codigo="TESTE-004" titulo="Assinaturas">
+        <Assinaturas
+          localData="São Paulo, 22 de agosto de 2026."
+          assinantes={[
+            { papel: "Empregado(a)", nome: "Fulano de Tal" },
+            { papel: "Recursos Humanos — Sistenge" },
+            { papel: "Testemunha 1" },
+            { papel: "Testemunha 2" },
+          ]}
+        />
+      </Documento>,
+    );
+    expect(contarPaginas(buffer)).toBe(1);
+  });
+
+  it("no modo aceite imprime o registro em vez de deixar linha", async () => {
+    const buffer = await renderToBuffer(
+      <Documento codigo="TESTE-005" titulo="Aceite">
+        <Assinaturas
+          modo="aceite"
+          assinantes={[
+            {
+              papel: "Empregado(a)",
+              nome: "Fulano de Tal",
+              detalhe: "Aceite em 22/08/2026 às 14:30 — IP 187.0.0.1",
+            },
+          ]}
+        />
+      </Documento>,
+    );
+    expect(contarPaginas(buffer)).toBe(1);
   });
 });

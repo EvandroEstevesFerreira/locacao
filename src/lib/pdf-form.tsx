@@ -227,6 +227,48 @@ export function Secao({
   );
 }
 
+export type Assinante = { papel: string; nome?: string | null; detalhe?: string };
+
+/**
+ * Grid de assinaturas, 2 por linha.
+ *
+ * `modo="aceite"` está preparado para a fase de aceite digital: em vez da linha
+ * para assinar à mão, imprime o registro de data/hora e IP. As colunas
+ * `ocupante_imovel.aceite_em` / `aceite_ip` já existem, nulas, desde a fase 1 —
+ * a troca será de props, não de layout nem de migration.
+ *
+ * `wrap={false}`: bloco de assinatura partido entre duas páginas produz folha
+ * com linhas soltas e sem contexto, que é exatamente o que ninguém assina.
+ */
+export function Assinaturas({
+  assinantes,
+  modo = "manual",
+  localData,
+}: {
+  assinantes: Assinante[];
+  modo?: "manual" | "aceite";
+  localData?: string;
+}) {
+  return (
+    <View wrap={false}>
+      {localData ? <Text style={f.localData}>{localData}</Text> : null}
+      <View style={f.assGrid}>
+        {assinantes.map((a, i) => (
+          <View key={i} style={f.assCol}>
+            <View style={f.assLinha}>
+              <Text style={f.assNome}>{a.nome || " "}</Text>
+              <Text style={f.assPapel}>{a.papel}</Text>
+              {modo === "aceite" && a.detalhe ? (
+                <Text style={f.assDetalhe}>{a.detalhe}</Text>
+              ) : null}
+            </View>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 export type Coluna = {
   titulo: string;
   /** Largura em % da tabela. A soma das colunas deve dar 100. */
