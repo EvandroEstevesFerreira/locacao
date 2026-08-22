@@ -5,8 +5,9 @@ import { getCurrentPerfil, podeConfigurarSistema } from "@/lib/auth";
 import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { DOCUMENTOS } from "@/lib/templates";
-import { ConfigRow } from "@/components/shared/config-row";
+import { MODULOS } from "@/lib/modulos";
+import { documentosDoModulo } from "@/lib/templates";
+import { ConfigRow, SecaoTitulo } from "@/components/shared/config-row";
 
 export const metadata = { title: "Templates de documentos — Loca" };
 
@@ -27,26 +28,31 @@ export default async function TemplatesPage() {
         titulo="Templates de documentos"
         descricao="Edite o texto dos contratos e termos com variáveis que o sistema preenche."
       />
-      <Card>
-        <CardContent className="divide-y p-0">
-          {DOCUMENTOS.map((doc) => (
-            <ConfigRow
-              key={doc.tipo}
-              href={`/configuracoes/templates/${doc.tipo}`}
-              icon={FileText}
-              titulo={doc.label}
-              descricao={doc.descricao}
-              extra={
-                personalizados.has(doc.tipo) ? (
-                  <Badge variant="secondary">Personalizado</Badge>
-                ) : (
-                  <Badge variant="outline">Padrão</Badge>
-                )
-              }
-            />
-          ))}
-        </CardContent>
-      </Card>
+      {MODULOS.filter((m) => documentosDoModulo(m.chave).length > 0).map((m) => (
+        <div key={m.chave} className="space-y-2">
+          <SecaoTitulo>{m.label}</SecaoTitulo>
+          <Card>
+            <CardContent className="divide-y p-0">
+              {documentosDoModulo(m.chave).map((doc) => (
+                <ConfigRow
+                  key={doc.tipo}
+                  href={`/configuracoes/templates/${doc.tipo}`}
+                  icon={FileText}
+                  titulo={doc.label}
+                  descricao={doc.descricao}
+                  extra={
+                    personalizados.has(doc.tipo) ? (
+                      <Badge variant="secondary">Personalizado</Badge>
+                    ) : (
+                      <Badge variant="outline">Padrão</Badge>
+                    )
+                  }
+                />
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+      ))}
     </div>
   );
 }

@@ -3,6 +3,8 @@ import {
   renderTemplate,
   corpoParaParagrafos,
   DEFAULT_TEMPLATES,
+  DOCUMENTOS,
+  documentosDoModulo,
 } from "./templates";
 
 describe("renderTemplate", () => {
@@ -59,5 +61,27 @@ describe("DEFAULT_TEMPLATES", () => {
     };
     const texto = renderTemplate(DEFAULT_TEMPLATES.contrato_imovel.corpo, vars);
     expect(texto).not.toMatch(/\{\{/);
+  });
+});
+
+describe("catálogo de documentos", () => {
+  it("todo documento declara módulo, categoria e preenchimento", () => {
+    for (const d of DOCUMENTOS) {
+      expect(d.modulo, `documento ${d.tipo}`).toBeTruthy();
+      expect(d.categoria, `documento ${d.tipo}`).toBeTruthy();
+      expect(["com_dados", "em_branco"]).toContain(d.preenchimento);
+    }
+  });
+
+  it("filtra por módulo", () => {
+    const imoveis = documentosDoModulo("imoveis");
+    expect(imoveis.length).toBeGreaterThan(0);
+    expect(imoveis.every((d) => d.modulo === "imoveis")).toBe(true);
+  });
+
+  it("todo tipo do catálogo tem template padrão", () => {
+    for (const d of DOCUMENTOS) {
+      expect(DEFAULT_TEMPLATES[d.tipo], `template de ${d.tipo}`).toBeTruthy();
+    }
   });
 });

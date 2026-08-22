@@ -1,6 +1,9 @@
 // Templates de documentos (contratos, termos) com variáveis {{chave}}.
 // SEM dependências de servidor — usado pelo editor (client) e pelas rotas de PDF.
 
+import type { ModuloKey } from "@/lib/modulos";
+import type { CategoriaBiblioteca } from "@/lib/biblioteca";
+
 export type TipoDocumento =
   | "contrato_imovel"
   | "contrato_equipamento"
@@ -13,6 +16,12 @@ export type DocumentoInfo = {
   label: string;
   descricao: string;
   eyebrow: string; // subtítulo fixo no topo do documento
+  /** Módulo a que o documento pertence — governa onde ele aparece. */
+  modulo: ModuloKey;
+  /** Categoria na tela de documentos do alojamento. */
+  categoria: CategoriaBiblioteca;
+  /** Sai preenchido com dados do sistema, ou em branco para preencher à mão. */
+  preenchimento: "com_dados" | "em_branco";
   variaveis: VariavelInfo[];
 };
 
@@ -23,6 +32,9 @@ export const DOCUMENTOS: DocumentoInfo[] = [
     label: "Contrato de locação de imóvel",
     descricao: "Gerado no imóvel (botão “Gerar contrato”).",
     eyebrow: "Contrato de locação",
+    modulo: "imoveis",
+    categoria: "formulario",
+    preenchimento: "com_dados",
     variaveis: [
       { chave: "locataria", descricao: "Empresa locatária (razão social ou nome)" },
       { chave: "empresa_cnpj", descricao: "CNPJ da empresa" },
@@ -48,6 +60,9 @@ export const DOCUMENTOS: DocumentoInfo[] = [
     label: "Contrato de locação de equipamento",
     descricao: "Gerado no contrato de locação (botão “Gerar contrato (PDF)”).",
     eyebrow: "Contrato de locação de equipamento",
+    modulo: "contratos",
+    categoria: "formulario",
+    preenchimento: "com_dados",
     variaveis: [
       { chave: "locataria", descricao: "Empresa locatária (razão social ou nome)" },
       { chave: "empresa_cnpj", descricao: "CNPJ da empresa" },
@@ -67,6 +82,9 @@ export const DOCUMENTOS: DocumentoInfo[] = [
     label: "Termo de responsabilidade (ocupante)",
     descricao: "Gerado no ocupante do imóvel (botão “Gerar termo”).",
     eyebrow: "Termo de responsabilidade",
+    modulo: "imoveis",
+    categoria: "formulario",
+    preenchimento: "com_dados",
     variaveis: [
       { chave: "ocupante", descricao: "Nome do ocupante" },
       { chave: "ocupante_cpf", descricao: "CPF do ocupante" },
@@ -80,6 +98,17 @@ export const DOCUMENTOS: DocumentoInfo[] = [
 
 export function documentoInfo(tipo: TipoDocumento): DocumentoInfo | undefined {
   return DOCUMENTOS.find((d) => d.tipo === tipo);
+}
+
+/**
+ * Documentos de um módulo, na ordem do catálogo.
+ *
+ * É o que liga documento a módulo: a tela de Templates agrupa por aqui, a de
+ * Documentos do alojamento filtra por aqui, e a filtragem de `moduloLiberado`
+ * passa a valer para documentos sem nenhum código novo de permissão.
+ */
+export function documentosDoModulo(modulo: ModuloKey): DocumentoInfo[] {
+  return DOCUMENTOS.filter((d) => d.modulo === modulo);
 }
 
 /** Título + corpo padrão de cada documento (usados quando não há template salvo). */
