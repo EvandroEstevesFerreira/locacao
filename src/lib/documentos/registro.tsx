@@ -12,6 +12,7 @@ import { MedidaDisciplinar } from "./frm-rh-002";
 import { TermoChaves } from "./frm-rh-003";
 import { KitAlojamento } from "./frm-rh-004";
 import { ChecklistLimpeza, type Frequencia } from "./frm-rh-005";
+import { PoliticaAlojamento } from "./pol-rh-001";
 
 export type ConteudoDocumento = {
   orgNome: string;
@@ -28,6 +29,7 @@ type Renderizador = (
 export const DOCUMENTOS_EM_BRANCO: Partial<
   Record<TipoDocumento, Renderizador>
 > = {
+  politica_alojamento: (c) => <PoliticaAlojamento {...c} />,
   medida_disciplinar: (c) => <MedidaDisciplinar {...c} />,
   termo_chaves: (c) => <TermoChaves {...c} />,
   kit_alojamento: (c) => <KitAlojamento {...c} />,

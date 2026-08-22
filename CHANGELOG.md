@@ -7,6 +7,26 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.26.0] — 2026-08-22
+
+Fecha a fase 2 dos **documentos do alojamento**: a POL-RH-001 gerada pelo sistema.
+
+### Adicionado
+
+- **POL-RH-001** composta a partir do template, com as 16 seções em **7 páginas**
+  (o original tem 14) — sem cortar conteúdo, só com o padrão tipográfico.
+- As **duas tabelas da política** (matriz de responsabilidades e tabela de
+  infrações e penalidades) vivem em código, como estrutura. Não foi escolha
+  estética: a extração automática embaralha as linhas 8 a 15 da tabela de
+  penalidades, e uma penalidade trocada num normativo disciplinar é erro que se
+  paga em audiência. Transcritas do PDF original conferindo página a página.
+
+### Notas
+
+- Resíduo conhecido de conversão: no item 2, o subtítulo "Princípios
+  orientadores" ficou absorvido no fim de um item da lista. Cosmético, e
+  corrigível editando o texto em Configurações.
+
 ## [0.25.0] — 2026-08-22
 
 Fase 2 dos **documentos do alojamento**: os quatro formulários compostos em

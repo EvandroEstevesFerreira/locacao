@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.25.0";
+export const APP_VERSION = "0.26.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,16 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.26.0",
+    data: "2026-08-22",
+    titulo: "Política de Alojamento no sistema",
+    mudancas: [
+      { tipo: "novo", texto: "A Política de Alojamento (POL-RH-001) passa a ser gerada pelo próprio sistema, com as 16 seções, a matriz de responsabilidades e a tabela de infrações e penalidades. Fica em Imóveis → Documentos, junto dos formulários." },
+      { tipo: "melhoria", texto: "A política caiu de 14 para 7 páginas impressas, sem cortar uma linha do conteúdo — só com o padrão tipográfico do sistema." },
+      { tipo: "melhoria", texto: "O texto da política também pode ser revisado em Configurações → Templates de documentos, o que dispensa republicar o arquivo a cada ajuste do Jurídico." },
+    ],
+  },
   {
     versao: "0.25.0",
     data: "2026-08-22",

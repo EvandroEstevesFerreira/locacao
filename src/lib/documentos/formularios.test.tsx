@@ -11,6 +11,7 @@ import { MedidaDisciplinar } from "./frm-rh-002";
 import { TermoChaves } from "./frm-rh-003";
 import { KitAlojamento } from "./frm-rh-004";
 import { ChecklistLimpeza, TAREFAS, linhasDoGrid } from "./frm-rh-005";
+import { PoliticaAlojamento } from "./pol-rh-001";
 
 const ORG = "Sistenge Construções e Comércio Ltda";
 
@@ -56,6 +57,22 @@ describe("formulários em branco — densidade", () => {
   });
 });
 
+describe("POL-RH-001", () => {
+  it("cai de 14 para no máximo 10 páginas", async () => {
+    const b = await renderToBuffer(
+      <PoliticaAlojamento {...conteudo("politica_alojamento")} />,
+    );
+    expect(contarPaginas(b)).toBeLessThanOrEqual(10);
+  });
+
+  it("o texto cobre as seções que sustentam o regime disciplinar", async () => {
+    const tpl = DEFAULT_TEMPLATES.politica_alojamento;
+    for (const termo of ["NR-24", "LGPD", "CFTV", "art. 482", "reincidência"]) {
+      expect(tpl.corpo.toLowerCase()).toContain(termo.toLowerCase());
+    }
+  });
+});
+
 describe("catálogo de tarefas de limpeza", () => {
   it("o corte por frequência é o que viabiliza a folha semanal", () => {
     const diarias = TAREFAS.filter((t) => t.frequencia === "D").length;
@@ -91,6 +108,7 @@ describe("catálogo de documentos", () => {
       "termo_chaves",
       "kit_alojamento",
       "checklist_limpeza",
+      "politica_alojamento",
     ]) {
       const doc = DOCUMENTOS.find((d) => d.tipo === tipo);
       expect(doc, `documento ${tipo}`).toBeTruthy();
