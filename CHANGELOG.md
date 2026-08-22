@@ -7,6 +7,40 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.25.0] — 2026-08-22
+
+Fase 2 dos **documentos do alojamento**: os quatro formulários compostos em
+branco e acessíveis pela tela do módulo.
+
+### Adicionado
+
+- **FRM-RH-002 a 005** compostos a partir dos primitivos, imprimíveis em branco
+  por `Imóveis → Documentos`. FRM-RH-002/003/004 em 2 páginas; FRM-RH-005 em 3
+  páginas paisagem (semanal) e 1 página (mensal).
+- **Rota `/api/documentos/[tipo]/pdf`**, que usa o texto customizado da
+  organização quando existe. `?variante=mensal` gera a folha mensal do checklist
+  de limpeza.
+- **Primitivos `Colunas` e `Tabela densa`**, ambos nascidos de medição no
+  FRM-RH-005: em paisagem a altura útil é de 527pt contra 782pt de largura, e
+  empilhar blocos estreitos gastava a dimensão escassa.
+
+### Corrigido
+
+- **Checkboxes invisíveis em todos os formulários.** O Helvetica não tem o glifo
+  U+2610 (`☐`), então toda caixa de marcação sumia: opções viravam texto solto e
+  as colunas OK/Avaria saíam vazias. Passaram a ser desenhadas, o que independe
+  de fonte.
+
+### Notas
+
+- O **FRM-RH-005 semanal fecha em 3 páginas**, não nas 2 previstas: o grid de 44
+  linhas ocupa 2 folhas sozinho e o apêndice a terceira. Tentados e descartados
+  coluna de tarefa mais larga, tabela densa e retirar as boas práticas — abaixo
+  disso o checkbox fica impossível de marcar à mão.
+- A **POL-RH-001 fica para a próxima entrega**: suas duas tabelas (matriz de
+  responsabilidades e tabela de infrações) são estrutura e precisam ser
+  compostas, não convertidas em prosa.
+
 ## [0.24.0] — 2026-08-22
 
 Primeira fase dos **documentos do alojamento**: os oito primitivos de formulário

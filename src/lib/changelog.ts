@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.24.0";
+export const APP_VERSION = "0.25.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,17 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.25.0",
+    data: "2026-08-22",
+    titulo: "Formulários do alojamento prontos para imprimir",
+    mudancas: [
+      { tipo: "novo", texto: "Quatro formulários do alojamento passam a sair do próprio sistema, no padrão visual da Sistenge: medida disciplinar (FRM-RH-002), entrega e devolução de chaves com checklist de conservação (FRM-RH-003), recebimento e devolução do kit (FRM-RH-004) e o checklist semanal de limpeza (FRM-RH-005). Ficam em Imóveis → Documentos, prontos para baixar e preencher à mão." },
+      { tipo: "novo", texto: "O checklist de limpeza tem duas folhas: a semanal, com as tarefas diárias e semanais, e uma folha mensal separada só com as tarefas de frequência mensal — assim a folha que vai para a obra toda semana não carrega o que só se faz uma vez por mês." },
+      { tipo: "melhoria", texto: "O texto de qualquer um desses formulários pode ser editado em Configurações → Templates de documentos, sem depender de atualização do sistema." },
+      { tipo: "correcao", texto: "As caixas de marcação dos formulários não estavam aparecendo no PDF — as opções saíam como texto solto e as colunas de vistoria, em branco. Agora são desenhadas e imprimem em qualquer leitor." },
+    ],
+  },
   {
     versao: "0.24.0",
     data: "2026-08-22",
