@@ -349,7 +349,6 @@ export function DocumentoVistoria({ v }: { v: VistoriaPdf }) {
 
 const docStyles = StyleSheet.create({
   page: { padding: 40, fontSize: 11, fontFamily: "Helvetica", color: SLATE_900, lineHeight: 1.5 },
-  marca: { fontSize: 16, fontFamily: "Helvetica-Bold", letterSpacing: 1 },
   eyebrow: { fontSize: 8, color: ACENTO, letterSpacing: 2, textTransform: "uppercase", marginBottom: 14 },
   titulo: { fontSize: 16, fontFamily: "Helvetica-Bold", textAlign: "center", marginBottom: 16 },
   infoBox: { border: `1 solid ${SLATE_200}`, padding: 10, marginBottom: 16 },
@@ -388,7 +387,7 @@ export function DocumentoTexto({
   return (
     <Document>
       <Page size="A4" style={docStyles.page}>
-        <Text style={docStyles.marca}>SISTENGE</Text>
+        <LogoSistenge width={110} />
         <Text style={docStyles.eyebrow}>{eyebrow} · {orgNome}</Text>
         <Text style={docStyles.titulo}>{titulo}</Text>
 

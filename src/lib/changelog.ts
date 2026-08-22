@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.23.0";
+export const APP_VERSION = "0.24.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,18 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.24.0",
+    data: "2026-08-22",
+    titulo: "Termo de Compromisso de Alojamento",
+    mudancas: [
+      { tipo: "novo", texto: "O termo gerado no ocupante do imóvel agora é o Termo de Compromisso de Alojamento (FRM-RH-001) por inteiro: as 22 regras de convivência, o consentimento informado de câmeras (CFTV), a cláusula do armário individual, a tabela de penalidades e o canal de denúncias. Antes saía uma versão curta, com quatro parágrafos genéricos." },
+      { tipo: "novo", texto: "O cadastro do ocupante ganhou função, número do quarto e número do armário. Esses dados saem preenchidos no termo; os que o sistema não guarda (RG, data de admissão, encarregado e contato de emergência) saem como linha em branco, para preencher à mão." },
+      { tipo: "melhoria", texto: "Os templates de documentos, em Configurações, aparecem agrupados por módulo — fica claro de onde cada documento é gerado." },
+      { tipo: "melhoria", texto: "Contratos e termos passaram a sair com o logotipo da Sistenge no cabeçalho, no lugar do nome escrito por extenso." },
+      { tipo: "melhoria", texto: "Ao cadastrar um ocupante, o sistema agora avisa se a data de saída for anterior à de entrada, em vez de aceitar em silêncio." },
+    ],
+  },
   {
     versao: "0.23.0",
     data: "2026-08-07",

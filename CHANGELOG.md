@@ -7,6 +7,45 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.24.0] — 2026-08-22
+
+Primeira fase dos **documentos do alojamento**: os oito primitivos de formulário
+em PDF e o FRM-RH-001 provado de ponta a ponta.
+
+### Adicionado
+
+- **Termo de Compromisso de Alojamento (FRM-RH-001)** como texto padrão do termo
+  do ocupante, substituindo a versão genérica anterior: 22 regras de convivência,
+  consentimento informado de CFTV (LGPD), cláusula de armário individual, tabela
+  de penalidades (CLT, arts. 474 e 482) e o canal de denúncias exigido pela Lei
+  14.457/2022. Nenhuma linha de `documento_template` é tocada — quem customizou
+  o texto continua com o dele.
+- **Primitivos de formulário em PDF** (`src/lib/pdf-form.tsx`): `Documento`,
+  `Secao`, `CampoGrid`, `Lista`, `OpcoesCheck`, `Tabela`, `AreaTexto` e
+  `Assinaturas`. `CampoGrid` com valor nulo desenha linha para preenchimento
+  manual; `Assinaturas` já aceita `modo="aceite"` para a fase de assinatura
+  digital.
+- **Colunas `cargo`, `quarto` e `armario`** em `ocupante_imovel`, com
+  `aceite_em`/`aceite_ip` nulas reservadas (migration `0043`).
+
+### Alterado
+
+- A tela **Configurações → Templates de documentos** agrupa por módulo.
+- `DocumentoInfo` ganhou `modulo`, `categoria` e `preenchimento`, tornando o
+  catálogo de `templates.ts` a fonte única de documentos do sistema.
+- O formulário de ocupante migrou para `react-hook-form` + `zodResolver` (8
+  campos e validação cruzada de datas) e `salvarOcupante` passou a devolver
+  `ActionResult` em vez de redirecionar.
+- Contratos e termos passaram a desenhar o logotipo no lugar da palavra
+  `SISTENGE`.
+
+### Notas
+
+- O FRM-RH-001 fecha em **3 páginas**, não nas 2 previstas para formulários: o
+  texto sozinho (44 cláusulas, 7.270 caracteres) já ocupa 2 páginas a 8,5pt, e
+  comprimir mais exigiria corpo abaixo de 7,5pt num documento que sustenta justa
+  causa. Um teste trava esse limite.
+
 ## [0.23.0] — 2026-08-07
 
 Conclusão da Fase 3 da migração para a construção do **Sistenge People**
