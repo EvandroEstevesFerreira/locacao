@@ -1,7 +1,7 @@
 # Documentos do alojamento — POL-RH-001 e FRM-RH-001 a 005
 
 **Data:** 2026-08-22
-**Status:** fases 1 e 2 entregues (v0.24.0 e v0.25.0); fases 3 a 5 pendentes
+**Status:** fase 2 completa (v0.24.0 a v0.26.0) — os 6 documentos saem do sistema; fases 3 a 5 pendentes
 
 ## Estado da entrega
 
@@ -9,7 +9,7 @@
 |---|---|---|
 | 1 — primitivos + FRM-RH-001 | **entregue** | 0.24.0 |
 | 2 — FRM-RH-002 a 005 em branco + rota + tela | **entregue** | 0.25.0 |
-| 2b — POL-RH-001 | **pendente** — ver "O que falta" | — |
+| 2b — POL-RH-001 | **entregue** — 7 páginas, de 14 | 0.26.0 |
 | 3 — `medida_disciplinar` e `entrega_ocupante` | pendente | — |
 | 4 — rotina semanal de limpeza | pendente | — |
 | 5 — aceite digital | pendente | — |
@@ -24,15 +24,13 @@
   apagando todos os checkboxes. **Lição para as fases seguintes: renderizar e
   inspecionar, não só contar páginas.**
 
-### O que falta na POL-RH-001
+### Lição registrada na POL-RH-001
 
-A conversão do texto está resolvida (script em
-`scratchpad/gera_politica.py`: 180 parágrafos, 21 seções corretamente
-detectadas). O que trava é que a política tem **duas tabelas** — a matriz de
-responsabilidades (item 10) e a tabela de infrações e penalidades (item 11.3) —
-que o `pdftotext` quebra em fragmentos de célula. Pelo princípio da abordagem C,
-elas são estrutura e vão em código, como `Tabela`, e não no template. É trabalho
-de composição, não de decisão: o desenho já está fechado.
+As duas tabelas foram transcritas **lendo o PDF original página a página**,
+depois que a extração automática entregou a reincidência da linha 13 errada
+("causa se intencional" em vez de "justa causa por indisciplina ou
+insubordinação"). Numa tabela que define penalidade disciplinar, conferir na
+fonte não é zelo excessivo — é o mínimo.
 
 ## Objetivo
 
