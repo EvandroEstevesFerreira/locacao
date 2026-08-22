@@ -108,8 +108,13 @@ Escala própria para formulários, sem tocar na escala de contrato:
 
 Metas por documento:
 
-- **FRM-RH-001 → 2 páginas.** `CampoGrid` em 2 colunas transforma 15 linhas em
-  8 (~110pt salvos). As 22 regras são o volume real e não se cortam.
+- **FRM-RH-001 → 3 páginas.** *(Corrigido na fase 1 — a previsão era 2.)* Medido:
+  o texto sozinho (54 parágrafos, 44 cláusulas, 7.270 caracteres) já ocupa 2
+  páginas cheias a 8,5pt. Somando o bloco de 14 campos, a tabela de penalidades e
+  as 4 assinaturas, 2 páginas exigiriam corpo abaixo de 7,5pt — ilegível num
+  documento que o alojado precisa ler e que sustenta justa causa. Vale o mesmo
+  princípio da política: não se resume para caber. Os demais formulários seguem
+  com meta de 2.
 - **FRM-RH-002 → 2 páginas.** As `AreaTexto` (5 e 4 linhas) são o gasto e são
   justamente o que não pode encolher.
 - **FRM-RH-003 → 2 páginas.**
@@ -347,6 +352,22 @@ template antigo simplesmente não a usa). **A migration não toca em nenhuma lin
 de `documento_template`.** Quem customizou não perde nada; Configurações passa a
 mostrar um aviso de "texto anterior ao FRM-RH-001", com opção de ver e adotar o
 padrão novo. Sem mágica, sem perda, visível.
+
+## Armadilha do renderizador (descoberta na fase 1)
+
+**Nunca declarar `lineHeight` no estilo da `Page`.** Com `lineHeight` ali, o
+`@react-pdf/renderer` 4.5 deixa de desenhar **qualquer** filho
+`position: absolute` + `fixed` — o rodapé de paginação some, em todas as folhas,
+sem erro nem aviso. Vale para 1.35 e até para 1.
+
+O entrelinhamento vive nos estilos de texto (`listaTexto`, `campoValor`,
+`tabelaCelula`, `opcaoTexto`). O estilo da página é a constante exportada
+`ESTILO_PAGINA`, e `pdf-form.test.tsx` reprova se `lineHeight` voltar.
+
+Isto passou pelo teste de contagem de páginas: o PDF tinha o número certo de
+folhas, faltava só a numeração nelas — que é justamente o que prova que nenhuma
+página foi retirada do processo. Achado só ao **olhar** o PDF gerado. Fica a
+lição para as fases seguintes: renderizar e inspecionar, não só contar páginas.
 
 ## Armadilhas registradas
 
