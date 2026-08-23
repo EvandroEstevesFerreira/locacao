@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.27.0";
+export const APP_VERSION = "0.28.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,16 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.28.0",
+    data: "2026-08-22",
+    titulo: "Rotina de limpeza do alojamento",
+    mudancas: [
+      { tipo: "novo", texto: "A tela do imóvel ganhou o controle da limpeza: abrir a semana, ver as semanas anteriores com a avaliação do Encarregado e baixar a folha já com o período preenchido." },
+      { tipo: "novo", texto: "O catálogo de 44 tarefas de limpeza pode ser criado de uma vez, a partir do padrão do FRM-RH-005, e depois fica editável pela organização. A folha impressa passa a usar esse catálogo." },
+      { tipo: "melhoria", texto: "A folha semanal traz só as tarefas diárias e semanais; as mensais saem numa folha separada. É o que faz a impressão semanal caber e deixa de gastar papel com o que só se faz uma vez por mês." },
+    ],
+  },
   {
     versao: "0.27.0",
     data: "2026-08-22",

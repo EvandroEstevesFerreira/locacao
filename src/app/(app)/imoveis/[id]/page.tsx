@@ -21,6 +21,7 @@ import { ImovelReparos } from "./_components/imovel-reparos";
 import { ImovelVistorias } from "./_components/imovel-vistorias";
 import { ImovelOcupantes } from "./_components/imovel-ocupantes";
 import { ImovelAlojamento } from "./_components/imovel-alojamento";
+import { ImovelLimpeza } from "./_components/imovel-limpeza";
 
 export const metadata = { title: "Imóvel — Loca" };
 
@@ -114,6 +115,10 @@ export default async function ImovelDetalhePage({
 
       <Suspense fallback={<SecaoSkeleton linhas={3} />}>
         <ImovelAlojamento imovelId={id} podeEditar={podeEditar} />
+      </Suspense>
+
+      <Suspense fallback={<SecaoSkeleton linhas={3} />}>
+        <ImovelLimpeza imovelId={id} podeEditar={podeEditar} />
       </Suspense>
 
       <AtividadeTimeline entidade="imovel" registroId={id} />

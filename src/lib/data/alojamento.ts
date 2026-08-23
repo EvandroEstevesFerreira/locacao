@@ -156,3 +156,60 @@ export async function buscarEntrega(id: string) {
     imovel: Array.isArray(im) ? (im[0] ?? null) : im,
   };
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Rotina semanal de limpeza (fase 4)
+// ═══════════════════════════════════════════════════════════════════════════
+
+export type TarefaLimpeza = {
+  id: string;
+  grupo: string;
+  descricao: string;
+  frequencia: "D" | "S" | "M";
+  ordem: number;
+};
+
+export type ChecklistLista = {
+  id: string;
+  semana_inicio: string;
+  auxiliar_nome: string | null;
+  avaliacao: string | null;
+  observacoes: string | null;
+};
+
+/**
+ * Catálogo de tarefas da organização, na ordem em que o auxiliar percorre o
+ * alojamento. Vazio quando a organização ainda não semeou o catálogo — nesse
+ * caso a folha impressa cai no catálogo embutido em `frm-rh-005.tsx`.
+ */
+export async function listarTarefasLimpeza(): Promise<TarefaLimpeza[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("tarefa_limpeza")
+    .select("id, grupo, descricao, frequencia, ordem")
+    .eq("ativo", true)
+    .order("ordem");
+
+  if (error) {
+    console.error("listarTarefasLimpeza", error);
+    return [];
+  }
+  return (data ?? []) as TarefaLimpeza[];
+}
+
+/** Checklists de um imóvel, da semana mais recente para a mais antiga. */
+export async function listarChecklists(imovelId: string): Promise<ChecklistLista[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("checklist_limpeza")
+    .select("id, semana_inicio, auxiliar_nome, avaliacao, observacoes")
+    .eq("imovel_id", imovelId)
+    .order("semana_inicio", { ascending: false })
+    .limit(12);
+
+  if (error) {
+    console.error("listarChecklists", error);
+    return [];
+  }
+  return (data ?? []) as ChecklistLista[];
+}

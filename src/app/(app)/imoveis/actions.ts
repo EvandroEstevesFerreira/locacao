@@ -8,7 +8,10 @@ import { CATEGORIAS_BIBLIOTECA } from "@/lib/biblioteca";
 import {
   medidaDisciplinarSchema,
   entregaOcupanteSchema,
+  segundaFeiraDaSemana,
 } from "@/lib/alojamento";
+import { TAREFAS } from "@/lib/documentos/frm-rh-005";
+import { hojeISOSaoPaulo } from "@/lib/locacao";
 import {
   contaConsumoSchema,
   contratoImovelSchema,
@@ -792,5 +795,95 @@ export async function excluirEntregaOcupante(formData: FormData) {
   if (error || data !== true) {
     return { error: "Não foi possível excluir a entrega." };
   }
+  revalidatePath(`/imoveis/${imovelId}`);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Rotina semanal de limpeza (fase 4)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Semeia o catálogo de tarefas da organização a partir do embutido no código.
+ *
+ * Existe porque a folha impressa precisa das tarefas ANTES de alguém as
+ * cadastrar uma a uma: são 44. Depois de semeado, o catálogo é da organização e
+ * pode ser editado — a semeadura não roda de novo se já houver tarefa.
+ */
+export async function semearTarefasLimpeza(formData: FormData): Promise<void> {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id || !podeEditarCadastros(perfil.papel)) {
+    throw new Error("Sem permissão para configurar o catálogo de limpeza.");
+  }
+  const imovelId = txt(formData.get("imovel_id"));
+
+  const supabase = await createClient();
+  const { count } = await supabase
+    .from("tarefa_limpeza")
+    .select("id", { count: "exact", head: true });
+  // Idempotente: já semeado, não faz nada. Dois cliques não duplicam 44 linhas.
+  if ((count ?? 0) > 0) return;
+
+  const linhas = TAREFAS.map((t, i) => ({
+    org_id: perfil.org_id,
+    grupo: t.grupo,
+    descricao: t.descricao,
+    frequencia: t.frequencia,
+    ordem: i,
+  }));
+  const { error } = await supabase.from("tarefa_limpeza").insert(linhas);
+  if (error) throw new Error("Não foi possível criar o catálogo de tarefas.");
+
+  if (imovelId) revalidatePath(`/imoveis/${imovelId}`);
+  revalidatePath("/configuracoes");
+}
+
+/**
+ * Abre o checklist da semana corrente de um imóvel.
+ *
+ * Chamada direto de um `<form action>`, então devolve `{error}` e não
+ * `ActionResult`: o React exige `void | Promise<void>` nessa posição.
+ */
+export async function abrirChecklistSemana(formData: FormData): Promise<void> {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) {
+    throw new Error("Você não tem permissão para abrir checklists.");
+  }
+  const imovelId = txt(formData.get("imovel_id"));
+  if (!imovelId) return;
+
+  // `hojeISOSaoPaulo()`, nunca `new Date()`: o Vercel roda em UTC e das 21h à
+  // meia-noite em Brasília a semana viraria antes da hora.
+  const semana = segundaFeiraDaSemana(hojeISOSaoPaulo());
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("checklist_limpeza").insert({
+    org_id: perfil.org_id,
+    imovel_id: imovelId,
+    semana_inicio: semana,
+  });
+  // 23505 = unique violation. O `unique (imovel_id, semana_inicio)` existe
+  // justamente para isto: dois checklists da mesma semana deixariam a obra com
+  // duas folhas divergentes e nenhuma delas oficial.
+  // 23505 = unique violation. O botão só aparece quando a semana não está
+  // aberta, então isto é corrida entre dois cliques: o estado desejado já vale,
+  // e insistir num erro só confundiria. Qualquer outra falha sobe para o
+  // error boundary de (app).
+  if (error && error.code !== "23505") {
+    throw new Error("Não foi possível abrir o checklist da semana.");
+  }
+
+  revalidatePath(`/imoveis/${imovelId}`);
+}
+
+export async function excluirChecklistLimpeza(formData: FormData) {
+  const id = txt(formData.get("id"));
+  const imovelId = txt(formData.get("imovel_id"));
+  if (!id) return;
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("soft_delete", {
+    p_entidade: "checklist_limpeza",
+    p_id: id,
+  });
+  if (error || data !== true) return { error: "Não foi possível excluir o checklist." };
   revalidatePath(`/imoveis/${imovelId}`);
 }

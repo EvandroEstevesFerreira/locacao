@@ -12,6 +12,8 @@ import {
   DOCUMENTOS_EM_BRANCO,
   ehDocumentoEmBranco,
 } from "@/lib/documentos/registro";
+import { listarTarefasLimpeza } from "@/lib/data/alojamento";
+import { rotuloSemana } from "@/lib/alojamento";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -52,7 +54,16 @@ export async function GET(
   const tpl = tplRow ?? DEFAULT_TEMPLATES[tipo];
   const variaveis = { empresa_nome: orgNome };
 
-  const variante = new URL(request.url).searchParams.get("variante");
+  const url2 = new URL(request.url);
+  const variante = url2.searchParams.get("variante");
+  const semanaParam = url2.searchParams.get("semana");
+
+  // A folha de limpeza usa o catálogo da organização quando ele existe; sem
+  // ele, cai no embutido — melhor entregar a folha padrão à obra do que uma
+  // folha vazia porque ninguém abriu Configurações ainda.
+  const tarefas =
+    tipo === "checklist_limpeza" ? await listarTarefasLimpeza() : [];
+
   const elemento = DOCUMENTOS_EM_BRANCO[tipo]!(
     {
       orgNome,
@@ -60,6 +71,10 @@ export async function GET(
       paragrafos: corpoParaParagrafos(renderTemplate(tpl.corpo, variaveis)),
     },
     variante,
+    {
+      catalogo: tarefas.length > 0 ? tarefas : undefined,
+      semana: semanaParam ? rotuloSemana(semanaParam) : undefined,
+    },
   );
 
   const buffer = await renderToBuffer(elemento);

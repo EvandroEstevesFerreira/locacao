@@ -7,6 +7,33 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.28.0] — 2026-08-22
+
+Fase 4 dos **documentos do alojamento**: a rotina semanal de limpeza.
+
+### Adicionado
+
+- Tabelas **`tarefa_limpeza`** (catálogo por organização) e
+  **`checklist_limpeza`** (uma linha por imóvel/semana), migration `0045`, com
+  ramos em `soft_delete`, auditoria e RLS.
+- Seção **Limpeza do alojamento** na tela do imóvel: semeadura do catálogo,
+  abertura da semana, histórico das últimas 12 semanas e download da folha.
+- A folha impressa passa a usar o **catálogo da organização** quando ele existe;
+  sem ele, cai no embutido — melhor entregar a folha padrão à obra do que uma
+  folha vazia porque ninguém abriu Configurações.
+- `?semana=yyyy-mm-dd` imprime a folha já com o período no cabeçalho.
+
+### Notas
+
+- `semana_inicio` é sempre a **segunda-feira**, calculada a partir de
+  `hojeISOSaoPaulo()`. O cálculo roda em UTC de propósito: a entrada já é data de
+  calendário, e reinterpretá-la num fuso local a deslocaria de um dia. O domingo
+  recua seis dias — o caso que quebra quase toda implementação ingênua — e tem
+  teste próprio.
+- `unique (imovel_id, semana_inicio)` impede a duplicata que aparece quando duas
+  pessoas abrem a folha da mesma semana. Colisão é tratada como no-op: o estado
+  desejado já vale.
+
 ## [0.27.0] — 2026-08-22
 
 Fase 3 dos **documentos do alojamento**: os registros transacionais.

@@ -11,7 +11,7 @@ import type { TipoDocumento } from "@/lib/templates";
 import { MedidaDisciplinar } from "./frm-rh-002";
 import { TermoChaves } from "./frm-rh-003";
 import { KitAlojamento } from "./frm-rh-004";
-import { ChecklistLimpeza, type Frequencia } from "./frm-rh-005";
+import { ChecklistLimpeza, type Frequencia, type Tarefa } from "./frm-rh-005";
 import { PoliticaAlojamento } from "./pol-rh-001";
 
 export type ConteudoDocumento = {
@@ -23,6 +23,7 @@ export type ConteudoDocumento = {
 type Renderizador = (
   conteudo: ConteudoDocumento,
   variante?: string | null,
+  extras?: { catalogo?: Tarefa[]; semana?: string },
 ) => ReactElement<DocumentProps>;
 
 /** Documentos em branco, imprimíveis sem nenhum registro do sistema. */
@@ -35,10 +36,12 @@ export const DOCUMENTOS_EM_BRANCO: Partial<
   kit_alojamento: (c) => <KitAlojamento {...c} />,
   // `?variante=mensal` gera a folha das 6 tarefas de frequência M. Sem ela, a
   // folha semanal com as diárias e semanais.
-  checklist_limpeza: (c, variante) => (
+  checklist_limpeza: (c, variante, extras) => (
     <ChecklistLimpeza
       {...c}
       frequencias={variante === "mensal" ? (["M"] as Frequencia[]) : undefined}
+      catalogo={extras?.catalogo}
+      semana={extras?.semana}
     />
   ),
 };

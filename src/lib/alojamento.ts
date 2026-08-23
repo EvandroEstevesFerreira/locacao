@@ -207,3 +207,37 @@ export const entregaOcupanteSchema = z
 
 export type EntregaOcupanteInput = z.input<typeof entregaOcupanteSchema>;
 export type EntregaOcupanteDados = z.output<typeof entregaOcupanteSchema>;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Semana da rotina de limpeza
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Segunda-feira da semana de uma data ISO (`yyyy-mm-dd`).
+ *
+ * A folha de limpeza é semanal e a coluna `semana_inicio` guarda sempre a
+ * segunda. O cálculo é feito em UTC de propósito: a entrada JÁ É uma data de
+ * calendário (vinda de `hojeISOSaoPaulo()`), e reinterpretá-la num fuso local
+ * a deslocaria de um dia — o mesmo erro que cobrava um dia extra de locação na
+ * 0.22.0. Aqui não há instante nenhum, só aritmética de dias.
+ */
+export function segundaFeiraDaSemana(iso: string): string {
+  const [ano, mes, dia] = iso.split("-").map(Number);
+  const d = new Date(Date.UTC(ano, mes - 1, dia));
+  // getUTCDay(): 0 = domingo. Domingo pertence à semana que começou na segunda
+  // anterior, seis dias antes — e não à que começa no dia seguinte.
+  const diaDaSemana = d.getUTCDay();
+  const recuo = diaDaSemana === 0 ? 6 : diaDaSemana - 1;
+  d.setUTCDate(d.getUTCDate() - recuo);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Rótulo "dd/mm a dd/mm" da semana que começa na segunda informada. */
+export function rotuloSemana(segunda: string): string {
+  const [a, m, d] = segunda.split("-").map(Number);
+  const ini = new Date(Date.UTC(a, m - 1, d));
+  const fim = new Date(Date.UTC(a, m - 1, d + 6));
+  const fmt = (x: Date) =>
+    `${String(x.getUTCDate()).padStart(2, "0")}/${String(x.getUTCMonth() + 1).padStart(2, "0")}`;
+  return `${fmt(ini)} a ${fmt(fim)}`;
+}

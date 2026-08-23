@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { medidaDisciplinarSchema, entregaOcupanteSchema } from "./alojamento";
+import {
+  medidaDisciplinarSchema,
+  entregaOcupanteSchema,
+  segundaFeiraDaSemana,
+  rotuloSemana,
+} from "./alojamento";
 
 const UUID_A = "11111111-1111-4111-8111-111111111111";
 const UUID_B = "22222222-2222-4222-8222-222222222222";
@@ -100,5 +105,42 @@ describe("entregaOcupanteSchema", () => {
       tratativa: "desgaste_natural",
     });
     expect(r.success).toBe(true);
+  });
+});
+
+describe("segundaFeiraDaSemana", () => {
+  it("uma segunda devolve ela mesma", () => {
+    expect(segundaFeiraDaSemana("2026-08-17")).toBe("2026-08-17");
+  });
+
+  it("meio de semana recua até a segunda", () => {
+    expect(segundaFeiraDaSemana("2026-08-20")).toBe("2026-08-17");
+  });
+
+  it("sábado pertence à semana que já começou", () => {
+    expect(segundaFeiraDaSemana("2026-08-22")).toBe("2026-08-17");
+  });
+
+  it("DOMINGO recua seis dias, não avança um", () => {
+    // O caso que quebra em quase toda implementação ingênua: getUTCDay() = 0.
+    expect(segundaFeiraDaSemana("2026-08-23")).toBe("2026-08-17");
+  });
+
+  it("atravessa a virada de mês", () => {
+    expect(segundaFeiraDaSemana("2026-09-02")).toBe("2026-08-31");
+  });
+
+  it("atravessa a virada de ano", () => {
+    expect(segundaFeiraDaSemana("2027-01-01")).toBe("2026-12-28");
+  });
+});
+
+describe("rotuloSemana", () => {
+  it("mostra o intervalo de segunda a domingo", () => {
+    expect(rotuloSemana("2026-08-17")).toBe("17/08 a 23/08");
+  });
+
+  it("atravessa a virada de mês", () => {
+    expect(rotuloSemana("2026-08-31")).toBe("31/08 a 06/09");
   });
 });

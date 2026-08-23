@@ -188,11 +188,21 @@ const AVALIACAO: Opcao[] = [
   { texto: "Não conforme — encaminhar ao RH para orientação ou medida disciplinar (FRM-RH-002)." },
 ];
 
-/** Monta as linhas do grid, com linha de grupo antes de cada bloco. */
-export function linhasDoGrid(frequencias: Frequencia[]): LinhaTabela[] {
+/**
+ * Monta as linhas do grid, com linha de grupo antes de cada bloco.
+ *
+ * `catalogo` permite passar as tarefas da ORGANIZAÇÃO (tabela `tarefa_limpeza`)
+ * no lugar do embutido. Enquanto a organização não semeia o catálogo, a folha
+ * impressa continua saindo com o padrão — não faz sentido entregar folha vazia
+ * à obra só porque ninguém abriu Configurações ainda.
+ */
+export function linhasDoGrid(
+  frequencias: Frequencia[],
+  catalogo: Tarefa[] = TAREFAS,
+): LinhaTabela[] {
   const linhas: LinhaTabela[] = [];
   let grupoAtual = "";
-  for (const t of TAREFAS) {
+  for (const t of catalogo) {
     if (!frequencias.includes(t.frequencia)) continue;
     if (t.grupo !== grupoAtual) {
       linhas.push({ grupo: t.grupo });
@@ -210,12 +220,18 @@ export function ChecklistLimpeza({
   titulo,
   paragrafos,
   frequencias = ["D", "S"],
+  catalogo,
+  semana,
 }: {
   orgNome: string;
   titulo: string;
   paragrafos: string[];
   /** `["D","S"]` gera a folha semanal; `["M"]` gera a folha mensal. */
   frequencias?: Frequencia[];
+  /** Tarefas da organização; ausente, usa o catálogo padrão embutido. */
+  catalogo?: Tarefa[];
+  /** Rótulo "dd/mm a dd/mm" impresso no cabeçalho, quando a folha é de uma semana. */
+  semana?: string;
 }) {
   const mensal = frequencias.length === 1 && frequencias[0] === "M";
   return (
@@ -226,7 +242,14 @@ export function ChecklistLimpeza({
       orientacao="landscape"
     >
       <Secao titulo="Identificação" quebrar={false}>
-        <CampoGrid colunas={2} campos={CABECALHO} />
+        <CampoGrid
+          colunas={2}
+          campos={CABECALHO.map((c) =>
+            semana && c.label.startsWith("Semana")
+              ? { label: "Semana", valor: semana }
+              : c,
+          )}
+        />
       </Secao>
 
       <Secao
@@ -236,7 +259,7 @@ export function ChecklistLimpeza({
             : "Tarefas — marque o dia em que a tarefa foi concluída (D = diária, S = semanal)"
         }
       >
-        <Tabela colunas={COLUNAS} linhas={linhasDoGrid(frequencias)} densa />
+        <Tabela colunas={COLUNAS} linhas={linhasDoGrid(frequencias, catalogo)} densa />
       </Secao>
 
       <Secao titulo="Observações do período">
