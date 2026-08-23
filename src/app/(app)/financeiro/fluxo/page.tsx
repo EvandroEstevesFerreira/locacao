@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { formatarBRL } from "@/lib/locacao";
 import { gerarFluxoCaixa } from "@/lib/fluxo";
@@ -126,8 +127,16 @@ export default async function FluxoCaixaPage({
             <TableBody>
               {fluxo.meses.map((m) => (
                 <TableRow key={m.chave}>
+                  {/* O mês leva aos lançamentos que o compõem. A coluna
+                      "Projetado" ao lado explica sozinha por que a soma da
+                      lista pode ser menor que o total: projeção não tem linha. */}
                   <TableCell className="font-medium capitalize">
-                    {m.label}
+                    <Link
+                      href={`/financeiro?mes=${m.chave}${obra ? `&obra=${obra}` : ""}`}
+                      className="underline-offset-4 hover:underline"
+                    >
+                      {m.label}
+                    </Link>
                   </TableCell>
                   <TableCell className="text-right">
                     {formatarBRL(m.pago)}

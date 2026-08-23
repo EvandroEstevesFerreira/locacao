@@ -7,6 +7,40 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.34.0] — 2026-08-23
+
+### Adicionado
+
+- **Barras do gráfico da home clicáveis.** Cada mês leva a
+  `/financeiro?mes=yyyy-MM`, carregando junto o filtro de obra quando há um
+  ativo — sem ele a lista viria de todas as obras e o total não bateria com a
+  barra que acabou de ser clicada. A coluna inteira é a área de clique: a barra
+  pode ter 3px num mês quase vazio.
+- **Filtro por mês de vencimento no Financeiro**, um `<input type="month">` na
+  barra de filtros. Não é um `<select>` de 12 meses de propósito: quem procura
+  uma conta de março do ano passado precisa alcançá-la.
+- **Meses da tabela do fluxo de caixa** também levam aos lançamentos.
+
+### Notas
+
+- O recorte é por **vencimento**, não por competência: o vencimento é o eixo do
+  gráfico, e clicar numa barra tem de trazer exatamente as linhas que a compõem.
+- Com o mês filtrado, a tela **avisa** que a projeção dos contratos não aparece
+  na lista. A barra soma pago + pendente + projetado, e o projetado é estimativa
+  de contrato em mês sem lançamento próprio — não existe como linha em lugar
+  nenhum. Quem clicasse numa barra de R$ 45 mil e encontrasse R$ 12 mil de
+  linhas concluiria, com razão, que um dos números está errado.
+- O filtro entrou no `aplicarFiltros` compartilhado de `lib/data/financeiro.ts`,
+  então listagem e indicadores usam o mesmo recorte. Escrever a condição duas
+  vezes é como os KPIs já discordaram da tabela em silêncio antes.
+
+### Corrigido antes de sair
+
+- `intervaloDoMes` nasceu com `/^d{4}-d{2}$/` no lugar de `/^d{4}-d{2}$/` —
+  as contrabarras se perderam na escrita do arquivo. O regex recusava **todo**
+  mês válido, e o filtro simplesmente nunca se aplicaria: a tela ignoraria o
+  parâmetro sem erro nenhum. Pego pelos testes do helper.
+
 ## [0.33.0] — 2026-08-23
 
 ### Adicionado

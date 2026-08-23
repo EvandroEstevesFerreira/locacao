@@ -195,7 +195,7 @@ export default async function HomePage({
             <LineChart className="size-4" /> Desembolso previsto (12 meses)
           </CardTitle>
           <CardDescription>
-            Pago, pendente e projeção dos contratos. Total previsto:{" "}
+            Clique num mês para ver os lançamentos dele. Total previsto:{" "}
             <strong>{formatarBRL(fluxo.totalPrevisto)}</strong>
             {custoImoveis > 0 ? (
               <> · imóveis vigentes: {formatarBRL(custoImoveis)}/mês</>
@@ -208,6 +208,10 @@ export default async function HomePage({
               label: m.label.replace(/\/\d{2}(\d{2})$/, "/$1"),
               value: m.total,
               destaque: i === 0,
+              // `m.chave` já é 'yyyy-MM', o formato do filtro. O recorte por
+              // obra viaja junto: sem ele, clicar na barra de uma obra abriria
+              // a lista de todas, e o total não bateria com a barra clicada.
+              href: `/financeiro?mes=${m.chave}${obra ? `&obra=${obra}` : ""}`,
             }))}
             formatValue={(n) =>
               n >= 1000 ? `${Math.round(n / 1000)}k` : String(Math.round(n))

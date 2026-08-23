@@ -4,6 +4,8 @@ import {
   periodosPorMes,
   custoLinhaLocado,
   hojeISOSaoPaulo,
+  intervaloDoMes,
+  rotuloMes,
   hojeSaoPaulo,
   dataDeISO,
   formatarData,
@@ -190,5 +192,52 @@ describe("hojeSaoPaulo", () => {
   it("de manhã não há divergência entre UTC e Brasília", () => {
     const manha = new Date("2026-08-07T13:00:00Z");
     expect(hojeSaoPaulo(manha).getTime()).toBe(dataDeISO("2026-08-07").getTime());
+  });
+});
+
+describe("intervaloDoMes", () => {
+  it("devolve o primeiro e o último dia do mês", () => {
+    expect(intervaloDoMes("2026-08")).toEqual({
+      inicio: "2026-08-01",
+      fim: "2026-08-31",
+    });
+  });
+
+  it("acerta os meses de 30 dias", () => {
+    expect(intervaloDoMes("2026-09")?.fim).toBe("2026-09-30");
+  });
+
+  it("acerta fevereiro comum e bissexto", () => {
+    // O truque do `Date.UTC(ano, mes, 0)` existe para não haver tabela de
+    // dias por mês nem regra de bissexto escrita à mão.
+    expect(intervaloDoMes("2026-02")?.fim).toBe("2026-02-28");
+    expect(intervaloDoMes("2028-02")?.fim).toBe("2028-02-29");
+  });
+
+  it("não desloca a borda por fuso", () => {
+    // O intervalo alimenta um `gte/lte` contra coluna `date`. Se o cálculo
+    // passasse por horário local, o dia 1 viraria o último do mês anterior nos
+    // fusos a oeste — e o Vercel roda em UTC. Aritmética pura, sem instante.
+    expect(intervaloDoMes("2026-01")?.inicio).toBe("2026-01-01");
+    expect(intervaloDoMes("2026-12")?.fim).toBe("2026-12-31");
+  });
+
+  it("recusa entrada malformada — o mês vem da querystring", () => {
+    for (const ruim of ["", "2026", "2026-13", "2026-00", "agosto", "2026-8", undefined, null]) {
+      expect(intervaloDoMes(ruim)).toBeNull();
+    }
+  });
+});
+
+describe("rotuloMes", () => {
+  it("escreve o mês em português abreviado", () => {
+    expect(rotuloMes("2026-08")).toBe("ago/2026");
+    expect(rotuloMes("2026-01")).toBe("jan/2026");
+    expect(rotuloMes("2026-12")).toBe("dez/2026");
+  });
+
+  it("devolve vazio para mês inválido, em vez de 'undefined/NaN'", () => {
+    expect(rotuloMes("2026-13")).toBe("");
+    expect(rotuloMes(undefined)).toBe("");
   });
 });

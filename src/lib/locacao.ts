@@ -148,6 +148,48 @@ export function hojeSaoPaulo(base: Date = new Date()): Date {
   return dataDeISO(hojeISOSaoPaulo(base));
 }
 
+/** Primeiro e último dia de um mês 'yyyy-MM', como 'yyyy-mm-dd'. */
+export type IntervaloMes = { inicio: string; fim: string };
+
+/**
+ * Converte 'yyyy-MM' no intervalo de datas do mês, para comparar com coluna
+ * `date` do banco.
+ *
+ * Aritmética pura de calendário, em UTC: a entrada JÁ É um mês de calendário,
+ * não um instante, e reinterpretá-la num fuso local deslocaria as bordas em um
+ * dia — o mesmo erro que cobrava um dia extra de locação na 0.22.0. Por isso
+ * também não há `new Date()` sem argumentos aqui: nada nesta função depende de
+ * "agora".
+ *
+ * O truque do último dia é `Date.UTC(ano, mes, 0)`: dia 0 do mês SEGUINTE é o
+ * último do mês pedido, e o próprio Date resolve fevereiro e ano bissexto.
+ *
+ * Devolve `null` para entrada malformada — quem chama trata como "sem filtro",
+ * porque o mês vem da querystring e o usuário pode digitar qualquer coisa.
+ */
+export function intervaloDoMes(mes: string | undefined | null): IntervaloMes | null {
+  if (!mes || !/^\d{4}-\d{2}$/.test(mes)) return null;
+  const [ano, m] = mes.split("-").map(Number);
+  if (m < 1 || m > 12) return null;
+  const ultimo = new Date(Date.UTC(ano, m, 0)).getUTCDate();
+  return {
+    inicio: `${mes}-01`,
+    fim: `${mes}-${String(ultimo).padStart(2, "0")}`,
+  };
+}
+
+/** Rótulo "ago/2026" de um mês 'yyyy-MM'. Vazio quando o mês é inválido. */
+export function rotuloMes(mes: string | undefined | null): string {
+  if (!intervaloDoMes(mes)) return "";
+  const [ano, m] = mes!.split("-").map(Number);
+  return `${MESES_CURTOS[m - 1]}/${ano}`;
+}
+
+const MESES_CURTOS = [
+  "jan", "fev", "mar", "abr", "mai", "jun",
+  "jul", "ago", "set", "out", "nov", "dez",
+];
+
 /** Formata um timestamp ISO como data + hora no fuso de São Paulo. */
 export function formatarDataHora(iso: string | null): string {
   if (!iso) return "—";

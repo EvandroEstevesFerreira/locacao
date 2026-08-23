@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.33.0";
+export const APP_VERSION = "0.34.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,17 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.34.0",
+    data: "2026-08-23",
+    titulo: "Clicar no mês abre as despesas dele",
+    mudancas: [
+      { tipo: "novo", texto: "No gráfico da tela inicial, clicar num mês abre o Financeiro já filtrado pelos lançamentos que vencem naquele mês. Se houver obra selecionada, ela vai junto." },
+      { tipo: "novo", texto: "O Financeiro ganhou filtro por mês de vencimento. Vale para qualquer mês, não só os do gráfico — dá para procurar aquela conta do ano passado." },
+      { tipo: "novo", texto: "No fluxo de caixa, o nome do mês na tabela também leva aos lançamentos dele." },
+      { tipo: "melhoria", texto: "Ao filtrar por mês, o Financeiro avisa que a projeção dos contratos não entra na lista — ela é estimativa, não conta a pagar. Sem isso o total da barra pareceria não bater com a soma da tela." },
+    ],
+  },
   {
     versao: "0.33.0",
     data: "2026-08-23",

@@ -3,7 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { termoOr } from "@/lib/lista";
-import { hojeISOSaoPaulo } from "@/lib/locacao";
+import { hojeISOSaoPaulo, intervaloDoMes } from "@/lib/locacao";
 import type { ListaParams, Pagina } from "./lista-params";
 
 export type StatusLancamento = "pendente" | "pago";
@@ -30,6 +30,8 @@ export type FiltrosFinanceiro = {
   /** Só filtra quando é "pendente" ou "pago"; qualquer outro valor é "todos". */
   status?: string;
   obraId?: string;
+  /** Mês 'yyyy-MM' — recorta por VENCIMENTO, que é o eixo do gráfico da home. */
+  mes?: string;
 };
 
 /**
@@ -41,7 +43,7 @@ export type FiltrosFinanceiro = {
  * lembrado nos dois lugares ou os KPIs discordavam da tabela em silêncio.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function aplicarFiltros<T extends { or: any; eq: any }>(
+function aplicarFiltros<T extends { or: any; eq: any; gte: any; lte: any }>(
   query: T,
   f: FiltrosFinanceiro,
   q: string,
@@ -49,6 +51,14 @@ function aplicarFiltros<T extends { or: any; eq: any }>(
   let r = query;
   if (f.status === "pendente" || f.status === "pago") r = r.eq("status", f.status);
   if (f.obraId) r = r.eq("obra_id", f.obraId);
+  // Por VENCIMENTO e não por competência: o vencimento é o eixo do gráfico da
+  // home, e clicar numa barra tem de trazer exatamente as linhas que a compõem.
+  // Competência é o mês a que a despesa se refere, quase sempre outro — e a
+  // divergência chegaria ao usuário como "o total não bate".
+  const intervalo = intervaloDoMes(f.mes);
+  if (intervalo) {
+    r = r.gte("vencimento", intervalo.inicio).lte("vencimento", intervalo.fim);
+  }
   if (q) r = r.or(termoOr(["descricao"], q));
   return r;
 }

@@ -1,4 +1,4 @@
-// Gráfico de barras simples em CSS (sem dependências). Server-safe.
+// Gráfico de barras simples em CSS (sem biblioteca de gráfico). Server-safe.
 // Alturas em pixels (não em %) para não depender da altura do contêiner flex.
 //
 // As barras usam `--foreground` com opacidade, não `--primary`. Com a paleta
@@ -7,7 +7,15 @@
 // demais. O foreground com opacidade dá a mesma hierarquia (mês corrente forte,
 // demais apagados) e se comporta nos dois temas.
 
-export type BarPoint = { label: string; value: number; destaque?: boolean };
+import Link from "next/link";
+
+export type BarPoint = {
+  label: string;
+  value: number;
+  destaque?: boolean;
+  /** Quando informado, a coluna inteira vira link para o detalhe do ponto. */
+  href?: string;
+};
 
 export function BarChart({
   data,
@@ -35,16 +43,36 @@ export function BarChart({
         {data.map((d, i) => {
           const alturaPx =
             d.value > 0 ? Math.max(3, Math.round((d.value / max) * areaBarras)) : 0;
-          return (
-            <div key={i} className="flex min-w-8 flex-1 flex-col items-center justify-end gap-1">
+          const titulo = `${d.label}: ${formatValue(d.value)}`;
+          const classe = "flex min-w-8 flex-1 flex-col items-center justify-end gap-1";
+
+          // A barra pode ter 3px num mês quase vazio — clicar nela seria um
+          // exercício de pontaria. Por isso o link envolve a COLUNA inteira, do
+          // topo do gráfico à base: o alvo é a faixa toda.
+          const coluna = (
+            <>
               <span className="text-[10px] tabular-nums text-muted-foreground">
                 {d.value > 0 ? formatValue(d.value) : ""}
               </span>
               <div
                 className={`w-full rounded-t-sm ${d.destaque ? "bg-foreground/90" : "bg-foreground/40"}`}
                 style={{ height: alturaPx }}
-                title={`${d.label}: ${formatValue(d.value)}`}
               />
+            </>
+          );
+
+          return d.href ? (
+            <Link
+              key={i}
+              href={d.href}
+              title={`${titulo} — ver os lançamentos do mês`}
+              className={`${classe} rounded-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring`}
+            >
+              {coluna}
+            </Link>
+          ) : (
+            <div key={i} className={classe} title={titulo}>
+              {coluna}
             </div>
           );
         })}

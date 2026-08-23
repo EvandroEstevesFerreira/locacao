@@ -10,7 +10,13 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { getCurrentPerfil, podeGerenciarFinanceiro } from "@/lib/auth";
-import { formatarBRL, formatarData, hojeISOSaoPaulo} from "@/lib/locacao";
+import {
+  formatarBRL,
+  formatarData,
+  hojeISOSaoPaulo,
+  intervaloDoMes,
+  rotuloMes,
+} from "@/lib/locacao";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +38,7 @@ import { KpiCard } from "@/components/shared/kpi-card";
 import { ListFilters } from "@/components/shared/list-filters";
 import { ListSearch } from "@/components/shared/list-search";
 import { SelectFilter } from "@/components/shared/select-filter";
+import { MesFilter } from "@/components/shared/mes-filter";
 import { listarObrasParaFiltro } from "@/lib/data/obras";
 import {
   listarLancamentos,
@@ -49,20 +56,33 @@ export default async function FinanceiroPage({
   const perfil = await getCurrentPerfil();
   const podeEditar = podeGerenciarFinanceiro(perfil?.papel);
   const sp = await searchParams;
-  const { status, obra } = sp;
+  const { status, obra, mes } = sp;
+  // O mês vem da querystring — o usuário pode digitar qualquer coisa no campo,
+  // e a barra do gráfico pode ser aberta com a URL editada à mão. Mês inválido
+  // vira "sem filtro", não erro.
+  const mesValido = intervaloDoMes(mes) ? mes : undefined;
   const { q, sort, ascending, from, to, page } = parseListParams(sp, {
     sortCols: ["vencimento", "valor", "status", "competencia", "descricao"],
     defaultSort: "vencimento",
   });
 
   const [{ itens: lancamentos, total }, totais, obras] = await Promise.all([
-    listarLancamentos({ q, sort, ascending, from, to, status, obraId: obra }),
+    listarLancamentos({
+      q,
+      sort,
+      ascending,
+      from,
+      to,
+      status,
+      obraId: obra,
+      mes: mesValido,
+    }),
     // Os totais somam TODOS os lançamentos do filtro, não só os da página — por
     // isso é consulta separada, e por isso o recorte de filtro é compartilhado
     // com a listagem dentro de `lib/data/financeiro.ts`. Antes as duas condições
     // estavam escritas duas vezes aqui, e um filtro novo esquecido num dos lados
     // fazia os indicadores discordarem da tabela em silêncio.
-    obterTotaisFinanceiro({ q, status, obraId: obra }),
+    obterTotaisFinanceiro({ q, status, obraId: obra, mes: mesValido }),
     listarObrasParaFiltro(),
   ]);
 
@@ -135,7 +155,31 @@ export default async function FinanceiroPage({
             { value: "pago", label: "Pago" },
           ]}
         />
+        <MesFilter />
       </ListFilters>
+
+      {/* AVISO DE HONESTIDADE, não decoração. A barra do gráfico da home soma
+          pago + pendente + PROJETADO, e o projetado é estimativa de contrato em
+          mês sem lançamento próprio — não existe como linha em lugar nenhum.
+          Quem clica numa barra de R$ 45 mil e encontra R$ 12 mil de linhas
+          conclui, com razão, que um dos dois números está errado. Estão os
+          dois certos; contam coisas diferentes, e isto diz qual é qual. */}
+      {mesValido ? (
+        <p className="text-xs text-muted-foreground">
+          Mostrando os lançamentos com vencimento em{" "}
+          <strong className="capitalize">{rotuloMes(mesValido)}</strong>. A
+          projeção dos contratos sem lançamento no mês não aparece aqui — ela é
+          estimativa, não conta a pagar. Para ver o mês somado com a projeção,
+          abra o{" "}
+          <Link
+            href={`/financeiro/fluxo${obra ? `?obra=${obra}` : ""}`}
+            className="font-medium text-primary underline-offset-4 hover:underline"
+          >
+            fluxo de caixa
+          </Link>
+          .
+        </p>
+      ) : null}
 
       <Card>
         <CardContent className="p-0">
