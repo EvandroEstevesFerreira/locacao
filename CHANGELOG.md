@@ -7,6 +7,23 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.32.0] — 2026-08-23
+
+### Alterado
+
+- **Telas de autenticação no padrão do SST Manager**: coluna única centralizada
+  sobre fundo claro — logo, nome do produto, cartão do formulário e rodapé. Vale
+  para `/login`, `/auth/recuperar` e `/auth/nova-senha`, que compartilham o
+  `AuthShell`.
+- Saiu o split-screen com painel escuro de apresentação. Ele era vitrine para
+  quem já sabe o que o sistema faz: quem chega ali é empregado da Sistenge indo
+  trabalhar, não visitante a ser convencido.
+- **Tema claro forçado no elemento raiz**, não só no cartão. Antes do login não
+  há preferência de tema conhecida, e sobraria o `prefers-color-scheme` do
+  sistema operacional — metade das pessoas veria a tela escura e a outra clara.
+- O ano do rodapé usa `hojeISOSaoPaulo()`: renderiza no servidor, que roda em
+  UTC, e na virada de 31 de dezembro mostraria o ano seguinte.
+
 ## [0.31.1] — 2026-08-23
 
 ### Alterado
