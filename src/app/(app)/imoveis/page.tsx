@@ -95,9 +95,13 @@ export default async function ImoveisPage({
           label="Tipo"
           opcoes={TIPOS_IMOVEL.map((t) => ({ value: t, label: TIPO_IMOVEL_INFO[t] }))}
         />
+        {/* Sem status escolhido, a lista esconde os encerrados — o placeholder
+            diz isso, senão o usuário lê "Todos" e não entende por que o imóvel
+            que ele encerrou sumiu. */}
         <SelectFilter
           param="status"
           label="Status"
+          placeholder="Ativos e em desocupação"
           opcoes={(Object.keys(STATUS_IMOVEL_INFO) as StatusImovel[]).map((s) => ({
             value: s,
             label: STATUS_IMOVEL_INFO[s].label,

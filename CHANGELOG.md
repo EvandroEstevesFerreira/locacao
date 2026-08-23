@@ -7,6 +7,21 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.31.1] — 2026-08-23
+
+### Alterado
+
+- **Imóvel encerrado não aparece por padrão** na listagem. Sem isso a lista
+  cresce para sempre: uma obra entregue deixa dezenas de imóveis que ninguém
+  gerencia no meio dos que estão em uso. Continua acessível pelo filtro de
+  Status, e continua existindo para contrato e financeiro, que apontam para ele.
+- O filtro usa `neq("status", "encerrado")` e não uma lista de status ativos: se
+  um status novo surgir, ele aparece por padrão. Só "encerrado" é escondido de
+  propósito.
+- O placeholder do filtro passou a dizer **"Ativos e em desocupação"** — com
+  "Todos" o usuário leria que nada está sendo filtrado e não entenderia por que o
+  imóvel que ele encerrou sumiu.
+
 ## [0.31.0] — 2026-08-23
 
 ### Adicionado

@@ -36,8 +36,20 @@ function mensalDoVigente(contratos: ContratoBruto[] | null): number {
   return v ? Number(v.valor_aluguel) + Number(v.valor_condominio) : 0;
 }
 
+/**
+ * Imóvel encerrado NÃO aparece por padrão.
+ *
+ * Sem isso a lista cresce para sempre: contrato encerrado é histórico, e uma
+ * obra entregue deixa dezenas de imóveis que ninguém mais gerencia no meio dos
+ * que estão em uso. O encerrado continua acessível — basta escolher "Encerrado"
+ * no filtro de Status — e continua existindo para contrato e financeiro, que
+ * apontam para ele.
+ *
+ * Uso de `neq` e não de uma lista de status ativos: se um status novo surgir,
+ * ele aparece por padrão. Só "encerrado" é deliberadamente escondido.
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function aplicarFiltros<T extends { or: any; eq: any }>(
+function aplicarFiltros<T extends { or: any; eq: any; neq: any }>(
   query: T,
   f: FiltrosImovel,
   q: string,
@@ -45,6 +57,7 @@ function aplicarFiltros<T extends { or: any; eq: any }>(
   let r = query;
   if (f.tipo) r = r.eq("tipo", f.tipo);
   if (f.status) r = r.eq("status", f.status);
+  else r = r.neq("status", "encerrado");
   if (f.obraId) r = r.eq("obra_id", f.obraId);
   if (q) r = r.or(termoOr(["apelido", "cidade"], q));
   return r;

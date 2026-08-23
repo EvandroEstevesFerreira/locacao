@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.31.0";
+export const APP_VERSION = "0.31.1";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,14 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.31.1",
+    data: "2026-08-23",
+    titulo: "Imóveis encerrados fora da lista",
+    mudancas: [
+      { tipo: "melhoria", texto: "A lista de imóveis não mostra mais os encerrados por padrão. Eles continuam acessíveis: basta escolher \"Encerrado\" no filtro de Status. O contador e o custo mensal passam a refletir só o que está em uso." },
+    ],
+  },
   {
     versao: "0.31.0",
     data: "2026-08-23",
