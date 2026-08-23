@@ -88,3 +88,20 @@ describe("FRM-RH-001 — Termo de Compromisso de Alojamento", () => {
     expect(contarPaginas(buffer)).toBeGreaterThanOrEqual(1);
   });
 });
+
+describe("aceite eletrônico", () => {
+  it("com aceite, o termo continua cabendo em 3 páginas", async () => {
+    const tpl = DEFAULT_TEMPLATES.termo_responsabilidade;
+    const b = await renderToBuffer(
+      <TermoCompromisso
+        orgNome={VARIAVEIS.empresa_nome}
+        titulo={renderTemplate(tpl.titulo, VARIAVEIS)}
+        campos={campos(true)}
+        paragrafos={corpoParaParagrafos(renderTemplate(tpl.corpo, VARIAVEIS))}
+        localData="São Paulo, 22 de agosto de 2026."
+        aceite={{ em: "22/08/2026 14:30", ip: "187.0.0.1" }}
+      />,
+    );
+    expect(contarPaginas(b)).toBeLessThanOrEqual(3);
+  });
+});

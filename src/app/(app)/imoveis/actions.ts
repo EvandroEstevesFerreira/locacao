@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeOperar, podeEditarCadastros } from "@/lib/auth";
@@ -886,4 +887,71 @@ export async function excluirChecklistLimpeza(formData: FormData) {
   });
   if (error || data !== true) return { error: "Não foi possível excluir o checklist." };
   revalidatePath(`/imoveis/${imovelId}`);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Aceite eletrônico do Termo de Compromisso (fase 5)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Registra o aceite eletrônico do FRM-RH-001 por um ocupante.
+ *
+ * As colunas `aceite_em` e `aceite_ip` existem, nulas, desde a migration 0043 —
+ * criá-las junto evitou uma migration só para isto. O primitivo
+ * `<Assinaturas modo="aceite">` também já existia: esta fase é troca de props,
+ * não mudança de layout.
+ *
+ * O IP vem do cabeçalho `x-forwarded-for` da Vercel. Ele NÃO prova identidade —
+ * prova que a confirmação partiu daquela sessão autenticada, naquele momento.
+ * A prova de identidade continua sendo o vínculo do usuário logado. Por isso o
+ * termo em papel segue valendo enquanto o Jurídico não se manifestar: este
+ * registro é complemento, não substituto.
+ */
+export async function registrarAceiteTermo(formData: FormData): Promise<void> {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) {
+    throw new Error("Você não tem permissão para registrar o aceite.");
+  }
+  const id = txt(formData.get("id"));
+  const imovelId = txt(formData.get("imovel_id"));
+  if (!id) return;
+
+  const cabecalhos = await headers();
+  // x-forwarded-for pode trazer uma cadeia de proxies; o primeiro é o cliente.
+  const ip =
+    cabecalhos.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    cabecalhos.get("x-real-ip") ||
+    null;
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("ocupante_imovel")
+    .update({ aceite_em: new Date().toISOString(), aceite_ip: ip })
+    .eq("id", id)
+    // Não sobrescreve um aceite já dado: a data do primeiro aceite é a que
+    // importa, e regravá-la apagaria a prova do momento original.
+    .is("aceite_em", null);
+
+  if (error) throw new Error("Não foi possível registrar o aceite.");
+  if (imovelId) revalidatePath(`/imoveis/${imovelId}`);
+}
+
+/** Desfaz um aceite registrado por engano. Só master. */
+export async function desfazerAceiteTermo(formData: FormData): Promise<void> {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id || !podeEditarCadastros(perfil.papel)) {
+    throw new Error("Você não tem permissão para desfazer o aceite.");
+  }
+  const id = txt(formData.get("id"));
+  const imovelId = txt(formData.get("imovel_id"));
+  if (!id) return;
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("ocupante_imovel")
+    .update({ aceite_em: null, aceite_ip: null })
+    .eq("id", id);
+
+  if (error) throw new Error("Não foi possível desfazer o aceite.");
+  if (imovelId) revalidatePath(`/imoveis/${imovelId}`);
 }

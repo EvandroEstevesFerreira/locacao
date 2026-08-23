@@ -1,7 +1,7 @@
 # Documentos do alojamento — POL-RH-001 e FRM-RH-001 a 005
 
 **Data:** 2026-08-22
-**Status:** fase 2 completa (v0.24.0 a v0.26.0) — os 6 documentos saem do sistema; fases 3 a 5 pendentes
+**Status:** COMPLETA — todas as 5 fases entregues (v0.24.0 a v0.29.0)
 
 ## Estado da entrega
 
@@ -10,9 +10,9 @@
 | 1 — primitivos + FRM-RH-001 | **entregue** | 0.24.0 |
 | 2 — FRM-RH-002 a 005 em branco + rota + tela | **entregue** | 0.25.0 |
 | 2b — POL-RH-001 | **entregue** — 7 páginas, de 14 | 0.26.0 |
-| 3 — `medida_disciplinar` e `entrega_ocupante` | pendente | — |
-| 4 — rotina semanal de limpeza | pendente | — |
-| 5 — aceite digital | pendente | — |
+| 3 — `medida_disciplinar` e `entrega_ocupante` | **entregue** | 0.27.0 |
+| 4 — rotina semanal de limpeza | **entregue** | 0.28.0 |
+| 5 — aceite digital | **entregue** — sem migration, como projetado | 0.29.0 |
 
 ### Correções de rota que a execução impôs
 

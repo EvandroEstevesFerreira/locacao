@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { createClient } from "@/lib/supabase/server";
-import { formatarData, hojeISOSaoPaulo } from "@/lib/locacao";
+import { formatarData, formatarDataHora, hojeISOSaoPaulo } from "@/lib/locacao";
 import { tipoImovelLabel } from "@/lib/imoveis";
 import type { Campo } from "@/lib/pdf-form";
 import { TermoCompromisso } from "@/lib/documentos/frm-rh-001";
@@ -39,7 +39,7 @@ export async function GET(
       .single(),
     supabase
       .from("ocupante_imovel")
-      .select("nome, cpf, cargo, quarto, armario")
+      .select("nome, cpf, cargo, quarto, armario, aceite_em, aceite_ip")
       .eq("id", ocupanteId)
       .single(),
   ]);
@@ -116,6 +116,14 @@ export async function GET(
       campos={campos}
       paragrafos={paragrafos}
       localData={`${imovel.cidade ?? "________"}, ${hojeStr}.`}
+      aceite={
+        ocupante.aceite_em
+          ? {
+              em: formatarDataHora(ocupante.aceite_em),
+              ip: ocupante.aceite_ip,
+            }
+          : undefined
+      }
     />,
   );
   return new NextResponse(new Uint8Array(buffer), {

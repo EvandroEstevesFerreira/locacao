@@ -7,6 +7,28 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.29.0] — 2026-08-22
+
+Fase 5 — última — dos **documentos do alojamento**: o aceite eletrônico.
+
+### Adicionado
+
+- `registrarAceiteTermo` e `desfazerAceiteTermo`, e o botão correspondente na
+  lista de ocupantes. O `TermoCompromisso` aceita `aceite` e troca o `modo` do
+  primitivo `<Assinaturas>` de `manual` para `aceite`.
+- **Nenhuma migration.** As colunas `aceite_em` e `aceite_ip` entraram nulas na
+  `0043`, na fase 1, e o primitivo já previa o modo — esta fase foi troca de
+  props, exatamente como a spec projetou.
+
+### Segurança
+
+- O aceite **não sobrescreve** um já registrado (`.is("aceite_em", null)` no
+  update): regravar apagaria a prova do momento original.
+- O IP vem de `x-forwarded-for` e **não prova identidade** — prova que a
+  confirmação partiu daquela sessão autenticada, naquele momento. O termo em
+  papel segue sendo o documento de referência até parecer do Jurídico; o registro
+  eletrônico é complemento.
+
 ## [0.28.0] — 2026-08-22
 
 Fase 4 dos **documentos do alojamento**: a rotina semanal de limpeza.

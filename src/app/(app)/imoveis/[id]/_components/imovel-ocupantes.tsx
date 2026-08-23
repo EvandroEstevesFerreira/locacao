@@ -1,8 +1,10 @@
-// Ocupantes do imóvel — base do termo de responsabilidade.
+// Ocupantes do imóvel — base do Termo de Compromisso de Alojamento
+// (FRM-RH-001) e de todo o registro do alojado.
 
-import { FileText, Plus } from "lucide-react";
+import { Check, FileText, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { formatarData } from "@/lib/locacao";
+import { formatarData, formatarDataHora } from "@/lib/locacao";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -14,7 +16,7 @@ import {
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { PiiText } from "@/components/pii-text";
 import { OcupanteForm } from "../../ocupante-form";
-import { excluirOcupante } from "../../actions";
+import { excluirOcupante, registrarAceiteTermo } from "../../actions";
 
 type Ocupante = {
   id: string;
@@ -23,6 +25,7 @@ type Ocupante = {
   contato: string | null;
   data_entrada: string | null;
   data_saida: string | null;
+  aceite_em: string | null;
 };
 
 export async function ImovelOcupantes({
@@ -35,7 +38,7 @@ export async function ImovelOcupantes({
   const supabase = await createClient();
   const { data } = await supabase
     .from("ocupante_imovel")
-    .select("id, nome, cpf, contato, data_entrada, data_saida")
+    .select("id, nome, cpf, contato, data_entrada, data_saida, aceite_em")
     .eq("imovel_id", imovelId)
     .order("created_at", { ascending: false });
 
@@ -110,6 +113,27 @@ export async function ImovelOcupantes({
                   >
                     <FileText className="size-4" /> Gerar termo
                   </Button>
+                  {/* Aceite eletrônico do FRM-RH-001. As colunas existem desde a
+                      migration 0043 e o primitivo <Assinaturas modo="aceite">
+                      desde a fase 1 — aqui é só a ação que preenche.
+                      O IP não prova identidade: prova que a confirmação partiu
+                      daquela sessão autenticada, naquele momento. O termo em
+                      papel continua valendo enquanto o Jurídico não se
+                      manifestar; isto é complemento, não substituto. */}
+                  {o.aceite_em ? (
+                    <Badge variant="outline" title={formatarDataHora(o.aceite_em)}>
+                      <Check className="size-3" aria-hidden /> Aceite em{" "}
+                      {formatarData(o.aceite_em.slice(0, 10))}
+                    </Badge>
+                  ) : podeEditar ? (
+                    <form action={registrarAceiteTermo}>
+                      <input type="hidden" name="id" value={o.id} />
+                      <input type="hidden" name="imovel_id" value={imovelId} />
+                      <Button type="submit" variant="ghost" size="sm">
+                        <Check className="size-4" aria-hidden /> Registrar aceite
+                      </Button>
+                    </form>
+                  ) : null}
                   {podeEditar ? (
                     <ConfirmDelete
                       action={excluirOcupante}

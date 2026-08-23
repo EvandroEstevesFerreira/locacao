@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.28.0";
+export const APP_VERSION = "0.29.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,16 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.29.0",
+    data: "2026-08-22",
+    titulo: "Aceite eletrônico do Termo de Compromisso",
+    mudancas: [
+      { tipo: "novo", texto: "Na lista de ocupantes é possível registrar o aceite eletrônico do Termo de Compromisso. O termo gerado passa a trazer a data, a hora e o IP do aceite no lugar da linha para assinar à mão." },
+      { tipo: "melhoria", texto: "Um aceite já registrado não é sobrescrito: a data do primeiro aceite é a que vale como prova do momento original." },
+      { tipo: "seguranca", texto: "O aceite eletrônico é complemento do termo em papel, não substituto: ele comprova que a confirmação partiu daquela sessão autenticada, naquele momento, e não a identidade de quem assinou. O termo assinado continua sendo o documento de referência até parecer do Jurídico." },
+    ],
+  },
   {
     versao: "0.28.0",
     data: "2026-08-22",

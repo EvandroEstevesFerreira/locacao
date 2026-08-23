@@ -100,12 +100,19 @@ export function TermoCompromisso({
   campos,
   paragrafos,
   localData,
+  aceite,
 }: {
   orgNome: string;
   titulo: string;
   campos: Campo[];
   paragrafos: string[];
   localData: string;
+  /**
+   * Registro do aceite eletrônico. Presente, o bloco de assinatura do empregado
+   * imprime data/hora e IP no lugar da linha para assinar à mão — o `modo` do
+   * primitivo <Assinaturas> foi desenhado para esta troca desde a fase 1.
+   */
+  aceite?: { em: string; ip?: string | null };
 }) {
   const blocos = agruparBlocos(paragrafos);
   const nomeAlojado = campos[0]?.valor ?? undefined;
@@ -141,8 +148,15 @@ export function TermoCompromisso({
 
       <Assinaturas
         localData={localData}
+        modo={aceite ? "aceite" : "manual"}
         assinantes={[
-          { papel: "Empregado(a)", nome: nomeAlojado },
+          {
+            papel: "Empregado(a)",
+            nome: nomeAlojado,
+            detalhe: aceite
+              ? `Aceite eletrônico em ${aceite.em}${aceite.ip ? ` — IP ${aceite.ip}` : ""}`
+              : undefined,
+          },
           { papel: `Recursos Humanos — ${orgNome}` },
           { papel: "Testemunha 1" },
           { papel: "Testemunha 2" },
