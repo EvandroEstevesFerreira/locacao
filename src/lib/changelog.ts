@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.31.1";
+export const APP_VERSION = "0.32.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,15 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.32.0",
+    data: "2026-08-23",
+    titulo: "Nova tela de entrada",
+    mudancas: [
+      { tipo: "melhoria", texto: "As telas de entrada, recuperação e troca de senha passaram a ter o logo da Sistenge sobre fundo claro, com os campos centralizados — o mesmo padrão do SST Manager." },
+      { tipo: "melhoria", texto: "A versão do sistema aparece no rodapé da tela de entrada." },
+    ],
+  },
   {
     versao: "0.31.1",
     data: "2026-08-23",
