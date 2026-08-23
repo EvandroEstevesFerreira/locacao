@@ -212,6 +212,22 @@ const f = StyleSheet.create({
   colunas: { flexDirection: "row" },
   colunaEsq: { width: "50%", paddingRight: 10 },
   colunaDir: { width: "50%", paddingLeft: 10 },
+  anexoRotulo: {
+    fontSize: 8,
+    fontFamily: "Helvetica-Bold",
+    color: SLATE_500,
+    letterSpacing: 1.5,
+    marginBottom: 2,
+  },
+  anexoTitulo: {
+    fontSize: 11,
+    fontFamily: "Helvetica-Bold",
+    marginBottom: 8,
+    paddingBottom: 3,
+    borderBottomWidth: 1,
+    borderBottomColor: SLATE_900,
+    borderBottomStyle: "solid",
+  },
   localData: { marginTop: 18, marginBottom: 20, fontSize: 9 },
   assGrid: { flexDirection: "row", flexWrap: "wrap" },
   assCol: { width: "50%", paddingRight: 16, marginBottom: 24 },
@@ -324,6 +340,38 @@ export function Colunas({
     <View style={f.colunas}>
       <View style={f.colunaEsq}>{esquerda}</View>
       <View style={f.colunaDir}>{direita}</View>
+    </View>
+  );
+}
+
+/**
+ * Anexo de documento normativo.
+ *
+ * Existe porque tabela grande no meio do corpo é ruim de duas formas: ela quebra
+ * a leitura corrida e, principalmente, revisar a tabela obriga a mexer na
+ * cláusula que a cita. Como anexo, o corpo diz "conforme o Anexo II" e a tabela
+ * pode ser revista sem tocar no texto que a invoca.
+ *
+ * Começa em página nova por padrão — é o que se espera de um anexo, e evita
+ * anexo pendurado no rodapé de uma seção do corpo.
+ */
+export function Anexo({
+  numero,
+  titulo,
+  novaPagina = true,
+  children,
+}: {
+  /** Numeral romano: "I", "II", "III". */
+  numero: string;
+  titulo: string;
+  novaPagina?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <View break={novaPagina}>
+      <Text style={f.anexoRotulo}>ANEXO {numero}</Text>
+      <Text style={f.anexoTitulo}>{titulo}</Text>
+      {children}
     </View>
   );
 }

@@ -4,7 +4,11 @@
 // `politica_alojamento`, e é editável em Configurações — é o documento que o
 // Jurídico mais revisa.
 //
-// As DUAS TABELAS ficam aqui, em código, e não no template. Não é preferência:
+// As DUAS TABELAS são ANEXOS — o corpo as cita ("conforme o Anexo II") e elas
+// começam em página nova. Isso não é só arrumação: revisar uma penalidade deixa
+// de exigir mexer no item 11.3 que a invoca.
+//
+// Elas ficam aqui, em código, e não no template. Não é preferência:
 // a matriz de responsabilidades (item 10) e a tabela de infrações (item 11.3)
 // não sobrevivem à conversão de texto — o extrator embaralha as linhas 8 a 15 da
 // tabela de penalidades, e uma penalidade trocada num normativo disciplinar é
@@ -16,7 +20,7 @@
 
 import {
   Documento,
-  Secao,
+  Anexo,
   Tabela,
   type Coluna,
   type LinhaTabela,
@@ -112,13 +116,16 @@ export function PoliticaAlojamento({
     >
       <Narrativa paragrafos={paragrafos} tituloPadrao="Apresentação" />
 
-      <Secao titulo="Matriz de responsabilidades">
+      {/* Anexos, e não seções do corpo: o item 10 e o 11.3 os CITAM, então
+          revisar a tabela não obriga a mexer na cláusula que a invoca. Cada um
+          começa em página nova. */}
+      <Anexo numero="I" titulo="Matriz de responsabilidades">
         <Tabela colunas={COLUNAS_RESPONSABILIDADE} linhas={RESPONSABILIDADES} />
-      </Secao>
+      </Anexo>
 
-      <Secao titulo="Tabela de infrações e penalidades">
+      <Anexo numero="II" titulo="Tabela de infrações e penalidades">
         <Tabela colunas={COLUNAS_INFRACAO} linhas={INFRACOES} densa />
-      </Secao>
+      </Anexo>
     </Documento>
   );
 }

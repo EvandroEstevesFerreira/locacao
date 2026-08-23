@@ -7,6 +7,36 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.30.0] — 2026-08-23
+
+### Corrigido
+
+- **As tabelas da POL-RH-001 apareciam duas vezes.** O conversor de texto
+  descartava fragmento curto de célula ("RH", "SST") mas deixava passar a célula
+  longa, então os itens 10 e 11.3 carregavam uma transcrição embaralhada das
+  tabelas — e elas saíam corretas no fim. 41 parágrafos de lixo removidos, mais
+  as linhas soltas do bloco de assinatura do item 16.
+- **Campo opcional em branco fazia a action falhar** com erro genérico. Ver a
+  nota de idempotência abaixo — é o mesmo defeito da 0.29.1, agora com os
+  schemas todos cobertos.
+- **Fornecedores: nome e ações nunca visíveis juntos.** Colunas fixas.
+
+### Alterado
+
+- As duas tabelas da política são **Anexo I** e **Anexo II**, cada um em página
+  própria, citados pelos itens 10 e 11.3. Não é arrumação: revisar a tabela
+  deixa de exigir mexer na cláusula que a invoca.
+- No **FRM-RH-001**, a tabela de penalidades virou **Anexo I** — o empregado
+  assina declarando ciência de um anexo identificável, o que em audiência vale
+  mais que "a tabela da página 2". O termo passou de 3 para 4 páginas, e a
+  quarta é o anexo.
+- Primitivo `Anexo` em `pdf-form.tsx`. **Anexo é para o que se lê, não para o
+  que se preenche:** o checklist de conservação do FRM-RH-003 e a folha do
+  FRM-RH-005 seguem inline, porque são preenchidos com o Encarregado e o alojado
+  olhando o item.
+- `agruparBlocos` estava duplicado entre `frm-rh-001.tsx` e `blocos.tsx`. Agora
+  há um só, e o termo usa `Narrativa` como os outros documentos.
+
 ## [0.29.1] — 2026-08-23
 
 Fecha pendências que a fase 3 deixou: código escrito e nunca ligado.

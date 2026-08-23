@@ -13,12 +13,12 @@
 // A convenção é frágil de propósito ser simples: o alternativo era inventar uma
 // linguagem de marcação dentro de um textarea que o RH usa uma vez por ano.
 
-import { Text, StyleSheet } from "@react-pdf/renderer";
+import { Narrativa, Paragrafo } from "./blocos";
 import {
   Documento,
+  Anexo,
   Secao,
   CampoGrid,
-  Lista,
   Tabela,
   Assinaturas,
   type Campo,
@@ -26,9 +26,6 @@ import {
   type LinhaTabela,
 } from "@/lib/pdf-form";
 
-const s = StyleSheet.create({
-  paragrafo: { fontSize: 8.5, textAlign: "justify", marginBottom: 4, lineHeight: 1.35 },
-});
 
 const COLUNAS_PENALIDADE: Coluna[] = [
   { titulo: "Penalidade", largura: 30 },
@@ -67,33 +64,6 @@ const PENALIDADES: LinhaTabela[] = [
   },
 ];
 
-/** Um parágrafo do template é título de subseção quando está em caixa alta. */
-function ehSubtitulo(p: string): boolean {
-  return p === p.toUpperCase() && !p.endsWith(".");
-}
-
-type Bloco = { titulo?: string; texto: string[]; itens: string[] };
-
-/** Agrupa os parágrafos do template em blocos de subseção. */
-export function agruparBlocos(paragrafos: string[]): Bloco[] {
-  const blocos: Bloco[] = [];
-  let atual: Bloco = { titulo: undefined, texto: [], itens: [] };
-  for (const p of paragrafos) {
-    if (ehSubtitulo(p)) {
-      blocos.push(atual);
-      atual = { titulo: p, texto: [], itens: [] };
-    } else if (p.startsWith("— ")) {
-      atual.itens.push(p.slice(2));
-    } else {
-      atual.texto.push(p);
-    }
-  }
-  blocos.push(atual);
-  return blocos.filter(
-    (b) => b.titulo || b.texto.length > 0 || b.itens.length > 0,
-  );
-}
-
 export function TermoCompromisso({
   orgNome,
   titulo,
@@ -114,7 +84,6 @@ export function TermoCompromisso({
    */
   aceite?: { em: string; ip?: string | null };
 }) {
-  const blocos = agruparBlocos(paragrafos);
   const nomeAlojado = campos[0]?.valor ?? undefined;
 
   return (
@@ -127,23 +96,15 @@ export function TermoCompromisso({
         <CampoGrid colunas={2} campos={campos} />
       </Secao>
 
-      {blocos.map((b, i) => (
-        <Secao key={i} titulo={b.titulo ?? "Apresentação"}>
-          {b.texto.map((t, j) => (
-            <Text key={j} style={s.paragrafo}>
-              {t}
-            </Text>
-          ))}
-          {b.itens.length > 0 ? (
-            <Lista tipo="numerada" itens={b.itens} />
-          ) : null}
-        </Secao>
-      ))}
+      <Narrativa paragrafos={paragrafos} tituloPadrao="Apresentação" />
 
       {/* quebrar={false}: sem isso o título e o cabeçalho da tabela ficam
           órfãos no pé de uma página e as linhas caem na seguinte. */}
-      <Secao titulo="Penalidades — estou ciente de que" quebrar={false}>
-        <Tabela colunas={COLUNAS_PENALIDADE} linhas={PENALIDADES} />
+      {/* O empregado assina declarando ciência de um anexo IDENTIFICÁVEL, o que
+          em audiência vale mais que "a tabela da página 2". A remissão fica no
+          corpo, logo antes das assinaturas. */}
+      <Secao titulo="Penalidades" quebrar={false}>
+        <Paragrafo texto="Declaro ciência do regime disciplinar aplicável ao descumprimento deste Termo e da Política POL-RH-001, conforme o Anexo I, que integra este documento." />
       </Secao>
 
       <Assinaturas
@@ -162,6 +123,9 @@ export function TermoCompromisso({
           { papel: "Testemunha 2" },
         ]}
       />
+      <Anexo numero="I" titulo="Regime disciplinar aplicável">
+        <Tabela colunas={COLUNAS_PENALIDADE} linhas={PENALIDADES} />
+      </Anexo>
     </Documento>
   );
 }

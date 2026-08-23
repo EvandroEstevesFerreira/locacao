@@ -56,7 +56,11 @@ function montar(preenchidos = true) {
   );
 }
 
-// META DE DENSIDADE: 3 páginas, não as 2 que a spec previa para formulários.
+// META DE DENSIDADE: 4 páginas — 3 de corpo mais o Anexo I.
+//
+// O anexo começa em página nova de propósito: é o que se espera de um anexo, e
+// evita tabela de penalidades pendurada no rodapé da folha de assinaturas. A
+// conta abaixo explica as 3 primeiras.
 //
 // Medido: o texto do termo sozinho — 54 parágrafos, 44 cláusulas, 7.270
 // caracteres — já ocupa 2 páginas cheias a 8,5pt. Somando o bloco de 14 campos
@@ -67,12 +71,12 @@ function montar(preenchidos = true) {
 // justa causa. Vale aqui o mesmo princípio que a spec fixou para a política —
 // não se resume para caber. Os demais formulários seguem com meta de 2.
 describe("FRM-RH-001 — Termo de Compromisso de Alojamento", () => {
-  it("cabe em 3 páginas com todos os dados preenchidos", async () => {
-    expect(contarPaginas(await renderToBuffer(montar(true)))).toBeLessThanOrEqual(3);
+  it("cabe em 4 páginas com todos os dados preenchidos", async () => {
+    expect(contarPaginas(await renderToBuffer(montar(true)))).toBeLessThanOrEqual(4);
   });
 
-  it("cabe em 3 páginas em branco, para impressão", async () => {
-    expect(contarPaginas(await renderToBuffer(montar(false)))).toBeLessThanOrEqual(3);
+  it("cabe em 4 páginas em branco, para impressão", async () => {
+    expect(contarPaginas(await renderToBuffer(montar(false)))).toBeLessThanOrEqual(4);
   });
 
   it("renderiza sem erro mesmo sem parágrafos de template", async () => {
@@ -90,7 +94,7 @@ describe("FRM-RH-001 — Termo de Compromisso de Alojamento", () => {
 });
 
 describe("aceite eletrônico", () => {
-  it("com aceite, o termo continua cabendo em 3 páginas", async () => {
+  it("com aceite, o termo continua cabendo em 4 páginas", async () => {
     const tpl = DEFAULT_TEMPLATES.termo_responsabilidade;
     const b = await renderToBuffer(
       <TermoCompromisso
@@ -102,6 +106,6 @@ describe("aceite eletrônico", () => {
         aceite={{ em: "22/08/2026 14:30", ip: "187.0.0.1" }}
       />,
     );
-    expect(contarPaginas(b)).toBeLessThanOrEqual(3);
+    expect(contarPaginas(b)).toBeLessThanOrEqual(4);
   });
 });

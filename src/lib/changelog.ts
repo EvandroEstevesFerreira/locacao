@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.29.1";
+export const APP_VERSION = "0.30.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,18 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.30.0",
+    data: "2026-08-23",
+    titulo: "Anexos na Política de Alojamento",
+    mudancas: [
+      { tipo: "correcao", texto: "Na Política de Alojamento, a matriz de responsabilidades e a tabela de infrações apareciam DUAS vezes: embaralhadas em texto corrido no meio dos itens 10 e 11.3, e corretas no fim do documento. O texto embaralhado saiu." },
+      { tipo: "melhoria", texto: "As duas tabelas passaram a ser Anexo I e Anexo II, cada um em página própria, e os itens 10 e 11.3 agora as citam. Revisar uma penalidade deixa de exigir mexer na cláusula que a invoca." },
+      { tipo: "melhoria", texto: "No Termo de Compromisso, a tabela de penalidades virou Anexo I, e o empregado assina declarando ciência de um anexo identificável." },
+      { tipo: "correcao", texto: "Cadastrar ocupante sem preencher CPF, e registrar reparo sem preencher Executor, falhavam com erro genérico. Qualquer campo opcional deixado em branco causava isso." },
+      { tipo: "correcao", texto: "Na lista de fornecedores, o nome e os botões de ação nunca apareciam ao mesmo tempo: rolar até a lixeira empurrava o nome para fora da tela. As duas colunas agora ficam fixas." },
+    ],
+  },
   {
     versao: "0.29.1",
     data: "2026-08-23",
