@@ -10,6 +10,7 @@ import { Download, Plus } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { listarMedidas, listarEntregas } from "@/lib/data/alojamento";
+import { assinarUrls } from "@/lib/data/storage";
 import { formatarData } from "@/lib/locacao";
 import {
   TIPO_MEDIDA_INFO,
@@ -31,14 +32,18 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDelete } from "@/components/confirm-delete";
+import { DocumentoAssinado } from "../../documento-assinado";
 import { MedidaForm, EntregaForm } from "../../alojamento-forms";
 import { excluirMedidaDisciplinar, excluirEntregaOcupante } from "../../actions";
 
 export async function ImovelAlojamento({
   imovelId,
+  orgId,
   podeEditar,
 }: {
   imovelId: string;
+  /** Primeira pasta do caminho no Storage — a policy do bucket a exige. */
+  orgId: string;
   podeEditar: boolean;
 }) {
   const supabase = await createClient();
@@ -52,6 +57,14 @@ export async function ImovelAlojamento({
     listarEntregas(imovelId),
   ]);
   const ocupantes = (ocupantesRaw ?? []) as { id: string; nome: string }[];
+
+  // Um lote só para os dois conjuntos: `createSignedUrls` no plural resolve
+  // tudo numa requisição ao Storage. Assinar um a um era o padrão antigo e
+  // custava dezenas de chamadas antes do primeiro byte de HTML.
+  const assinadas = await assinarUrls("imoveis", [
+    ...entregas.map((e) => e.documento_path),
+    ...medidas.map((m) => m.documento_path),
+  ]);
 
   return (
     <>
@@ -107,6 +120,18 @@ export async function ImovelAlojamento({
                     <Download className="size-3.5" aria-hidden />
                     {TIPO_ENTREGA_INFO[e.tipo as TipoEntrega]?.doc ?? "PDF"}
                   </Button>
+                  <DocumentoAssinado
+                    entidade="entrega_ocupante"
+                    registroId={e.id}
+                    imovelId={imovelId}
+                    orgId={orgId}
+                    url={
+                      e.documento_path
+                        ? (assinadas.get(e.documento_path) ?? null)
+                        : null
+                    }
+                    podeEditar={podeEditar}
+                  />
                   {podeEditar ? (
                     <ConfirmDelete
                       action={excluirEntregaOcupante}
@@ -187,6 +212,18 @@ export async function ImovelAlojamento({
                       <Download className="size-3.5" aria-hidden />
                       PDF
                     </Button>
+                    <DocumentoAssinado
+                      entidade="medida_disciplinar"
+                      registroId={m.id}
+                      imovelId={imovelId}
+                      orgId={orgId}
+                      url={
+                        m.documento_path
+                          ? (assinadas.get(m.documento_path) ?? null)
+                          : null
+                      }
+                      podeEditar={podeEditar}
+                    />
                     {/* Apagar advertência remove prova de pasta funcional: o
                         soft_delete só deixa o master, e a ação fica na auditoria. */}
                     <ConfirmDelete

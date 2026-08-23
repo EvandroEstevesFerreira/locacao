@@ -1,7 +1,8 @@
 # Documentos do alojamento — POL-RH-001 e FRM-RH-001 a 005
 
 **Data:** 2026-08-22
-**Status:** COMPLETA — todas as 5 fases entregues (v0.24.0 a v0.29.0)
+**Status:** COMPLETA — 5 fases entregues (v0.24.0 a v0.29.0); pendências de
+fase 4 fechadas na v0.33.0
 
 ## Estado da entrega
 
@@ -12,6 +13,7 @@
 | 2b — POL-RH-001 | **entregue** — 7 páginas, de 14 | 0.26.0 |
 | 3 — `medida_disciplinar` e `entrega_ocupante` | **entregue** | 0.27.0 |
 | 4 — rotina semanal de limpeza | **entregue** | 0.28.0 |
+| 4b — fechamento da semana, catálogo editável e upload do assinado | **entregue** | 0.33.0 |
 | 5 — aceite digital | **entregue** — sem migration, como projetado | 0.29.0 |
 
 ### Correções de rota que a execução impôs
@@ -23,6 +25,26 @@
   `lineHeight` na `Page` apagando o rodapé fixo, e o Helvetica sem o glifo `☐`
   apagando todos os checkboxes. **Lição para as fases seguintes: renderizar e
   inspecionar, não só contar páginas.**
+
+### O que a fase 4 deixou pela metade (fechado na 0.33.0)
+
+A fase 4 entregou a folha impressa e o controle das semanas, mas três coisas
+ficaram desenhadas no banco e sem código:
+
+- **`auxiliar_nome`, `avaliacao` e `observacoes` eram lidos e nunca escritos.**
+  A tela mostrava "Sem avaliação" em toda semana, para sempre. Abrir a semana
+  registrava que a folha fora impressa; a conferência da sexta não tinha onde ser
+  gravada.
+- **O catálogo de tarefas em Configurações**, que consta desta tabela de
+  faseamento, não existia: havia a semeadura das 44 e mais nada. Editar uma
+  tarefa exigia SQL.
+- **`documento_path` nas três tabelas** (0044 e 0045) não era escrito por
+  ninguém. O ciclo terminava no papel assinado dentro de uma gaveta da obra — o
+  problema que originou o módulo, sobrevivendo à última etapa.
+
+Lição de processo: uma coluna criada "já que a migration está aberta" é dívida,
+não economia. Ela passa por typecheck, lint, teste e build sem nunca ser
+exercitada, e some do radar exatamente porque parece pronta.
 
 ### Lição registrada na POL-RH-001
 
@@ -429,6 +451,7 @@ mesmo template" é composição, "dentro do sistema" é transação.
 | 3 | 0.26.0 | Registro disciplinar e entregas: formulários, PDF preenchido, pendências no ocupante | `medida_disciplinar`, `entrega_ocupante` |
 | 4 | 0.27.0 | Rotina semanal de limpeza; catálogo de tarefas em Configurações; folha mensal separada | `tarefa_limpeza`, `checklist_limpeza` |
 | 5 | — | Aceite digital: troca `modo` do `<Assinaturas>` | nenhuma |
+| 4b | 0.33.0 | Fechamento da semana (avaliação do Encarregado), catálogo de tarefas editável em Configurações, upload do PDF assinado nas três tabelas | nenhuma |
 
 Ao fim da fase 2 o RH imprime os seis documentos no template do Loca, sem Word e
 sem pasta de rede — a maior fatia do pedido original, sem nenhum risco de

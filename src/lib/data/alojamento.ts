@@ -17,6 +17,7 @@ export type MedidaLista = {
   suspensao_dias: number | null;
   fato_descricao: string;
   ciencia: string | null;
+  documento_path: string | null;
   ocupante_id: string;
   ocupante_nome: string;
 };
@@ -27,6 +28,7 @@ export type EntregaLista = {
   entregue_em: string | null;
   devolvido_em: string | null;
   tratativa: string | null;
+  documento_path: string | null;
   ocupante_id: string;
   ocupante_nome: string;
 };
@@ -43,7 +45,7 @@ export async function listarMedidas(imovelId: string): Promise<MedidaLista[]> {
   const { data, error } = await supabase
     .from("medida_disciplinar")
     .select(
-      "id, data, tipo, suspensao_dias, fato_descricao, ciencia, ocupante_id, ocupante_imovel(nome)",
+      "id, data, tipo, suspensao_dias, fato_descricao, ciencia, documento_path, ocupante_id, ocupante_imovel(nome)",
     )
     .eq("imovel_id", imovelId)
     .order("data", { ascending: false });
@@ -65,6 +67,7 @@ export async function listarMedidas(imovelId: string): Promise<MedidaLista[]> {
       suspensao_dias: m.suspensao_dias,
       fato_descricao: m.fato_descricao,
       ciencia: m.ciencia,
+      documento_path: m.documento_path,
       ocupante_id: m.ocupante_id,
       ocupante_nome: nome,
     };
@@ -77,7 +80,7 @@ export async function listarEntregas(imovelId: string): Promise<EntregaLista[]> 
   const { data, error } = await supabase
     .from("entrega_ocupante")
     .select(
-      "id, tipo, entregue_em, devolvido_em, tratativa, ocupante_id, ocupante_imovel(nome)",
+      "id, tipo, entregue_em, devolvido_em, tratativa, documento_path, ocupante_id, ocupante_imovel(nome)",
     )
     .eq("imovel_id", imovelId)
     .order("devolvido_em", { ascending: true, nullsFirst: true })
@@ -97,6 +100,7 @@ export async function listarEntregas(imovelId: string): Promise<EntregaLista[]> 
       entregue_em: e.entregue_em,
       devolvido_em: e.devolvido_em,
       tratativa: e.tratativa,
+      documento_path: e.documento_path,
       ocupante_id: e.ocupante_id,
       ocupante_nome: nome,
     };
@@ -175,6 +179,7 @@ export type ChecklistLista = {
   auxiliar_nome: string | null;
   avaliacao: string | null;
   observacoes: string | null;
+  documento_path: string | null;
 };
 
 /**
@@ -202,7 +207,9 @@ export async function listarChecklists(imovelId: string): Promise<ChecklistLista
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("checklist_limpeza")
-    .select("id, semana_inicio, auxiliar_nome, avaliacao, observacoes")
+    .select(
+      "id, semana_inicio, auxiliar_nome, avaliacao, observacoes, documento_path",
+    )
     .eq("imovel_id", imovelId)
     .order("semana_inicio", { ascending: false })
     .limit(12);
@@ -212,4 +219,28 @@ export async function listarChecklists(imovelId: string): Promise<ChecklistLista
     return [];
   }
   return (data ?? []) as ChecklistLista[];
+}
+
+export type TarefaCatalogo = TarefaLimpeza & { ativo: boolean };
+
+/**
+ * Catálogo completo da organização, INCLUSIVE as tarefas inativas.
+ *
+ * `listarTarefasLimpeza` filtra por `ativo` porque alimenta a folha impressa —
+ * tarefa desligada não vai para o papel. A tela de Configurações precisa do
+ * contrário: sem as inativas, desligar uma tarefa a faria sumir e não haveria
+ * como religá-la, só recriá-la com outro id.
+ */
+export async function listarCatalogoLimpeza(): Promise<TarefaCatalogo[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("tarefa_limpeza")
+    .select("id, grupo, descricao, frequencia, ordem, ativo")
+    .order("ordem");
+
+  if (error) {
+    console.error("listarCatalogoLimpeza", error);
+    return [];
+  }
+  return (data ?? []) as TarefaCatalogo[];
 }

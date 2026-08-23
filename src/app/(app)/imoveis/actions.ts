@@ -4,14 +4,19 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentPerfil, podeOperar, podeEditarCadastros } from "@/lib/auth";
+import {
+  getCurrentPerfil,
+  podeOperar,
+  podeEditarCadastros,
+  type Papel,
+} from "@/lib/auth";
 import { CATEGORIAS_BIBLIOTECA } from "@/lib/biblioteca";
 import {
   medidaDisciplinarSchema,
   entregaOcupanteSchema,
+  fechamentoLimpezaSchema,
   segundaFeiraDaSemana,
 } from "@/lib/alojamento";
-import { TAREFAS } from "@/lib/documentos/frm-rh-005";
 import { hojeISOSaoPaulo } from "@/lib/locacao";
 import {
   contaConsumoSchema,
@@ -819,42 +824,10 @@ export async function excluirEntregaOcupante(formData: FormData) {
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Rotina semanal de limpeza (fase 4)
+//
+// O catálogo de tarefas mora em `configuracoes/limpeza-actions.ts`: é cadastro
+// da organização, não do imóvel.
 // ═══════════════════════════════════════════════════════════════════════════
-
-/**
- * Semeia o catálogo de tarefas da organização a partir do embutido no código.
- *
- * Existe porque a folha impressa precisa das tarefas ANTES de alguém as
- * cadastrar uma a uma: são 44. Depois de semeado, o catálogo é da organização e
- * pode ser editado — a semeadura não roda de novo se já houver tarefa.
- */
-export async function semearTarefasLimpeza(formData: FormData): Promise<void> {
-  const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !podeEditarCadastros(perfil.papel)) {
-    throw new Error("Sem permissão para configurar o catálogo de limpeza.");
-  }
-  const imovelId = txt(formData.get("imovel_id"));
-
-  const supabase = await createClient();
-  const { count } = await supabase
-    .from("tarefa_limpeza")
-    .select("id", { count: "exact", head: true });
-  // Idempotente: já semeado, não faz nada. Dois cliques não duplicam 44 linhas.
-  if ((count ?? 0) > 0) return;
-
-  const linhas = TAREFAS.map((t, i) => ({
-    org_id: perfil.org_id,
-    grupo: t.grupo,
-    descricao: t.descricao,
-    frequencia: t.frequencia,
-    ordem: i,
-  }));
-  const { error } = await supabase.from("tarefa_limpeza").insert(linhas);
-  if (error) throw new Error("Não foi possível criar o catálogo de tarefas.");
-
-  if (imovelId) revalidatePath(`/imoveis/${imovelId}`);
-  revalidatePath("/configuracoes");
-}
 
 /**
  * Abre o checklist da semana corrente de um imóvel.
@@ -905,6 +878,54 @@ export async function excluirChecklistLimpeza(formData: FormData) {
   });
   if (error || data !== true) return { error: "Não foi possível excluir o checklist." };
   revalidatePath(`/imoveis/${imovelId}`);
+}
+
+/**
+ * Fechamento da semana: quem limpou e como o Encarregado avaliou.
+ *
+ * Recebe `FormData` e devolve `ActionResult`: são três campos sem validação
+ * cruzada, então não há react-hook-form — o formulário chama a action dentro de
+ * um `useTransition` e fecha o painel com o resultado em mãos. `useActionState`
+ * não serviria: fechar o painel a partir do estado exigiria um `useEffect` que
+ * chama `setState`, que é justamente o que o `react-hooks/set-state-in-effect`
+ * proíbe.
+ *
+ * Só atualiza; a linha nasce em `abrirChecklistSemana`. Abrir e avaliar são
+ * momentos diferentes de propósito: a folha é impressa na segunda e conferida
+ * na sexta, muitas vezes por pessoas diferentes.
+ */
+export async function salvarFechamentoLimpeza(
+  formData: FormData,
+): Promise<ActionResult> {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) {
+    return falha("Você não tem permissão para avaliar a semana.");
+  }
+
+  const parsed = fechamentoLimpezaSchema.safeParse({
+    id: formData.get("id"),
+    imovel_id: formData.get("imovel_id"),
+    auxiliar_nome: formData.get("auxiliar_nome"),
+    avaliacao: formData.get("avaliacao"),
+    observacoes: formData.get("observacoes"),
+  });
+  if (!parsed.success) return falha(primeiroErro(parsed.error.issues));
+  const { id, imovel_id, ...campos } = parsed.data;
+
+  const supabase = await createClient();
+  // `updated_at` fica com o trigger `trg_checklist_limpeza_updated_at`
+  // (migration 0045) — mandá-lo daqui só criaria uma segunda verdade.
+  const { error } = await supabase
+    .from("checklist_limpeza")
+    .update(campos)
+    .eq("id", id);
+  if (error) {
+    console.error("salvarFechamentoLimpeza", error);
+    return falha("Não foi possível salvar a avaliação da semana.");
+  }
+
+  revalidatePath(`/imoveis/${imovel_id}`);
+  return { ok: true };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -971,5 +992,102 @@ export async function desfazerAceiteTermo(formData: FormData): Promise<void> {
     .eq("id", id);
 
   if (error) throw new Error("Não foi possível desfazer o aceite.");
+  if (imovelId) revalidatePath(`/imoveis/${imovelId}`);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Documento assinado — o PDF de volta do papel
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * As três tabelas do alojamento que guardam o digitalizado, e quem pode anexá-lo.
+ *
+ * A coluna `documento_path` existe nas três desde as migrations 0044 e 0045, e
+ * até aqui ninguém escrevia nela: o sistema gerava o PDF, alguém imprimia,
+ * colhia as assinaturas — e o papel assinado voltava para a gaveta da obra. Era
+ * exatamente o problema que originou este módulo, sobrevivendo na última etapa.
+ *
+ * A permissão espelha a de escrita de cada tabela: a medida disciplinar é
+ * registro de pasta funcional e exige quem gere cadastros; entrega e checklist
+ * são rotina de obra.
+ */
+const ENTIDADES_DOC = {
+  medida_disciplinar: "cadastros",
+  entrega_ocupante: "operar",
+  checklist_limpeza: "operar",
+} as const;
+
+export type EntidadeDocumento = keyof typeof ENTIDADES_DOC;
+
+function podeAnexar(entidade: EntidadeDocumento, papel: Papel | undefined) {
+  return ENTIDADES_DOC[entidade] === "cadastros"
+    ? podeEditarCadastros(papel)
+    : podeOperar(papel);
+}
+
+/**
+ * Grava o caminho do digitalizado depois que o cliente subiu o arquivo.
+ *
+ * O upload em si acontece no navegador, direto para o Storage — mesmo caminho
+ * do `ImovelAnexoUploader`. Mandar o arquivo por server action o faria passar
+ * pelo limite de corpo da action e ocupar memória da função sem necessidade.
+ */
+export async function salvarDocumentoAssinado(
+  entidade: EntidadeDocumento,
+  registroId: string,
+  imovelId: string,
+  path: string,
+): Promise<ActionResult> {
+  const perfil = await getCurrentPerfil();
+  if (!ENTIDADES_DOC[entidade]) return falha("Registro inválido.");
+  if (!perfil?.org_id || !podeAnexar(entidade, perfil.papel)) {
+    return falha("Você não tem permissão para anexar este documento.");
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from(entidade)
+    .update({ documento_path: path })
+    .eq("id", registroId);
+  if (error) {
+    console.error("salvarDocumentoAssinado", entidade, error);
+    return falha("Não foi possível anexar o documento.");
+  }
+
+  revalidatePath(`/imoveis/${imovelId}`);
+  return { ok: true };
+}
+
+/** Remove o digitalizado — do banco e do Storage, para não deixar órfão. */
+export async function removerDocumentoAssinado(formData: FormData) {
+  const perfil = await getCurrentPerfil();
+  const entidade = String(formData.get("entidade") ?? "") as EntidadeDocumento;
+  if (!ENTIDADES_DOC[entidade]) return;
+  if (!perfil?.org_id || !podeAnexar(entidade, perfil.papel)) {
+    return { error: "Você não tem permissão para remover este documento." };
+  }
+
+  const id = txt(formData.get("id"));
+  const imovelId = txt(formData.get("imovel_id"));
+  if (!id) return;
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from(entidade)
+    .select("documento_path")
+    .eq("id", id)
+    .maybeSingle();
+  const path = (data as { documento_path: string | null } | null)?.documento_path;
+
+  // Banco primeiro: se o Storage falhar, sobra um arquivo órfão que ninguém
+  // alcança. Na ordem inversa, o registro apontaria para um arquivo que já não
+  // existe e a tela mostraria um link quebrado.
+  const { error } = await supabase
+    .from(entidade)
+    .update({ documento_path: null })
+    .eq("id", id);
+  if (error) return { error: "Não foi possível remover o documento." };
+  if (path) await supabase.storage.from("imoveis").remove([path]);
+
   if (imovelId) revalidatePath(`/imoveis/${imovelId}`);
 }

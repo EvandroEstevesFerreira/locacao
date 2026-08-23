@@ -276,3 +276,97 @@ export function rotuloSemana(segunda: string): string {
     `${String(x.getUTCDate()).padStart(2, "0")}/${String(x.getUTCMonth() + 1).padStart(2, "0")}`;
   return `${fmt(ini)} a ${fmt(fim)}`;
 }
+
+/**
+ * Como o Encarregado avaliou a semana ao conferir a folha afixada.
+ *
+ * Os três valores repetem o `check (avaliacao in (...))` de `checklist_limpeza`
+ * (migration 0045). Mudar aqui sem mudar lá devolve erro de banco, não erro de
+ * formulário — por isso o schema abaixo valida antes de chegar ao insert.
+ */
+export const AVALIACOES = ["conforme", "parcial", "nao_conforme"] as const;
+export type Avaliacao = (typeof AVALIACOES)[number];
+
+export const AVALIACAO_INFO: Record<
+  Avaliacao,
+  { label: string; variant: "default" | "secondary" | "outline" | "destructive" }
+> = {
+  conforme: { label: "Conforme", variant: "outline" },
+  parcial: { label: "Parcialmente conforme", variant: "secondary" },
+  nao_conforme: { label: "Não conforme", variant: "destructive" },
+};
+
+export function avaliacaoLabel(v: string | null): string {
+  if (!v) return "Sem avaliação";
+  return AVALIACAO_INFO[v as Avaliacao]?.label ?? v;
+}
+
+/**
+ * Fechamento da semana: quem limpou, como o Encarregado avaliou e o que
+ * observou.
+ *
+ * A marcação diária continua no papel — é ela que fica afixada no alojamento e
+ * que o auxiliar risca a caneta. O que o sistema guarda é o resultado da
+ * conferência, que é o que alguém procura seis meses depois.
+ */
+export const fechamentoLimpezaSchema = z.object({
+  id: z.string().uuid(),
+  imovel_id: z.string().uuid(),
+  auxiliar_nome: texto(120),
+  avaliacao: enumOpcional(AVALIACOES),
+  observacoes: texto(2000),
+});
+
+export type FechamentoLimpezaDados = z.output<typeof fechamentoLimpezaSchema>;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Catálogo de tarefas de limpeza
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Frequência de uma tarefa — as mesmas letras do `check` da migration 0045 e
+ * da legenda impressa no rodapé do FRM-RH-005.
+ *
+ * É o que separa a folha semanal da mensal: sem a classificação, toda semana a
+ * obra imprimiria as 44 tarefas.
+ */
+export const FREQUENCIAS = ["D", "S", "M"] as const;
+export type Frequencia = (typeof FREQUENCIAS)[number];
+
+export const FREQUENCIA_INFO: Record<Frequencia, { label: string; folha: string }> = {
+  D: { label: "Diária", folha: "Folha semanal" },
+  S: { label: "Semanal", folha: "Folha semanal" },
+  M: { label: "Mensal", folha: "Folha mensal" },
+};
+
+export const tarefaLimpezaSchema = z.object({
+  // Vazio = tarefa nova. O mesmo formulário cria e edita: são quatro campos, e
+  // duplicá-lo só criaria dois lugares para esquecer de mudar o limite do
+  // `grupo`.
+  id: z.union([z.literal(""), z.null(), z.string().uuid()]).optional(),
+  grupo: z
+    .string()
+    .trim()
+    .min(2, "Informe o ambiente (ex.: BANHEIROS).")
+    // 80 e não 60: o ambiente mais longo do catálogo embutido é "QUARTOS /
+    // DORMITÓRIOS (áreas comuns — não pertences do alojado)", com 62. Com o
+    // limite em 60, seis tarefas semeadas pelo próprio sistema ficariam
+    // impossíveis de reeditar pela tela — só apagando e recriando.
+    .max(80, "Use no máximo 80 caracteres no ambiente.")
+    // Maiúsculas porque é assim que o grupo é impresso na folha, como faixa de
+    // separação. Normalizar aqui evita "Banheiros" e "BANHEIROS" virarem dois
+    // ambientes distintos na mesma folha.
+    .transform((v) => v.toUpperCase()),
+  descricao: z
+    .string()
+    .trim()
+    .min(3, "Descreva a tarefa.")
+    .max(200, "Use no máximo 200 caracteres na tarefa."),
+  frequencia: z.enum(FREQUENCIAS),
+  ordem: z
+    .union([z.literal(""), z.null(), z.coerce.number().int().min(0).max(9999)])
+    .optional()
+    .transform((v) => (v === "" || v == null ? 0 : v)),
+});
+
+export type TarefaLimpezaDados = z.output<typeof tarefaLimpezaSchema>;
