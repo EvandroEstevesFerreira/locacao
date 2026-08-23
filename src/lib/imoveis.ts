@@ -72,39 +72,81 @@ export function tipoConsumoLabel(t: string): string {
 export const TIPOS_CONTA = ["corrente", "poupanca"] as const;
 export const STATUS_CAUCAO = ["em_aberto", "devolvida", "retida"] as const;
 
+/**
+ * IDEMPOTÊNCIA — leia antes de mexer nestes helpers.
+ *
+ * Toda action deste módulo re-valida o que recebe (`schema.safeParse(raw)`), e o
+ * que ela recebe é o OUTPUT do mesmo schema, já transformado pelo zodResolver no
+ * cliente. Logo o schema tem de aceitar o próprio output: `parse(parse(x))` deve
+ * dar `parse(x)`.
+ *
+ * Os helpers abaixo não aceitavam. Produziam `null` para campo vazio e só
+ * aceitavam `string | undefined` na entrada, então re-validar devolvia
+ * "Invalid input: expected string, received null" e a action respondia com erro
+ * genérico. Efeito prático: registrar reparo sem preencher "Executor" falhava
+ * desde a 0.23.0, e cadastrar ocupante sem CPF falhava desde a 0.24.0 — sem
+ * nenhum teste acusar, porque os testes só validavam a PRIMEIRA passagem.
+ *
+ * `imoveis.test.ts` e `alojamento.test.ts` guardam a idempotência de cada schema.
+ */
 const texto = (max: number) =>
   z
-    .string()
-    .trim()
-    .max(max)
+    .union([z.string(), z.null()])
     .optional()
-    .transform((v) => (v && v.length > 0 ? v : null));
+    .transform((v) => {
+      const s = (v ?? "").trim();
+      return s.length > 0 ? s : null;
+    })
+    .refine((v) => v === null || v.length <= max, {
+      message: `Use no máximo ${max} caracteres.`,
+    });
+
+/** String opcional crua (data, uuid, chave de enum), idempotente. */
+const stringOpcional = z
+  .union([z.string(), z.null()])
+  .optional()
+  .transform((v) => {
+    const s = (v ?? "").trim();
+    return s.length > 0 ? s : null;
+  });
+
+/** Como stringOpcional, mas só aceita valores de uma lista conhecida. */
+const daLista = (valores: readonly string[]) =>
+  stringOpcional.transform((v) => (v && valores.includes(v) ? v : null));
 
 const emailOpcional = (rotulo: string) =>
   z
-    .string()
-    .trim()
-    .max(200)
+    .union([z.string(), z.null()])
     .optional()
-    .refine((v) => !v || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v), {
-      message: `${rotulo} inválido.`,
+    .transform((v) => {
+      const s = (v ?? "").trim();
+      return s.length > 0 ? s : null;
     })
-    .transform((v) => (v && v.length > 0 ? v : null));
+    .refine((v) => v === null || v.length <= 200, {
+      message: `${rotulo} muito longo.`,
+    })
+    .refine((v) => v === null || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v), {
+      message: `${rotulo} inválido.`,
+    });
 
 /** Número opcional que aceita vírgula decimal, como o usuário digita. */
 const numeroOpcional = (msg: string) =>
   z
-    .string()
+    .union([z.string(), z.number(), z.null()])
     .optional()
-    .transform((v) => (v ?? "").trim().replace(",", "."))
+    .transform((v) =>
+      typeof v === "number" ? String(v) : (v ?? "").trim().replace(",", "."),
+    )
     .refine((v) => v === "" || Number.isFinite(Number(v)), { message: msg })
     .transform((v) => (v === "" ? null : Number(v)));
 
 const dinheiro = (msg: string) =>
   z
-    .string()
+    .union([z.string(), z.number(), z.null()])
     .optional()
-    .transform((v) => (v ?? "").trim().replace(",", "."))
+    .transform((v) =>
+      typeof v === "number" ? String(v) : (v ?? "").trim().replace(",", "."),
+    )
     .refine((v) => v === "" || (Number.isFinite(Number(v)) && Number(v) >= 0), {
       message: msg,
     })
@@ -121,17 +163,18 @@ export const imovelSchema = z.object({
   endereco: texto(300),
   cidade: texto(120),
   uf: z
-    .string()
-    .trim()
+    .union([z.string(), z.null()])
     .optional()
-    .refine((v) => !v || /^[A-Za-z]{2}$/.test(v), { message: "UF deve ter 2 letras." })
-    .transform((v) => (v && v.length > 0 ? v.toUpperCase() : null)),
+    .transform((v) => {
+      const s = (v ?? "").trim();
+      return s.length > 0 ? s.toUpperCase() : null;
+    })
+    .refine((v) => v === null || /^[A-Z]{2}$/.test(v), {
+      message: "UF deve ter 2 letras.",
+    }),
   capacidade_pessoas: numeroOpcional("Capacidade inválida."),
   area_m2: numeroOpcional("Área inválida."),
-  obra_id: z
-    .string()
-    .optional()
-    .transform((v) => (v && v.length > 0 ? v : null)),
+  obra_id: stringOpcional,
   status: z.enum(["ativo", "desocupacao", "encerrado"] as const),
   proprietario_nome: texto(200),
   proprietario_telefone: texto(40),
@@ -142,10 +185,7 @@ export const imovelSchema = z.object({
   banco: texto(80),
   agencia: texto(20),
   conta: texto(30),
-  tipo_conta: z
-    .string()
-    .optional()
-    .transform((v) => (v && (TIPOS_CONTA as readonly string[]).includes(v) ? v : null)),
+  tipo_conta: daLista(TIPOS_CONTA),
   titular_conta: texto(200),
   pix_chave: texto(200),
   observacoes: texto(1000),
@@ -162,36 +202,25 @@ export const contratoImovelSchema = z
       .string()
       .optional()
       .transform((v) => (v && v.length > 0 ? v : null)),
-    data_fim: z
-      .string()
-      .optional()
-      .transform((v) => (v && v.length > 0 ? v : null)),
+    data_fim: stringOpcional,
     valor_aluguel: dinheiro("Valor do aluguel inválido."),
     valor_condominio: dinheiro("Valor do condomínio inválido."),
     valor_iptu: dinheiro("Valor do IPTU inválido."),
     seguro_fianca: dinheiro("Valor do seguro-fiança inválido."),
     seguro_fianca_mensal: z.boolean(),
     dia_vencimento: z
-      .string()
+      .union([z.string(), z.number(), z.null()])
       .optional()
-      .transform((v) => (v ?? "").trim())
+      .transform((v) => (typeof v === "number" ? String(v) : (v ?? "").trim()))
       .refine(
         (v) => v === "" || (Number.isInteger(Number(v)) && Number(v) >= 1 && Number(v) <= 31),
         { message: "O dia do vencimento deve estar entre 1 e 31." },
       )
       .transform((v) => (v === "" ? null : Number(v))),
     indice_reajuste: texto(40),
-    data_reajuste: z
-      .string()
-      .optional()
-      .transform((v) => (v && v.length > 0 ? v : null)),
+    data_reajuste: stringOpcional,
     caucao_valor: numeroOpcional("Valor da caução inválido."),
-    caucao_status: z
-      .string()
-      .optional()
-      .transform((v) =>
-        v && (STATUS_CAUCAO as readonly string[]).includes(v) ? v : null,
-      ),
+    caucao_status: daLista(STATUS_CAUCAO),
     vigente: z.boolean(),
     observacoes: texto(1000),
   })
@@ -254,9 +283,16 @@ export const reparoSchema = z.object({
     .trim()
     .min(3, "Descreva o que foi reparado (mínimo 3 caracteres).")
     .max(300, "Descrição muito longa (máximo 300 caracteres)."),
+  // `z.null()` antes do coerce: `z.coerce.number()` converteria null em 0 e
+  // esconderia a diferença entre "não informado" e "zero".
   valor: z
-    .union([z.literal(""), z.coerce.number().nonnegative("O valor não pode ser negativo.")])
-    .transform((v) => (v === "" ? 0 : v)),
+    .union([
+      z.literal(""),
+      z.null(),
+      z.coerce.number().nonnegative("O valor não pode ser negativo."),
+    ])
+    .optional()
+    .transform((v) => (v === "" || v == null ? 0 : v)),
   executor: texto(120),
 });
 

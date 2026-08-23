@@ -4,6 +4,19 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
+/**
+ * COLUNA FIXA — como usar.
+ *
+ * A tabela rola na horizontal (`overflow-x-auto`) e toda célula é
+ * `whitespace-nowrap`, então em listas largas (fornecedores, com nome de 40+
+ * caracteres mais CNPJ, contato, obras, status e ações) a linha estoura o card.
+ * Sem coluna fixa, rolar para a direita até a lixeira empurra o NOME para fora
+ * da tela, e ficar à esquerda esconde as AÇÕES — o usuário nunca vê os dois.
+ *
+ * Marque a primeira coluna com `fixa` e a de ações com `fixaFim`, no
+ * `TableHead` e no `TableCell`. O fundo opaco é obrigatório: sem ele o conteúdo
+ * que rola aparece por baixo da coluna fixa.
+ */
 function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (
     <div
@@ -57,13 +70,22 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
     <tr
       data-slot="table-row"
       className={cn(
-        "border-b transition-colors hover:bg-muted/50 has-aria-expanded:bg-muted/50 data-[state=selected]:bg-muted",
+        // `group/row` existe para as colunas fixas: elas têm fundo próprio
+        // (senão o conteúdo rolando aparece por baixo) e precisam acompanhar o
+        // hover da linha, o que `hover:` no <tr> não alcança.
+        "group/row border-b transition-colors hover:bg-muted/50 has-aria-expanded:bg-muted/50 data-[state=selected]:bg-muted",
         className
       )}
       {...props}
     />
   )
 }
+
+/** Classes da coluna fixa à esquerda (primeira) e à direita (ações). */
+export const colunaFixa =
+  "sticky left-0 z-20 bg-card group-hover/row:bg-muted/50 border-r"
+export const colunaFixaFim =
+  "sticky right-0 z-20 bg-card group-hover/row:bg-muted/50 border-l"
 
 function TableHead({ className, ...props }: React.ComponentProps<"th">) {
   return (

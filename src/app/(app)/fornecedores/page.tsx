@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import {
   Table,
   TableBody,
@@ -13,6 +14,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  colunaFixa,
+  colunaFixaFim,
 } from "@/components/ui/table";
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { Pagination } from "@/components/pagination";
@@ -70,12 +73,16 @@ export default async function FornecedoresPage({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead><SortHeader column="nome" label="Nome" /></TableHead>
+                  <TableHead className={colunaFixa}>
+                    <SortHeader column="nome" label="Nome" />
+                  </TableHead>
                   <TableHead><SortHeader column="cnpj" label="CNPJ" /></TableHead>
                   <TableHead>Contato</TableHead>
                   <TableHead>Obras</TableHead>
                   <TableHead><SortHeader column="ativo" label="Status" /></TableHead>
-                  <TableHead className="w-24 text-right">Ações</TableHead>
+                  <TableHead className={cn("w-24 text-right", colunaFixaFim)}>
+                    Ações
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -83,7 +90,9 @@ export default async function FornecedoresPage({
                   const codigos = f.obras.map((o) => o.codigo);
                   return (
                     <TableRow key={f.id}>
-                      <TableCell className="font-medium">{f.nome}</TableCell>
+                      <TableCell className={cn("font-medium", colunaFixa)}>
+                        {f.nome}
+                      </TableCell>
                       <TableCell className="text-muted-foreground">
                         {f.cnpj ?? "—"}
                       </TableCell>
@@ -99,7 +108,7 @@ export default async function FornecedoresPage({
                           {f.ativo ? "Ativo" : "Inativo"}
                         </Badge>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className={colunaFixaFim}>
                         <div className="flex items-center justify-end gap-1">
                           <Button
                             variant="ghost"

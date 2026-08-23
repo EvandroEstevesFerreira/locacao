@@ -440,7 +440,10 @@ export async function salvarReparo(raw: unknown): Promise<ActionResult> {
     imovel_id,
     ...campos,
   });
-  if (error) return falha("Não foi possível salvar o reparo.");
+  if (error) {
+    console.error("salvarReparo", error);
+    return falha("Não foi possível salvar o reparo.");
+  }
 
   // Sem `redirect()`: a action devolve {ok} e o form chama router.refresh().
   // Um redirect aqui faria o NEXT_REDIRECT propagar e matar todo o código
@@ -583,7 +586,13 @@ export async function salvarOcupante(raw: unknown): Promise<ActionResult> {
   }
 
   const parsed = ocupanteSchema.safeParse(raw);
-  if (!parsed.success) return falha(primeiroErro(parsed.error.issues));
+  if (!parsed.success) {
+    // A causa completa no log: a mensagem que vai ao usuário é a primeira, e
+    // sozinha ela não diz QUAL campo recusou. Foi o que tornou o defeito de
+    // idempotência dos schemas tão difícil de achar.
+    console.error("salvarOcupante — validação", parsed.error.issues);
+    return falha(primeiroErro(parsed.error.issues));
+  }
   const { imovel_id, ...campos } = parsed.data;
 
   const supabase = await createClient();
@@ -592,7 +601,10 @@ export async function salvarOcupante(raw: unknown): Promise<ActionResult> {
     imovel_id,
     ...campos,
   });
-  if (error) return falha("Não foi possível salvar o ocupante.");
+  if (error) {
+    console.error("salvarOcupante", error);
+    return falha("Não foi possível salvar o ocupante.");
+  }
 
   // Sem `redirect()`: a action devolve {ok} e o form chama router.refresh().
   // Um redirect aqui faria o NEXT_REDIRECT propagar e matar todo o código
@@ -738,7 +750,10 @@ export async function salvarMedidaDisciplinar(raw: unknown): Promise<ActionResul
     imovel_id,
     ...campos,
   });
-  if (error) return falha("Não foi possível registrar a medida disciplinar.");
+  if (error) {
+    console.error("salvarMedidaDisciplinar", error);
+    return falha("Não foi possível registrar a medida disciplinar.");
+  }
 
   revalidatePath(`/imoveis/${imovel_id}`);
   return { ok: true };
@@ -778,7 +793,10 @@ export async function salvarEntregaOcupante(raw: unknown): Promise<ActionResult>
     itens,
     ...campos,
   });
-  if (error) return falha("Não foi possível registrar a entrega.");
+  if (error) {
+    console.error("salvarEntregaOcupante", error);
+    return falha("Não foi possível registrar a entrega.");
+  }
 
   revalidatePath(`/imoveis/${imovel_id}`);
   return { ok: true };

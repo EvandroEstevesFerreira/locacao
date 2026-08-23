@@ -51,18 +51,37 @@ export function tipoMedidaLabel(t: string): string {
   return TIPO_MEDIDA_INFO[t as TipoMedida]?.label ?? "Medida disciplinar";
 }
 
+/**
+ * IDEMPOTÊNCIA: estes helpers têm de aceitar o próprio output, porque a action
+ * re-valida o que o zodResolver já transformou no cliente. Ver o comentário
+ * longo em `src/lib/imoveis.ts` — foi lá que o defeito apareceu primeiro.
+ */
 const texto = (max: number) =>
   z
-    .string()
-    .trim()
-    .max(max)
+    .union([z.string(), z.null()])
     .optional()
-    .transform((v) => (v && v.length > 0 ? v : null));
+    .transform((v) => {
+      const s = (v ?? "").trim();
+      return s.length > 0 ? s : null;
+    })
+    .refine((v) => v === null || v.length <= max, {
+      message: `Use no máximo ${max} caracteres.`,
+    });
 
 const dataOpcional = z
-  .string()
+  .union([z.string(), z.null()])
   .optional()
-  .transform((v) => (v && v.length > 0 ? v : null));
+  .transform((v) => {
+    const s = (v ?? "").trim();
+    return s.length > 0 ? s : null;
+  });
+
+/** Enum que também aceita "" (do <select>) e null (do próprio output). */
+const enumOpcional = <T extends readonly [string, ...string[]]>(valores: T) =>
+  z
+    .union([z.literal(""), z.null(), z.enum(valores)])
+    .optional()
+    .transform((v) => (v === "" || v == null ? null : v));
 
 export const medidaDisciplinarSchema = z
   .object({
@@ -70,10 +89,13 @@ export const medidaDisciplinarSchema = z
     imovel_id: z.string().uuid(),
     data: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Informe a data da medida."),
     tipo: z.enum(TIPOS_MEDIDA),
+    // `z.null()` vem ANTES do coerce de propósito: `z.coerce.number()` converte
+    // null em 0, e 0 é rejeitado pelo check (between 1 and 30) do banco. Sem
+    // esta ordem, re-validar uma medida sem suspensão viraria erro de banco.
     suspensao_dias: z
-      .union([z.literal(""), z.coerce.number().int()])
+      .union([z.literal(""), z.null(), z.coerce.number().int()])
       .optional()
-      .transform((v) => (v === "" || v === undefined ? null : v)),
+      .transform((v) => (v === "" || v == null ? null : v)),
     suspensao_inicio: dataOpcional,
     suspensao_fim: dataOpcional,
     fato_em: dataOpcional,
@@ -88,10 +110,7 @@ export const medidaDisciplinarSchema = z
     clt_artigo: texto(60),
     reincidencia: z.boolean().optional().default(false),
     fundamentacao: texto(4000),
-    ciencia: z
-      .union([z.literal(""), z.enum(CIENCIAS)])
-      .optional()
-      .transform((v) => (v === "" || v === undefined ? null : v)),
+    ciencia: enumOpcional(CIENCIAS),
     ciencia_em: dataOpcional,
   })
   // O art. 474 da CLT limita a suspensão a 30 dias; acima disso a medida
@@ -198,16 +217,10 @@ export const entregaOcupanteSchema = z
     tipo: z.enum(TIPOS_ENTREGA),
     entregue_em: dataOpcional,
     devolvido_em: dataOpcional,
-    devolucao_motivo: z
-      .union([z.literal(""), z.enum(MOTIVOS_DEVOLUCAO)])
-      .optional()
-      .transform((v) => (v === "" || v === undefined ? null : v)),
+    devolucao_motivo: enumOpcional(MOTIVOS_DEVOLUCAO),
     itens: z.array(z.string()).optional().default([]),
     avarias: texto(4000),
-    tratativa: z
-      .union([z.literal(""), z.enum(TRATATIVAS)])
-      .optional()
-      .transform((v) => (v === "" || v === undefined ? null : v)),
+    tratativa: enumOpcional(TRATATIVAS),
   })
   .refine((v) => v.entregue_em !== null || v.devolvido_em !== null, {
     message: "Informe a data de entrega ou a de devolução.",
