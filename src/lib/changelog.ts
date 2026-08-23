@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.32.0";
+export const APP_VERSION = "0.33.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,18 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.33.0",
+    data: "2026-08-23",
+    titulo: "Limpeza fechada e o documento assinado de volta",
+    mudancas: [
+      { tipo: "novo", texto: "A semana de limpeza agora se fecha: o Encarregado registra quem limpou, como avaliou a semana e o que observou na conferência. Antes toda semana ficava marcada como \"Sem avaliação\" para sempre." },
+      { tipo: "novo", texto: "As 44 tarefas da folha de limpeza ficaram editáveis em Configurações → Catálogo de limpeza. Dá para mudar o texto, o ambiente, a frequência e a ordem em que aparecem na folha." },
+      { tipo: "novo", texto: "Uma tarefa pode sair da folha impressa sem ser apagada: alojamento sem lavanderia não precisa da tarefa do tanque, e ocultá-la preserva o histórico das semanas que já a marcaram." },
+      { tipo: "novo", texto: "O documento assinado volta para o sistema: depois de imprimir, colher a assinatura e digitalizar, o PDF pode ser anexado à medida disciplinar, à entrega ao alojado e à folha da semana." },
+      { tipo: "melhoria", texto: "O nome do ambiente aceita até 80 caracteres. Com o limite anterior, seis tarefas criadas pelo próprio sistema não podiam ser reeditadas pela tela." },
+    ],
+  },
   {
     versao: "0.32.0",
     data: "2026-08-23",

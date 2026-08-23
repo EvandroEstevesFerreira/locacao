@@ -7,6 +7,49 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.33.0] — 2026-08-23
+
+### Adicionado
+
+- **Fechamento da semana de limpeza.** `auxiliar_nome`, `avaliacao` e
+  `observacoes` existiam em `checklist_limpeza` desde a migration 0045 e eram
+  lidos pela tela, mas nada os escrevia: abrir a semana registrava que a folha
+  fora impressa e a conferência da sexta não tinha onde ser gravada. Toda semana
+  aparecia como "Sem avaliação", para sempre.
+- **Catálogo de limpeza editável** em Configurações → Catálogo de limpeza. Texto,
+  ambiente, frequência e ordem das 44 tarefas do FRM-RH-005. A ordem é a do
+  percurso pelo alojamento, não a alfabética — por isso ela é editável e visível.
+- **Ocultar tarefa sem apagar.** Alojamento sem lavanderia não precisa da tarefa
+  do tanque; apagá-la tiraria o item da folha de todas as outras obras e deixaria
+  as semanas já marcadas sem referência.
+- **Upload do documento assinado** na medida disciplinar (FRM-RH-002), na entrega
+  ao alojado (FRM-RH-003 e 004) e na folha da semana (FRM-RH-005). A coluna
+  `documento_path` existia nas três tabelas desde as migrations 0044 e 0045 e
+  nenhum código escrevia nela: o sistema gerava o PDF, a obra imprimia, colhia a
+  assinatura — e o papel assinado terminava numa gaveta, que é exatamente o
+  problema que originou este módulo.
+
+### Alterado
+
+- O nome do ambiente do catálogo aceita 80 caracteres, não 60. O ambiente mais
+  longo do catálogo embutido — "QUARTOS / DORMITÓRIOS (áreas comuns — não
+  pertences do alojado)" — tem 62, e com o limite antigo seis tarefas semeadas
+  pelo próprio sistema seriam impossíveis de reeditar pela tela. Achado por um
+  teste que passa as 44 tarefas embutidas pelo schema da tela.
+- `semearTarefasLimpeza` saiu de `imoveis/actions.ts` para
+  `configuracoes/limpeza-actions.ts`. O catálogo é cadastro da organização — a
+  policy `tarefa_limpeza_write` exige `pode_gerir_cadastros()` — e manter a
+  criação num lugar e a edição em outro era convidar as duas a divergirem.
+
+### Notas técnicas
+
+- Os dois formulários novos chamam a server action dentro de um `useTransition`
+  em vez de `useActionState`: fechar o painel a partir do estado exigiria um
+  `useEffect` que chama `setState`, e `react-hooks/set-state-in-effect` reprova.
+  O resultado da action chega ao mesmo escopo que fecha o painel.
+- Nenhuma migration. As três colunas e o `soft_delete` de `tarefa_limpeza` já
+  estavam no banco desde 0044 e 0045.
+
 ## [0.32.0] — 2026-08-23
 
 ### Alterado

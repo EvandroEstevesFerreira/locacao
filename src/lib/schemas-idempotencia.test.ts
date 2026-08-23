@@ -7,7 +7,12 @@ import {
   reparoSchema,
   ocupanteSchema,
 } from "./imoveis";
-import { medidaDisciplinarSchema, entregaOcupanteSchema } from "./alojamento";
+import {
+  medidaDisciplinarSchema,
+  entregaOcupanteSchema,
+  fechamentoLimpezaSchema,
+  tarefaLimpezaSchema,
+} from "./alojamento";
 
 /**
  * TODA action deste sistema re-valida o que recebe, e o que ela recebe é o
@@ -87,6 +92,19 @@ const CASOS: { nome: string; schema: ZodType; minimo: unknown }[] = [
       tipo: "chaves",
       entregue_em: "2026-08-01",
     },
+  },
+  {
+    nome: "fechamentoLimpezaSchema",
+    schema: fechamentoLimpezaSchema,
+    // O mínimo aqui é a semana aberta e ainda não conferida: os três campos que
+    // o Encarregado preenche saem `null`, e é esse output que a action re-valida
+    // quando ele salva de novo depois de corrigir uma letra.
+    minimo: { id: UUID, imovel_id: UUID },
+  },
+  {
+    nome: "tarefaLimpezaSchema",
+    schema: tarefaLimpezaSchema,
+    minimo: { grupo: "BANHEIROS", descricao: "Lavar piso", frequencia: "D" },
   },
 ];
 

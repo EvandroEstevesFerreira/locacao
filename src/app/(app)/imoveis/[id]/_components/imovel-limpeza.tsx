@@ -9,11 +9,12 @@
 // diárias e semanais, e as mensais saem numa folha própria.
 
 import Link from "next/link";
-import { CalendarPlus, Download, ListChecks } from "lucide-react";
+import { CalendarPlus, Download, ListChecks, Settings2 } from "lucide-react";
 import {
   listarChecklists,
   listarTarefasLimpeza,
 } from "@/lib/data/alojamento";
+import { assinarUrls } from "@/lib/data/storage";
 import { hojeISOSaoPaulo } from "@/lib/locacao";
 import { segundaFeiraDaSemana, rotuloSemana } from "@/lib/alojamento";
 import {
@@ -23,29 +24,19 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ConfirmDelete } from "@/components/confirm-delete";
-import {
-  abrirChecklistSemana,
-  excluirChecklistLimpeza,
-  semearTarefasLimpeza,
-} from "../../actions";
-
-const AVALIACAO_INFO: Record<
-  string,
-  { label: string; variant: "default" | "secondary" | "outline" | "destructive" }
-> = {
-  conforme: { label: "Conforme", variant: "outline" },
-  parcial: { label: "Parcialmente conforme", variant: "secondary" },
-  nao_conforme: { label: "Não conforme", variant: "destructive" },
-};
+import { LimpezaSemana } from "../../limpeza-semana";
+import { abrirChecklistSemana } from "../../actions";
+import { semearTarefasLimpeza } from "../../../configuracoes/limpeza-actions";
 
 export async function ImovelLimpeza({
   imovelId,
+  orgId,
   podeEditar,
 }: {
   imovelId: string;
+  /** Primeira pasta do caminho no Storage — a policy do bucket a exige. */
+  orgId: string;
   podeEditar: boolean;
 }) {
   const [tarefas, checklists] = await Promise.all([
@@ -55,6 +46,11 @@ export async function ImovelLimpeza({
 
   // "Hoje" é sempre o de Brasília: o Vercel roda em UTC e das 21h à meia-noite
   // a semana viraria antes da hora.
+  const assinadas = await assinarUrls(
+    "imoveis",
+    checklists.map((c) => c.documento_path),
+  );
+
   const semanaAtual = segundaFeiraDaSemana(hojeISOSaoPaulo());
   const jaAberta = checklists.some((c) => c.semana_inicio === semanaAtual);
 
@@ -95,7 +91,14 @@ export async function ImovelLimpeza({
             Catálogo com <strong>{tarefas.length}</strong> tarefas —{" "}
             {diarias} diárias, {semanais} semanais e {mensais} mensais. A folha
             semanal imprime {diarias + semanais}; as mensais saem em folha
-            separada.
+            separada.{" "}
+            <Link
+              href="/configuracoes/limpeza"
+              className="font-medium text-primary underline-offset-4 hover:underline"
+            >
+              Editar o catálogo
+            </Link>
+            .
           </p>
         )}
 
@@ -135,6 +138,16 @@ export async function ImovelLimpeza({
               </Button>
             </form>
           ) : null}
+          {tarefas.length > 0 && podeEditar ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              render={<Link href="/configuracoes/limpeza" />}
+            >
+              <Settings2 className="size-3.5" aria-hidden />
+              Catálogo de tarefas
+            </Button>
+          ) : null}
         </div>
 
         {checklists.length === 0 ? (
@@ -144,49 +157,17 @@ export async function ImovelLimpeza({
         ) : (
           <div className="divide-y">
             {checklists.map((c) => (
-              <div key={c.id} className="flex flex-wrap items-center gap-3 py-2 text-sm">
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium">
-                    Semana de {rotuloSemana(c.semana_inicio)}
-                    {c.semana_inicio === semanaAtual ? (
-                      <span className="ml-2 text-xs font-normal text-muted-foreground">
-                        (semana corrente)
-                      </span>
-                    ) : null}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {c.auxiliar_nome ?? "Auxiliar não informado"}
-                    {c.observacoes ? ` · ${c.observacoes}` : ""}
-                  </p>
-                </div>
-                {c.avaliacao ? (
-                  <Badge variant={AVALIACAO_INFO[c.avaliacao]?.variant}>
-                    {AVALIACAO_INFO[c.avaliacao]?.label ?? c.avaliacao}
-                  </Badge>
-                ) : (
-                  <Badge variant="secondary">Sem avaliação</Badge>
-                )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  render={
-                    <Link
-                      href={`/api/documentos/checklist_limpeza/pdf?semana=${c.semana_inicio}`}
-                      target="_blank"
-                    />
-                  }
-                >
-                  <Download className="size-3.5" aria-hidden />
-                  Folha
-                </Button>
-                {podeEditar ? (
-                  <ConfirmDelete
-                    action={excluirChecklistLimpeza}
-                    id={c.id}
-                    hidden={{ imovel_id: imovelId }}
-                  />
-                ) : null}
-              </div>
+              <LimpezaSemana
+                key={c.id}
+                checklist={c}
+                imovelId={imovelId}
+                orgId={orgId}
+                url={
+                  c.documento_path ? (assinadas.get(c.documento_path) ?? null) : null
+                }
+                corrente={c.semana_inicio === semanaAtual}
+                podeEditar={podeEditar}
+              />
             ))}
           </div>
         )}

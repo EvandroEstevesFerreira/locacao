@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { Users, Building, FileText, History } from "lucide-react";
+import { Users, Building, FileText, History, ListChecks } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeConfigurarSistema } from "@/lib/auth";
 import { PageHeader } from "@/components/shared/page-header";
@@ -72,6 +72,12 @@ export default async function ConfiguracoesPage() {
               icon={FileText}
               titulo="Templates de documentos"
               descricao="Texto dos contratos e termos com variáveis preenchidas ao gerar o PDF."
+            />
+            <ConfigRow
+              href="/configuracoes/limpeza"
+              icon={ListChecks}
+              titulo="Catálogo de limpeza"
+              descricao="As 44 tarefas do FRM-RH-005, por ambiente e frequência — é o que a folha impressa lista."
             />
             <ConfigRow
               href="/usuarios"

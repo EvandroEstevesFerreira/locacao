@@ -119,11 +119,11 @@ export default async function ImovelDetalhePage({
       </Suspense>
 
       <Suspense fallback={<SecaoSkeleton linhas={3} />}>
-        <ImovelAlojamento imovelId={id} podeEditar={podeEditar} />
+        <ImovelAlojamento imovelId={id} orgId={orgId} podeEditar={podeEditar} />
       </Suspense>
 
       <Suspense fallback={<SecaoSkeleton linhas={3} />}>
-        <ImovelLimpeza imovelId={id} podeEditar={podeEditar} />
+        <ImovelLimpeza imovelId={id} orgId={orgId} podeEditar={podeEditar} />
       </Suspense>
 
       <AtividadeTimeline entidade="imovel" registroId={id} />
