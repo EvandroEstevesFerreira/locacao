@@ -12,6 +12,16 @@ import { TermoChaves } from "./frm-rh-003";
 import { KitAlojamento } from "./frm-rh-004";
 import { ChecklistLimpeza, TAREFAS, linhasDoGrid } from "./frm-rh-005";
 import { PoliticaAlojamento } from "./pol-rh-001";
+import { ITENS_PADRAO, ITENS_ENTREGA } from "@/lib/alojamento";
+
+/**
+ * Os rótulos que o PDF de fato desenha. Lidos de ITENS_ENTREGA, que é a fonte
+ * que os dois componentes consomem — se um deles voltar a manter lista própria,
+ * este helper deixa de refletir o PDF e o teste perde sentido, então ele é
+ * deliberadamente simples e direto.
+ */
+const linhasKitDoPdf = () => ITENS_ENTREGA.kit.map((i) => i.item);
+const linhasChavesDoPdf = () => ITENS_ENTREGA.chaves.map((i) => i.item);
 
 const ORG = "Sistenge Construções e Comércio Ltda";
 
@@ -114,6 +124,71 @@ describe("catálogo de documentos", () => {
       expect(doc, `documento ${tipo}`).toBeTruthy();
       expect(doc!.preenchimento).toBe("em_branco");
       expect(doc!.modulo).toBe("imoveis");
+    }
+  });
+});
+
+describe("formulários preenchidos a partir do registro", () => {
+  const dados = {
+    ocupante: "José Aparecido da Silva",
+    cpf: "123.456.789-00",
+    cargo: "Pedreiro",
+    centroResultado: "CR-4410",
+    obra: "OBRA-014 — Edifício Aurora",
+    endereco: "Rua das Palmeiras, 240, Osasco, SP",
+    quarto: "3",
+    armario: "12",
+    entregueEm: "01/08/2026",
+    devolvidoEm: "22/08/2026",
+    itens: ["Chave da porta de entrada do alojamento", "Fronha"],
+    avarias: "Cadeado do armário com a haste empenada, sem impedir o fechamento.",
+    devolucaoMotivo: "desligamento",
+    tratativa: "desgaste_natural",
+  };
+
+  it("FRM-RH-003 preenchido cabe em 2 páginas", async () => {
+    const b = await renderToBuffer(
+      <TermoChaves {...conteudo("termo_chaves")} dados={dados} />,
+    );
+    expect(contarPaginas(b)).toBeLessThanOrEqual(2);
+  });
+
+  it("FRM-RH-004 preenchido cabe em 2 páginas", async () => {
+    const b = await renderToBuffer(
+      <KitAlojamento {...conteudo("kit_alojamento")} dados={dados} />,
+    );
+    expect(contarPaginas(b)).toBeLessThanOrEqual(2);
+  });
+
+  it("o checklist de conservação sai em branco mesmo no documento preenchido", async () => {
+    // Vistoria conjunta não se pré-marca a partir do sistema: seria inventar uma
+    // conferência que não aconteceu, e avaria não registrada na entrada vira
+    // cobrança indevida na saída. Se alguém ligar o checklist aos dados, este
+    // teste tem de ser reescrito de propósito, não por acidente.
+    const comDados = await renderToBuffer(
+      <TermoChaves {...conteudo("termo_chaves")} dados={dados} />,
+    );
+    const semDados = await renderToBuffer(<TermoChaves {...conteudo("termo_chaves")} />);
+    expect(contarPaginas(comDados)).toBe(contarPaginas(semDados));
+  });
+});
+
+describe("rótulos de item — formulário e PDF são a mesma fonte", () => {
+  // O defeito que este teste guarda: o formulário gravava "Lençol (par)" e o PDF
+  // comparava com "Lençol (par — inferior e superior)". A caixa do lençol nunca
+  // era marcada no documento preenchido, e nada acusava — tipo, teste e build
+  // passavam todos. Qualquer divergência de rótulo agora reprova aqui.
+  it("todo item que o formulário oferece existe na tabela do PDF do kit", () => {
+    const noPdf = new Set(linhasKitDoPdf());
+    for (const item of ITENS_PADRAO.kit) {
+      expect(noPdf, `item "${item}" do formulário`).toContain(item);
+    }
+  });
+
+  it("todo item que o formulário oferece existe na tabela do PDF de chaves", () => {
+    const noPdf = new Set(linhasChavesDoPdf());
+    for (const item of ITENS_PADRAO.chaves) {
+      expect(noPdf, `item "${item}" do formulário`).toContain(item);
     }
   });
 });

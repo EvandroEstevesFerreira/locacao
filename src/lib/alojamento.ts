@@ -153,16 +153,38 @@ export const TRATATIVA_INFO: Record<Tratativa, string> = {
   atribuivel: "Atribuível ao empregado — encaminhar ao RH",
 };
 
-/** Itens padrão de cada tipo de entrega, na ordem do formulário original. */
-export const ITENS_PADRAO: Record<TipoEntrega, string[]> = {
+/**
+ * Itens de cada tipo de entrega — FONTE ÚNICA.
+ *
+ * O formulário grava exatamente estes rótulos em `entrega_ocupante.itens`, e o
+ * PDF os compara para marcar as caixas. Duas listas separadas já produziram um
+ * defeito silencioso: o formulário gravava "Lençol (par)" e o PDF comparava com
+ * "Lençol (par — inferior e superior)", então o lençol nunca era marcado e nada
+ * acusava. `alojamento.test.ts` guarda a coincidência entre as duas pontas.
+ */
+export const ITENS_ENTREGA: Record<
+  TipoEntrega,
+  { item: string; quantidade: string }[]
+> = {
   chaves: [
-    "Chave da porta de entrada do alojamento",
-    "Chave da porta do quarto",
-    "Cadeado do armário individual",
-    "Chave / segredo do cadeado",
-    "Controle de portão / acesso",
+    { item: "Chave da porta de entrada do alojamento", quantidade: "" },
+    { item: "Chave da porta do quarto", quantidade: "" },
+    { item: "Cadeado do armário individual", quantidade: "" },
+    { item: "Chave / segredo do cadeado", quantidade: "" },
+    { item: "Controle de portão / acesso", quantidade: "" },
   ],
-  kit: ["Lençol (par)", "Fronha", "Travesseiro", "Cobertor"],
+  kit: [
+    { item: "Lençol (par — inferior e superior)", quantidade: "1 jogo" },
+    { item: "Fronha", quantidade: "1 unid." },
+    { item: "Travesseiro", quantidade: "1 unid." },
+    { item: "Cobertor", quantidade: "1 unid." },
+  ],
+};
+
+/** Só os rótulos, para os checkboxes do formulário. */
+export const ITENS_PADRAO: Record<TipoEntrega, string[]> = {
+  chaves: ITENS_ENTREGA.chaves.map((i) => i.item),
+  kit: ITENS_ENTREGA.kit.map((i) => i.item),
 };
 
 export function tipoEntregaLabel(t: string): string {

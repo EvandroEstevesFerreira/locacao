@@ -7,6 +7,34 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.29.1] — 2026-08-23
+
+Fecha pendências que a fase 3 deixou: código escrito e nunca ligado.
+
+### Adicionado
+
+- Rota **`/api/entregas/[id]/pdf`** — FRM-RH-003 ou FRM-RH-004 preenchido a
+  partir do registro, decidido pelo `tipo` da entrega. `buscarEntrega()` existia
+  desde a 0.27.0 sem nenhum consumidor.
+- Botão de **desfazer aceite**, restrito a quem gere cadastros.
+  `desfazerAceiteTermo` também era código morto.
+
+### Corrigido
+
+- **A caixa do lençol nunca era marcada** no FRM-RH-004 preenchido: o formulário
+  gravava `"Lençol (par)"` e o PDF comparava com
+  `"Lençol (par — inferior e superior)"`. Tipo, lint, teste e build passavam
+  todos. `ITENS_ENTREGA` passa a ser fonte única das duas pontas, e um teste
+  trava a coincidência.
+
+### Notas
+
+- O **checklist de conservação** (FRM-RH-003) e a **conferência de devolução**
+  (FRM-RH-004) saem em branco mesmo no documento preenchido, e há teste que
+  garante isso. São vistoria conjunta feita com Encarregado e alojado olhando o
+  item; pré-marcá-las a partir do sistema inventaria uma conferência que não
+  aconteceu — e avaria não registrada na entrada vira cobrança indevida na saída.
+
 ## [0.29.0] — 2026-08-22
 
 Fase 5 — última — dos **documentos do alojamento**: o aceite eletrônico.

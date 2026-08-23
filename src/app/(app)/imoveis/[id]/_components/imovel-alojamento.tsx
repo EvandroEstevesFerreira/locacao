@@ -18,6 +18,7 @@ import {
   tipoMedidaLabel,
   tipoEntregaLabel,
   type TipoMedida,
+  type TipoEntrega,
   type Tratativa,
 } from "@/lib/alojamento";
 import {
@@ -98,6 +99,14 @@ export async function ImovelAlojamento({
                   ) : (
                     <Badge variant="secondary">Em posse do alojado</Badge>
                   )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    render={<Link href={`/api/entregas/${e.id}/pdf`} target="_blank" />}
+                  >
+                    <Download className="size-3.5" aria-hidden />
+                    {TIPO_ENTREGA_INFO[e.tipo as TipoEntrega]?.doc ?? "PDF"}
+                  </Button>
                   {podeEditar ? (
                     <ConfirmDelete
                       action={excluirEntregaOcupante}

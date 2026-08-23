@@ -1,7 +1,7 @@
 // Ocupantes do imóvel — base do Termo de Compromisso de Alojamento
 // (FRM-RH-001) e de todo o registro do alojado.
 
-import { Check, FileText, Plus } from "lucide-react";
+import { Check, FileText, Plus, Undo2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { formatarData, formatarDataHora } from "@/lib/locacao";
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +16,11 @@ import {
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { PiiText } from "@/components/pii-text";
 import { OcupanteForm } from "../../ocupante-form";
-import { excluirOcupante, registrarAceiteTermo } from "../../actions";
+import {
+  excluirOcupante,
+  registrarAceiteTermo,
+  desfazerAceiteTermo,
+} from "../../actions";
 
 type Ocupante = {
   id: string;
@@ -31,9 +35,15 @@ type Ocupante = {
 export async function ImovelOcupantes({
   imovelId,
   podeEditar,
+  /**
+   * Desfazer um aceite apaga a prova do momento original, então é ato de
+   * cadastro, mais restrito que registrar. Sem a prop, ninguém desfaz.
+   */
+  podeGerirCadastros = false,
 }: {
   imovelId: string;
   podeEditar: boolean;
+  podeGerirCadastros?: boolean;
 }) {
   const supabase = await createClient();
   const { data } = await supabase
@@ -121,10 +131,21 @@ export async function ImovelOcupantes({
                       papel continua valendo enquanto o Jurídico não se
                       manifestar; isto é complemento, não substituto. */}
                   {o.aceite_em ? (
-                    <Badge variant="outline" title={formatarDataHora(o.aceite_em)}>
-                      <Check className="size-3" aria-hidden /> Aceite em{" "}
-                      {formatarData(o.aceite_em.slice(0, 10))}
-                    </Badge>
+                    <>
+                      <Badge variant="outline" title={formatarDataHora(o.aceite_em)}>
+                        <Check className="size-3" aria-hidden /> Aceite em{" "}
+                        {formatarData(o.aceite_em.slice(0, 10))}
+                      </Badge>
+                      {podeGerirCadastros ? (
+                        <form action={desfazerAceiteTermo}>
+                          <input type="hidden" name="id" value={o.id} />
+                          <input type="hidden" name="imovel_id" value={imovelId} />
+                          <Button type="submit" variant="ghost" size="sm">
+                            <Undo2 className="size-4" aria-hidden /> Desfazer
+                          </Button>
+                        </form>
+                      ) : null}
+                    </>
                   ) : podeEditar ? (
                     <form action={registrarAceiteTermo}>
                       <input type="hidden" name="id" value={o.id} />

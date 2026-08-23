@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.29.0";
+export const APP_VERSION = "0.29.1";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,16 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.29.1",
+    data: "2026-08-23",
+    titulo: "Entregas com PDF preenchido",
+    mudancas: [
+      { tipo: "novo", texto: "As entregas registradas passam a gerar o formulário já preenchido — FRM-RH-003 para chaves e FRM-RH-004 para o kit —, como já acontecia com a medida disciplinar. Antes o registro existia no sistema mas a folha saía em branco." },
+      { tipo: "novo", texto: "Um aceite registrado por engano pode ser desfeito por quem gere cadastros." },
+      { tipo: "correcao", texto: "No formulário do kit, a caixa do lençol nunca era marcada no documento preenchido: o nome do item era escrito de duas formas diferentes no sistema e no PDF." },
+    ],
+  },
   {
     versao: "0.29.0",
     data: "2026-08-22",

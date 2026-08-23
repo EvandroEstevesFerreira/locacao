@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FileText, Pencil } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentPerfil, podeOperar } from "@/lib/auth";
+import { getCurrentPerfil, podeOperar, podeEditarCadastros } from "@/lib/auth";
 import { tipoImovelLabel } from "@/lib/imoveis";
 import { PageHeader } from "@/components/shared/page-header";
 import { SecaoSkeleton } from "@/components/shared/skeletons";
@@ -47,6 +47,7 @@ export default async function ImovelDetalhePage({
   const { id } = await params;
   const perfil = await getCurrentPerfil();
   const podeEditar = podeOperar(perfil?.papel);
+  const podeGerirCadastros = podeEditarCadastros(perfil?.papel);
   const orgId = perfil?.org_id ?? "";
 
   const supabase = await createClient();
@@ -110,7 +111,11 @@ export default async function ImovelDetalhePage({
       </Suspense>
 
       <Suspense fallback={<SecaoSkeleton linhas={3} />}>
-        <ImovelOcupantes imovelId={id} podeEditar={podeEditar} />
+        <ImovelOcupantes
+          imovelId={id}
+          podeEditar={podeEditar}
+          podeGerirCadastros={podeGerirCadastros}
+        />
       </Suspense>
 
       <Suspense fallback={<SecaoSkeleton linhas={3} />}>
