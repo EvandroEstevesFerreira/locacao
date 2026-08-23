@@ -1,8 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { formatarBRL } from "@/lib/locacao";
 import { gerarFluxoCaixa } from "@/lib/fluxo";
-import { PageHeader } from "@/components/page-header";
-import { ObraFilter } from "@/components/obra-filter";
+import { PageHeader } from "@/components/shared/page-header";
 import {
   Card,
   CardContent,
@@ -18,6 +17,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { SelectFilter } from "@/components/shared/select-filter";
+import { ListFilters } from "@/components/shared/list-filters";
+import { listarObrasParaFiltro } from "@/lib/data/obras";
 
 export const metadata = { title: "Fluxo de caixa — Loca" };
 
@@ -29,9 +31,9 @@ export default async function FluxoCaixaPage({
   const { obra } = await searchParams;
   const supabase = await createClient();
 
-  const [fluxo, { data: obrasData }] = await Promise.all([
+  const [fluxo, obrasData] = await Promise.all([
     gerarFluxoCaixa(supabase, { obra_id: obra }),
-    supabase.from("obra").select("id, codigo, nome").order("codigo"),
+    listarObrasParaFiltro(),
   ]);
 
   const prox3 = fluxo.meses.slice(0, 3).reduce((s, m) => s + m.total, 0);
@@ -39,16 +41,18 @@ export default async function FluxoCaixaPage({
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <PageHeader
-        eyebrow="Financeiro"
         titulo="Fluxo de caixa"
         descricao="Projeção de desembolsos por mês: lançamentos + contratos de equipamento e imóveis."
       />
 
-      <ObraFilter
-        obras={obrasData ?? []}
-        value={obra}
-        basePath="/financeiro/fluxo"
-      />
+      <ListFilters>
+        <SelectFilter
+          param="obra"
+          label="Obra"
+          placeholder="Todas as obras"
+          opcoes={obrasData.map((o) => ({ value: o.id, label: `${o.codigo} — ${o.nome}` }))}
+        />
+      </ListFilters>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Card>
@@ -58,7 +62,7 @@ export default async function FluxoCaixaPage({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="font-heading text-4xl leading-none font-semibold">
+            <div className="text-2xl font-semibold tracking-tight tabular-nums">
               {formatarBRL(fluxo.totalPrevisto)}
             </div>
           </CardContent>
@@ -70,7 +74,7 @@ export default async function FluxoCaixaPage({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="font-heading text-4xl leading-none font-semibold">
+            <div className="text-2xl font-semibold tracking-tight tabular-nums">
               {formatarBRL(prox3)}
             </div>
           </CardContent>

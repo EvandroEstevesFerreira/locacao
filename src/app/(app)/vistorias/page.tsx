@@ -1,14 +1,13 @@
 import Link from "next/link";
 import { ClipboardCheck, Plus, ChevronRight } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeOperar } from "@/lib/auth";
 import { formatarData } from "@/lib/locacao";
-import { TIPO_VISTORIA, type TipoVistoria } from "@/lib/vistoria";
-import { PageHeader } from "@/components/page-header";
-import { ObraFilter } from "@/components/obra-filter";
+import { TIPO_VISTORIA } from "@/lib/vistoria";
+import { listarVistorias } from "@/lib/data/vistorias";
+import { PageHeader } from "@/components/shared/page-header";
 import { Pagination } from "@/components/pagination";
 import { SortHeader } from "@/components/sort-header";
-import { PAGE_SIZE, parseListParams } from "@/lib/lista";
+import { PAGE_SIZE, contagem, parseListParams } from "@/lib/lista";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,17 +19,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { SelectFilter } from "@/components/shared/select-filter";
+import { ListFilters } from "@/components/shared/list-filters";
+import { EmptyState } from "@/components/shared/empty-state";
+import { listarObrasParaFiltro } from "@/lib/data/obras";
 
 export const metadata = { title: "Vistorias — Loca" };
-
-type Row = {
-  id: string;
-  tipo: TipoVistoria;
-  data: string;
-  contrato: { numero: string; obra: { codigo: string } | null } | null;
-  vistoria_foto: { count: number }[];
-  avaria: { count: number }[];
-};
 
 export default async function VistoriasPage({
   searchParams,
@@ -47,43 +41,36 @@ export default async function VistoriasPage({
     defaultDir: "desc",
   });
 
-  const supabase = await createClient();
-  let q = supabase
-    .from("vistoria")
-    .select(
-      "id, tipo, data, contrato:contrato_id!inner(numero, obra_id, obra:obra_id(codigo)), vistoria_foto(count), avaria(count)",
-      { count: "exact" },
-    );
-  if (obra) q = q.eq("contrato.obra_id", obra);
-  q = q.order(sort, { ascending }).range(from, to);
-  const { data, count } = await q;
-
-  const { data: obrasData } = await supabase
-    .from("obra")
-    .select("id, codigo, nome")
-    .order("codigo");
-
-  const vistorias = (data ?? []) as unknown as Row[];
-  const total = count ?? 0;
+  const [{ itens: vistorias, total }, obrasData] = await Promise.all([
+    listarVistorias({ sort, ascending, from, to, obraId: obra }),
+    listarObrasParaFiltro(),
+  ]);
   const tem = vistorias.length > 0;
   const buscando = Boolean(obra);
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <PageHeader
-        eyebrow="Retirada e devolução"
         titulo="Vistorias"
-        descricao="Registros de retirada e devolução com fotos e avarias."
-      >
-        {podeEditar ? (
-          <Button render={<Link href="/vistorias/nova" />}>
-            <Plus className="size-4" />
-            Nova vistoria
-          </Button>
-        ) : null}
-      </PageHeader>
+        descricao={`Registros de retirada e devolução com fotos e avarias. · ${contagem(total, "vistoria", "vistorias")} no filtro`}
+        acoes={
+          podeEditar ? (
+            <Button render={<Link href="/vistorias/nova" />}>
+              <Plus className="size-4" />
+              Nova vistoria
+            </Button>
+          ) : null
+        }
+      />
 
-      <ObraFilter obras={obrasData ?? []} value={obra} basePath="/vistorias" />
+      <ListFilters>
+        <SelectFilter
+          param="obra"
+          label="Obra"
+          placeholder="Todas as obras"
+          opcoes={obrasData.map((o) => ({ value: o.id, label: `${o.codigo} — ${o.nome}` }))}
+        />
+      </ListFilters>
 
       {tem || buscando ? (
         <>
@@ -112,11 +99,11 @@ export default async function VistoriasPage({
                   <TableRow key={v.id}>
                     <TableCell>{formatarData(v.data)}</TableCell>
                     <TableCell className="font-medium">
-                      {v.contrato?.numero ?? "—"}
-                      {v.contrato?.obra ? (
+                      {v.contratoNumero ?? "—"}
+                      {v.obraCodigo ? (
                         <span className="text-muted-foreground">
                           {" "}
-                          · {v.contrato.obra.codigo}
+                          · {v.obraCodigo}
                         </span>
                       ) : null}
                     </TableCell>
@@ -126,14 +113,14 @@ export default async function VistoriasPage({
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      {(v.vistoria_foto?.[0]?.count ?? 0) === 0 ? (
+                      {v.fotos === 0 ? (
                         <Badge variant="destructive">Pendente</Badge>
                       ) : (
-                        (v.vistoria_foto?.[0]?.count ?? 0)
+                        v.fotos
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      {v.avaria?.[0]?.count ?? 0}
+                      {v.avarias}
                     </TableCell>
                     <TableCell className="text-right">
                       <Button
@@ -154,20 +141,12 @@ export default async function VistoriasPage({
           <Pagination page={page} pageSize={PAGE_SIZE} total={total} />
         </>
       ) : (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-            <div className="flex size-12 items-center justify-center rounded-full bg-muted">
-              <ClipboardCheck className="size-6 text-muted-foreground" />
-            </div>
-            <p className="font-medium">Nenhuma vistoria registrada ainda</p>
-            {podeEditar ? (
-              <Button render={<Link href="/vistorias/nova" />}>
-                <Plus className="size-4" />
-                Registrar primeira vistoria
-              </Button>
-            ) : null}
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={<ClipboardCheck />}
+          titulo="Nenhuma vistoria registrada ainda"
+          descricao="A vistoria é a prova do estado do item na retirada e na devolução, com fotos e avarias."
+          acao={podeEditar ? { label: "Nova vistoria", href: "/vistorias/nova" } : undefined}
+        />
       )}
     </div>
   );

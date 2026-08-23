@@ -10,9 +10,8 @@ import { CATEGORIAS_BIBLIOTECA, CATEGORIA_BIBLIOTECA_INFO } from "@/lib/bibliote
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 
-const selectClasses =
-  "flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm outline-none focus-visible:border-ring";
 
 function nomeSeguro(nome: string) {
   return nome.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-80);
@@ -62,18 +61,17 @@ export function BibliotecaUploader({ orgId }: { orgId: string }) {
     <div className="grid gap-3 rounded-lg border border-dashed p-4 sm:grid-cols-3">
       <div className="space-y-1.5">
         <Label htmlFor="bib_categoria">Categoria</Label>
-        <select
+        <NativeSelect
           id="bib_categoria"
           value={categoria}
           onChange={(e) => setCategoria(e.target.value)}
-          className={selectClasses}
         >
           {CATEGORIAS_BIBLIOTECA.map((c) => (
             <option key={c} value={c}>
               {CATEGORIA_BIBLIOTECA_INFO[c].label}
             </option>
           ))}
-        </select>
+        </NativeSelect>
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="bib_titulo">Título *</Label>

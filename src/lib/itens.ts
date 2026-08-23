@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 export type TipoItem = "equipamento" | "material_retornavel" | "consumivel";
 
 export const TIPO_ITEM: Record<
@@ -23,3 +25,30 @@ export const TIPO_ITEM: Record<
 
 /** Sugestões de unidade de medida (o campo é livre). */
 export const UNIDADES = ["un", "m", "m²", "m³", "kg", "L", "par", "cj"];
+
+// ── Schema ───────────────────────────────────────────────────────────────────
+// Fica aqui, e não em `itens/actions.ts`, para poder ser importado pelo
+// formulário — um arquivo "use server" não atravessa para o cliente.
+
+
+export const TIPOS_ITEM = [
+  "equipamento",
+  "material_retornavel",
+  "consumivel",
+] as const;
+
+export const itemSchema = z.object({
+  id: z.string().uuid().optional(),
+  tipo: z.enum(TIPOS_ITEM),
+  descricao: z.string().trim().min(1, "Informe a descrição do item.").max(200),
+  unidade: z
+    .string()
+    .trim()
+    .max(10)
+    .optional()
+    .transform((v) => (v && v.length > 0 ? v : null)),
+  ativo: z.boolean(),
+});
+
+export type ItemInput = z.input<typeof itemSchema>;
+export type ItemDados = z.output<typeof itemSchema>;

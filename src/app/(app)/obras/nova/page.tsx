@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentPerfil, podeEditarCadastros } from "@/lib/auth";
-import { PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { ObraForm } from "../obra-form";
 

@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.19.4";
+export const APP_VERSION = "0.31.1";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,179 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.31.1",
+    data: "2026-08-23",
+    titulo: "Imóveis encerrados fora da lista",
+    mudancas: [
+      { tipo: "melhoria", texto: "A lista de imóveis não mostra mais os encerrados por padrão. Eles continuam acessíveis: basta escolher \"Encerrado\" no filtro de Status. O contador e o custo mensal passam a refletir só o que está em uso." },
+    ],
+  },
+  {
+    versao: "0.31.0",
+    data: "2026-08-23",
+    titulo: "Versão e data nos documentos, e tabelas no padrão do RH",
+    mudancas: [
+      { tipo: "novo", texto: "Todo documento agora traz a versão do texto e a data de publicação no cabeçalho de cada página — \"Versão 1.2 · 22/08/2026\". É o que identifica qual texto o empregado assinou." },
+      { tipo: "novo", texto: "A versão é editável em Configurações → Templates de documentos, junto com o texto: ao revisar uma cláusula, aumente a versão. A data se atualiza sozinha ao salvar, sem depender de alguém lembrar." },
+      { tipo: "melhoria", texto: "As tabelas dos documentos ganharam o formato dos originais do RH: cabeçalho com fundo cheio, linhas alternadas, grade completa e primeira coluna em negrito." },
+      { tipo: "correcao", texto: "A matriz de responsabilidades da Política de Alojamento estava errada: saía como lista de papel e atribuições, quando a original é uma matriz de atividade por papel (R, A, C, I). Refeita, com o detalhamento por papel logo abaixo." },
+    ],
+  },
+  {
+    versao: "0.30.0",
+    data: "2026-08-23",
+    titulo: "Anexos na Política de Alojamento",
+    mudancas: [
+      { tipo: "correcao", texto: "Na Política de Alojamento, a matriz de responsabilidades e a tabela de infrações apareciam DUAS vezes: embaralhadas em texto corrido no meio dos itens 10 e 11.3, e corretas no fim do documento. O texto embaralhado saiu." },
+      { tipo: "melhoria", texto: "As duas tabelas passaram a ser Anexo I e Anexo II, cada um em página própria, e os itens 10 e 11.3 agora as citam. Revisar uma penalidade deixa de exigir mexer na cláusula que a invoca." },
+      { tipo: "melhoria", texto: "No Termo de Compromisso, a tabela de penalidades virou Anexo I, e o empregado assina declarando ciência de um anexo identificável." },
+      { tipo: "correcao", texto: "Cadastrar ocupante sem preencher CPF, e registrar reparo sem preencher Executor, falhavam com erro genérico. Qualquer campo opcional deixado em branco causava isso." },
+      { tipo: "correcao", texto: "Na lista de fornecedores, o nome e os botões de ação nunca apareciam ao mesmo tempo: rolar até a lixeira empurrava o nome para fora da tela. As duas colunas agora ficam fixas." },
+    ],
+  },
+  {
+    versao: "0.29.1",
+    data: "2026-08-23",
+    titulo: "Entregas com PDF preenchido",
+    mudancas: [
+      { tipo: "novo", texto: "As entregas registradas passam a gerar o formulário já preenchido — FRM-RH-003 para chaves e FRM-RH-004 para o kit —, como já acontecia com a medida disciplinar. Antes o registro existia no sistema mas a folha saía em branco." },
+      { tipo: "novo", texto: "Um aceite registrado por engano pode ser desfeito por quem gere cadastros." },
+      { tipo: "correcao", texto: "No formulário do kit, a caixa do lençol nunca era marcada no documento preenchido: o nome do item era escrito de duas formas diferentes no sistema e no PDF." },
+    ],
+  },
+  {
+    versao: "0.29.0",
+    data: "2026-08-22",
+    titulo: "Aceite eletrônico do Termo de Compromisso",
+    mudancas: [
+      { tipo: "novo", texto: "Na lista de ocupantes é possível registrar o aceite eletrônico do Termo de Compromisso. O termo gerado passa a trazer a data, a hora e o IP do aceite no lugar da linha para assinar à mão." },
+      { tipo: "melhoria", texto: "Um aceite já registrado não é sobrescrito: a data do primeiro aceite é a que vale como prova do momento original." },
+      { tipo: "seguranca", texto: "O aceite eletrônico é complemento do termo em papel, não substituto: ele comprova que a confirmação partiu daquela sessão autenticada, naquele momento, e não a identidade de quem assinou. O termo assinado continua sendo o documento de referência até parecer do Jurídico." },
+    ],
+  },
+  {
+    versao: "0.28.0",
+    data: "2026-08-22",
+    titulo: "Rotina de limpeza do alojamento",
+    mudancas: [
+      { tipo: "novo", texto: "A tela do imóvel ganhou o controle da limpeza: abrir a semana, ver as semanas anteriores com a avaliação do Encarregado e baixar a folha já com o período preenchido." },
+      { tipo: "novo", texto: "O catálogo de 44 tarefas de limpeza pode ser criado de uma vez, a partir do padrão do FRM-RH-005, e depois fica editável pela organização. A folha impressa passa a usar esse catálogo." },
+      { tipo: "melhoria", texto: "A folha semanal traz só as tarefas diárias e semanais; as mensais saem numa folha separada. É o que faz a impressão semanal caber e deixa de gastar papel com o que só se faz uma vez por mês." },
+    ],
+  },
+  {
+    versao: "0.27.0",
+    data: "2026-08-22",
+    titulo: "Medidas disciplinares e entregas ao alojado",
+    mudancas: [
+      { tipo: "novo", texto: "A tela do imóvel ganhou o registro de medidas disciplinares (advertência e suspensão). O sistema recusa suspensão acima de 30 dias, que é o limite do art. 474 da CLT, e gera o FRM-RH-002 já preenchido para assinatura." },
+      { tipo: "novo", texto: "Registro de entregas ao alojado — chaves e kit de alojamento — com data de entrega, data de devolução e tratativa. O que foi entregue e ainda não voltou aparece primeiro na lista." },
+      { tipo: "seguranca", texto: "Medidas disciplinares são visíveis apenas para quem gere cadastros. Quem tem acesso à obra não passa a ter, por isso, acesso à advertência de um colega. Excluir uma medida é permitido só ao master, e a ação fica registrada na auditoria." },
+      { tipo: "correcao", texto: "Nos documentos preenchidos pelo sistema, as caixas marcadas apareciam vazias: o X era maior que a caixa e ficava recortado." },
+    ],
+  },
+  {
+    versao: "0.26.0",
+    data: "2026-08-22",
+    titulo: "Política de Alojamento no sistema",
+    mudancas: [
+      { tipo: "novo", texto: "A Política de Alojamento (POL-RH-001) passa a ser gerada pelo próprio sistema, com as 16 seções, a matriz de responsabilidades e a tabela de infrações e penalidades. Fica em Imóveis → Documentos, junto dos formulários." },
+      { tipo: "melhoria", texto: "A política caiu de 14 para 7 páginas impressas, sem cortar uma linha do conteúdo — só com o padrão tipográfico do sistema." },
+      { tipo: "melhoria", texto: "O texto da política também pode ser revisado em Configurações → Templates de documentos, o que dispensa republicar o arquivo a cada ajuste do Jurídico." },
+    ],
+  },
+  {
+    versao: "0.25.0",
+    data: "2026-08-22",
+    titulo: "Formulários do alojamento prontos para imprimir",
+    mudancas: [
+      { tipo: "novo", texto: "Quatro formulários do alojamento passam a sair do próprio sistema, no padrão visual da Sistenge: medida disciplinar (FRM-RH-002), entrega e devolução de chaves com checklist de conservação (FRM-RH-003), recebimento e devolução do kit (FRM-RH-004) e o checklist semanal de limpeza (FRM-RH-005). Ficam em Imóveis → Documentos, prontos para baixar e preencher à mão." },
+      { tipo: "novo", texto: "O checklist de limpeza tem duas folhas: a semanal, com as tarefas diárias e semanais, e uma folha mensal separada só com as tarefas de frequência mensal — assim a folha que vai para a obra toda semana não carrega o que só se faz uma vez por mês." },
+      { tipo: "melhoria", texto: "O texto de qualquer um desses formulários pode ser editado em Configurações → Templates de documentos, sem depender de atualização do sistema." },
+      { tipo: "correcao", texto: "As caixas de marcação dos formulários não estavam aparecendo no PDF — as opções saíam como texto solto e as colunas de vistoria, em branco. Agora são desenhadas e imprimem em qualquer leitor." },
+    ],
+  },
+  {
+    versao: "0.24.0",
+    data: "2026-08-22",
+    titulo: "Termo de Compromisso de Alojamento",
+    mudancas: [
+      { tipo: "novo", texto: "O termo gerado no ocupante do imóvel agora é o Termo de Compromisso de Alojamento (FRM-RH-001) por inteiro: as 22 regras de convivência, o consentimento informado de câmeras (CFTV), a cláusula do armário individual, a tabela de penalidades e o canal de denúncias. Antes saía uma versão curta, com quatro parágrafos genéricos." },
+      { tipo: "novo", texto: "O cadastro do ocupante ganhou função, número do quarto e número do armário. Esses dados saem preenchidos no termo; os que o sistema não guarda (RG, data de admissão, encarregado e contato de emergência) saem como linha em branco, para preencher à mão." },
+      { tipo: "melhoria", texto: "Os templates de documentos, em Configurações, aparecem agrupados por módulo — fica claro de onde cada documento é gerado." },
+      { tipo: "melhoria", texto: "Contratos e termos passaram a sair com o logotipo da Sistenge no cabeçalho, no lugar do nome escrito por extenso." },
+      { tipo: "melhoria", texto: "Ao cadastrar um ocupante, o sistema agora avisa se a data de saída for anterior à de entrada, em vez de aceitar em silêncio." },
+      { tipo: "correcao", texto: "Os documentos de várias páginas passam a trazer o rodapé com a numeração (\"Página 2 de 3\") em todas as folhas — importante para comprovar que nenhuma página foi retirada." },
+    ],
+  },
+  {
+    versao: "0.23.0",
+    data: "2026-08-07",
+    titulo: "Telas de detalhe mais rápidas e correção na cobrança por período",
+    mudancas: [
+      { tipo: "correcao", texto: "Entre 21h e a meia-noite, o custo estimado do contrato cobrava um período inteiro a mais, e a coluna \"Custo até hoje\" dos relatórios saía com um dia extra de locação. A causa era a mesma da versão anterior — o sistema já considerava o dia seguinte —, mas em outro ponto do cálculo. O dia passa a ser sempre o de Brasília também aqui." },
+      { tipo: "correcao", texto: "No último dia do mês, depois das 21h, a projeção do fluxo de caixa começava do mês seguinte e deixava o mês corrente de fora." },
+      { tipo: "correcao", texto: "No dia 31 de dezembro, depois das 21h, um contrato novo era numerado com o ano seguinte." },
+      { tipo: "melhoria", texto: "As telas de imóvel, contrato e vistoria abrem muito mais rápido. Antes elas esperavam TODAS as informações — contratos, contas, reparos, fotos, anexos — antes de mostrar qualquer coisa. Agora o cabeçalho e o resumo aparecem de imediato e cada bloco vai chegando à medida que fica pronto." },
+      { tipo: "correcao", texto: "Na tela do contrato, o histórico de auditoria aparecia logo abaixo do título, antes do resumo do contrato. Voltou para o fim da página." },
+      { tipo: "seguranca", texto: "Nas listas de reparos e ocorrências do imóvel, quem tem acesso somente de leitura via os botões de anexar e de excluir. Eles não funcionavam, mas não deviam estar visíveis — as demais listas da mesma tela já os escondiam." },
+      { tipo: "melhoria", texto: "O formulário de reparo do imóvel passou a validar os campos na hora, e o valor não aceita mais texto inválido: antes qualquer coisa que não fosse número era gravada como R$ 0,00, sem avisar." },
+      { tipo: "correcao", texto: "Os avisos em amarelo (relatório sem assinatura, CNPJ já cadastrado) estavam com o texto claro demais sobre o fundo e ficavam difíceis de ler." },
+      { tipo: "correcao", texto: "Em Financeiro e Imóveis, os indicadores do topo podiam discordar da tabela: as condições dos filtros eram aplicadas em dois lugares separados, e bastava um deles ficar de fora para os totais somarem um recorte diferente do que a lista mostrava." },
+      { tipo: "correcao", texto: "Digitar um endereço que não existe levava a uma página em branco com texto em inglês. Agora aparece uma tela em português com um botão para voltar ao início." },
+    ],
+  },
+  {
+    versao: "0.22.0",
+    data: "2026-08-06",
+    titulo: "Filtros ao vivo e correção no cálculo de datas",
+    mudancas: [
+      { tipo: "correcao", texto: "Entre 21h e a meia-noite o sistema considerava o dia seguinte. Isso fazia contas com vencimento para hoje aparecerem como vencidas, cobrava um dia a mais no cálculo de multa e juros da baixa, e imprimia os contratos, termos e laudos com a data de amanhã. O dia passa a ser sempre o de Brasília." },
+      { tipo: "melhoria", texto: "A busca das listagens aplica sozinha enquanto você digita, com um botão para limpar — antes era preciso apertar Enter. Quem preferir, Enter continua funcionando." },
+      { tipo: "melhoria", texto: "Os filtros ficaram iguais em todas as listas e aplicam na hora, sem botão \"Filtrar\". Um botão \"Limpar\" aparece quando há algum filtro ativo." },
+      { tipo: "correcao", texto: "Filtrar por obra deixava de considerar a busca que você já tinha digitado. Agora os filtros se somam." },
+      { tipo: "correcao", texto: "Mudar um filtro estando na página 3 mantinha o pedido pela página 3 de um resultado que passou a ter uma só, e a lista aparecia vazia. Agora volta para a primeira página." },
+      { tipo: "melhoria", texto: "As telas de imóvel, contrato e vistoria abrem mais rápido: os anexos passaram a ser liberados de uma vez, em vez de um por um." },
+      { tipo: "melhoria", texto: "Todas as telas abrem mais rápido: os dados do seu usuário e a lista de obras eram consultados várias vezes para montar uma única página, e agora são consultados uma vez só." },
+      { tipo: "melhoria", texto: "As telas sem nenhum registro agora explicam para que serve aquele cadastro, em vez de só dizer que está vazio." },
+      { tipo: "melhoria", texto: "Os indicadores de Financeiro e Imóveis ganharam ícone e cor conforme a situação — vencido em vermelho, pago em verde." },
+    ],
+  },
+  {
+    versao: "0.21.0",
+    data: "2026-08-06",
+    titulo: "Nova navegação",
+    mudancas: [
+      { tipo: "novo", texto: "O menu lateral agora fica recolhido, só com os ícones, e se abre quando você passa o mouse — sobra bem mais espaço para as tabelas e os relatórios." },
+      { tipo: "novo", texto: "Busca rápida: aperte Ctrl+K (ou ⌘+K no Mac) em qualquer tela para pular direto para um módulo ou começar um cadastro, navegando pelas setas do teclado." },
+      { tipo: "novo", texto: "Uma trilha no topo mostra onde você está — por exemplo “Início › Contratos › Novo” — e leva de volta com um clique." },
+      { tipo: "novo", texto: "No celular e no tablet o menu virou uma gaveta que abre pelo botão de três linhas, em vez da faixa de ícones que rolava para o lado no pé da tela." },
+      { tipo: "melhoria", texto: "Seu nome, perfil, “Meu perfil” e “Sair” ficam reunidos no menu do avatar, no canto superior direito." },
+      { tipo: "melhoria", texto: "O topo da tela acompanha a rolagem, então a busca e o menu do usuário estão sempre à mão." },
+      { tipo: "melhoria", texto: "As telas de entrar, recuperar senha e definir nova senha ganharam uma apresentação em duas colunas." },
+      { tipo: "melhoria", texto: "Ao abrir uma listagem ou um imóvel, contrato ou vistoria, aparece um esboço da própria tela em vez de um indicador genérico — a página deixa de “saltar” quando os dados chegam." },
+      { tipo: "novo", texto: "Endereço inexistente passa a mostrar uma tela própria, dentro do sistema, com atalho de volta ao Início." },
+      { tipo: "melhoria", texto: "A tela de erro mostra um código do ocorrido, que você pode informar ao pedir suporte." },
+      { tipo: "melhoria", texto: "A tela de “sem conexão” acompanha o tema claro ou escuro do seu aparelho." },
+    ],
+  },
+  {
+    versao: "0.20.0",
+    data: "2026-08-06",
+    titulo: "Nova identidade visual",
+    mudancas: [
+      { tipo: "novo", texto: "O Loca passa a ter a mesma cara do Sistenge People: fundo claro, cartões brancos com sombra leve, cantos arredondados e o vermelho da Sistenge reservado ao logotipo e às marcações de urgência." },
+      { tipo: "novo", texto: "Modo escuro. O botão de sol/lua no topo da tela alterna entre claro e escuro, e por padrão o sistema segue a preferência do seu computador ou celular." },
+      { tipo: "melhoria", texto: "Textos e números em tipografia nova (Inter), com os valores em dinheiro alinhados em coluna para facilitar a comparação entre linhas." },
+      { tipo: "melhoria", texto: "Campos, botões e listas de seleção ficaram maiores e do mesmo tamanho em todas as telas — antes uma lista de seleção podia aparecer menor que o campo ao lado." },
+      { tipo: "melhoria", texto: "Tabelas com mais respiro entre as linhas, ficando mais fáceis de ler em telas grandes." },
+      { tipo: "melhoria", texto: "Excluir um registro abre uma janela de confirmação dentro do sistema, e o motivo aparece ali mesmo quando a exclusão é recusada — antes era o aviso cinza do navegador e o motivo surgia num canto da tela." },
+      { tipo: "melhoria", texto: "A tela de erro passa a mostrar um código do ocorrido, que você pode informar ao pedir suporte." },
+      { tipo: "melhoria", texto: "Contratos, termos e e-mails do sistema seguem a mesma paleta das telas." },
+      { tipo: "seguranca", texto: "O sistema passa a enviar cabeçalhos de segurança que impedem que suas telas sejam embutidas em outros sites e restringem de onde o navegador pode carregar conteúdo." },
+    ],
+  },
   {
     versao: "0.19.4",
     data: "2026-07-29",

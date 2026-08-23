@@ -7,9 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { NativeSelect } from "@/components/ui/native-select";
 
-const selectClasses =
-  "flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 export function VistoriaForm({
   contratos,
@@ -27,12 +26,11 @@ export function VistoriaForm({
     <form action={formAction} className="space-y-5">
       <div className="space-y-2">
         <Label htmlFor="contrato_id">Contrato *</Label>
-        <select
+        <NativeSelect
           id="contrato_id"
           name="contrato_id"
           required
           defaultValue={contratoIdInicial ?? ""}
-          className={selectClasses}
         >
           <option value="" disabled>
             Selecione…
@@ -42,16 +40,16 @@ export function VistoriaForm({
               {c.numero} — {c.obra}
             </option>
           ))}
-        </select>
+        </NativeSelect>
       </div>
 
       <div className="grid gap-5 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="tipo">Tipo *</Label>
-          <select id="tipo" name="tipo" defaultValue="entrada" className={selectClasses}>
+          <NativeSelect id="tipo" name="tipo" defaultValue="entrada">
             <option value="entrada">Entrada (retirada)</option>
             <option value="devolucao">Devolução</option>
-          </select>
+          </NativeSelect>
         </div>
         <div className="space-y-2">
           <Label htmlFor="data">Data *</Label>

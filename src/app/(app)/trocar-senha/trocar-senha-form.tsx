@@ -1,26 +1,85 @@
 "use client";
 
-import { useActionState } from "react";
-import { trocarSenha, type TrocarSenhaState } from "./actions";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { trocarSenhaSchema, type TrocarSenhaInput } from "@/lib/permissoes";
+import { FormError } from "@/components/shared/form-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { trocarSenha } from "./actions";
 
 export function TrocarSenhaForm() {
-  const [state, action, pending] = useActionState<TrocarSenhaState, FormData>(trocarSenha, {});
+  const router = useRouter();
+  const [erroServidor, setErroServidor] = useState<string | null>(null);
+  const [pendente, startTransition] = useTransition();
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<TrocarSenhaInput>({
+    resolver: zodResolver(trocarSenhaSchema),
+    defaultValues: { senha: "", confirmar: "" },
+  });
+
+  function onSubmit(values: TrocarSenhaInput) {
+    setErroServidor(null);
+    startTransition(async () => {
+      const r = await trocarSenha(values);
+      if (!r.ok) {
+        setErroServidor(r.erro);
+        return;
+      }
+      toast.success("Senha alterada.");
+      // A navegação é do cliente: a action não pode redirecionar e devolver
+      // ActionResult ao mesmo tempo.
+      router.replace("/");
+      router.refresh();
+    });
+  }
+
   return (
-    <form action={action} className="space-y-4">
-      <div className="space-y-2">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <div className="space-y-1.5">
         <Label htmlFor="senha">Nova senha</Label>
-        <Input id="senha" name="senha" type="password" required minLength={8} autoComplete="new-password" />
+        <Input
+          id="senha"
+          type="password"
+          autoComplete="new-password"
+          aria-invalid={!!errors.senha}
+          disabled={pendente}
+          {...register("senha")}
+        />
+        {errors.senha ? (
+          <p className="text-xs text-destructive">{errors.senha.message}</p>
+        ) : null}
       </div>
-      <div className="space-y-2">
+
+      <div className="space-y-1.5">
         <Label htmlFor="confirmar">Confirmar nova senha</Label>
-        <Input id="confirmar" name="confirmar" type="password" required minLength={8} autoComplete="new-password" />
+        <Input
+          id="confirmar"
+          type="password"
+          autoComplete="new-password"
+          aria-invalid={!!errors.confirmar}
+          disabled={pendente}
+          {...register("confirmar")}
+        />
+        {errors.confirmar ? (
+          <p className="text-xs text-destructive">{errors.confirmar.message}</p>
+        ) : null}
       </div>
-      {state.error ? <p className="text-sm text-destructive">{state.error}</p> : null}
-      <Button type="submit" disabled={pending} className="w-full">
-        {pending ? "Salvando…" : "Definir nova senha"}
+
+      <FormError>{erroServidor}</FormError>
+
+      <Button type="submit" disabled={pendente} className="w-full">
+        {pendente ? <Loader2 className="size-4 animate-spin" /> : null}
+        {pendente ? "Salvando…" : "Definir nova senha"}
       </Button>
     </form>
   );

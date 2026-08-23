@@ -1,15 +1,18 @@
 "use client";
 
-import { useTransition } from "react";
 import { Trash2 } from "lucide-react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 
 /**
  * Botão de excluir que pede confirmação e chama um server action.
  * O `action` é passado do server component (referência de server action).
- * Se a exclusão for recusada, mostra o motivo num toast — antes o erro voltava
- * do servidor e era descartado, dando a impressão de que nada acontecia.
+ *
+ * Os props são exatamente os de antes, de propósito: os 18 call sites em 9
+ * arquivos não mudam. O que mudou é o miolo — era `window.confirm()`, sem
+ * estilo, sem tema e bloqueante, e o motivo de uma recusa aparecia num toast
+ * longe do botão clicado. Agora é o ConfirmDialog do sistema, e o erro do
+ * servidor aparece dentro do próprio diálogo, que fica aberto.
  */
 export function ConfirmDelete({
   action,
@@ -25,35 +28,38 @@ export function ConfirmDelete({
   /** Quando informado, mostra um botão com texto em vez do ícone de lixeira. */
   rotulo?: string;
 }) {
-  const [pendente, iniciar] = useTransition();
-
-  function excluir() {
-    if (!window.confirm(mensagem)) return;
-    const formData = new FormData();
-    formData.set("id", id);
-    for (const [chave, valor] of Object.entries(hidden ?? {})) {
-      formData.set(chave, valor);
-    }
-    iniciar(async () => {
-      const resultado = await action(formData);
-      if (resultado?.error) toast.error(resultado.error);
-    });
-  }
-
   return (
-    <Button
-      type="button"
-      variant={rotulo ? "outline" : "ghost"}
-      size={rotulo ? "default" : "icon-sm"}
-      aria-label={rotulo ? undefined : "Excluir"}
-      disabled={pendente}
-      onClick={excluir}
-      className={
-        rotulo ? "text-destructive" : "text-muted-foreground hover:text-destructive"
+    <ConfirmDialog
+      destrutivo
+      titulo="Excluir registro?"
+      descricao={mensagem}
+      confirmarLabel="Excluir"
+      trigger={
+        <Button
+          type="button"
+          variant={rotulo ? "outline" : "ghost"}
+          size={rotulo ? "default" : "icon-sm"}
+          aria-label={rotulo ? undefined : "Excluir"}
+          className={
+            rotulo
+              ? "text-destructive"
+              : "text-muted-foreground hover:text-destructive"
+          }
+        >
+          <Trash2 />
+          {rotulo}
+        </Button>
       }
-    >
-      <Trash2 />
-      {rotulo}
-    </Button>
+      onConfirm={async () => {
+        const formData = new FormData();
+        formData.set("id", id);
+        for (const [chave, valor] of Object.entries(hidden ?? {})) {
+          formData.set(chave, valor);
+        }
+        const resultado = await action(formData);
+        // string devolvida = erro inline; o diálogo permanece aberto.
+        if (resultado?.error) return resultado.error;
+      }}
+    />
   );
 }

@@ -1,13 +1,13 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ChevronRight, FileText } from "lucide-react";
+import { FileText } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeConfigurarSistema } from "@/lib/auth";
-import { PageHeader } from "@/components/page-header";
-import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { DOCUMENTOS } from "@/lib/templates";
+import { Card, CardContent } from "@/components/ui/card";
+import { MODULOS } from "@/lib/modulos";
+import { documentosDoModulo } from "@/lib/templates";
+import { ConfigRow, SecaoTitulo } from "@/components/shared/config-row";
 
 export const metadata = { title: "Templates de documentos — Loca" };
 
@@ -25,34 +25,33 @@ export default async function TemplatesPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <PageHeader
-        eyebrow="Configurações"
         titulo="Templates de documentos"
         descricao="Edite o texto dos contratos e termos com variáveis que o sistema preenche."
       />
-      {DOCUMENTOS.map((doc) => (
-        <Card key={doc.tipo}>
-          <CardHeader className="flex-row items-center justify-between space-y-0">
-            <div>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <FileText className="size-4" /> {doc.label}
-                {personalizados.has(doc.tipo) ? (
-                  <Badge variant="secondary">Personalizado</Badge>
-                ) : (
-                  <Badge variant="outline">Padrão</Badge>
-                )}
-              </CardTitle>
-              <CardDescription>{doc.descricao}</CardDescription>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              render={<Link href={`/configuracoes/templates/${doc.tipo}`} />}
-            >
-              Editar
-              <ChevronRight className="size-4" />
-            </Button>
-          </CardHeader>
-        </Card>
+      {MODULOS.filter((m) => documentosDoModulo(m.chave).length > 0).map((m) => (
+        <div key={m.chave} className="space-y-2">
+          <SecaoTitulo>{m.label}</SecaoTitulo>
+          <Card>
+            <CardContent className="divide-y p-0">
+              {documentosDoModulo(m.chave).map((doc) => (
+                <ConfigRow
+                  key={doc.tipo}
+                  href={`/configuracoes/templates/${doc.tipo}`}
+                  icon={FileText}
+                  titulo={doc.label}
+                  descricao={doc.descricao}
+                  extra={
+                    personalizados.has(doc.tipo) ? (
+                      <Badge variant="secondary">Personalizado</Badge>
+                    ) : (
+                      <Badge variant="outline">Padrão</Badge>
+                    )
+                  }
+                />
+              ))}
+            </CardContent>
+          </Card>
+        </div>
       ))}
     </div>
   );

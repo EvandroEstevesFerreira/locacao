@@ -1,11 +1,15 @@
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentPerfil, podeEditarCadastros } from "@/lib/auth";
+import {
+  getCurrentPerfil,
+  podeEditarCadastros,
+  podeConfigurarSistema,
+} from "@/lib/auth";
 import { formatarData } from "@/lib/locacao";
 import {
   CATEGORIAS_BIBLIOTECA,
   CATEGORIA_BIBLIOTECA_INFO,
 } from "@/lib/biblioteca";
-import { PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/components/shared/page-header";
 import {
   Card,
   CardContent,
@@ -15,6 +19,11 @@ import {
 } from "@/components/ui/card";
 import { BibliotecaUploader } from "../biblioteca-uploader";
 import { BibliotecaItem } from "../biblioteca-item";
+import { assinarUrls } from "@/lib/data/storage";
+import { documentosDoModulo } from "@/lib/templates";
+import { DocumentoSistema } from "../documento-sistema";
+import { EmptyState } from "@/components/shared/empty-state";
+import { FileText } from "lucide-react";
 
 export const metadata = { title: "Documentos do alojamento — Loca" };
 
@@ -30,6 +39,9 @@ type Doc = {
 export default async function DocumentosPage() {
   const perfil = await getCurrentPerfil();
   const podeEditar = podeEditarCadastros(perfil?.papel);
+  // Editar o TEXTO de um documento é ato de configuração do sistema, mais
+  // restrito que gerenciar a biblioteca de arquivos enviados.
+  const podeEditarTexto = podeConfigurarSistema(perfil?.papel);
 
   const supabase = await createClient();
   const { data } = await supabase
@@ -38,18 +50,11 @@ export default async function DocumentosPage() {
     .order("created_at", { ascending: false });
   const docs = (data ?? []) as Doc[];
 
-  const url = new Map<string, string>();
-  await Promise.all(
-    docs.map(async (d) => {
-      const { data } = await supabase.storage.from("imoveis").createSignedUrl(d.path, 3600);
-      if (data?.signedUrl) url.set(d.path, data.signedUrl);
-    }),
-  );
+  const url = await assinarUrls("imoveis", docs.map((d) => d.path));
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <PageHeader
-        eyebrow="Imóveis"
         titulo="Documentos do alojamento"
         descricao="Normativos, formulários e placas padronizadas — para consultar, baixar e imprimir."
       />
@@ -69,12 +74,53 @@ export default async function DocumentosPage() {
         </Card>
       ) : null}
 
+      {/* Documentos GERADOS pelo sistema, acima dos enviados. Vêm do mesmo
+          catálogo que alimenta Configurações → Templates de documentos: um só
+          lugar declara título, categoria e módulo. */}
+      {CATEGORIAS_BIBLIOTECA.map((cat) => {
+        const gerados = documentosDoModulo("imoveis").filter(
+          (d) => d.categoria === cat && d.preenchimento === "em_branco",
+        );
+        if (gerados.length === 0) return null;
+        const info = CATEGORIA_BIBLIOTECA_INFO[cat];
+        return (
+          <Card key={`sistema-${cat}`}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">{info.label} do sistema</CardTitle>
+              <CardDescription>
+                Gerados pelo Loca, sempre atualizados. Para mudar o texto, use
+                Configurações → Templates de documentos.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-1">
+              {gerados.map((d) => (
+                <DocumentoSistema
+                  key={d.tipo}
+                  tipo={d.tipo}
+                  titulo={d.label}
+                  descricao={d.descricao}
+                  podeEditar={podeEditarTexto}
+                  variantes={
+                    d.tipo === "checklist_limpeza"
+                      ? [
+                          { rotulo: "Folha semanal", query: "" },
+                          { rotulo: "Folha mensal", query: "?variante=mensal" },
+                        ]
+                      : undefined
+                  }
+                />
+              ))}
+            </CardContent>
+          </Card>
+        );
+      })}
+
       {docs.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="py-16 text-center text-sm text-muted-foreground">
-            Nenhum documento na biblioteca ainda.
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={<FileText />}
+          titulo="Nenhum documento na biblioteca"
+          descricao="Normativos, formulários e placas ficam aqui para consultar, baixar e imprimir."
+        />
       ) : (
         CATEGORIAS_BIBLIOTECA.map((cat) => {
           const doList = docs.filter((d) => d.categoria === cat);

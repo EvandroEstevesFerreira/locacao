@@ -1,6 +1,7 @@
 // Cálculos financeiros puros (client-safe, testáveis): geração de parcelas
 // mensais recorrentes e encargos por atraso (multa + juros).
 
+import { z } from "zod";
 import {
   addMonths,
   format,
@@ -91,3 +92,73 @@ export function calcularEncargos(opts: {
 function round2(n: number): number {
   return Math.round((n + Number.EPSILON) * 100) / 100;
 }
+
+// ── Schema ───────────────────────────────────────────────────────────────────
+// Aqui, e não em `financeiro/actions.ts`, para o formulário poder importar.
+
+
+export const STATUS_LANCAMENTO = ["pendente", "pago"] as const;
+export type StatusLancamento = (typeof STATUS_LANCAMENTO)[number];
+
+/** 'yyyy-mm' (input month) ou 'yyyy-mm-dd' → 'yyyy-mm-01'. */
+export function competenciaParaData(v: string): string {
+  const base = v.length === 7 ? `${v}-01` : v;
+  return `${base.slice(0, 7)}-01`;
+}
+
+export const lancamentoSchema = z
+  .object({
+    id: z.string().uuid().optional(),
+    obra_id: z.string().uuid("Selecione a obra."),
+    contrato_id: z
+      .string()
+      .optional()
+      .transform((v) => (v && v.length > 0 ? v : null)),
+    descricao: z.string().trim().min(1, "Informe a descrição.").max(200),
+    competencia: z
+      .string()
+      .regex(/^\d{4}-\d{2}(-\d{2})?$/, "Competência inválida (use AAAA-MM).")
+      .transform(competenciaParaData),
+    valor: z.coerce.number().positive("O valor deve ser maior que zero."),
+    vencimento: z.string().min(1, "Informe o vencimento."),
+    status: z.enum(STATUS_LANCAMENTO),
+    data_pagamento: z
+      .string()
+      .optional()
+      .transform((v) => (v && v.length > 0 ? v : null)),
+  })
+  // Regra cruzada: o vencimento não pode ser anterior ao mês de competência.
+  // Um lançamento de julho vencendo em maio é erro de digitação, e antes passava
+  // direto — reaparecendo depois como "vencido" num mês que nem começou.
+  .refine((d) => d.vencimento >= d.competencia, {
+    message: "O vencimento não pode ser anterior ao mês de competência.",
+    path: ["vencimento"],
+  });
+
+export type LancamentoInput = z.input<typeof lancamentoSchema>;
+export type LancamentoDados = z.output<typeof lancamentoSchema>;
+
+/**
+ * Baixa (conciliação) de um lançamento. Já era chamada com um objeto tipado
+ * direto do cliente, então o schema aqui só formaliza as checagens que estavam
+ * espalhadas em `if`s dentro da action.
+ */
+export const baixaSchema = z.object({
+  id: z.string().uuid(),
+  valorPago: z.coerce.number().positive("Informe o valor pago."),
+  multa: z.coerce.number().min(0, "Multa inválida.").default(0),
+  juros: z.coerce.number().min(0, "Juros inválidos.").default(0),
+  nfNumero: z
+    .string()
+    .trim()
+    .max(60)
+    .optional()
+    .transform((v) => (v && v.length > 0 ? v : null)),
+  dataPagamento: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Data de pagamento inválida."),
+  comprovantePath: z.string().nullable().optional(),
+});
+
+export type BaixaInput = z.input<typeof baixaSchema>;
+export type BaixaDados = z.output<typeof baixaSchema>;

@@ -1,3 +1,5 @@
+import { AuthShell } from "@/components/shared/auth-shell";
+import { APP_VERSION } from "@/lib/changelog";
 import { NovaSenhaForm } from "./nova-senha-form";
 
 export const metadata = {
@@ -6,8 +8,12 @@ export const metadata = {
 
 export default function NovaSenhaPage() {
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-muted/40 p-4">
+    <AuthShell
+      titulo="Definir nova senha"
+      descricao="Escolha uma senha nova para entrar no Loca."
+      versao={APP_VERSION}
+    >
       <NovaSenhaForm />
-    </main>
+    </AuthShell>
   );
 }

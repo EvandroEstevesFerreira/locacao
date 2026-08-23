@@ -1,5 +1,11 @@
 // Gráfico de barras simples em CSS (sem dependências). Server-safe.
 // Alturas em pixels (não em %) para não depender da altura do contêiner flex.
+//
+// As barras usam `--foreground` com opacidade, não `--primary`. Com a paleta
+// Sistenge 2026 o primary é slate-900 no claro e inverte para slate-50 no
+// escuro — o que daria barras de branco puro sobre o card escuro, agressivo
+// demais. O foreground com opacidade dá a mesma hierarquia (mês corrente forte,
+// demais apagados) e se comporta nos dois temas.
 
 export type BarPoint = { label: string; value: number; destaque?: boolean };
 
@@ -35,7 +41,7 @@ export function BarChart({
                 {d.value > 0 ? formatValue(d.value) : ""}
               </span>
               <div
-                className={`w-full rounded-t ${d.destaque ? "bg-primary" : "bg-primary/55"}`}
+                className={`w-full rounded-t-sm ${d.destaque ? "bg-foreground/90" : "bg-foreground/40"}`}
                 style={{ height: alturaPx }}
                 title={`${d.label}: ${formatValue(d.value)}`}
               />
@@ -50,6 +56,51 @@ export function BarChart({
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Barras horizontais para ranking de categorias — o gráfico de /relatorios, que
+ * antes era montado à mão na própria página.
+ *
+ * É um componente separado, e não um prop `orientation` no BarChart, de
+ * propósito: os dois são gráficos genuinamente diferentes. O BarChart é série
+ * temporal com destaque do mês corrente e o valor sobre a coluna; este é
+ * ranking com o valor na linha do rótulo, sem noção de "agora". Um booleano de
+ * orientação seria a proliferação de prop que o Sistenge People evita — mas o
+ * cálculo do máximo e o vocabulário de cor ficam compartilhados aqui.
+ */
+export function HBarChart({
+  data,
+  formatValue = (n) => String(n),
+}: {
+  data: { label: string; valor: number }[];
+  formatValue?: (n: number) => string;
+}) {
+  if (data.length === 0) return null;
+  const max = data.reduce((m, d) => Math.max(m, d.valor), 0);
+
+  return (
+    <div className="space-y-3">
+      {data.map((d, i) => (
+        <div key={i}>
+          <div className="mb-1 flex justify-between gap-3 text-sm">
+            <span className="min-w-0 truncate">{d.label}</span>
+            <span className="shrink-0 font-medium tabular-nums">
+              {formatValue(d.valor)}
+            </span>
+          </div>
+          {/* Trilha e preenchimento arredondados: a borda reta sem raio era
+              artefato do antigo --radius: 0. */}
+          <div className="h-3 overflow-hidden rounded-full bg-muted">
+            <div
+              className="h-full rounded-full bg-foreground/80"
+              style={{ width: `${max > 0 ? (d.valor / max) * 100 : 0}%` }}
+            />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

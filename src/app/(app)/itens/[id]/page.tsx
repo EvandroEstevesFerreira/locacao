@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeEditarCadastros } from "@/lib/auth";
 import { TIPO_ITEM, type TipoItem } from "@/lib/itens";
-import { PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/components/shared/page-header";
 import {
   Card,
   CardContent,
@@ -13,6 +13,7 @@ import {
 import { ItemForm } from "../item-form";
 import { AddUnidadeForm } from "../add-unidade-form";
 import { excluirUnidade } from "../actions";
+import { ConfirmDelete } from "@/components/confirm-delete";
 
 export const metadata = { title: "Editar item — Loca" };
 
@@ -82,11 +83,12 @@ export default async function EditarItemPage({
                         </span>
                       ) : null}
                     </div>
-                    <form action={excluirUnidade}>
-                      <input type="hidden" name="id" value={u.id} />
-                      <input type="hidden" name="item_id" value={item.id} />
-                      <ConfirmDeleteInline />
-                    </form>
+                    <ConfirmDelete
+                      action={excluirUnidade}
+                      id={u.id}
+                      hidden={{ item_id: item.id }}
+                      mensagem="Excluir esta unidade do equipamento?"
+                    />
                   </li>
                 ))}
               </ul>
@@ -102,15 +104,3 @@ export default async function EditarItemPage({
   );
 }
 
-// Botão de excluir para itens dentro de um form já existente (sem form próprio).
-function ConfirmDeleteInline() {
-  return (
-    <button
-      type="submit"
-      aria-label="Excluir unidade"
-      className="rounded-md px-2 py-1 text-xs text-muted-foreground hover:text-destructive"
-    >
-      Remover
-    </button>
-  );
-}

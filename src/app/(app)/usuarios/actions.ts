@@ -1,11 +1,11 @@
 "use server";
 
-import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getCurrentPerfil, PAPEIS, PAPEL_INFO, type Papel } from "@/lib/auth";
+import { getCurrentPerfil, PAPEL_INFO, type Papel } from "@/lib/auth";
+import { criarUsuarioSchema, editarUsuarioSchema } from "@/lib/permissoes";
+import { falha, primeiroErro, type ActionResult } from "@/lib/acoes";
 import { normalizarModulos } from "@/lib/modulos";
 import {
   enviarEmail,
@@ -14,10 +14,6 @@ import {
   montarEmailSenhaRedefinida,
 } from "@/lib/email";
 
-export type UsuarioFormState = { error?: string };
-
-const papelSchema = z.enum(PAPEIS as unknown as [string, ...string[]]);
-
 /** Só o master gere usuários. Retorna o perfil master ou null. */
 async function exigirMaster() {
   const perfil = await getCurrentPerfil();
@@ -25,17 +21,13 @@ async function exigirMaster() {
   return perfil;
 }
 
-function obrasDoForm(formData: FormData) {
-  return formData.getAll("obras").map(String).filter(Boolean);
-}
-
 /**
- * Módulos marcados no form. Lista vazia → null (= acesso a todos os módulos),
- * evitando trancar o usuário fora de tudo por engano.
+ * Lista VAZIA de módulos vira `null`, que significa acesso a todos. Evita
+ * trancar o usuário fora de tudo por não ter marcado nenhuma caixa.
  */
-function modulosDoForm(formData: FormData): string[] | null {
-  const marcados = normalizarModulos(formData.getAll("modulos").map(String));
-  return marcados.length > 0 ? marcados : null;
+function modulosOuNull(marcados: string[]): string[] | null {
+  const validos = normalizarModulos(marcados);
+  return validos.length > 0 ? validos : null;
 }
 
 async function sincronizarObras(
@@ -54,38 +46,20 @@ async function sincronizarObras(
 // ---------------------------------------------------------------------------
 // Criar usuário (e-mail + senha temporária) — usa a API admin (service_role).
 // ---------------------------------------------------------------------------
-const criarSchema = z.object({
-  nome: z.string().trim().min(1, "Informe o nome.").max(120),
-  email: z.string().trim().email("E-mail inválido."),
-  papel: papelSchema,
-  senha: z.string().min(8, "A senha deve ter ao menos 8 caracteres."),
-});
-
-export async function criarUsuario(
-  _prev: UsuarioFormState,
-  formData: FormData,
-): Promise<UsuarioFormState> {
+export async function criarUsuario(raw: unknown): Promise<ActionResult> {
   const master = await exigirMaster();
-  if (!master) return { error: "Apenas o Master pode criar usuários." };
+  if (!master) return falha("Apenas o Master pode criar usuários.");
 
-  const parsed = criarSchema.safeParse({
-    nome: formData.get("nome"),
-    email: formData.get("email"),
-    papel: formData.get("papel"),
-    senha: formData.get("senha"),
-  });
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
-  }
+  const parsed = criarUsuarioSchema.safeParse(raw);
+  if (!parsed.success) return falha(primeiroErro(parsed.error.issues));
 
   let admin: ReturnType<typeof createAdminClient>;
   try {
     admin = createAdminClient();
   } catch {
-    return {
-      error:
-        "Criação indisponível: falta a chave SUPABASE_SERVICE_ROLE_KEY no ambiente.",
-    };
+    return falha(
+      "Criação indisponível: falta a chave SUPABASE_SERVICE_ROLE_KEY no ambiente.",
+    );
   }
 
   const { data: criado, error: errAuth } = await admin.auth.admin.createUser({
@@ -98,11 +72,11 @@ export async function criarUsuario(
     const jaExiste =
       errAuth?.message?.toLowerCase().includes("already") ||
       errAuth?.message?.toLowerCase().includes("registered");
-    return {
-      error: jaExiste
+    return falha(
+      jaExiste
         ? "Já existe um usuário com este e-mail."
         : "Não foi possível criar o usuário. Tente novamente.",
-    };
+    );
   }
 
   const uid = criado.user.id;
@@ -114,12 +88,12 @@ export async function criarUsuario(
       papel: parsed.data.papel,
       nome: parsed.data.nome,
       ativo: true,
-      modulos: modulosDoForm(formData),
+      modulos: modulosOuNull(parsed.data.modulos),
       senha_temporaria: true, // força troca no primeiro acesso
     })
     .eq("id", uid);
 
-  await sincronizarObras(admin, uid, obrasDoForm(formData));
+  await sincronizarObras(admin, uid, parsed.data.obras);
 
   // E-mail de boas-vindas com os dados de acesso (best-effort).
   if (emailConfigurado()) {
@@ -140,57 +114,49 @@ export async function criarUsuario(
   }
 
   revalidatePath("/usuarios");
-  redirect("/usuarios");
+  return { ok: true, id: uid };
 }
 
 // ---------------------------------------------------------------------------
 // Excluir usuário (auth + perfil em cascata). Só master; nunca a si mesmo.
 // ---------------------------------------------------------------------------
-export async function excluirUsuario(formData: FormData) {
+export async function excluirUsuario(
+  formData: FormData,
+): Promise<{ error?: string } | void> {
   const master = await exigirMaster();
-  if (!master) return;
+  if (!master) return { error: "Apenas o Master pode excluir usuários." };
+
   const id = String(formData.get("id") ?? "").trim();
-  if (!id || id === master.id) return; // não permite excluir a si mesmo
+  if (!id) return { error: "Usuário inválido." };
+  if (id === master.id) {
+    return { error: "Você não pode excluir o seu próprio acesso." };
+  }
 
   try {
     const admin = createAdminClient();
     await admin.auth.admin.deleteUser(id); // cascata remove perfil e vínculos
   } catch (e) {
     console.error("Falha ao excluir usuário:", e);
-    return;
+    return {
+      error:
+        "Não foi possível excluir. Verifique a chave SUPABASE_SERVICE_ROLE_KEY.",
+    };
   }
 
   revalidatePath("/usuarios");
-  redirect("/usuarios");
 }
 
 // ---------------------------------------------------------------------------
 // Editar usuário — papel, nome, ativo, obras e (opcional) redefinir senha.
 // ---------------------------------------------------------------------------
-const editarSchema = z.object({
-  id: z.string().uuid(),
-  nome: z.string().trim().min(1, "Informe o nome.").max(120),
-  papel: papelSchema,
-});
-
-export async function salvarUsuario(
-  _prev: UsuarioFormState,
-  formData: FormData,
-): Promise<UsuarioFormState> {
+export async function salvarUsuario(raw: unknown): Promise<ActionResult> {
   const master = await exigirMaster();
-  if (!master) return { error: "Apenas o Master pode editar usuários." };
+  if (!master) return falha("Apenas o Master pode editar usuários.");
 
-  const parsed = editarSchema.safeParse({
-    id: formData.get("id"),
-    nome: formData.get("nome"),
-    papel: formData.get("papel"),
-  });
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
-  }
+  const parsed = editarUsuarioSchema.safeParse(raw);
+  if (!parsed.success) return falha(primeiroErro(parsed.error.issues));
 
-  const ativo =
-    formData.get("ativo") === "on" || formData.get("ativo") === "true";
+  const { ativo } = parsed.data;
 
   const supabase = await createClient();
   const { error } = await supabase
@@ -199,17 +165,14 @@ export async function salvarUsuario(
       papel: parsed.data.papel,
       nome: parsed.data.nome,
       ativo,
-      modulos: modulosDoForm(formData),
+      modulos: modulosOuNull(parsed.data.modulos),
     })
     .eq("id", parsed.data.id);
-  if (error) return { error: "Não foi possível salvar. Tente novamente." };
+  if (error) return falha("Não foi possível salvar. Tente novamente.");
 
   // Redefinição opcional de senha (via API admin).
-  const novaSenha = String(formData.get("nova_senha") ?? "").trim();
+  const novaSenha = parsed.data.nova_senha;
   if (novaSenha) {
-    if (novaSenha.length < 8) {
-      return { error: "A nova senha deve ter ao menos 8 caracteres." };
-    }
     try {
       const admin = createAdminClient();
       await admin.auth.admin.updateUserById(parsed.data.id, {
@@ -221,10 +184,9 @@ export async function salvarUsuario(
         .update({ senha_temporaria: true })
         .eq("id", parsed.data.id);
     } catch {
-      return {
-        error:
-          "Perfil salvo, mas a senha não pôde ser redefinida (falta SUPABASE_SERVICE_ROLE_KEY).",
-      };
+      return falha(
+        "Perfil salvo, mas a senha não pôde ser redefinida (falta SUPABASE_SERVICE_ROLE_KEY).",
+      );
     }
 
     // E-mail avisando a nova senha (best-effort).
@@ -249,7 +211,7 @@ export async function salvarUsuario(
   }
 
   // Sincroniza acesso por obra (usa client normal; master tem policy de gestão).
-  const obras = obrasDoForm(formData);
+  const obras = parsed.data.obras;
   await supabase.from("obra_usuario").delete().eq("perfil_id", parsed.data.id);
   if (obras.length > 0) {
     await supabase
@@ -258,5 +220,5 @@ export async function salvarUsuario(
   }
 
   revalidatePath("/usuarios");
-  redirect("/usuarios");
+  return { ok: true, id: parsed.data.id };
 }

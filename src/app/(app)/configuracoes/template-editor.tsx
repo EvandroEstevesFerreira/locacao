@@ -8,16 +8,23 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { formatarData } from "@/lib/locacao";
 
 export function TemplateEditor({
   doc,
   titulo,
   corpo,
+  versao,
+  publicadoEm,
   personalizado,
 }: {
   doc: DocumentoInfo;
   titulo: string;
   corpo: string;
+  /** Versão do texto — quem revisa a cláusula decide se é 1.3 ou 2.0. */
+  versao: string;
+  /** Data da última publicação. Não é campo: vem do updated_at da linha. */
+  publicadoEm: string;
   /** true = existe template salvo; false = está mostrando o padrão do sistema. */
   personalizado: boolean;
 }) {
@@ -46,6 +53,36 @@ export function TemplateEditor({
       <div className="space-y-2">
         <Label htmlFor="titulo">Título do documento</Label>
         <Input id="titulo" name="titulo" defaultValue={titulo} required />
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="versao">Versão</Label>
+          <Input
+            id="versao"
+            name="versao"
+            defaultValue={versao}
+            placeholder="1.3"
+            required
+          />
+          <p className="text-xs text-muted-foreground">
+            Sai no cabeçalho de toda página do documento. Ao revisar uma
+            cláusula, aumente a versão — é ela que identifica qual texto o
+            empregado assinou.
+          </p>
+        </div>
+        <div className="space-y-2">
+          <Label>Publicado em</Label>
+          {/* Não é campo editável de propósito: a data vem do updated_at da
+              linha, então revisar o texto reata a data sozinho. Campo manual
+              fica desatualizado no primeiro esquecimento. */}
+          <p className="rounded-md border bg-muted/40 px-3 py-2 text-sm">
+            {formatarData(publicadoEm)}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Atualizada automaticamente quando você salva.
+          </p>
+        </div>
       </div>
 
       <div className="space-y-2">

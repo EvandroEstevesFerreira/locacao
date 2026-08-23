@@ -1,12 +1,27 @@
 "use client";
 
-import { useActionState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
-import { salvarItem, type ItemFormState } from "./actions";
-import { TIPO_ITEM, UNIDADES, type TipoItem } from "@/lib/itens";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import {
+  TIPOS_ITEM,
+  TIPO_ITEM,
+  UNIDADES,
+  itemSchema,
+  type ItemDados,
+  type ItemInput,
+  type TipoItem,
+} from "@/lib/itens";
+import { FormError } from "@/components/shared/form-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
+import { salvarItem } from "./actions";
 
 type Item = {
   id: string;
@@ -16,61 +31,89 @@ type Item = {
   ativo: boolean;
 };
 
-const selectClasses =
-  "flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
-
 export function ItemForm({ item }: { item?: Item }) {
-  const [state, formAction, isPending] = useActionState<ItemFormState, FormData>(
-    salvarItem,
-    {},
-  );
+  const router = useRouter();
+  const [erroServidor, setErroServidor] = useState<string | null>(null);
+  const [pendente, startTransition] = useTransition();
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<ItemInput, unknown, ItemDados>({
+    resolver: zodResolver(itemSchema),
+    defaultValues: {
+      id: item?.id,
+      tipo: item?.tipo ?? "equipamento",
+      descricao: item?.descricao ?? "",
+      unidade: item?.unidade ?? "",
+      ativo: item?.ativo ?? true,
+    },
+  });
+
+  function onSubmit(values: ItemDados) {
+    setErroServidor(null);
+    startTransition(async () => {
+      const r = await salvarItem(values);
+      if (!r.ok) {
+        setErroServidor(r.erro);
+        return;
+      }
+      toast.success(item ? "Item atualizado." : "Item cadastrado.");
+      // Equipamento novo vai para a edição, onde se cadastram as unidades. O
+      // destino é decidido aqui porque a action devolve o id — antes era um
+      // `redirect()` condicional dentro dela.
+      const novoEquipamento = !item && values.tipo === "equipamento" && r.id;
+      router.replace(novoEquipamento ? `/itens/${r.id}` : "/itens");
+      router.refresh();
+    });
+  }
 
   return (
-    <form action={formAction} className="space-y-5">
-      {item ? <input type="hidden" name="id" value={item.id} /> : null}
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      <input type="hidden" {...register("id")} />
 
-      <div className="space-y-2">
-        <Label htmlFor="tipo">Tipo *</Label>
-        <select
-          id="tipo"
-          name="tipo"
-          defaultValue={item?.tipo ?? "equipamento"}
-          className={selectClasses}
-        >
-          {(Object.keys(TIPO_ITEM) as TipoItem[]).map((t) => (
+      <div className="space-y-1.5">
+        <Label htmlFor="tipo">Tipo</Label>
+        <NativeSelect id="tipo" disabled={pendente} {...register("tipo")}>
+          {TIPOS_ITEM.map((t) => (
             <option key={t} value={t}>
               {TIPO_ITEM[t].label}
             </option>
           ))}
-        </select>
+        </NativeSelect>
         <p className="text-xs text-muted-foreground">
           Equipamentos são controlados por unidade; materiais retornáveis por
           quantidade; consumíveis não retornam.
         </p>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="descricao">Descrição *</Label>
+      <div className="space-y-1.5">
+        <Label htmlFor="descricao">Descrição</Label>
         <Input
           id="descricao"
-          name="descricao"
-          required
-          maxLength={200}
-          defaultValue={item?.descricao ?? ""}
           placeholder="Ex.: Betoneira 400L / Escora metálica 3m"
+          aria-invalid={!!errors.descricao}
+          disabled={pendente}
+          {...register("descricao")}
         />
+        {errors.descricao ? (
+          <p className="text-xs text-destructive">{errors.descricao.message}</p>
+        ) : null}
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="unidade">Unidade de medida</Label>
+      <div className="space-y-1.5">
+        <Label htmlFor="unidade">
+          Unidade de medida{" "}
+          <span className="font-normal text-muted-foreground">(opcional)</span>
+        </Label>
         <Input
           id="unidade"
-          name="unidade"
           list="unidades"
-          maxLength={10}
-          defaultValue={item?.unidade ?? ""}
           placeholder="un, m, kg…"
           className="max-w-40"
+          disabled={pendente}
+          {...register("unidade")}
         />
         <datalist id="unidades">
           {UNIDADES.map((u) => (
@@ -82,23 +125,22 @@ export function ItemForm({ item }: { item?: Item }) {
       <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"
-          name="ativo"
-          defaultChecked={item?.ativo ?? true}
+          disabled={pendente}
           className="size-4"
+          {...register("ativo")}
         />
         Item ativo
       </label>
 
-      {state.error ? (
-        <p className="text-sm text-destructive">{state.error}</p>
-      ) : null}
+      <FormError>{erroServidor}</FormError>
 
-      <div className="flex gap-2">
-        <Button type="submit" disabled={isPending}>
-          {isPending ? "Salvando…" : "Salvar"}
-        </Button>
+      <div className="flex justify-end gap-2 pt-2">
         <Button type="button" variant="outline" render={<Link href="/itens" />}>
           Cancelar
+        </Button>
+        <Button type="submit" disabled={pendente}>
+          {pendente ? <Loader2 className="size-4 animate-spin" /> : null}
+          {pendente ? "Salvando…" : "Salvar"}
         </Button>
       </div>
     </form>

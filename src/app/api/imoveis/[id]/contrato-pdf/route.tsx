@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { createClient } from "@/lib/supabase/server";
-import { formatarBRL, formatarData } from "@/lib/locacao";
+import { formatarBRL, formatarData, hojeISOSaoPaulo} from "@/lib/locacao";
 import { tipoImovelLabel } from "@/lib/imoveis";
 import { DocumentoTexto, type InfoLinha } from "@/lib/pdf";
 import {
@@ -137,7 +137,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const tituloDoc = renderTemplate(tpl.titulo, variaveis);
   const paragrafos = corpoParaParagrafos(renderTemplate(tpl.corpo, variaveis));
 
-  const hojeStr = formatarData(new Date().toISOString().slice(0, 10));
+  const hojeStr = formatarData(hojeISOSaoPaulo());
   const buffer = await renderToBuffer(
     <DocumentoTexto
       orgNome={orgNome}

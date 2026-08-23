@@ -9,88 +9,48 @@ import {
   podeOperar,
   podeExcluirCritico,
 } from "@/lib/auth";
+import { falha, primeiroErro, type ActionResult } from "@/lib/acoes";
+import { contratoSchema, itemLocadoSchema } from "@/lib/locacao";
 
-export type ContratoFormState = { error?: string };
 
-const contratoSchema = z.object({
-  obra_id: z.string().uuid("Selecione a obra."),
-  fornecedor_id: z.string().uuid("Selecione o fornecedor."),
-  numero: z.string().trim().min(1, "Informe o número do contrato.").max(60),
-  cadencia: z.enum(["diaria", "semanal", "quinzenal", "mensal"]),
-  data_inicio: z.string().min(1, "Informe a data de início."),
-  data_fim_prevista: z.string().optional(),
-  status: z.enum(["ativo", "encerrado", "cancelado"]),
-  observacoes: z.string().trim().max(1000).optional(),
-});
-
-function nuloSeVazio(v: string | undefined) {
-  const t = (v ?? "").trim();
-  return t === "" ? null : t;
-}
-
-export async function salvarContrato(
-  _prev: ContratoFormState,
-  formData: FormData,
-): Promise<ContratoFormState> {
+export async function salvarContrato(raw: unknown): Promise<ActionResult> {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id) return { error: "Sessão inválida." };
+  if (!perfil?.org_id) return falha("Sessão inválida. Entre novamente.");
   if (!podeOperar(perfil.papel)) {
-    return { error: "Você não tem permissão para editar contratos." };
+    return falha("Você não tem permissão para editar contratos.");
   }
 
-  const parsed = contratoSchema.safeParse({
-    obra_id: formData.get("obra_id"),
-    fornecedor_id: formData.get("fornecedor_id"),
-    numero: formData.get("numero"),
-    cadencia: formData.get("cadencia"),
-    data_inicio: formData.get("data_inicio"),
-    data_fim_prevista: formData.get("data_fim_prevista") ?? undefined,
-    status: formData.get("status"),
-    observacoes: formData.get("observacoes") ?? undefined,
-  });
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
-  }
+  const parsed = contratoSchema.safeParse(raw);
+  if (!parsed.success) return falha(primeiroErro(parsed.error.issues));
 
-  const id = (formData.get("id") as string | null)?.trim() || null;
-  const dados = {
-    obra_id: parsed.data.obra_id,
-    fornecedor_id: parsed.data.fornecedor_id,
-    numero: parsed.data.numero,
-    cadencia: parsed.data.cadencia,
-    data_inicio: parsed.data.data_inicio,
-    data_fim_prevista: nuloSeVazio(parsed.data.data_fim_prevista),
-    status: parsed.data.status,
-    observacoes: nuloSeVazio(parsed.data.observacoes),
-    cobranca_prorata: formData.get("cobranca_prorata") === "on",
-  };
+  const { id, ...dados } = parsed.data;
 
   const supabase = await createClient();
-  let contratoId = id;
+  let contratoId = id ?? null;
   if (id) {
     const { error } = await supabase
       .from("contrato_locacao")
       .update(dados)
       .eq("id", id);
-    if (error) return { error: "Não foi possível salvar. Tente novamente." };
+    if (error) return falha("Não foi possível salvar. Tente novamente.");
   } else {
     const { data, error } = await supabase
       .from("contrato_locacao")
       .insert({ org_id: perfil.org_id, ...dados })
       .select("id")
       .single();
-    if (error || !data)
-      return { error: "Não foi possível salvar. Tente novamente." };
+    if (error || !data) return falha("Não foi possível salvar. Tente novamente.");
     contratoId = data.id;
   }
 
   revalidatePath("/contratos");
-  redirect(`/contratos/${contratoId}`);
+  // Devolve o id: o cliente navega para o detalhe, onde se adicionam os itens.
+  return { ok: true, id: contratoId ?? undefined };
 }
 
 export async function excluirContrato(
   formData: FormData,
-): Promise<ContratoFormState | void> {
+): Promise<{ error?: string } | void> {
   const perfil = await getCurrentPerfil();
   if (!perfil?.org_id || !podeExcluirCritico(perfil.papel)) {
     return { error: "Somente o Master pode excluir contratos." };
@@ -108,62 +68,36 @@ export async function excluirContrato(
     return { error: "Não foi possível excluir o contrato. Tente novamente." };
   }
   revalidatePath("/contratos");
-  redirect("/contratos");
 }
 
-const itemLocadoSchema = z.object({
-  contrato_id: z.string().uuid(),
-  item_id: z.string().uuid("Selecione o item."),
-  quantidade: z.coerce.number().positive("Quantidade deve ser maior que zero."),
-  valor_unitario_periodo: z.coerce.number().min(0, "Valor inválido."),
-  data_retirada: z.string().min(1, "Informe a data de retirada."),
-  data_devolucao_prevista: z.string().optional(),
-  identificacao: z.string().trim().max(120).optional(),
-});
-
-export type ItemLocadoFormState = { error?: string };
-
 export async function adicionarItemLocado(
-  _prev: ItemLocadoFormState,
-  formData: FormData,
-): Promise<ItemLocadoFormState> {
+  raw: unknown,
+): Promise<ActionResult> {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id) return { error: "Sessão inválida." };
-  if (!podeOperar(perfil.papel)) return { error: "Sem permissão." };
-
-  const parsed = itemLocadoSchema.safeParse({
-    contrato_id: formData.get("contrato_id"),
-    item_id: formData.get("item_id"),
-    quantidade: formData.get("quantidade"),
-    valor_unitario_periodo: formData.get("valor_unitario_periodo"),
-    data_retirada: formData.get("data_retirada"),
-    data_devolucao_prevista: formData.get("data_devolucao_prevista") ?? undefined,
-    identificacao: formData.get("identificacao") ?? undefined,
-  });
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  if (!perfil?.org_id) return falha("Sessão inválida. Entre novamente.");
+  if (!podeOperar(perfil.papel)) {
+    return falha("Você não tem permissão para adicionar itens.");
   }
+
+  const parsed = itemLocadoSchema.safeParse(raw);
+  if (!parsed.success) return falha(primeiroErro(parsed.error.issues));
 
   const supabase = await createClient();
   const { error } = await supabase.from("item_locado").insert({
     org_id: perfil.org_id,
-    contrato_id: parsed.data.contrato_id,
-    item_id: parsed.data.item_id,
-    quantidade: parsed.data.quantidade,
-    valor_unitario_periodo: parsed.data.valor_unitario_periodo,
-    data_retirada: parsed.data.data_retirada,
-    data_devolucao_prevista: nuloSeVazio(parsed.data.data_devolucao_prevista),
-    identificacao: nuloSeVazio(parsed.data.identificacao),
+    ...parsed.data,
   });
-  if (error) return { error: "Não foi possível adicionar o item." };
+  if (error) return falha("Não foi possível adicionar o item.");
 
   revalidatePath(`/contratos/${parsed.data.contrato_id}`);
-  return {};
+  return { ok: true };
 }
 
 export async function excluirItemLocado(formData: FormData) {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) {
+    return { error: "Você não tem permissão para excluir itens do contrato." };
+  }
   const id = (formData.get("id") as string | null)?.trim();
   const contratoId = (formData.get("contrato_id") as string | null)?.trim();
   if (!id) return;
@@ -319,7 +253,9 @@ export async function salvarAnexoContrato(contratoId: string, path: string) {
 
 export async function removerAnexoContrato(formData: FormData) {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) {
+    return { error: "Você não tem permissão para remover anexos do contrato." };
+  }
   const contratoId = (formData.get("contrato_id") as string | null)?.trim();
   const path = (formData.get("path") as string | null)?.trim();
   if (!contratoId) return;
@@ -361,7 +297,9 @@ export async function salvarContratoDoc(
 
 export async function removerContratoDoc(formData: FormData) {
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) {
+    return { error: "Você não tem permissão para remover documentos do contrato." };
+  }
   const id = (formData.get("id") as string | null)?.trim();
   const contratoId = (formData.get("contrato_id") as string | null)?.trim();
   const path = (formData.get("path") as string | null)?.trim();

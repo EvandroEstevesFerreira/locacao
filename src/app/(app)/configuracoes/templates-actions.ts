@@ -23,8 +23,13 @@ export async function salvarTemplate(
 
   const titulo = String(formData.get("titulo") ?? "").trim();
   const corpo = String(formData.get("corpo") ?? "").trim();
+  const versao = String(formData.get("versao") ?? "").trim();
   if (!titulo) return { error: "Informe o título do documento." };
   if (!corpo) return { error: "O corpo do documento não pode ficar vazio." };
+  if (!versao) return { error: "Informe a versão do documento." };
+  if (!/^\d+(\.\d+)*$/.test(versao)) {
+    return { error: "A versão deve ser numérica, como 1.3." };
+  }
 
   const supabase = await createClient();
   const { error } = await supabase.from("documento_template").upsert(
@@ -33,6 +38,7 @@ export async function salvarTemplate(
       tipo,
       titulo,
       corpo,
+      versao,
       ativo: true,
       updated_at: new Date().toISOString(),
     },

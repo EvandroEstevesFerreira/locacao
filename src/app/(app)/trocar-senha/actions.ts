@@ -1,28 +1,37 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { falha, primeiroErro, type ActionResult } from "@/lib/acoes";
+import { trocarSenhaSchema } from "@/lib/permissoes";
 
-export type TrocarSenhaState = { error?: string };
-
-export async function trocarSenha(
-  _prev: TrocarSenhaState,
-  formData: FormData,
-): Promise<TrocarSenhaState> {
-  const senha = String(formData.get("senha") ?? "");
-  const confirmar = String(formData.get("confirmar") ?? "");
-  if (senha.length < 8) return { error: "A senha deve ter ao menos 8 caracteres." };
-  if (senha !== confirmar) return { error: "As senhas não conferem." };
+/**
+ * Troca a senha do próprio usuário e limpa a flag de senha temporária.
+ *
+ * Recebe `raw: unknown` (o objeto tipado que o react-hook-form entrega) em vez
+ * de FormData, e devolve `ActionResult`. Não chama `redirect()`: quem navega é o
+ * cliente, com `router.replace`. As duas coisas juntas não funcionam — o
+ * `redirect()` lança NEXT_REDIRECT e o `if (!r.ok)` do cliente nunca rodaria.
+ */
+export async function trocarSenha(raw: unknown): Promise<ActionResult> {
+  const parsed = trocarSenhaSchema.safeParse(raw);
+  if (!parsed.success) return falha(primeiroErro(parsed.error.issues));
 
   const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
-  if (!userData?.user) return { error: "Sessão inválida." };
+  if (!userData?.user) return falha("Sessão inválida. Entre novamente.");
 
-  const { error } = await supabase.auth.updateUser({ password: senha });
-  if (error) return { error: "Não foi possível alterar a senha. Tente novamente." };
+  const { error } = await supabase.auth.updateUser({
+    password: parsed.data.senha,
+  });
+  if (error) {
+    return falha("Não foi possível alterar a senha. Tente novamente.");
+  }
 
-  // Limpa a flag de senha temporária (SECURITY DEFINER, só para o próprio usuário).
+  // Limpa a flag de senha temporária (SECURITY DEFINER, só para o próprio
+  // usuário). Se falhar, a senha já foi trocada — o middleware apenas pediria a
+  // troca outra vez, o que é melhor do que reportar erro numa operação
+  // concluída.
   await supabase.rpc("marcar_senha_trocada");
 
-  redirect("/");
+  return { ok: true };
 }

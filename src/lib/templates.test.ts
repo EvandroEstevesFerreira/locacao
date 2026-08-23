@@ -3,6 +3,8 @@ import {
   renderTemplate,
   corpoParaParagrafos,
   DEFAULT_TEMPLATES,
+  DOCUMENTOS,
+  documentosDoModulo,
 } from "./templates";
 
 describe("renderTemplate", () => {
@@ -59,5 +61,66 @@ describe("DEFAULT_TEMPLATES", () => {
     };
     const texto = renderTemplate(DEFAULT_TEMPLATES.contrato_imovel.corpo, vars);
     expect(texto).not.toMatch(/\{\{/);
+  });
+});
+
+describe("catálogo de documentos", () => {
+  it("todo documento declara módulo, categoria e preenchimento", () => {
+    for (const d of DOCUMENTOS) {
+      expect(d.modulo, `documento ${d.tipo}`).toBeTruthy();
+      expect(d.categoria, `documento ${d.tipo}`).toBeTruthy();
+      expect(["com_dados", "em_branco"]).toContain(d.preenchimento);
+    }
+  });
+
+  it("filtra por módulo", () => {
+    const imoveis = documentosDoModulo("imoveis");
+    expect(imoveis.length).toBeGreaterThan(0);
+    expect(imoveis.every((d) => d.modulo === "imoveis")).toBe(true);
+  });
+
+  it("todo tipo do catálogo tem template padrão", () => {
+    for (const d of DOCUMENTOS) {
+      expect(DEFAULT_TEMPLATES[d.tipo], `template de ${d.tipo}`).toBeTruthy();
+    }
+  });
+});
+
+describe("termo de compromisso (FRM-RH-001)", () => {
+  const tpl = DEFAULT_TEMPLATES.termo_responsabilidade;
+
+  it("o título é o do FRM-RH-001", () => {
+    expect(tpl.titulo).toContain("COMPROMISSO");
+  });
+
+  it("cobre as regras que sustentam justa causa", () => {
+    for (const termo of ["22h", "drogas", "CFTV", "armário", "cozinhar"]) {
+      expect(tpl.corpo.toLowerCase()).toContain(termo.toLowerCase());
+    }
+  });
+
+  it("declara o canal de denúncias exigido pela Lei 14.457/2022", () => {
+    expect(tpl.corpo).toContain("sistenge-ouvidoria.vercel.app");
+  });
+
+  it("toda variável usada no corpo está declarada no catálogo", () => {
+    const doc = DOCUMENTOS.find((d) => d.tipo === "termo_responsabilidade")!;
+    const declaradas = new Set(doc.variaveis.map((v) => v.chave));
+    const usadas = [...tpl.corpo.matchAll(/\{\{\s*([a-z_]+)\s*\}\}/gi)].map(
+      (m) => m[1],
+    );
+    // Sem isto o teste passaria por vacuidade se o corpo perdesse as chaves.
+    expect(usadas.length).toBeGreaterThan(0);
+    for (const u of usadas) expect(declaradas, `variável {{${u}}}`).toContain(u);
+  });
+
+  it("declara as variáveis do bloco de identificação, ainda que a estrutura as preencha", () => {
+    // Elas não aparecem no corpo — quem as desenha é o CampoGrid do FRM-RH-001.
+    // Ficam declaradas para que o RH possa citá-las numa cláusula, se quiser.
+    const doc = DOCUMENTOS.find((d) => d.tipo === "termo_responsabilidade")!;
+    const chaves = doc.variaveis.map((v) => v.chave);
+    for (const c of ["ocupante", "ocupante_cargo", "quarto", "armario", "obra"]) {
+      expect(chaves).toContain(c);
+    }
   });
 });

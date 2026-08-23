@@ -4,6 +4,15 @@ import {
   formatarValor,
   type Relatorio,
 } from "@/lib/relatorios";
+import {
+  BRANCO,
+  SLATE_50,
+  SLATE_100,
+  SLATE_200,
+  SLATE_400,
+  SLATE_500,
+  SLATE_900,
+} from "@/lib/brand-colors";
 
 export function emailConfigurado() {
   return Boolean(process.env.RESEND_API_KEY && process.env.EMAIL_FROM);
@@ -22,7 +31,7 @@ export function montarEmailVencimentos(
   orgNome: string,
   linhas: LinhaAlerta[],
 ): string {
-  const cel = "padding:8px 12px;border-bottom:1px solid #eee;";
+  const cel = `padding:8px 12px;border-bottom:1px solid ${SLATE_200};`;
   const itens = linhas
     .map(
       (l) =>
@@ -37,12 +46,12 @@ export function montarEmailVencimentos(
     .join("");
 
   return `<!doctype html>
-<html lang="pt-BR"><body style="font-family:Arial,Helvetica,sans-serif;color:#111;">
+<html lang="pt-BR"><body style="font-family:Arial,Helvetica,sans-serif;color:${SLATE_900};">
   <h2 style="margin:0 0 4px;">Loca — Avisos de vencimento</h2>
-  <p style="color:#555;margin:0 0 16px;">${orgNome}</p>
+  <p style="color:${SLATE_500};margin:0 0 16px;">${orgNome}</p>
   <table style="border-collapse:collapse;width:100%;font-size:14px;">
     <thead>
-      <tr style="text-align:left;background:#f5f5f5;">
+      <tr style="text-align:left;background:${SLATE_100};">
         <th style="padding:8px 12px;">Tipo</th>
         <th style="padding:8px 12px;">Descrição</th>
         <th style="padding:8px 12px;">Obra</th>
@@ -52,7 +61,7 @@ export function montarEmailVencimentos(
     </thead>
     <tbody>${itens}</tbody>
   </table>
-  <p style="color:#888;font-size:12px;margin-top:16px;">
+  <p style="color:${SLATE_400};font-size:12px;margin-top:16px;">
     Enviado automaticamente pelo Loca — controle de locações.
   </p>
 </body></html>`;
@@ -62,12 +71,14 @@ export function montarEmailVencimentos(
 // Comunicações de acesso (novo usuário / redefinição de senha)
 // ---------------------------------------------------------------------------
 
-const ACENTO = "#BE3A31";
+// Cor de ação. Na identidade Sistenge 2026 é o slate-900, não o vermelho
+// da marca — este fica restrito a logo e marcações de crítico.
+const ACENTO = SLATE_900;
 
 function layoutEmail(titulo: string, corpo: string): string {
   return `<!doctype html>
-<html lang="pt-BR"><body style="font-family:Arial,Helvetica,sans-serif;color:#1d1f20;background:#f2f2f3;margin:0;padding:24px;">
-  <div style="max-width:520px;margin:0 auto;background:#fff;border:1px solid #d4d4d7;">
+<html lang="pt-BR"><body style="font-family:Arial,Helvetica,sans-serif;color:${SLATE_900};background:${SLATE_50};margin:0;padding:24px;">
+  <div style="max-width:520px;margin:0 auto;background:${BRANCO};border:1px solid ${SLATE_200};">
     <div style="border-bottom:3px solid ${ACENTO};padding:16px 24px;">
       <div style="font-size:18px;font-weight:bold;letter-spacing:1px;">SISTENGE</div>
       <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:${ACENTO};">Locações de obra</div>
@@ -75,7 +86,7 @@ function layoutEmail(titulo: string, corpo: string): string {
     <div style="padding:24px;">
       <h2 style="margin:0 0 12px;font-size:18px;">${titulo}</h2>
       ${corpo}
-      <p style="color:#888;font-size:12px;margin-top:24px;border-top:1px solid #eee;padding-top:12px;">
+      <p style="color:${SLATE_400};font-size:12px;margin-top:24px;border-top:1px solid ${SLATE_200};padding-top:12px;">
         Enviado automaticamente pelo Loca — controle de locações da Sistenge.
       </p>
     </div>
@@ -85,13 +96,13 @@ function layoutEmail(titulo: string, corpo: string): string {
 
 function bloco(label: string, valor: string): string {
   return `<tr>
-    <td style="padding:8px 0;color:#5d5d60;font-size:13px;width:150px;">${label}</td>
+    <td style="padding:8px 0;color:${SLATE_500};font-size:13px;width:150px;">${label}</td>
     <td style="padding:8px 0;font-size:14px;font-weight:bold;">${valor}</td>
   </tr>`;
 }
 
 function botao(url: string, texto: string): string {
-  return `<a href="${url}" style="display:inline-block;margin-top:16px;background:${ACENTO};color:#fff;text-decoration:none;padding:10px 18px;font-weight:bold;">${texto}</a>`;
+  return `<a href="${url}" style="display:inline-block;margin-top:16px;background:${ACENTO};color:${BRANCO};text-decoration:none;padding:10px 18px;font-weight:bold;">${texto}</a>`;
 }
 
 function appUrl(): string {
@@ -115,7 +126,7 @@ export function montarEmailNovoUsuario(
        ${bloco("Senha temporária", senha)}
        ${bloco("Perfil", perfil)}
      </table>
-     <p style="font-size:13px;color:#5d5d60;margin-top:12px;">Por segurança, recomendamos trocar a senha após o primeiro acesso.</p>
+     <p style="font-size:13px;color:${SLATE_500};margin-top:12px;">Por segurança, recomendamos trocar a senha após o primeiro acesso.</p>
      ${botao(url, "Acessar o Loca")}`,
   );
 }
@@ -134,7 +145,7 @@ export function montarEmailSenhaRedefinida(
        ${bloco("E-mail de acesso", email)}
        ${bloco("Nova senha temporária", senha)}
      </table>
-     <p style="font-size:13px;color:#5d5d60;margin-top:12px;">Recomendamos trocar a senha após entrar. Se você não esperava esta alteração, avise o administrador.</p>
+     <p style="font-size:13px;color:${SLATE_500};margin-top:12px;">Recomendamos trocar a senha após entrar. Se você não esperava esta alteração, avise o administrador.</p>
      ${botao(url, "Acessar o Loca")}`,
   );
 }
@@ -150,7 +161,7 @@ export function montarEmailRelatorio(
       (c) =>
         `<th style="padding:6px 8px;text-align:${
           c.tipo === "moeda" || c.tipo === "numero" ? "right" : "left"
-        };border-bottom:2px solid #d4d4d7;font-size:12px;">${c.label}</th>`,
+        };border-bottom:2px solid ${SLATE_200};font-size:12px;">${c.label}</th>`,
     )
     .join("");
 
@@ -159,7 +170,7 @@ export function montarEmailRelatorio(
     .map((lr) => {
       const forte = lr.tipo !== "dado";
       const bg =
-        lr.tipo === "total" ? "#f7e9e8" : lr.tipo === "subtotal" ? "#f2f2f3" : "#fff";
+        lr.tipo === "total" ? "${SLATE_100}" : lr.tipo === "subtotal" ? "${SLATE_50}" : "${BRANCO}";
       const tds = relatorio.colunas
         .map((c) => {
           let conteudo = "";
@@ -169,7 +180,7 @@ export function montarEmailRelatorio(
           else if (c.key === primeira)
             conteudo = lr.tipo === "total" ? lr.rotulo : `Subtotal — ${lr.rotulo}`;
           const dir = c.tipo === "moeda" || c.tipo === "numero" ? "right" : "left";
-          return `<td style="padding:6px 8px;text-align:${dir};border-bottom:1px solid #eee;font-size:12px;${
+          return `<td style="padding:6px 8px;text-align:${dir};border-bottom:1px solid ${SLATE_200};font-size:12px;${
             forte ? "font-weight:bold;" : ""
           }">${conteudo}</td>`;
         })
@@ -180,14 +191,14 @@ export function montarEmailRelatorio(
 
   const vazio =
     relatorio.linhas.length === 0
-      ? `<p style="font-size:13px;color:#5d5d60;">Sem registros no período.</p>`
+      ? `<p style="font-size:13px;color:${SLATE_500};">Sem registros no período.</p>`
       : `<table style="border-collapse:collapse;width:100%;margin-top:8px;"><thead><tr>${th}</tr></thead><tbody>${corpo}</tbody></table>`;
 
   return layoutEmail(
     `${relatorio.titulo}${periodoLabel ? ` · ${periodoLabel}` : ""}`,
     `<p style="font-size:14px;">Resumo automático — <strong>${orgNome}</strong>.</p>
      ${vazio}
-     <p style="font-size:12px;color:#5d5d60;margin-top:12px;">O PDF completo está anexado a este e-mail.</p>`,
+     <p style="font-size:12px;color:${SLATE_500};margin-top:12px;">O PDF completo está anexado a este e-mail.</p>`,
   );
 }
 

@@ -1,12 +1,12 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeConfigurarSistema } from "@/lib/auth";
-import { PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { TemplateEditor } from "../../template-editor";
 import {
-  DEFAULT_TEMPLATES,
   documentoInfo,
+  resolverTemplate,
   type TipoDocumento,
 } from "@/lib/templates";
 
@@ -27,24 +27,24 @@ export default async function EditarTemplatePage({
   const supabase = await createClient();
   const { data } = await supabase
     .from("documento_template")
-    .select("titulo, corpo")
+    .select("titulo, corpo, versao, updated_at")
     .eq("org_id", perfil.org_id)
     .eq("tipo", doc.tipo)
     .maybeSingle();
 
-  const padrao = DEFAULT_TEMPLATES[doc.tipo];
-  const titulo = data?.titulo ?? padrao.titulo;
-  const corpo = data?.corpo ?? padrao.corpo;
+  const tpl = resolverTemplate(doc.tipo, data);
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <PageHeader eyebrow="Templates" titulo={doc.label} descricao={doc.descricao} />
+      <PageHeader titulo={doc.label} descricao={doc.descricao} />
       <Card>
         <CardContent className="pt-6">
           <TemplateEditor
             doc={doc}
-            titulo={titulo}
-            corpo={corpo}
+            titulo={tpl.titulo}
+            corpo={tpl.corpo}
+            versao={tpl.versao}
+            publicadoEm={tpl.publicadoEm}
             personalizado={Boolean(data)}
           />
         </CardContent>
