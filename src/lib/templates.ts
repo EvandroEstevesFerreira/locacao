@@ -181,10 +181,20 @@ export function documentosDoModulo(modulo: ModuloKey): DocumentoInfo[] {
   return DOCUMENTOS.filter((d) => d.modulo === modulo);
 }
 
-/** Título + corpo padrão de cada documento (usados quando não há template salvo). */
+/**
+ * Título, corpo, versão e data de publicação padrão de cada documento.
+ *
+ * `versao` e `publicadoEm` existem porque o cabeçalho tem de dizer QUAL texto o
+ * empregado assinou — "ele assinou o termo" vale menos, em audiência, que "ele
+ * assinou a versão 1.2, publicada em 23/08/2026". Nas versões herdadas dos
+ * `.docx` originais (POL-RH-001 e FRM-RH-001) mantivemos a numeração que eles
+ * já traziam, para não fingir que a primeira publicação foi nossa.
+ *
+ * Quando existe template salvo, a versão vem da linha e a data do `updated_at`.
+ */
 export const DEFAULT_TEMPLATES: Record<
   TipoDocumento,
-  { titulo: string; corpo: string }
+  { titulo: string; corpo: string; versao: string; publicadoEm: string }
 > = {
   contrato_imovel: {
     titulo: "CONTRATO DE LOCAÇÃO DE IMÓVEL",
@@ -196,6 +206,8 @@ export const DEFAULT_TEMPLATES: Record<
       "Os pagamentos serão realizados por meio dos seguintes dados bancários: {{dados_bancarios}}.",
       "As partes elegem o foro da comarca do imóvel para dirimir questões oriundas deste contrato.",
     ].join("\n\n"),
+    versao: "1.0",
+    publicadoEm: "2026-07-24",
   },
   contrato_equipamento: {
     titulo: "CONTRATO DE LOCAÇÃO DE EQUIPAMENTOS",
@@ -207,6 +219,8 @@ export const DEFAULT_TEMPLATES: Record<
       "Eventuais avarias além do desgaste natural, apuradas em vistoria de devolução, serão de responsabilidade da LOCATÁRIA.",
       "As partes elegem o foro da comarca da obra para dirimir questões oriundas deste contrato.",
     ].join("\n\n"),
+    versao: "1.0",
+    publicadoEm: "2026-07-24",
   },
   termo_responsabilidade: {
     titulo: "TERMO DE COMPROMISSO DE ALOJAMENTO",
@@ -266,6 +280,8 @@ export const DEFAULT_TEMPLATES: Record<
       "— Estar ciente de que, ao desligamento ou término do uso do alojamento, devo devolver as chaves e o ambiente em condições adequadas, sob pena de descontos legais e de responsabilização pelos danos eventualmente causados.",
       "— Estar ciente de que a Sistenge mantém canal próprio de denúncias (https://sistenge-ouvidoria.vercel.app/), com garantia de sigilo, apuração imparcial e vedação de retaliação, conforme a Lei 14.457/2022 e a LGPD.",
     ].join("\n\n"),
+    versao: "1.2",
+    publicadoEm: "2026-08-22",
   },
   medida_disciplinar: {
     titulo: "MEDIDA DISCIPLINAR — ADVERTÊNCIA E SUSPENSÃO",
@@ -278,6 +294,8 @@ export const DEFAULT_TEMPLATES: Record<
       "— Tem o direito de apresentar manifestação por escrito ao RH no prazo de 5 (cinco) dias úteis a contar do recebimento deste documento.",
       "— Em caso de suspensão, o período não será remunerado (CLT, art. 474) e poderá impactar a contagem para férias proporcionais e demais direitos.",
     ].join("\n\n"),
+    versao: "1.0",
+    publicadoEm: "2026-08-22",
   },
   termo_chaves: {
     titulo: "TERMO DE ENTREGA / DEVOLUÇÃO DE CHAVES DO ALOJAMENTO",
@@ -291,6 +309,8 @@ export const DEFAULT_TEMPLATES: Record<
       "— Pertences pessoais foram retirados; objetos eventualmente esquecidos serão guardados pela empresa por até 30 (trinta) dias, após o que serão considerados abandonados.",
       "— A não devolução de chaves implica autorização para descontos do custo de reposição ou substituição de fechaduras.",
     ].join("\n\n"),
+    versao: "1.0",
+    publicadoEm: "2026-08-22",
   },
   kit_alojamento: {
     titulo: "DECLARAÇÃO DE RECEBIMENTO E DEVOLUÇÃO DO KIT DE ALOJAMENTO",
@@ -304,6 +324,8 @@ export const DEFAULT_TEMPLATES: Record<
       "— Solicitações de troca extraordinária (acidente, mancha grave, dano não intencional) devem ser dirigidas ao Encarregado do alojamento, que avaliará e providenciará a substituição.",
       "— Ao fim do uso do alojamento — desligamento, transferência ou término de contrato — os itens devem ser devolvidos conforme a seção de devolução deste formulário.",
     ].join("\n\n"),
+    versao: "1.0",
+    publicadoEm: "2026-08-22",
   },
   checklist_limpeza: {
     titulo: "CHECKLIST SEMANAL DE LIMPEZA DO ALOJAMENTO",
@@ -318,6 +340,8 @@ export const DEFAULT_TEMPLATES: Record<
       "— Respeitar a privacidade dos alojados: não mexer em pertences pessoais dentro dos armários ou nas camas, e não entrar em quartos ocupados sem autorização.",
       "— Em caso de acidente, contato com produto químico ou indisposição, avisar o Encarregado imediatamente e procurar atendimento.",
     ].join("\n\n"),
+    versao: "1.0",
+    publicadoEm: "2026-08-22",
   },
   politica_alojamento: {
     titulo: "POLÍTICA DE ALOJAMENTO",
@@ -502,6 +526,8 @@ export const DEFAULT_TEMPLATES: Record<
       "— Modelo de Livro de Ocorrências do Alojamento (a desenvolver).",
       "— Checklist de Auditoria Mensal NR-24 (a desenvolver).",
     ].join("\n\n"),
+    versao: "1.2",
+    publicadoEm: "2026-08-22",
   },
 };
 
@@ -522,4 +548,45 @@ export function corpoParaParagrafos(corpo: string): string[] {
     .split(/\n\s*\n/)
     .map((p) => p.replace(/\s*\n\s*/g, " ").trim())
     .filter(Boolean);
+}
+
+/** Linha de `documento_template`, como as rotas a leem. */
+export type TemplateSalvo = {
+  titulo: string;
+  corpo: string;
+  versao: string | null;
+  updated_at: string | null;
+};
+
+export type TemplateResolvido = {
+  titulo: string;
+  corpo: string;
+  versao: string;
+  publicadoEm: string;
+};
+
+/**
+ * Junta o template salvo da organização com o padrão do sistema.
+ *
+ * Existe para não repetir esta decisão em seis rotas — e porque a regra da DATA
+ * é sutil: quando há texto salvo, a data de publicação é o `updated_at` da
+ * linha, não a do padrão. Ou seja, revisar a cláusula reata a data
+ * automaticamente, sem depender de alguém lembrar de mudar um campo.
+ *
+ * A versão, ao contrário, é deliberada: quem revisa decide se aquilo é 1.3 ou
+ * 2.0. O sistema não adivinha isso.
+ */
+export function resolverTemplate(
+  tipo: TipoDocumento,
+  salvo?: Partial<TemplateSalvo> | null,
+): TemplateResolvido {
+  const padrao = DEFAULT_TEMPLATES[tipo];
+  return {
+    titulo: salvo?.titulo ?? padrao.titulo,
+    corpo: salvo?.corpo ?? padrao.corpo,
+    versao: salvo?.versao ?? padrao.versao,
+    publicadoEm: salvo?.updated_at
+      ? salvo.updated_at.slice(0, 10)
+      : padrao.publicadoEm,
+  };
 }

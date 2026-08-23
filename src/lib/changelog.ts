@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.30.0";
+export const APP_VERSION = "0.31.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,17 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.31.0",
+    data: "2026-08-23",
+    titulo: "Versão e data nos documentos, e tabelas no padrão do RH",
+    mudancas: [
+      { tipo: "novo", texto: "Todo documento agora traz a versão do texto e a data de publicação no cabeçalho de cada página — \"Versão 1.2 · 22/08/2026\". É o que identifica qual texto o empregado assinou." },
+      { tipo: "novo", texto: "A versão é editável em Configurações → Templates de documentos, junto com o texto: ao revisar uma cláusula, aumente a versão. A data se atualiza sozinha ao salvar, sem depender de alguém lembrar." },
+      { tipo: "melhoria", texto: "As tabelas dos documentos ganharam o formato dos originais do RH: cabeçalho com fundo cheio, linhas alternadas, grade completa e primeira coluna em negrito." },
+      { tipo: "correcao", texto: "A matriz de responsabilidades da Política de Alojamento estava errada: saía como lista de papel e atribuições, quando a original é uma matriz de atividade por papel (R, A, C, I). Refeita, com o detalhamento por papel logo abaixo." },
+    ],
+  },
   {
     versao: "0.30.0",
     data: "2026-08-23",

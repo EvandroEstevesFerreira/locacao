@@ -10,8 +10,17 @@
 // corrido. Ver a seção "Densidade" da spec de 2026-08-22.
 
 import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
-import { SLATE_100, SLATE_200, SLATE_400, SLATE_500, SLATE_900 } from "@/lib/brand-colors";
+import {
+  BRANCO,
+  SLATE_50,
+  SLATE_100,
+  SLATE_200,
+  SLATE_400,
+  SLATE_500,
+  SLATE_900,
+} from "@/lib/brand-colors";
 import { LogoSistenge } from "./pdf-logo";
+import { formatarData } from "./locacao";
 
 /**
  * Marcador de célula que deve virar uma caixa de marcação.
@@ -79,6 +88,7 @@ const f = StyleSheet.create({
     marginBottom: 12,
   },
   codigo: { fontSize: 7.5, color: SLATE_500, textAlign: "right" },
+  versao: { fontSize: 6.5, color: SLATE_400, textAlign: "right", marginTop: 1 },
   titulo: {
     fontSize: 13,
     fontFamily: "Helvetica-Bold",
@@ -150,7 +160,13 @@ const f = StyleSheet.create({
     fontFamily: "Helvetica-Bold",
     textAlign: "center",
   },
+  // Caixa DENTRO de célula de tabela: centrada por alignSelf, sem View
+  // envolvente. A versão anterior usava um wrapper para centralizar, e num grid
+  // de 45x7 isso dobrava a contagem de nós — 630 Views só de checkbox, o que
+  // pesou segundos no render.
   caixaCelula: {
+    alignSelf: "center",
+    marginVertical: 2.5,
     width: 8,
     height: 8,
     borderWidth: 0.7,
@@ -179,26 +195,39 @@ const f = StyleSheet.create({
     borderStyle: "solid",
     marginBottom: 8,
   },
+  // Cabeçalho com fundo cheio e texto claro, como nos documentos originais do
+  // RH. Antes era texto sobre branco, e a tabela se dissolvia na página.
   tabelaCabecalho: {
     flexDirection: "row",
-    borderBottomWidth: 0.5,
-    borderBottomColor: SLATE_200,
-    borderBottomStyle: "solid",
+    backgroundColor: SLATE_900,
   },
   tabelaCabecalhoCelula: {
     fontSize: 7.5,
     fontFamily: "Helvetica-Bold",
-    paddingVertical: 3,
-    paddingHorizontal: 3,
+    color: BRANCO,
+    paddingVertical: 5,
+    paddingHorizontal: 4,
   },
+  // Zebra: o original alterna cinza claro e branco, e numa tabela de 15 linhas
+  // com quatro colunas isso é o que impede o olho de pular de linha.
+  tabelaLinhaPar: { backgroundColor: SLATE_50 },
+  tabelaCelulaPrimeira: { fontFamily: "Helvetica-Bold" },
   tabelaLinha: {
     flexDirection: "row",
-    minHeight: 12,
+    minHeight: 14,
     borderBottomWidth: 0.5,
     borderBottomColor: SLATE_200,
     borderBottomStyle: "solid",
   },
-  tabelaCelula: { fontSize: 8, paddingVertical: 1.5, paddingHorizontal: 3, lineHeight: 1.35 },
+  tabelaCelula: {
+    fontSize: 8,
+    paddingVertical: 3,
+    paddingHorizontal: 4,
+    lineHeight: 1.3,
+    borderRightWidth: 0.5,
+    borderRightColor: SLATE_200,
+    borderRightStyle: "solid",
+  },
   tabelaLinhaDensa: { minHeight: 10 },
   tabelaCelulaDensa: { fontSize: 7, paddingVertical: 0.5, paddingHorizontal: 2.5, lineHeight: 1.2 },
   tabelaGrupo: {
@@ -267,21 +296,45 @@ export function Documento({
   codigo,
   titulo,
   subtitulo,
+  versao,
+  publicadoEm,
   orientacao = "portrait",
   children,
 }: {
   codigo: string;
   titulo: string;
   subtitulo?: string;
+  /**
+   * Versão e data de publicação do TEXTO, no cabeçalho de toda folha.
+   *
+   * Não é enfeite: num documento que sustenta justa causa, "ele assinou o termo"
+   * vale menos que "ele assinou a versão 1.2, publicada em 23/08/2026". E o
+   * cabeçalho é `fixed`, então a identificação viaja em todas as páginas — folha
+   * solta continua rastreável.
+   */
+  versao?: string;
+  publicadoEm?: string;
   orientacao?: "portrait" | "landscape";
   children: React.ReactNode;
 }) {
+  // A data chega em ISO (yyyy-mm-dd), do `updated_at` ou do padrão, e é
+  // formatada aqui — num só lugar. Documento brasileiro com data ISO no
+  // cabeçalho é erro que salta aos olhos de quem assina.
+  const selo = [
+    versao ? `Versão ${versao}` : null,
+    publicadoEm ? formatarData(publicadoEm) : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
   return (
     <Document>
       <Page size="A4" orientation={orientacao} style={f.page}>
         <View style={f.cabecalho} fixed>
           <LogoSistenge width={LOGO_LARGURA} />
-          <Text style={f.codigo}>{codigo}</Text>
+          <View>
+            <Text style={f.codigo}>{codigo}</Text>
+            {selo ? <Text style={f.versao}>{selo}</Text> : null}
+          </View>
         </View>
         <Text style={f.titulo}>{titulo}</Text>
         {subtitulo ? <Text style={f.subtitulo}>{subtitulo}</Text> : null}
@@ -448,9 +501,12 @@ export function Tabela({
   colunas,
   linhas,
   densa = false,
+  negritoNaPrimeira = false,
 }: {
   colunas: Coluna[];
   linhas: LinhaTabela[];
+  /** Primeira coluna em negrito — usado nas tabelas dos normativos. */
+  negritoNaPrimeira?: boolean;
   /**
    * Aperta linha e corpo. Existe para o grid do FRM-RH-005: 44 tarefas × 7 dias
    * numa folha paisagem, onde a altura útil é de apenas 527pt. Fora desse caso a
@@ -458,17 +514,32 @@ export function Tabela({
    */
   densa?: boolean;
 }) {
+  const zebra = calcularZebra(linhas);
+
+  // Estilos pré-computados FORA do map. Passar array novo a cada linha e a cada
+  // célula derrota o cache de estilo do @react-pdf: o mesmo grid de 45 linhas ia
+  // de ~0,5s para ~10s, e a rota de PDF responderia em dez segundos.
+  const estiloLinha = densa ? [f.tabelaLinha, f.tabelaLinhaDensa] : [f.tabelaLinha];
+  const estiloLinhaPar = [...estiloLinha, f.tabelaLinhaPar];
+  const estiloCelula = densa ? f.tabelaCelulaDensa : f.tabelaCelula;
+  const larguras = colunas.map((c) => ({
+    width: `${c.largura}%` as const,
+    textAlign: c.alinhar ?? ("left" as const),
+  }));
+  const celulaPorColuna = colunas.map((_, j) =>
+    j === 0 && negritoNaPrimeira
+      ? [estiloCelula, f.tabelaCelulaPrimeira, larguras[j]]
+      : [estiloCelula, larguras[j]],
+  );
+  const larguraPorColuna = colunas.map((c) => ({
+    width: `${c.largura}%` as const,
+  }));
+
   return (
     <View style={f.tabela}>
       <View style={f.tabelaCabecalho} fixed>
         {colunas.map((c, i) => (
-          <Text
-            key={i}
-            style={[
-              f.tabelaCabecalhoCelula,
-              { width: `${c.largura}%`, textAlign: c.alinhar ?? "left" },
-            ]}
-          >
+          <Text key={i} style={[f.tabelaCabecalhoCelula, larguras[i]]}>
             {c.titulo}
           </Text>
         ))}
@@ -481,25 +552,16 @@ export function Tabela({
         ) : (
           <View
             key={i}
-            style={densa ? [f.tabelaLinha, f.tabelaLinhaDensa] : f.tabelaLinha}
+            style={zebra[i] ? estiloLinhaPar : estiloLinha}
             wrap={false}
           >
-            {colunas.map((c, j) =>
+            {colunas.map((_, j) =>
               linha.celulas[j] === CAIXA || linha.celulas[j] === CAIXA_MARCADA ? (
-                <View
-                  key={j}
-                  style={[f.celulaCentro, { width: `${c.largura}%` }]}
-                >
+                <View key={j} style={larguraPorColuna[j]}>
                   <Caixa celula marcada={linha.celulas[j] === CAIXA_MARCADA} />
                 </View>
               ) : (
-                <Text
-                  key={j}
-                  style={[
-                    densa ? f.tabelaCelulaDensa : f.tabelaCelula,
-                    { width: `${c.largura}%`, textAlign: c.alinhar ?? "left" },
-                  ]}
-                >
+                <Text key={j} style={celulaPorColuna[j]}>
                   {linha.celulas[j] ?? ""}
                 </Text>
               ),
@@ -509,6 +571,21 @@ export function Tabela({
       )}
     </View>
   );
+}
+
+/**
+ * Quais linhas recebem fundo alternado.
+ *
+ * Conta pela posição entre as linhas de DADOS, não pelo índice bruto: com linhas
+ * de grupo no meio (o grid do FRM-RH-005 tem seis), o índice bruto quebraria a
+ * alternância justamente onde ela mais ajuda a não pular de linha.
+ *
+ * Numa passada só. A primeira versão recalculava do zero para cada linha, o que
+ * é O(n²) e estourou o timeout dos testes na tabela de 45 linhas.
+ */
+function calcularZebra(linhas: LinhaTabela[]): boolean[] {
+  let n = 0;
+  return linhas.map((l) => ("grupo" in l ? false : n++ % 2 === 1));
 }
 
 export function Lista({

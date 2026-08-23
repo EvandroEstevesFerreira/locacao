@@ -219,6 +219,8 @@ export function ChecklistLimpeza({
   orgNome,
   titulo,
   paragrafos,
+  versao,
+  publicadoEm,
   frequencias = ["D", "S"],
   catalogo,
   semana,
@@ -226,6 +228,8 @@ export function ChecklistLimpeza({
   orgNome: string;
   titulo: string;
   paragrafos: string[];
+  versao?: string;
+  publicadoEm?: string;
   /** `["D","S"]` gera a folha semanal; `["M"]` gera a folha mensal. */
   frequencias?: Frequencia[];
   /** Tarefas da organização; ausente, usa o catálogo padrão embutido. */
@@ -237,6 +241,8 @@ export function ChecklistLimpeza({
   return (
     <Documento
       codigo="FRM-RH-005"
+      versao={versao}
+      publicadoEm={publicadoEm}
       titulo={mensal ? `${titulo} — folha mensal` : titulo}
       subtitulo={`${orgNome} — Política de Alojamento POL-RH-001`}
       orientacao="landscape"

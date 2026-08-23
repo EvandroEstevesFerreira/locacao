@@ -3,10 +3,10 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil } from "@/lib/auth";
 import {
-  DEFAULT_TEMPLATES,
   documentoInfo,
   renderTemplate,
   corpoParaParagrafos,
+  resolverTemplate,
 } from "@/lib/templates";
 import {
   DOCUMENTOS_EM_BRANCO,
@@ -44,14 +44,14 @@ export async function GET(
     supabase.from("organizacao").select("nome").eq("id", perfil.org_id).single(),
     supabase
       .from("documento_template")
-      .select("titulo, corpo")
+      .select("titulo, corpo, versao, updated_at")
       .eq("org_id", perfil.org_id)
       .eq("tipo", tipo)
       .maybeSingle(),
   ]);
   const orgNome = org?.nome ?? "Sistenge";
 
-  const tpl = tplRow ?? DEFAULT_TEMPLATES[tipo];
+  const tpl = resolverTemplate(tipo, tplRow);
   const variaveis = { empresa_nome: orgNome };
 
   const url2 = new URL(request.url);
@@ -69,6 +69,8 @@ export async function GET(
       orgNome,
       titulo: renderTemplate(tpl.titulo, variaveis),
       paragrafos: corpoParaParagrafos(renderTemplate(tpl.corpo, variaveis)),
+      versao: tpl.versao,
+      publicadoEm: tpl.publicadoEm,
     },
     variante,
     {

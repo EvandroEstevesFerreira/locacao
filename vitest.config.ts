@@ -20,6 +20,14 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["src/**/*.test.{ts,tsx}"],
+    // Os testes de documento renderizam PDF de verdade, e o grid do FRM-RH-005
+    // — 45 linhas x 10 colunas, com 315 caixas de marcação DESENHADAS — custa
+    // cerca de 5s. Medido: as bordas por célula são de graça (1677ms contra
+    // 1696ms num teste isolado); o custo é o desenho das caixas, que existe
+    // porque o Helvetica não tem o glifo ☐ e sem elas o formulário é inútil.
+    // O default de 5s ficava exatamente na fronteira, e o teste falhava por
+    // timeout sem nada estar errado.
+    testTimeout: 30_000,
     exclude: ["node_modules", ".next", "supabase"],
   },
 });

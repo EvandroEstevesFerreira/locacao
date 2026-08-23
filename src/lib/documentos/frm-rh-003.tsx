@@ -133,12 +133,16 @@ export function TermoChaves({
   orgNome,
   titulo,
   paragrafos,
+  versao,
+  publicadoEm,
   dados,
   localData,
 }: {
   orgNome: string;
   titulo: string;
   paragrafos: string[];
+  versao?: string;
+  publicadoEm?: string;
   /** Ausente, o documento sai em branco para preencher à mão. */
   dados?: DadosEntrega;
   localData?: string;
@@ -146,6 +150,8 @@ export function TermoChaves({
   return (
     <Documento
       codigo="FRM-RH-003"
+      versao={versao}
+      publicadoEm={publicadoEm}
       titulo={titulo}
       subtitulo={`${orgNome} — Política de Alojamento POL-RH-001`}
     >

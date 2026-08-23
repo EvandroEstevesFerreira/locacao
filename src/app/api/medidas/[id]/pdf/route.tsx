@@ -4,9 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 import { buscarMedida } from "@/lib/data/alojamento";
 import { formatarData, formatarDataHora, hojeISOSaoPaulo } from "@/lib/locacao";
 import {
-  DEFAULT_TEMPLATES,
   renderTemplate,
   corpoParaParagrafos,
+  resolverTemplate,
 } from "@/lib/templates";
 import {
   MedidaDisciplinar,
@@ -50,11 +50,11 @@ export async function GET(
 
   const { data: tplRow } = await supabase
     .from("documento_template")
-    .select("titulo, corpo")
+    .select("titulo, corpo, versao, updated_at")
     .eq("org_id", medida.imovel.org_id)
     .eq("tipo", "medida_disciplinar")
     .maybeSingle();
-  const tpl = tplRow ?? DEFAULT_TEMPLATES.medida_disciplinar;
+  const tpl = resolverTemplate("medida_disciplinar", tplRow);
 
   const periodo =
     medida.suspensao_inicio && medida.suspensao_fim
@@ -88,6 +88,8 @@ export async function GET(
       orgNome={orgNome}
       titulo={renderTemplate(tpl.titulo, variaveis)}
       paragrafos={corpoParaParagrafos(renderTemplate(tpl.corpo, variaveis))}
+      versao={tpl.versao}
+      publicadoEm={tpl.publicadoEm}
       dados={dados}
       localData={`${medida.imovel.cidade ?? "________"}, ${formatarData(
         medida.data || hojeISOSaoPaulo(),

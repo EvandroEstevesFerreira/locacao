@@ -155,12 +155,16 @@ export function MedidaDisciplinar({
   orgNome,
   titulo,
   paragrafos,
+  versao,
+  publicadoEm,
   dados,
   localData,
 }: {
   orgNome: string;
   titulo: string;
   paragrafos: string[];
+  versao?: string;
+  publicadoEm?: string;
   /** Ausente, o documento sai em branco para preencher à mão. */
   dados?: DadosMedida;
   localData?: string;
@@ -168,6 +172,8 @@ export function MedidaDisciplinar({
   return (
     <Documento
       codigo="FRM-RH-002"
+      versao={versao}
+      publicadoEm={publicadoEm}
       titulo={titulo}
       subtitulo={`${orgNome} — Política de Alojamento POL-RH-001`}
     >

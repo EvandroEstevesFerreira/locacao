@@ -69,6 +69,8 @@ export function TermoCompromisso({
   titulo,
   campos,
   paragrafos,
+  versao,
+  publicadoEm,
   localData,
   aceite,
 }: {
@@ -76,6 +78,8 @@ export function TermoCompromisso({
   titulo: string;
   campos: Campo[];
   paragrafos: string[];
+  versao?: string;
+  publicadoEm?: string;
   localData: string;
   /**
    * Registro do aceite eletrônico. Presente, o bloco de assinatura do empregado
@@ -89,6 +93,8 @@ export function TermoCompromisso({
   return (
     <Documento
       codigo="FRM-RH-001"
+      versao={versao}
+      publicadoEm={publicadoEm}
       titulo={titulo}
       subtitulo={`${orgNome} — Política de Alojamento POL-RH-001`}
     >

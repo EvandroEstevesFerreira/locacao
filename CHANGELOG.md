@@ -7,6 +7,45 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.31.0] — 2026-08-23
+
+### Adicionado
+
+- **Versão e data de publicação no cabeçalho** de toda página de todo documento
+  (`Versão 1.2 · 22/08/2026`). O `.docx` original trazia isso e a primeira
+  transcrição perdeu — num documento que sustenta justa causa, "ele assinou o
+  termo" vale menos que "ele assinou a versão 1.2". O cabeçalho é `fixed`, então
+  folha solta continua rastreável.
+- Campo **versão** no editor de template, com validação de formato numérico.
+  `resolverTemplate()` junta o salvo com o padrão em um lugar só, em vez de
+  repetir a decisão em seis rotas.
+- Migration `0046`: coluna `versao` em `documento_template`. A **data não é
+  campo** — vem de `updated_at`, então revisar a cláusula reata a data sozinho.
+
+### Corrigido
+
+- **A matriz de responsabilidades estava errada.** Eu havia entregado uma lista
+  de papel → atribuições em prosa, que é o *Detalhamento* do original — não a
+  matriz. A original cruza **atividade × papel** com R/A/C/I, e essa distinção é
+  quem responde pelo quê. Refeita com as 12 atividades, e o detalhamento entra
+  logo abaixo no mesmo anexo.
+- A data de publicação saía em **ISO** (`2026-08-22`) num documento brasileiro.
+
+### Alterado
+
+- Tabelas no formato dos originais do RH: cabeçalho com fundo cheio e texto
+  claro, linhas alternadas, grade completa, primeira coluna em negrito.
+
+### Notas de desempenho
+
+- Renderizar o grid do FRM-RH-005 (45 × 10, com 315 caixas desenhadas) custa
+  ~5s. Medido: as bordas por célula são **de graça** (1677ms contra 1696ms
+  isolado); o custo é o desenho das caixas, que existe porque o Helvetica não tem
+  o glifo `☐`. `testTimeout` subiu para 30s.
+- Os arrays de estilo passaram a ser **pré-computados fora do map**. Criar array
+  novo por linha e por célula derrotava o cache do `@react-pdf` e levava o mesmo
+  grid de ~4,5s para ~10s.
+
 ## [0.30.0] — 2026-08-23
 
 ### Corrigido

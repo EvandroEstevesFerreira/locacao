@@ -120,17 +120,23 @@ export function KitAlojamento({
   orgNome,
   titulo,
   paragrafos,
+  versao,
+  publicadoEm,
   dados,
 }: {
   orgNome: string;
   titulo: string;
   paragrafos: string[];
+  versao?: string;
+  publicadoEm?: string;
   /** Ausente, o documento sai em branco para preencher à mão. */
   dados?: DadosEntrega;
 }) {
   return (
     <Documento
       codigo="FRM-RH-004"
+      versao={versao}
+      publicadoEm={publicadoEm}
       titulo={titulo}
       subtitulo={`${orgNome} — Política de Alojamento POL-RH-001`}
     >

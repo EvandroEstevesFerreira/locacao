@@ -4,9 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 import { buscarEntrega } from "@/lib/data/alojamento";
 import { formatarData, hojeISOSaoPaulo } from "@/lib/locacao";
 import {
-  DEFAULT_TEMPLATES,
   renderTemplate,
   corpoParaParagrafos,
+  resolverTemplate,
   type TipoDocumento,
 } from "@/lib/templates";
 import { TermoChaves, type DadosEntrega } from "@/lib/documentos/frm-rh-003";
@@ -67,11 +67,11 @@ export async function GET(
 
   const { data: tplRow } = await supabase
     .from("documento_template")
-    .select("titulo, corpo")
+    .select("titulo, corpo, versao, updated_at")
     .eq("org_id", imovel.org_id)
     .eq("tipo", tipo)
     .maybeSingle();
-  const tpl = tplRow ?? DEFAULT_TEMPLATES[tipo];
+  const tpl = resolverTemplate(tipo, tplRow);
 
   const dados: DadosEntrega = {
     ocupante: ocupante.nome,
@@ -96,6 +96,8 @@ export async function GET(
     orgNome,
     titulo: renderTemplate(tpl.titulo, variaveis),
     paragrafos: corpoParaParagrafos(renderTemplate(tpl.corpo, variaveis)),
+    versao: tpl.versao,
+    publicadoEm: tpl.publicadoEm,
   };
   // `hojeISOSaoPaulo()`, nunca `new Date().toISOString()`: o Vercel roda em UTC
   // e entre 21h e a meia-noite em Brasília a data sairia do dia seguinte.

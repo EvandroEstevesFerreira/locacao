@@ -21,34 +21,74 @@
 import {
   Documento,
   Anexo,
+  Secao,
   Tabela,
   type Coluna,
   type LinhaTabela,
 } from "@/lib/pdf-form";
-import { Narrativa } from "./blocos";
+import { Narrativa, Paragrafo } from "./blocos";
 
-const COLUNAS_RESPONSABILIDADE: Coluna[] = [
+/**
+ * ANEXO I — matriz RACI do item 10, transcrita do original conferindo célula a
+ * célula.
+ *
+ * Antes eu havia entregado aqui uma lista de papel → atribuições em prosa, que
+ * é o "Detalhamento" do original — NÃO a matriz. São tabelas diferentes: a matriz
+ * cruza ATIVIDADE com PAPEL e diz quem é Responsável, Aprovador, Consultado e
+ * Informado. Numa política disciplinar, essa distinção é quem responde pelo quê.
+ */
+const COLUNAS_RACI: Coluna[] = [
+  { titulo: "Atividade", largura: 44 },
+  { titulo: "RH", largura: 14, alinhar: "center" },
+  { titulo: "Encarregado", largura: 16, alinhar: "center" },
+  { titulo: "SESMT / SST", largura: 14, alinhar: "center" },
+  { titulo: "Empregado", largura: 12, alinhar: "center" },
+];
+
+const RACI: LinhaTabela[] = (
+  [
+    ["Elaborar e revisar esta política", "R", "C", "I", "—"],
+    ["Comunicar regras ao empregado na admissão", "R", "C", "—", "—"],
+    ["Colher assinatura do Termo de Compromisso", "R", "C", "—", "—"],
+    ["Entrega e devolução de chaves do alojamento e do armário", "R", "R", "—", "C"],
+    ["Operar o sistema de câmeras (CFTV)", "R", "C", "C", "I"],
+    ["Fiscalizar o cumprimento das regras no dia a dia", "C", "R", "I", "—"],
+    ["Registrar ocorrências e advertências", "A", "R", "—", "—"],
+    ["Aplicar penalidades disciplinares", "R", "C", "I", "—"],
+    ["Manter limpeza coletiva e organização", "—", "C", "—", "R"],
+    ["Comunicar problemas estruturais (manutenção)", "I", "R", "C", "C"],
+    ["Cumprir as regras do alojamento", "—", "—", "—", "R"],
+    ["Apurar denúncias", "R", "C", "C", "I"],
+  ] as const
+).map((celulas) => ({ celulas: [...celulas] }));
+
+/**
+ * O "Detalhamento" do item 10: o que cada parte faz, em prosa. Vem depois da
+ * matriz no mesmo anexo, como no original — a matriz diz QUEM responde, o
+ * detalhamento diz O QUÊ.
+ */
+const COLUNAS_DETALHAMENTO: Coluna[] = [
   { titulo: "Responsável", largura: 24 },
   { titulo: "Atribuições", largura: 76 },
 ];
 
-const RESPONSABILIDADES: LinhaTabela[] = [
-  {
-    celulas: [
-      "Empregado alojado",
-      "Cumprir esta política e o Termo de Compromisso FRM-RH-001; zelar pela conservação do alojamento, do armário e do kit; comunicar avarias, riscos e violações ao Encarregado.",
-    ],
-  },
-  {
-    celulas: [
-      "Encarregado",
-      "Fiscalizar o cumprimento da política; registrar ocorrências; conduzir a vistoria de entrega e devolução; aplicar advertência verbal e acionar o RH nos demais casos.",
-    ],
-  },
+const DETALHAMENTO: LinhaTabela[] = [
   {
     celulas: [
       "Recursos Humanos",
-      "Aplicar advertência escrita e suspensão (FRM-RH-002); manter a pasta funcional; apurar denúncias; guardar as imagens de CFTV sob acesso restrito.",
+      "Elaborar, revisar e atualizar esta política; comunicar as regras ao empregado na admissão e colher a assinatura do Termo de Compromisso; aplicar advertências, suspensões e demais penalidades; apurar denúncias e mediar conflitos não solucionados pelo Encarregado; manter o arquivo das ocorrências e penalidades; coordenar a gestão do CFTV (acesso, retenção e atendimento a pedidos de titulares).",
+    ],
+  },
+  {
+    celulas: [
+      "Encarregado de Obra / Administrativo do Contrato",
+      "Fiscalizar diariamente o cumprimento das regras; registrar ocorrências em livro próprio ou no sistema indicado; realizar entrega e devolução de chaves do alojamento e do armário individual; receber e dar primeira tratativa às demandas dos alojados; acionar o RH em caso de infração grave ou reincidência; coordenar a manutenção corretiva e preventiva do alojamento.",
+    ],
+  },
+  {
+    celulas: [
+      "Empregado alojado",
+      "Conhecer e cumprir esta política, assinando o Termo de Compromisso na admissão; zelar pela limpeza, segurança e conservação do alojamento e do armário individual; comunicar imediatamente problemas, danos ou violações; cooperar com a fiscalização.",
     ],
   },
   {
@@ -103,14 +143,20 @@ export function PoliticaAlojamento({
   orgNome,
   titulo,
   paragrafos,
+  versao,
+  publicadoEm,
 }: {
   orgNome: string;
   titulo: string;
   paragrafos: string[];
+  versao?: string;
+  publicadoEm?: string;
 }) {
   return (
     <Documento
       codigo="POL-RH-001"
+      versao={versao}
+      publicadoEm={publicadoEm}
       titulo={titulo}
       subtitulo={`${orgNome} — Recursos Humanos`}
     >
@@ -120,11 +166,19 @@ export function PoliticaAlojamento({
           revisar a tabela não obriga a mexer na cláusula que a invoca. Cada um
           começa em página nova. */}
       <Anexo numero="I" titulo="Matriz de responsabilidades">
-        <Tabela colunas={COLUNAS_RESPONSABILIDADE} linhas={RESPONSABILIDADES} />
+        <Paragrafo texto="R: Responsável · A: Aprovador · C: Consultado · I: Informado" />
+        <Tabela colunas={COLUNAS_RACI} linhas={RACI} negritoNaPrimeira />
+        <Secao titulo="Detalhamento">
+          <Tabela
+            colunas={COLUNAS_DETALHAMENTO}
+            linhas={DETALHAMENTO}
+            negritoNaPrimeira
+          />
+        </Secao>
       </Anexo>
 
       <Anexo numero="II" titulo="Tabela de infrações e penalidades">
-        <Tabela colunas={COLUNAS_INFRACAO} linhas={INFRACOES} densa />
+        <Tabela colunas={COLUNAS_INFRACAO} linhas={INFRACOES} negritoNaPrimeira />
       </Anexo>
     </Documento>
   );

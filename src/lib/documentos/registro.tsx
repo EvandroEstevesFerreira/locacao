@@ -18,6 +18,9 @@ export type ConteudoDocumento = {
   orgNome: string;
   titulo: string;
   paragrafos: string[];
+  /** Versão do texto e data de publicação, impressas no cabeçalho. */
+  versao?: string;
+  publicadoEm?: string;
 };
 
 type Renderizador = (

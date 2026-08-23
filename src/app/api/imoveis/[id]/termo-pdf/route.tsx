@@ -6,9 +6,9 @@ import { tipoImovelLabel } from "@/lib/imoveis";
 import type { Campo } from "@/lib/pdf-form";
 import { TermoCompromisso } from "@/lib/documentos/frm-rh-001";
 import {
-  DEFAULT_TEMPLATES,
   renderTemplate,
   corpoParaParagrafos,
+  resolverTemplate,
 } from "@/lib/templates";
 
 export const runtime = "nodejs";
@@ -85,7 +85,7 @@ export async function GET(
 
   const { data: tplRow } = await supabase
     .from("documento_template")
-    .select("titulo, corpo")
+    .select("titulo, corpo, versao, updated_at")
     .eq("org_id", imovel.org_id)
     .eq("tipo", "termo_responsabilidade")
     .maybeSingle();
@@ -104,7 +104,7 @@ export async function GET(
     cidade: imovel.cidade ?? "",
   };
 
-  const tpl = tplRow ?? DEFAULT_TEMPLATES.termo_responsabilidade;
+  const tpl = resolverTemplate("termo_responsabilidade", tplRow);
   const tituloDoc = renderTemplate(tpl.titulo, variaveis);
   const paragrafos = corpoParaParagrafos(renderTemplate(tpl.corpo, variaveis));
 
@@ -115,6 +115,8 @@ export async function GET(
       titulo={tituloDoc}
       campos={campos}
       paragrafos={paragrafos}
+      versao={tpl.versao}
+      publicadoEm={tpl.publicadoEm}
       localData={`${imovel.cidade ?? "________"}, ${hojeStr}.`}
       aceite={
         ocupante.aceite_em
