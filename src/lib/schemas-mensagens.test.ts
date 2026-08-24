@@ -10,6 +10,7 @@ import * as itens from "./itens";
 import * as locacao from "./locacao";
 import * as obra from "./obra";
 import * as permissoes from "./permissoes";
+import * as recebimento from "./recebimento";
 
 /**
  * O USUÁRIO NUNCA PODE VER UMA MENSAGEM CRUA DO ZOD.
@@ -44,6 +45,7 @@ const MODULOS: Record<string, Record<string, unknown>> = {
   locacao,
   obra,
   permissoes,
+  recebimento,
 };
 
 /**
@@ -160,6 +162,25 @@ const VAZIOS: Record<string, unknown> = {
     modulos: [],
     nova_senha: "",
   },
+  recebimentoSchema: {
+    contrato_id: "",
+    recebido_em: "",
+    conferente: "",
+    nota_fornecedor: "",
+    observacoes: "",
+  },
+  recebimentoItemSchema: {
+    recebimento_id: "",
+    item_locado_id: "",
+    item_id: "",
+    unidade_id: "",
+    quantidade: "",
+    condicao: "ok",
+    observacoes: "",
+  },
+  // `ciente: false` é o caso real: a pessoa clica em fechar sem marcar a
+  // confirmação. Tem de sair a NOSSA mensagem, não "Invalid literal".
+  fecharRecebimentoSchema: { id: "", ciente: false, observacoes: "" },
   lancamentoSchema: {
     obra_id: "",
     contrato_id: "",
