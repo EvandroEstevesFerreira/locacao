@@ -7,6 +7,7 @@
 // fase pode ir a produção sozinha sem risco de comunicar terceiro por engano.
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeOperar } from "@/lib/auth";
 import {
@@ -19,6 +20,54 @@ import { falha, primeiroErro, type ActionResult } from "@/lib/acoes";
 function revalidar(contratoId: string, recebimentoId?: string) {
   revalidatePath(`/contratos/${contratoId}`);
   if (recebimentoId) revalidatePath(`/recebimentos/${recebimentoId}`);
+}
+
+/**
+ * Cria o rascunho e leva direto à conferência.
+ *
+ * REDIRECIONA, e por isso não devolve `ActionResult`: um `redirect()` lança
+ * `NEXT_REDIRECT` e tudo depois do `await` no cliente seria código morto
+ * (regra do AGENTS.md). Quem chama é um `<form action>` simples.
+ *
+ * Existe separado de `salvarRecebimento` porque o caminho normal é um clique
+ * só: o conferente está com o caminhão parado no portão e não quer preencher
+ * cabeçalho antes de listar o que chegou. Data e conferente ficam editáveis na
+ * própria tela de conferência.
+ */
+export async function criarRascunhoRecebimento(formData: FormData): Promise<void> {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) {
+    throw new Error("Você não tem permissão para registrar recebimentos.");
+  }
+  const contratoId = String(formData.get("contrato_id") ?? "").trim();
+  const recebidoEm = String(formData.get("recebido_em") ?? "").trim();
+  if (!contratoId || !/^d{4}-d{2}-d{2}$/.test(recebidoEm)) return;
+
+  const supabase = await createClient();
+  const { data: contrato } = await supabase
+    .from("contrato_locacao")
+    .select("fornecedor_id")
+    .eq("id", contratoId)
+    .maybeSingle();
+  if (!contrato) throw new Error("Contrato não encontrado.");
+
+  const { data, error } = await supabase
+    .from("recebimento")
+    .insert({
+      org_id: perfil.org_id,
+      contrato_id: contratoId,
+      fornecedor_id: contrato.fornecedor_id,
+      recebido_em: recebidoEm,
+    })
+    .select("id")
+    .single();
+  if (error || !data) {
+    console.error("criarRascunhoRecebimento", error);
+    throw new Error("Não foi possível criar o recebimento.");
+  }
+
+  revalidatePath(`/contratos/${contratoId}`);
+  redirect(`/recebimentos/${data.id}`);
 }
 
 /**

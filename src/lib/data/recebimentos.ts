@@ -86,7 +86,30 @@ export async function listarRecebimentos(
  * policy esconde a linha, e a página chama `notFound()` nos dois casos sem
  * distinguir.
  */
-export async function buscarRecebimento(id: string) {
+export type RecebimentoCompleto = {
+  id: string;
+  numero_registro: string | null;
+  recebido_em: string;
+  status: string;
+  conferente: string | null;
+  nota_fornecedor: string | null;
+  observacoes: string | null;
+  fechado_em: string | null;
+  aviso_enviado_em: string | null;
+  documento_path: string | null;
+  contrato: {
+    id: string;
+    numero: string;
+    numero_registro: string | null;
+    obra: { codigo: string; nome: string } | null;
+  } | null;
+  fornecedor: { nome: string; contato_email: string | null } | null;
+  itens: RecebimentoItemLinha[];
+};
+
+export async function buscarRecebimento(
+  id: string,
+): Promise<RecebimentoCompleto | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("recebimento")
@@ -125,18 +148,31 @@ export async function buscarRecebimento(id: string) {
     };
   });
 
+  const contratoBruto = achatar(
+    data.contrato as unknown as {
+      id: string;
+      numero: string;
+      numero_registro: string | null;
+      obra: { codigo: string; nome: string } | { codigo: string; nome: string }[] | null;
+    } | null,
+  );
+
   return {
-    ...data,
-    contrato: achatar(
-      data.contrato as {
-        id: string;
-        numero: string;
-        numero_registro: string | null;
-        obra: { codigo: string; nome: string } | { codigo: string; nome: string }[] | null;
-      } | null,
-    ),
+    id: data.id,
+    numero_registro: data.numero_registro,
+    recebido_em: data.recebido_em,
+    status: data.status,
+    conferente: data.conferente,
+    nota_fornecedor: data.nota_fornecedor,
+    observacoes: data.observacoes,
+    fechado_em: data.fechado_em,
+    aviso_enviado_em: data.aviso_enviado_em,
+    documento_path: data.documento_path,
+    contrato: contratoBruto
+      ? { ...contratoBruto, obra: achatar(contratoBruto.obra) }
+      : null,
     fornecedor: achatar(
-      data.fornecedor as { nome: string; contato_email: string | null } | null,
+      data.fornecedor as unknown as { nome: string; contato_email: string | null } | null,
     ),
     itens,
   };

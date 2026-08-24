@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.38.0";
+export const APP_VERSION = "0.39.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,17 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.39.0",
+    data: "2026-08-24",
+    titulo: "Recebimento de equipamento",
+    mudancas: [
+      { tipo: "novo", texto: "O contrato ganhou a seção Recebimentos: registre o que chegou do fornecedor, item a item, com quem conferiu e o número da nota deles." },
+      { tipo: "novo", texto: "Equipamento de valor passa a ser conferido por patrimônio — o sistema sabe QUAL betoneira chegou, não só que chegou uma. Material de repetição continua por quantidade." },
+      { tipo: "novo", texto: "Dá para registrar que chegou algo fora do contrato, ou com avaria, sem ter de forçar o lançamento para conseguir salvar." },
+      { tipo: "melhoria", texto: "A data do recebimento é a da entrega, não a do lançamento: quem digita dias depois no escritório corrige a data na tela." },
+    ],
+  },
   {
     versao: "0.38.0",
     data: "2026-08-24",
