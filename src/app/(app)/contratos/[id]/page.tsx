@@ -28,6 +28,7 @@ import { ContratoItens } from "./_components/contrato-itens";
 import { ContratoRetirada, type VistoriaDeRetirada } from "./_components/contrato-retirada";
 import { ContratoDocumentos } from "./_components/contrato-documentos";
 import { ContratoDevolucoes } from "./_components/contrato-devolucoes";
+import { ContratoRecebimentos } from "./_components/contrato-recebimentos";
 
 export const metadata = { title: "Contrato — Loca" };
 
@@ -158,6 +159,10 @@ export default async function ContratoDetalhePage({
           prorata={prorata}
           podeEditar={podeEditar}
         />
+      </Suspense>
+
+      <Suspense fallback={<SecaoSkeleton linhas={3} />}>
+        <ContratoRecebimentos contratoId={contrato.id} podeEditar={podeEditar} />
       </Suspense>
 
       <ContratoRetirada

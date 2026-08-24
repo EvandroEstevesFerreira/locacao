@@ -7,6 +7,63 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.39.0] — 2026-08-24
+
+Fase 1a de `docs/superpowers/specs/2026-08-23-recebimento-equipamento-design.md`.
+O fechamento, o romaneio em PDF e o e-mail ao fornecedor vêm na 1b.
+
+### Adicionado
+
+- **Recebimento como evento.** Até aqui ele não existia em lugar nenhum:
+  `movimentacao` só grava devolução, e a retirada era implícita em
+  `item_locado.data_retirada`. O papel que circulava na obra era o do fornecedor.
+- **Seção Recebimentos** no detalhe do contrato e tela de conferência em
+  `/recebimentos/[id]`.
+- **Granularidade mista** — `item_catalogo.controle` (`peca` | `quantidade`).
+  O formulário troca o campo conforme o item: seletor de patrimônio ou
+  quantidade. Sem isso, o conferente de uma betoneira digitaria "1" e o sistema
+  não saberia QUAL betoneira chegou.
+- **`item_locado.unidade_id`** — o vínculo que faltava. `equipamento_unidade`
+  existia desde a migration 0005 e estava **órfã**: única por organização, e
+  nenhuma tabela a referenciava.
+
+### Decisões
+
+- **`recebimento_item.item_locado_id` é nulável de propósito.** Nulo = chegou
+  algo fora do contrato. Sem isso o conferente teria de mentir no documento para
+  conseguir salvar, e mentira em documento de conferência é pior do que
+  divergência registrada.
+- **`recebido_em` é campo, não `now()`.** Obra grande lança com o caminhão
+  parado; obra pequena manda a nota ao escritório e alguém digita três dias
+  depois. Com `now()`, o segundo caso produziria um documento com a data errada
+  — e é o documento que vai ao fornecedor.
+- **O rascunho nasce sem número.** Esta é a única tabela do sistema sem o
+  trigger `trg_numero_registro` da 0048: o número sai no fechamento. Rascunho
+  numerado que é excluído deixa exatamente o buraco que o contador gapless
+  existe para evitar.
+- **`fornecedor_id` vem do CONTRATO, não do formulário.** Aceitá-lo do cliente
+  permitiria gravar um recebimento apontando para um fornecedor que não é o do
+  contrato — e é ele que receberá o aviso na 1b.
+- **Avaria e divergência exigem descrição.** Sem ela o fornecedor recebe "1 item
+  com avaria" e não sabe qual nem o quê.
+
+### Verificação
+
+Migration 0049 validada no Postgres local em oito casos, inclusive os três que
+devem **recusar**: quantidade zero, condição inválida e número repetido na mesma
+organização. Dois rascunhos com `numero_registro` nulo convivem sem colidir no
+`unique`.
+
+Rota verificada no servidor de desenvolvimento: `/recebimentos/[id]` responde
+307 para `/login` sem sessão, sem erro no log.
+
+**Não verificado num navegador** — as telas não foram abertas com sessão real.
+
+### Ainda não disponível
+
+O botão de fechar. A tela avisa, em vez de deixar o usuário procurar: enquanto a
+1b não chega, o recebimento é registro interno e nada sai do sistema.
+
 ## [0.38.0] — 2026-08-24
 
 Identidade visual Sistenge em toda a comunicação por e-mail. Um layout só —

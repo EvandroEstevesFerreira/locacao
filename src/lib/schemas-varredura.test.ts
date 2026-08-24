@@ -10,6 +10,7 @@ import * as itens from "./itens";
 import * as locacao from "./locacao";
 import * as obra from "./obra";
 import * as permissoes from "./permissoes";
+import * as recebimento from "./recebimento";
 
 /**
  * VARREDURA — o teste que a suíte de idempotência deveria ter sido desde o
@@ -44,6 +45,7 @@ const MODULOS: Record<string, Record<string, unknown>> = {
   locacao,
   obra,
   permissoes,
+  recebimento,
 };
 
 /**
@@ -146,6 +148,14 @@ const AMOSTRAS: Record<string, unknown> = {
     obras: [],
     modulos: [],
   },
+  recebimentoSchema: { contrato_id: UUID, recebido_em: "2026-08-24" },
+  recebimentoItemSchema: {
+    recebimento_id: UUID,
+    item_id: UUID,
+    quantidade: "2",
+    condicao: "ok",
+  },
+  fecharRecebimentoSchema: { id: UUID, ciente: true },
   lancamentoSchema: {
     obra_id: UUID,
     descricao: "Aluguel",
