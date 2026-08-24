@@ -18,6 +18,7 @@ import {
 import { FormError } from "@/components/shared/form-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { salvarObra } from "./actions";
@@ -30,9 +31,17 @@ type Obra = {
   responsavel: string | null;
   centro_custo: string | null;
   status: StatusObra;
+  destinatarios_alerta: string[] | null;
 };
 
-export function ObraForm({ obra }: { obra?: Obra }) {
+export function ObraForm({
+  obra,
+  vinculados = [],
+}: {
+  obra?: Obra;
+  /** E-mails que já recebem por estarem vinculados à obra. Só para exibir. */
+  vinculados?: string[];
+}) {
   const router = useRouter();
   const [erroServidor, setErroServidor] = useState<string | null>(null);
   const [pendente, startTransition] = useTransition();
@@ -56,6 +65,7 @@ export function ObraForm({ obra }: { obra?: Obra }) {
       responsavel: obra?.responsavel ?? "",
       centro_custo: obra?.centro_custo ?? "",
       status: obra?.status ?? "ativa",
+      destinatarios_alerta: (obra?.destinatarios_alerta ?? []).join("\n"),
     },
   });
 
@@ -148,6 +158,43 @@ export function ObraForm({ obra }: { obra?: Obra }) {
             {...register("centro_custo")}
           />
         </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="destinatarios_alerta">
+          E-mails extras para avisos{" "}
+          <span className="font-normal text-muted-foreground">(opcional)</span>
+        </Label>
+        <Textarea
+          id="destinatarios_alerta"
+          rows={3}
+          disabled={pendente}
+          placeholder={"mestre.obra@terceirizada.com.br\nalmoxarifado@obra.com.br"}
+          aria-invalid={!!errors.destinatarios_alerta}
+          {...register("destinatarios_alerta")}
+        />
+        {errors.destinatarios_alerta ? (
+          <p className="text-xs text-destructive">
+            {errors.destinatarios_alerta.message}
+          </p>
+        ) : null}
+        <p className="text-xs text-muted-foreground">
+          Um por linha. Use apenas para quem <strong>não tem login</strong> no
+          Loca — quem está vinculado à obra já recebe automaticamente.
+        </p>
+        {/* Mostrar quem já é coberto evita o erro mais provável: digitar de
+            novo endereços que o vínculo com a obra já entrega. */}
+        {vinculados.length > 0 ? (
+          <p className="text-xs text-muted-foreground">
+            Já recebem por estarem vinculados a esta obra:{" "}
+            <span className="text-foreground">{vinculados.join(", ")}</span>.
+          </p>
+        ) : obra ? (
+          <p className="text-xs text-muted-foreground">
+            Nenhum usuário está vinculado a esta obra. Sem e-mails extras, os
+            avisos dela vão só para a lista central.
+          </p>
+        ) : null}
       </div>
 
       <FormError>{erroServidor}</FormError>

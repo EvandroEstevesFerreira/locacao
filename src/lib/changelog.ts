@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.34.0";
+export const APP_VERSION = "0.35.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,19 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.35.0",
+    data: "2026-08-24",
+    titulo: "Cada obra recebe o aviso que é dela",
+    mudancas: [
+      { tipo: "novo", texto: "Os avisos de vencimento passaram a sair por obra: cada obra recebe só o que é dela. Quem está vinculado à obra recebe automaticamente." },
+      { tipo: "novo", texto: "A obra ganhou um campo de e-mails extras, para avisar quem não tem login no Loca — mestre de obra, encarregado terceirizado, e-mail do almoxarifado." },
+      { tipo: "novo", texto: "A lista de Configurações virou a central: recebe tudo, de todas as obras, agrupado por obra. Quem já estava lá continua recebendo, agora organizado." },
+      { tipo: "novo", texto: "Obra sem ninguém para avisar não perde o aviso — ele vai para a central, marcado, para que a falta seja visível." },
+      { tipo: "correcao", texto: "Salvar uma obra sem endereço, sem responsável ou sem centro de custo dava \"Dados inválidos\" sem dizer qual campo. Corrigido." },
+      { tipo: "correcao", texto: "Se o registro do envio falhasse, o mesmo aviso era reenviado todo dia sem que nada acusasse. Agora a falha é registrada." },
+    ],
+  },
   {
     versao: "0.34.0",
     data: "2026-08-23",

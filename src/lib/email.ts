@@ -26,11 +26,11 @@ export type LinhaAlerta = {
   custo?: string;
 };
 
-/** Monta o HTML do e-mail de aviso de vencimentos. */
-export function montarEmailVencimentos(
-  orgNome: string,
-  linhas: LinhaAlerta[],
-): string {
+/**
+ * A tabela de avisos — usada tanto no e-mail da obra quanto em cada seção do
+ * e-mail central. Uma montagem só: duas divergiriam na primeira coluna nova.
+ */
+function tabelaAlertas(linhas: LinhaAlerta[]): string {
   const cel = `padding:8px 12px;border-bottom:1px solid ${SLATE_200};`;
   const itens = linhas
     .map(
@@ -45,11 +45,7 @@ export function montarEmailVencimentos(
     )
     .join("");
 
-  return `<!doctype html>
-<html lang="pt-BR"><body style="font-family:Arial,Helvetica,sans-serif;color:${SLATE_900};">
-  <h2 style="margin:0 0 4px;">Loca — Avisos de vencimento</h2>
-  <p style="color:${SLATE_500};margin:0 0 16px;">${orgNome}</p>
-  <table style="border-collapse:collapse;width:100%;font-size:14px;">
+  return `<table style="border-collapse:collapse;width:100%;font-size:14px;">
     <thead>
       <tr style="text-align:left;background:${SLATE_100};">
         <th style="padding:8px 12px;">Tipo</th>
@@ -60,9 +56,96 @@ export function montarEmailVencimentos(
       </tr>
     </thead>
     <tbody>${itens}</tbody>
-  </table>
+  </table>`;
+}
+
+/**
+ * E-mail de aviso de vencimentos de UMA obra (ou da organização, quando não há
+ * divisão por obra). O subtítulo diz de quem é a lista.
+ */
+export function montarEmailVencimentos(
+  orgNome: string,
+  linhas: LinhaAlerta[],
+  subtitulo?: string,
+): string {
+  return `<!doctype html>
+<html lang="pt-BR"><body style="font-family:Arial,Helvetica,sans-serif;color:${SLATE_900};">
+  <h2 style="margin:0 0 4px;">Loca — Avisos de vencimento</h2>
+  <p style="color:${SLATE_500};margin:0 0 16px;">${subtitulo ? `${orgNome} — ${subtitulo}` : orgNome}</p>
+  ${tabelaAlertas(linhas)}
   <p style="color:${SLATE_400};font-size:12px;margin-top:16px;">
     Enviado automaticamente pelo Loca — controle de locações.
+  </p>
+</body></html>`;
+}
+
+/** Um bloco do e-mail central: uma obra e os avisos dela. */
+export type GrupoAlerta = {
+  /** Rótulo da obra, ou "Sem obra" para o que não tem obra vinculada. */
+  obra: string;
+  linhas: LinhaAlerta[];
+  /**
+   * Obra sem ninguém para avisar — nem usuário vinculado, nem e-mail extra.
+   *
+   * A central é o destino de tudo que a divisão por obra não consegue entregar,
+   * e precisa DIZER que absorveu. Sem esta marca, o alerta chegaria à central
+   * exatamente como os outros e ninguém saberia que a obra ficou sem aviso.
+   */
+  semDestinatarios?: boolean;
+};
+
+/**
+ * E-mail central: todas as obras, agrupadas, para quem gerencia os contratos.
+ *
+ * Reaproveita `montarEmailVencimentos` por grupo em vez de reescrever a tabela:
+ * o corpo que a obra recebe e o que aparece na seção dela no central são o
+ * mesmo HTML, e duas montagens divergiriam na primeira mudança de coluna.
+ */
+export function montarEmailVencimentosCentral(
+  orgNome: string,
+  grupos: GrupoAlerta[],
+): string {
+  const total = grupos.reduce((s, g) => s + g.linhas.length, 0);
+  // Numa variável, e não interpolado no meio do template: quebrado em duas
+  // linhas o HTML renderiza igual (o navegador colapsa o espaço), mas a frase
+  // deixa de existir como string contígua — e nenhum teste consegue afirmá-la.
+  const resumo = `${total} ${total === 1 ? "aviso" : "avisos"} em ${grupos.length} ${
+    grupos.length === 1 ? "grupo" : "grupos"
+  }`;
+
+  const indice = grupos
+    .map(
+      (g) =>
+        `<li style="margin-bottom:4px;">
+          <strong>${g.obra}</strong> — ${g.linhas.length} ${g.linhas.length === 1 ? "aviso" : "avisos"}
+          ${
+            g.semDestinatarios
+              ? `<br><span style="color:${SLATE_500};font-size:12px;">&#9888; sem destinatários próprios — só a central foi avisada</span>`
+              : ""
+          }
+        </li>`,
+    )
+    .join("");
+
+  const secoes = grupos
+    .map(
+      (g) =>
+        `<h3 style="margin:24px 0 8px;font-size:15px;border-top:1px solid ${SLATE_200};padding-top:16px;">
+          ${g.obra}
+        </h3>
+        ${tabelaAlertas(g.linhas)}`,
+    )
+    .join("");
+
+  return `<!doctype html>
+<html lang="pt-BR"><body style="font-family:Arial,Helvetica,sans-serif;color:${SLATE_900};">
+  <h2 style="margin:0 0 4px;">Loca — Avisos de vencimento</h2>
+  <p style="color:${SLATE_500};margin:0 0 16px;">${orgNome} — ${resumo}</p>
+  <ul style="font-size:14px;padding-left:20px;margin:0 0 8px;">${indice}</ul>
+  ${secoes}
+  <p style="color:${SLATE_400};font-size:12px;margin-top:16px;">
+    Você recebe este resumo por gerenciar todos os contratos. Cada obra recebe
+    separadamente o que é dela.
   </p>
 </body></html>`;
 }

@@ -19,18 +19,32 @@ export default async function EditarObraPage({
   const supabase = await createClient();
   const { data: obra } = await supabase
     .from("obra")
-    .select("id, codigo, nome, endereco, responsavel, centro_custo, status")
+    .select(
+      "id, codigo, nome, endereco, responsavel, centro_custo, status, destinatarios_alerta",
+    )
     .eq("id", id)
     .single();
 
   if (!obra) notFound();
+
+  // Quem já recebe os avisos desta obra por estar vinculado a ela. É exibição,
+  // não configuração: sem isto a pessoa digita nos "e-mails extras" endereços
+  // que o vínculo já entrega, e passa a receber dois e-mails iguais.
+  const { data: vinculos } = await supabase
+    .from("obra_usuario")
+    .select("perfil:perfil_id(email, ativo)")
+    .eq("obra_id", id);
+  const vinculados = (vinculos ?? [])
+    .map((v) => v.perfil as unknown as { email: string | null; ativo: boolean } | null)
+    .filter((p): p is { email: string; ativo: boolean } => Boolean(p?.ativo && p.email))
+    .map((p) => p.email);
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <PageHeader titulo="Editar obra" descricao={obra.nome} />
       <Card>
         <CardContent className="pt-6">
-          <ObraForm obra={obra} />
+          <ObraForm obra={obra} vinculados={vinculados} />
         </CardContent>
       </Card>
     </div>

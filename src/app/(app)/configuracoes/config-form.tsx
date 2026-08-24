@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { useActionState, useEffect } from "react";
 import { toast } from "sonner";
 import { salvarConfigAlerta, type ConfigFormState } from "./actions";
@@ -56,7 +58,7 @@ export function ConfigAlertaForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="destinatarios">Destinatários</Label>
+        <Label htmlFor="destinatarios">Central — recebe todas as obras</Label>
         <Textarea
           id="destinatarios"
           name="destinatarios"
@@ -65,7 +67,21 @@ export function ConfigAlertaForm({
           placeholder={"um e-mail por linha\nex.: financeiro@sistenge.com"}
         />
         <p className="text-xs text-muted-foreground">
-          Um e-mail por linha (ou separados por vírgula).
+          Um e-mail por linha (ou separados por vírgula). Quem está aqui recebe
+          um resumo com <strong>todas as obras</strong>, agrupado.
+        </p>
+        {/* Sem esta explicação, a tela continua parecendo a lista única de
+            antes e ninguém procura o campo da obra. */}
+        <p className="text-xs text-muted-foreground">
+          Cada obra recebe separadamente só o que é dela: vão os usuários
+          vinculados a ela mais os e-mails extras cadastrados em{" "}
+          <Link
+            href="/obras"
+            className="font-medium text-primary underline-offset-4 hover:underline"
+          >
+            Obras
+          </Link>
+          . Obra sem ninguém para avisar cai na central, sinalizada.
         </p>
       </div>
 
