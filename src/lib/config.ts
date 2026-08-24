@@ -3,57 +3,31 @@
 
 import { z } from "zod";
 import { cnpjValido, normalizarCnpj } from "@/lib/cnpj";
-
-const texto = (max: number) =>
-  z
-    .string()
-    .trim()
-    .max(max)
-    .optional()
-    .transform((v) => (v && v.length > 0 ? v : null));
+import {
+  opcional,
+  textoOpcional as texto,
+  emailOpcional,
+  ufOpcional,
+  cepOpcional,
+} from "@/lib/campos";
 
 /** Campos de `organizacao` que o formulário de empresa edita. */
 export const empresaSchema = z.object({
   nome: z.string().trim().min(1, "Informe ao menos o nome da empresa.").max(200),
   razao_social: texto(200),
   nome_fantasia: texto(200),
-  cnpj: z
-    .string()
-    .trim()
-    .max(25)
-    .optional()
-    .refine((v) => !v || normalizarCnpj(v) === "" || cnpjValido(v), {
-      message: "CNPJ inválido. Verifique o número (formato alfanumérico).",
-    })
-    .transform((v) => (v && v.length > 0 ? v : null)),
+  cnpj: opcional.refine(
+    (v) => v === null || normalizarCnpj(v) === "" || cnpjValido(v),
+    { message: "CNPJ inválido. Verifique o número (formato alfanumérico)." },
+  ),
   inscricao_estadual: texto(40),
   inscricao_municipal: texto(40),
   endereco: texto(300),
   cidade: texto(120),
-  uf: z
-    .string()
-    .trim()
-    .optional()
-    .refine((v) => !v || /^[A-Za-z]{2}$/.test(v), { message: "UF deve ter 2 letras." })
-    .transform((v) => (v && v.length > 0 ? v.toUpperCase() : null)),
-  cep: z
-    .string()
-    .trim()
-    .optional()
-    .refine((v) => !v || /^\d{5}-?\d{3}$/.test(v), {
-      message: "CEP inválido (use 00000-000).",
-    })
-    .transform((v) => (v && v.length > 0 ? v : null)),
+  uf: ufOpcional,
+  cep: cepOpcional,
   telefone: texto(40),
-  email: z
-    .string()
-    .trim()
-    .max(200)
-    .optional()
-    .refine((v) => !v || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v), {
-      message: "E-mail inválido.",
-    })
-    .transform((v) => (v && v.length > 0 ? v : null)),
+  email: emailOpcional(200),
   site: texto(200),
   representante_nome: texto(200),
   representante_cargo: texto(120),
@@ -79,11 +53,18 @@ export const configRelatorioSchema = z
     tipo: z.string().min(1, "Escolha o relatório."),
     frequencia: z.enum(FREQUENCIAS_RELATORIO),
     dia: z.coerce.number().int().min(1, "Informe o dia."),
-    /** Uma lista por linha, vírgula ou ponto e vírgula — como o usuário digita. */
+    /**
+     * Uma lista por linha, vírgula ou ponto e vírgula — como o usuário digita.
+     *
+     * Aceita string E array porque a action re-valida o OUTPUT deste schema: o
+     * zodResolver já transformou no cliente, e um `z.string()` puro recusava o
+     * array na segunda passagem com "expected string, received array". Salvar
+     * o relatório automático por e-mail simplesmente não funcionava.
+     */
     destinatarios: z
-      .string()
+      .union([z.string(), z.array(z.string())])
       .transform((v) =>
-        v
+        (Array.isArray(v) ? v.join(",") : v)
           .split(/[\n,;]+/)
           .map((s) => s.trim())
           .filter(Boolean),

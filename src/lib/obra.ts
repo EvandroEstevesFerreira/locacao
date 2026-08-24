@@ -6,6 +6,7 @@
 // não pode ser importado por componente cliente.
 
 import { z } from "zod";
+import { textoOpcional as textoOpcionalCampo } from "@/lib/campos";
 
 export const STATUS_OBRA = ["ativa", "pausada", "encerrada"] as const;
 export type StatusObra = (typeof STATUS_OBRA)[number];
@@ -34,17 +35,9 @@ export const STATUS_OBRA_INFO: Record<
  * Mesmo defeito que `src/lib/imoveis.ts` teve — lá foi corrigido na 0.31.x e
  * aqui passou batido, porque nenhum teste exercitava a segunda passagem.
  */
-const textoOpcional = (max: number) =>
-  z
-    .union([z.string(), z.null()])
-    .optional()
-    .transform((v) => {
-      const s = (v ?? "").trim();
-      return s.length > 0 ? s : null;
-    })
-    .refine((v) => v === null || v.length <= max, {
-      message: `Use no máximo ${max} caracteres.`,
-    });
+// Vem de `campos.ts`: uma implementação para todo o sistema, e não uma cópia
+// por arquivo — foi a cópia que fez o mesmo defeito voltar três vezes.
+const textoOpcional = textoOpcionalCampo;
 
 /**
  * E-mails extras de aviso da obra — SÓ para quem não tem login no Loca.

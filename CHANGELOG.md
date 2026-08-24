@@ -7,6 +7,56 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.36.0] — 2026-08-24
+
+### Corrigido
+
+**Seis schemas recusavam o próprio output.** Toda action re-valida o que recebe,
+e o que ela recebe é a saída do mesmo schema — o zodResolver já transformou no
+cliente. O jeito ingênuo de escrever campo opcional quebra isso:
+
+```ts
+z.string().trim().max(200).optional().transform((v) => v || null)
+//         ↑ aceita string | undefined            ↑ produz null
+```
+
+Na segunda passagem o `null` é recusado com *"Invalid input: expected string,
+received null"* — o erro cru do zod, sem nome de campo, na tela do usuário.
+
+Estavam quebrados **ao mesmo tempo**, em produção:
+
+| Schema | Efeito |
+|---|---|
+| `empresaSchema` | Salvar dados da empresa sem razão social, CNPJ, UF, CEP… |
+| `fornecedorSchema` | Salvar fornecedor sem CNPJ ou sem e-mail de contato |
+| `contratoSchema` | Salvar contrato de equipamento sem observações |
+| `itemLocadoSchema` | Item locado sem devolução prevista ou sem identificação |
+| `lancamentoSchema` | Lançamento sem contrato vinculado |
+| `editarUsuarioSchema` | Redefinir senha de usuário |
+| `configRelatorioSchema` | Salvar o relatório automático por e-mail |
+
+O último é de outra forma — `destinatarios` transforma `string` em `string[]` e
+recusava o array na re-validação.
+
+### Por que voltou três vezes
+
+O defeito já tinha chegado à produção em `imoveis.ts` (0.23.0 → 0.31.x) e em
+`obra.ts` (0.35.0). Cada correção era numa **cópia privada** do mesmo helper de
+três linhas, e `schemas-idempotencia.test.ts` cobria uma **lista escrita à mão**
+— schema novo nascia fora dela.
+
+Duas mudanças estruturais:
+
+- **`src/lib/campos.ts`** é agora a fonte única: `opcional`, `textoOpcional`,
+  `dataOpcional`, `enumOpcional`, `numeroOpcional`, `emailOpcional`,
+  `ufOpcional`, `cepOpcional`. Os oito módulos de domínio apontam para ele.
+- **`src/lib/schemas-varredura.test.ts`** não tem lista. Importa os módulos de
+  domínio, encontra todo export terminado em `Schema` e exige a propriedade de
+  todos. Um schema sem amostra **reprova** em vez de ser ignorado — acrescentar a
+  amostra passa a ser parte de criar o schema.
+
+De 175 para 221 testes.
+
 ## [0.35.0] — 2026-08-24
 
 Implementa `docs/superpowers/specs/2026-08-23-alertas-por-obra-design.md`.

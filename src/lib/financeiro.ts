@@ -2,6 +2,7 @@
 // mensais recorrentes e encargos por atraso (multa + juros).
 
 import { z } from "zod";
+import { opcional, dataOpcional, textoOpcional } from "@/lib/campos";
 import {
   addMonths,
   format,
@@ -110,10 +111,7 @@ export const lancamentoSchema = z
   .object({
     id: z.string().uuid().optional(),
     obra_id: z.string().uuid("Selecione a obra."),
-    contrato_id: z
-      .string()
-      .optional()
-      .transform((v) => (v && v.length > 0 ? v : null)),
+    contrato_id: opcional,
     descricao: z.string().trim().min(1, "Informe a descrição.").max(200),
     competencia: z
       .string()
@@ -122,10 +120,7 @@ export const lancamentoSchema = z
     valor: z.coerce.number().positive("O valor deve ser maior que zero."),
     vencimento: z.string().min(1, "Informe o vencimento."),
     status: z.enum(STATUS_LANCAMENTO),
-    data_pagamento: z
-      .string()
-      .optional()
-      .transform((v) => (v && v.length > 0 ? v : null)),
+    data_pagamento: dataOpcional,
   })
   // Regra cruzada: o vencimento não pode ser anterior ao mês de competência.
   // Um lançamento de julho vencendo em maio é erro de digitação, e antes passava
@@ -148,12 +143,7 @@ export const baixaSchema = z.object({
   valorPago: z.coerce.number().positive("Informe o valor pago."),
   multa: z.coerce.number().min(0, "Multa inválida.").default(0),
   juros: z.coerce.number().min(0, "Juros inválidos.").default(0),
-  nfNumero: z
-    .string()
-    .trim()
-    .max(60)
-    .optional()
-    .transform((v) => (v && v.length > 0 ? v : null)),
+  nfNumero: textoOpcional(60),
   dataPagamento: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Data de pagamento inválida."),
