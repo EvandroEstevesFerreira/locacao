@@ -6,7 +6,9 @@ import {
   emailConfigurado,
   enviarEmail,
   montarEmailVencimentos,
+  montarEmailVencimentosCentral,
   type LinhaAlerta,
+  type GrupoAlerta,
 } from "@/lib/email";
 import {
   formatarData,
@@ -17,7 +19,10 @@ import {
   type Cadencia,
 } from "@/lib/locacao";
 
-type ObraRef = { codigo: string; nome: string } | null;
+// `id` entra porque o agrupamento é por obra e o rótulo "OB-042 — Vista Verde"
+// não serve de chave: duas obras podem ter o mesmo nome, e o rótulo muda quando
+// alguém renomeia a obra no meio do dia.
+type ObraRef = { id: string; codigo: string; nome: string } | null;
 const nomeObra = (o: ObraRef) => (o ? `${o.codigo} — ${o.nome}` : undefined);
 
 export const dynamic = "force-dynamic";
@@ -83,7 +88,7 @@ export async function GET(request: Request) {
       await Promise.all([
         supabase
           .from("item_locado")
-          .select("id, data_devolucao_prevista, quantidade, valor_unitario_periodo, item:item_id(descricao), contrato:contrato_id(numero, cadencia, obra:obra_id(codigo, nome))")
+          .select("id, data_devolucao_prevista, quantidade, valor_unitario_periodo, item:item_id(descricao), contrato:contrato_id(numero, cadencia, obra:obra_id(id, codigo, nome))")
           .eq("org_id", cfg.org_id)
           .eq("status", "em_aberto")
           .not("data_devolucao_prevista", "is", null)
@@ -91,7 +96,7 @@ export async function GET(request: Request) {
           .lte("data_devolucao_prevista", limite),
         supabase
           .from("contrato_locacao")
-          .select("id, numero, cadencia, data_fim_prevista, obra:obra_id(codigo, nome), item_locado(quantidade, valor_unitario_periodo)")
+          .select("id, numero, cadencia, data_fim_prevista, obra:obra_id(id, codigo, nome), item_locado(quantidade, valor_unitario_periodo)")
           .eq("org_id", cfg.org_id)
           .eq("status", "ativo")
           .not("data_fim_prevista", "is", null)
@@ -99,20 +104,20 @@ export async function GET(request: Request) {
           .lte("data_fim_prevista", limite),
         supabase
           .from("lancamento_financeiro")
-          .select("id, descricao, valor, vencimento, obra:obra_id(codigo, nome)")
+          .select("id, descricao, valor, vencimento, obra:obra_id(id, codigo, nome)")
           .eq("org_id", cfg.org_id)
           .eq("status", "pendente")
           .lte("vencimento", limite),
         // Imóveis: contratos vigentes (fim de contrato / reajuste dentro da janela)
         supabase
           .from("contrato_imovel")
-          .select("id, data_fim, data_reajuste, valor_aluguel, valor_condominio, valor_iptu, seguro_fianca, seguro_fianca_mensal, imovel:imovel_id(apelido, obra:obra_id(codigo, nome))")
+          .select("id, data_fim, data_reajuste, valor_aluguel, valor_condominio, valor_iptu, seguro_fianca, seguro_fianca_mensal, imovel:imovel_id(apelido, obra:obra_id(id, codigo, nome))")
           .eq("org_id", cfg.org_id)
           .eq("vigente", true),
         // Imóveis ativos + flag de contrato vigente (ausência de contrato)
         supabase
           .from("imovel")
-          .select("id, apelido, obra:obra_id(codigo, nome), contrato_imovel(vigente)")
+          .select("id, apelido, obra:obra_id(id, codigo, nome), contrato_imovel(vigente)")
           .eq("org_id", cfg.org_id)
           .eq("status", "ativo"),
       ]);
@@ -122,6 +127,9 @@ export async function GET(request: Request) {
       referencia_id: string;
       data_referencia: string;
       dias: number; // marco (prazo) que este aviso representa
+      /** Nulo quando o alerta não tem obra — só `imovel.obra_id` é nulável. */
+      obra_id: string | null;
+      obra_rotulo: string | null;
       linha: LinhaAlerta;
     };
     const brutos: Omit<Cand, "dias">[] = [];
@@ -137,6 +145,8 @@ export async function GET(request: Request) {
         tipo: "devolucao",
         referencia_id: d.id,
         data_referencia: d.data_devolucao_prevista!,
+        obra_id: contrato?.obra?.id ?? null,
+        obra_rotulo: nomeObra(contrato?.obra ?? null) ?? null,
         linha: {
           categoria: "Devolução prevista",
           descricao: `${item?.descricao ?? "Item"} (contrato ${contrato?.numero ?? "—"})`,
@@ -157,6 +167,8 @@ export async function GET(request: Request) {
         tipo: "contrato_fim",
         referencia_id: c.id,
         data_referencia: c.data_fim_prevista!,
+        obra_id: obra?.id ?? null,
+        obra_rotulo: nomeObra(obra) ?? null,
         linha: {
           categoria: "Fim de contrato",
           descricao: `Contrato ${c.numero}`,
@@ -172,6 +184,8 @@ export async function GET(request: Request) {
         tipo: "pagamento",
         referencia_id: p.id,
         data_referencia: p.vencimento,
+        obra_id: obra?.id ?? null,
+        obra_rotulo: nomeObra(obra) ?? null,
         linha: {
           categoria: "Pagamento",
           descricao: p.descricao,
@@ -186,6 +200,9 @@ export async function GET(request: Request) {
     for (const ci of imovelContratos.data ?? []) {
       const imv = ci.imovel as unknown as { apelido: string; obra: ObraRef } | null;
       const apelido = imv?.apelido ?? "Imóvel";
+      // `imovel.obra_id` é NULÁVEL — é a única fonte em que isso acontece. O
+      // alerta sem obra não tem para onde ir no agrupamento e vai só à central.
+      const obraId = imv?.obra?.id ?? null;
       const obra = nomeObra(imv?.obra ?? null);
       const custoMensal =
         Number(ci.valor_aluguel) +
@@ -198,6 +215,8 @@ export async function GET(request: Request) {
           tipo: "imovel_contrato_fim",
           referencia_id: ci.id,
           data_referencia: ci.data_fim,
+          obra_id: obraId,
+          obra_rotulo: obra ?? null,
           linha: {
             categoria: "Imóvel — fim de contrato",
             descricao: apelido,
@@ -212,6 +231,8 @@ export async function GET(request: Request) {
           tipo: "imovel_reajuste",
           referencia_id: ci.id,
           data_referencia: ci.data_reajuste,
+          obra_id: obraId,
+          obra_rotulo: obra ?? null,
           linha: {
             categoria: "Imóvel — reajuste de aluguel",
             descricao: apelido,
@@ -243,16 +264,19 @@ export async function GET(request: Request) {
       const cts = (im.contrato_imovel as { vigente: boolean }[] | null) ?? [];
       const temVigente = cts.some((c) => c.vigente);
       if (temVigente) continue;
+      const obraIm = (im.obra as unknown as ObraRef) ?? null;
       candidatos.push({
         tipo: "imovel_sem_contrato",
         referencia_id: im.id as string,
         data_referencia: mesRef,
         dias: 0,
+        obra_id: obraIm?.id ?? null,
+        obra_rotulo: nomeObra(obraIm) ?? null,
         linha: {
           categoria: "Imóvel sem contrato",
           descricao: (im.apelido as string) ?? "Imóvel",
           data: "—",
-          obra: nomeObra((im.obra as unknown as ObraRef) ?? null),
+          obra: nomeObra(obraIm),
         },
       });
     }
@@ -261,50 +285,180 @@ export async function GET(request: Request) {
 
     // Remove os que já foram notificados (mesma referência + data + marco).
     const ids = candidatos.map((c) => c.referencia_id);
+    // A dedupe passa a considerar o PÚBLICO: o mesmo aviso vai à obra e à
+    // central, e sem isso o segundo envio seria descartado como repetido.
     const { data: jaEnviados } = await supabase
       .from("notificacao_log")
-      .select("tipo, referencia_id, data_referencia, dias")
+      .select("tipo, referencia_id, data_referencia, dias, obra_id")
       .eq("org_id", cfg.org_id)
       .in("referencia_id", ids);
-    const chave = (t: string, r: string, d: string, dias: number | null) =>
-      `${t}:${r}:${d}:${dias}`;
+    const chave = (
+      t: string,
+      r: string,
+      d: string,
+      dias: number | null,
+      obra: string | null,
+    ) => `${t}:${r}:${d}:${dias}:${obra ?? "central"}`;
     const enviadosSet = new Set(
       (jaEnviados ?? []).map((e) =>
-        chave(e.tipo, e.referencia_id, e.data_referencia, e.dias),
+        chave(e.tipo, e.referencia_id, e.data_referencia, e.dias, e.obra_id),
       ),
     );
-    const novos = candidatos.filter(
-      (c) =>
-        !enviadosSet.has(
-          chave(c.tipo, c.referencia_id, c.data_referencia, c.dias),
-        ),
-    );
-    if (novos.length === 0) continue;
 
     const { data: org } = await supabase
       .from("organizacao")
       .select("nome")
       .eq("id", cfg.org_id)
       .single();
+    const orgNome = org?.nome ?? "Organização";
 
-    const html = montarEmailVencimentos(
-      org?.nome ?? "Organização",
-      novos.map((c) => c.linha),
-    );
-    await enviarEmail(destinatarios, "Loca — Avisos de vencimento", html);
+    // ── Destinatários por obra ───────────────────────────────────────────────
+    // Vinculados à obra (a MESMA fonte que a RLS usa para o acesso) + a lista
+    // extra de quem não tem login. Derivar do vínculo é o que impede que alguém
+    // tirado da obra continue recebendo por e-mail o que já não pode ver.
+    const obraIds = [
+      ...new Set(candidatos.map((c) => c.obra_id).filter((v): v is string => !!v)),
+    ];
+    const porObra = new Map<string, string[]>();
+    if (obraIds.length > 0) {
+      const [{ data: vinculos }, { data: obras }] = await Promise.all([
+        supabase
+          .from("obra_usuario")
+          .select("obra_id, perfil:perfil_id(email, ativo)")
+          .in("obra_id", obraIds),
+        supabase
+          .from("obra")
+          .select("id, destinatarios_alerta")
+          .in("id", obraIds),
+      ]);
 
-    await supabase.from("notificacao_log").insert(
-      novos.map((c) => ({
-        org_id: cfg.org_id,
-        tipo: c.tipo,
-        referencia_id: c.referencia_id,
-        data_referencia: c.data_referencia,
-        dias: c.dias,
+      for (const v of vinculos ?? []) {
+        const p = v.perfil as unknown as { email: string | null; ativo: boolean } | null;
+        // `ativo` no filtro: usuário desativado perde o acesso à tela e não pode
+        // seguir recebendo o conteúdo dela por e-mail.
+        if (!p?.ativo || !p.email) continue;
+        const lista = porObra.get(v.obra_id) ?? [];
+        lista.push(p.email);
+        porObra.set(v.obra_id, lista);
+      }
+      for (const o of obras ?? []) {
+        const extras = ((o.destinatarios_alerta ?? []) as string[]).filter(Boolean);
+        if (extras.length === 0) continue;
+        const lista = porObra.get(o.id) ?? [];
+        lista.push(...extras);
+        porObra.set(o.id, lista);
+      }
+      // Deduplica: quem está vinculado à obra E na lista extra receberia dois
+      // e-mails idênticos.
+      for (const [k, v] of porObra) porObra.set(k, [...new Set(v)]);
+    }
+
+    // ── Agrupamento ──────────────────────────────────────────────────────────
+    const SEM_OBRA = "__sem_obra__";
+    const grupos = new Map<string, Cand[]>();
+    for (const c of candidatos) {
+      const k = c.obra_id ?? SEM_OBRA;
+      grupos.set(k, [...(grupos.get(k) ?? []), c]);
+    }
+
+    let enviados = 0;
+    const paraCentral: GrupoAlerta[] = [];
+    const registros: Record<string, unknown>[] = [];
+
+    for (const [k, doGrupo] of [...grupos].sort()) {
+      const rotulo = k === SEM_OBRA ? "Sem obra" : (doGrupo[0].obra_rotulo ?? "Obra");
+      const destObra = k === SEM_OBRA ? [] : (porObra.get(k) ?? []);
+
+      // A central recebe TUDO, e a dedupe dela é independente da da obra.
+      const novosCentral = doGrupo.filter(
+        (c) => !enviadosSet.has(chave(c.tipo, c.referencia_id, c.data_referencia, c.dias, null)),
+      );
+      if (novosCentral.length > 0) {
+        paraCentral.push({
+          obra: rotulo,
+          linhas: novosCentral.map((c) => c.linha),
+          // Obra sem ninguém para avisar: a central absorve e DIZ que absorveu.
+          // Sem esta marca, o alerta chegaria como qualquer outro e ninguém
+          // saberia que a obra ficou sem aviso próprio.
+          semDestinatarios: k !== SEM_OBRA && destObra.length === 0,
+        });
+        registros.push(
+          ...novosCentral.map((c) => ({
+            org_id: cfg.org_id,
+            tipo: c.tipo,
+            referencia_id: c.referencia_id,
+            data_referencia: c.data_referencia,
+            dias: c.dias,
+            obra_id: null,
+            destinatarios,
+          })),
+        );
+      }
+
+      if (destObra.length === 0) continue;
+
+      const novosObra = doGrupo.filter(
+        (c) => !enviadosSet.has(chave(c.tipo, c.referencia_id, c.data_referencia, c.dias, k)),
+      );
+      if (novosObra.length === 0) continue;
+
+      try {
+        await enviarEmail(
+          destObra,
+          `Loca — Avisos de vencimento · ${rotulo}`,
+          montarEmailVencimentos(orgNome, novosObra.map((c) => c.linha), rotulo),
+        );
+        enviados += novosObra.length;
+        registros.push(
+          ...novosObra.map((c) => ({
+            org_id: cfg.org_id,
+            tipo: c.tipo,
+            referencia_id: c.referencia_id,
+            data_referencia: c.data_referencia,
+            dias: c.dias,
+            obra_id: k,
+            destinatarios: destObra,
+          })),
+        );
+      } catch (e) {
+        // Falha numa obra não pode derrubar as outras nem a central. Sem o
+        // registro, o aviso volta a ser candidato amanhã — que é o desejado.
+        logger.error("cron.vencimentos.obra_falha", {
+          org_id: cfg.org_id,
+          obra_id: k,
+          ...erroMeta(e),
+        });
+      }
+    }
+
+    // ── Central ──────────────────────────────────────────────────────────────
+    if (paraCentral.length > 0 && destinatarios.length > 0) {
+      await enviarEmail(
         destinatarios,
-      })),
-    );
+        "Loca — Avisos de vencimento",
+        montarEmailVencimentosCentral(orgNome, paraCentral),
+      );
+      enviados += paraCentral.reduce((s, g) => s + g.linhas.length, 0);
+    }
 
-    resumo.push({ org: cfg.org_id, enviados: novos.length });
+    if (registros.length > 0) {
+      // O erro deste insert NÃO era tratado. Se ele falhasse, os e-mails já
+      // tinham saído e nada ficava registrado — e o mesmo aviso era reenviado
+      // no dia seguinte, e no outro, sem que nada acusasse.
+      const { error: erroLog } = await supabase
+        .from("notificacao_log")
+        .insert(registros);
+      if (erroLog) {
+        logger.error("cron.vencimentos.log_falha", {
+          org_id: cfg.org_id,
+          registros: registros.length,
+          erro: erroLog.message,
+        });
+        erros.push({ org: cfg.org_id, erro: `log: ${erroLog.message}` });
+      }
+    }
+
+    resumo.push({ org: cfg.org_id, enviados });
    } catch (e) {
     // Isola a falha: uma org com erro não impede as demais.
     logger.error("cron.vencimentos.org_falha", { org_id: cfg.org_id, ...erroMeta(e) });

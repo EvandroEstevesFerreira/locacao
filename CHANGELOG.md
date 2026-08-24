@@ -7,6 +7,57 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.35.0] — 2026-08-24
+
+Implementa `docs/superpowers/specs/2026-08-23-alertas-por-obra-design.md`.
+
+### Adicionado
+
+- **Avisos de vencimento por obra.** Onde saía um e-mail com todas as obras
+  para uma lista fixa, passam a sair N+1: um por obra, com o que é dela, e um
+  central com tudo agrupado por obra.
+- **Destinatários da obra derivados de `obra_usuario`** — a mesma fonte que a
+  RLS usa para o acesso. Uma lista digitada seria segunda verdade: tirar alguém
+  da obra não tiraria os alertas dela, e a pessoa continuaria recebendo por
+  e-mail o que já não pode ver na tela.
+- **`obra.destinatarios_alerta`** para quem não tem login — mestre de obra,
+  encarregado terceirizado, e-mail do almoxarifado. O formulário mostra quem já
+  é coberto pelo vínculo, para evitar o endereço digitado duas vezes.
+- **Obra sem destinatário cai na central, sinalizada.** Sem esse fallback a
+  mudança seria uma regressão disfarçada de recurso: hoje o alerta chega a
+  alguém, depois dela chegaria a ninguém.
+
+### Corrigido
+
+- **`obraSchema` não era idempotente.** A action re-valida o output do próprio
+  schema, e `textoOpcional` produzia `null` aceitando só `string | undefined`.
+  Salvar uma obra sem endereço, sem responsável ou sem centro de custo falhava
+  com "Dados inválidos" sem dizer qual campo. Mesmo defeito de `imoveis.ts`,
+  corrigido na 0.31.x — aqui passou batido porque nenhum teste exercitava a
+  segunda passagem. `obraSchema` entrou na suíte de idempotência.
+- **O insert em `notificacao_log` não tratava erro.** Se falhasse, os e-mails
+  já tinham saído e nada ficava registrado — e o mesmo aviso era reenviado no
+  dia seguinte, e no outro, sem que nada acusasse.
+- **Falha de envio numa obra não derruba mais as outras nem a central.**
+
+### Banco
+
+- `obra.destinatarios_alerta text[]`.
+- `notificacao_log.obra_id` — nulo significa envio para a central. Sem ele, a
+  mesma referência gravada para a obra e para a central violaria o `unique`,
+  abortando o lote e fazendo a central parar de receber em silêncio. O índice
+  usa `coalesce` porque, em Postgres, `null` não é igual a `null`.
+- **Drift registrado:** `notificacao_log.dias` é lida e gravada pelo cron desde
+  a fase 5 e nunca foi versionada. Produção tem a coluna — senão o cron falharia
+  todo dia —, mas um banco criado a partir das migrations não teria e o cron
+  quebraria no primeiro disparo. Mesmo caso do `config_alerta.dias_alerta` da
+  migration 0029. Adicionada de forma idempotente.
+
+### Atenção operacional
+
+O volume de e-mails cresce de 1 para N+1 por dia. Com 20 obras ativas são 21
+disparos diários no Resend — vale conferir o plano contratado.
+
 ## [0.34.0] — 2026-08-23
 
 ### Adicionado

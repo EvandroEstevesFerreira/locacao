@@ -13,6 +13,7 @@ import {
   fechamentoLimpezaSchema,
   tarefaLimpezaSchema,
 } from "./alojamento";
+import { obraSchema } from "./obra";
 
 /**
  * TODA action deste sistema re-valida o que recebe, e o que ela recebe é o
@@ -92,6 +93,13 @@ const CASOS: { nome: string; schema: ZodType; minimo: unknown }[] = [
       tipo: "chaves",
       entregue_em: "2026-08-01",
     },
+  },
+  {
+    // Faltava aqui, e o defeito estava vivo: salvar uma obra sem endereço, sem
+    // responsável ou sem centro de custo falhava com "Dados inválidos".
+    nome: "obraSchema",
+    schema: obraSchema,
+    minimo: { codigo: "OB-01", nome: "Obra", status: "ativa" },
   },
   {
     nome: "fechamentoLimpezaSchema",
