@@ -7,12 +7,29 @@ import { getCurrentPerfil, PAPEL_INFO, type Papel } from "@/lib/auth";
 import { criarUsuarioSchema, editarUsuarioSchema } from "@/lib/permissoes";
 import { falha, primeiroErro, type ActionResult } from "@/lib/acoes";
 import { normalizarModulos } from "@/lib/modulos";
-import {
-  enviarEmail,
-  emailConfigurado,
-  montarEmailNovoUsuario,
-  montarEmailSenhaRedefinida,
-} from "@/lib/email";
+import { enviarEmail, emailConfigurado } from "@/lib/email";
+import { montarContexto, SELECT_ORGANIZACAO_EMAIL } from "@/lib/emails/contexto";
+import { acessoCriado, senhaRedefinida } from "@/lib/emails/templates";
+
+/**
+ * Contexto de e-mail da organização — razão social e CNPJ para o rodapé.
+ *
+ * Client normal, não admin: `organizacao` é tabela da aplicação e o isolamento
+ * por organização depende da RLS. O master lê a própria organização por policy.
+ */
+async function contextoEmail(orgId: string | null) {
+  // `exigirMaster` já garante `org_id`, mas o tipo de `Perfil` continua anulável
+  // e o TS não estreita entre funções. Tratar o nulo aqui é mais honesto que um
+  // `!`: no pior caso o rodapé sai com o nome genérico, e nada quebra.
+  if (!orgId) return montarContexto(null);
+  const supabase = await createClient();
+  const { data: org } = await supabase
+    .from("organizacao")
+    .select(SELECT_ORGANIZACAO_EMAIL)
+    .eq("id", orgId)
+    .single();
+  return montarContexto(org);
+}
 
 /** Só o master gere usuários. Retorna o perfil master ou null. */
 async function exigirMaster() {
@@ -100,12 +117,14 @@ export async function criarUsuario(raw: unknown): Promise<ActionResult> {
     try {
       await enviarEmail(
         [parsed.data.email],
-        "Loca — seu acesso foi criado",
-        montarEmailNovoUsuario(
-          parsed.data.nome,
-          parsed.data.email,
-          parsed.data.senha,
-          PAPEL_INFO[parsed.data.papel as Papel]?.label ?? parsed.data.papel,
+        acessoCriado(
+          {
+            nome: parsed.data.nome,
+            email: parsed.data.email,
+            senha: parsed.data.senha,
+            perfil: PAPEL_INFO[parsed.data.papel as Papel]?.label ?? parsed.data.papel,
+          },
+          await contextoEmail(master.org_id),
         ),
       );
     } catch (e) {
@@ -200,8 +219,10 @@ export async function salvarUsuario(raw: unknown): Promise<ActionResult> {
         if (u?.email) {
           await enviarEmail(
             [u.email],
-            "Loca — sua senha foi redefinida",
-            montarEmailSenhaRedefinida(parsed.data.nome, u.email, novaSenha),
+            senhaRedefinida(
+              { nome: parsed.data.nome, email: u.email, senha: novaSenha },
+              await contextoEmail(master.org_id),
+            ),
           );
         }
       } catch (e) {
