@@ -7,6 +7,69 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.37.0] — 2026-08-24
+
+Fase 0 de `docs/superpowers/specs/2026-08-23-recebimento-equipamento-design.md`.
+Vai a produção sozinha e é pré-requisito das outras duas fases.
+
+### Adicionado
+
+- **Número de registro em onze tabelas**: contrato de equipamento (`CTR`),
+  contrato de imóvel (`CTI`), devolução (`DEV`), vistoria (`VIS`), vistoria de
+  imóvel (`VIM`), avaria (`AVA`), reparo (`REP`), medida disciplinar (`MED`),
+  entrega ao alojado (`ENT`), folha de limpeza (`LIM`) e ocorrência (`OCO`).
+  Formato `PREFIXO-ANO-0000`, reiniciando a cada ano.
+- **Numeração retroativa.** O que já existia foi numerado na ordem de
+  `created_at` e no ano de criação. Um livro que começa no meio obriga a
+  explicar para sempre por que metade dos registros não tem número.
+- **Busca por número na listagem de contratos**, pelos dois números — o do
+  fornecedor e o do Loca. Digitar `9` acha o `0009`: ninguém digita
+  `AVA-2026-0009` inteiro.
+
+### Decisões
+
+- **Dois números, sempre.** `contrato_locacao.numero` é o número DO FORNECEDOR:
+  digitado, pode repetir, pode vir em branco. Não foi tocado. O número do Loca é
+  `numero_registro` e vive ao lado. Conflatá-los é o erro clássico.
+- **Sem buracos, por decisão.** Uma `sequence` do Postgres seria mais rápida e é
+  a escolha óbvia — e está errada aqui: transação abortada queima o número e o
+  livro fica sem o `REC-2026-0008` sem que ninguém saiba por quê. O contador é
+  uma tabela com `on conflict do update`, que faz o lock de linha sozinho.
+- **Trigger, não chamada em cada action.** São onze tabelas escritas por dezenas
+  de actions; bastaria uma esquecida para nascer registro sem número. No banco,
+  não há como escapar.
+- **O ano é o de São Paulo.** `extract(year from now())` daria o ano em UTC, e
+  das 21h à meia-noite de 31 de dezembro o primeiro registro de 2027 sairia
+  numerado no dia 31/12/2026. Mesma regra do `hojeISOSaoPaulo()`.
+- **Fora de propósito:** `lancamento_financeiro` (é linha de conta a pagar, não
+  documento que circula) e `item_locado` (a retirada ganha número na fase 1,
+  como `recebimento`; numerá-la agora daria dois números ao mesmo evento).
+
+### Verificação
+
+A migration é de DADOS, não só de esquema — roda uma vez e é difícil de
+desfazer. Testada contra o Postgres local com duas organizações, dois anos e
+linhas fora de ordem de inserção:
+
+| Caso | Resultado |
+|---|---|
+| Retroatividade por `created_at`, ano e organização | ✓ |
+| Contador parado no último de cada (org, ano) | ✓ |
+| Insert novo continua a sequência sem colidir | ✓ |
+| **Transação abortada não queima o número** (`0002` → `0003`) | ✓ |
+| Rodar a retroatividade de novo não renumera | ✓ |
+| Cada organização tem o seu `0001` | ✓ |
+
+`registros.test.ts` lê o SQL da migration e compara os prefixos com o mapa do
+TypeScript: divergir faria a tela chamar de `CTR` o que o banco gravou como
+outra coisa, e nada acusaria.
+
+### Ainda não exposto
+
+O número existe e é único nas onze tabelas, mas só aparece na **listagem de
+contratos**. As demais telas e os PDFs continuam sem exibi-lo — é trabalho de
+superfície, não de modelo, e vem depois.
+
 ## [0.36.0] — 2026-08-24
 
 ### Corrigido

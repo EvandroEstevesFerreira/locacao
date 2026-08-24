@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.36.0";
+export const APP_VERSION = "0.37.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,17 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.37.0",
+    data: "2026-08-24",
+    titulo: "Todo registro tem número",
+    mudancas: [
+      { tipo: "novo", texto: "Contratos, devoluções, vistorias, avarias, reparos, medidas disciplinares, entregas, folhas de limpeza e ocorrências passaram a ter número próprio: CTR-2026-0007, AVA-2026-0009, VIS-2026-0022." },
+      { tipo: "novo", texto: "Os registros que já existiam foram numerados, na ordem em que foram criados e no ano de criação. O livro começa do começo." },
+      { tipo: "novo", texto: "O número reinicia a cada ano e nunca tem buraco — nem quando algo dá errado no meio de um cadastro." },
+      { tipo: "melhoria", texto: "Na lista de contratos, o número do Loca aparece ao lado do número do fornecedor. A busca acha pelos dois, e basta digitar \"9\" para achar o 0009." },
+    ],
+  },
   {
     versao: "0.36.0",
     data: "2026-08-24",

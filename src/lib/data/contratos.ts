@@ -10,6 +10,7 @@ import {
   type StatusContrato,
 } from "@/lib/locacao";
 import { termoOr } from "@/lib/lista";
+import { normalizarBuscaNumero } from "@/lib/registros";
 import type { ListaParams, Pagina } from "./lista-params";
 
 export type MovimentacaoDaLinha = {
@@ -113,6 +114,7 @@ export function contaFotos(
 export type ContratoListItem = {
   id: string;
   numero: string;
+  numero_registro: string | null;
   cadencia: Cadencia;
   data_inicio: string;
   data_fim_prevista: string | null;
@@ -129,11 +131,18 @@ export async function listarContratos(
   let query = supabase
     .from("contrato_locacao")
     .select(
-      "id, numero, cadencia, data_inicio, data_fim_prevista, status, obra:obra_id(codigo,nome), fornecedor:fornecedor_id(nome)",
+      "id, numero, numero_registro, cadencia, data_inicio, data_fim_prevista, status, obra:obra_id(codigo,nome), fornecedor:fornecedor_id(nome)",
       { count: "exact" },
     );
   if (p.obraId) query = query.eq("obra_id", p.obraId);
-  if (p.q) query = query.or(termoOr(["numero"], p.q));
+  // Busca pelos DOIS números: o do fornecedor (`numero`, digitado) e o do
+  // registro no Loca (`numero_registro`, gerado). Quem tem o papel na mão
+  // procura por um; quem tem o e-mail, pelo outro.
+  if (p.q) {
+    query = query.or(
+      termoOr(["numero", "numero_registro"], normalizarBuscaNumero(p.q)),
+    );
+  }
 
   const { data, count, error } = await query
     .order(p.sort, { ascending: p.ascending })
@@ -146,6 +155,7 @@ export async function listarContratos(
   type Bruto = {
     id: string;
     numero: string;
+    numero_registro: string | null;
     cadencia: Cadencia;
     data_inicio: string;
     data_fim_prevista: string | null;
@@ -158,6 +168,7 @@ export async function listarContratos(
     itens: ((data ?? []) as unknown as Bruto[]).map((c) => ({
       id: c.id,
       numero: c.numero,
+      numero_registro: c.numero_registro,
       cadencia: c.cadencia,
       data_inicio: c.data_inicio,
       data_fim_prevista: c.data_fim_prevista,

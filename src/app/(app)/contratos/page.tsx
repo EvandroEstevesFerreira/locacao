@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { formatarNumero } from "@/lib/registros";
 import { FileText, Plus, ChevronRight } from "lucide-react";
 import { getCurrentPerfil, podeOperar } from "@/lib/auth";
 import {
@@ -40,7 +41,7 @@ export default async function ContratosPage({
   const sp = await searchParams;
   const obra = sp.obra;
   const { q, sort, ascending, from, to, page } = parseListParams(sp, {
-    sortCols: ["numero", "data_inicio", "status"],
+    sortCols: ["numero", "numero_registro", "data_inicio", "status"],
     defaultSort: "data_inicio",
     defaultDir: "desc",
   });
@@ -84,7 +85,10 @@ export default async function ContratosPage({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead><SortHeader column="numero" label="Número" /></TableHead>
+                  <TableHead>
+                    <SortHeader column="numero_registro" label="Registro" />
+                  </TableHead>
+                  <TableHead><SortHeader column="numero" label="Nº do fornecedor" /></TableHead>
                   <TableHead>Obra</TableHead>
                   <TableHead>Fornecedor</TableHead>
                   <TableHead>Cadência</TableHead>
@@ -105,7 +109,13 @@ export default async function ContratosPage({
                   const s = STATUS_CONTRATO[c.status];
                   return (
                     <TableRow key={c.id}>
-                      <TableCell className="font-medium">{c.numero}</TableCell>
+                      {/* O número do Loca vem PRIMEIRO: é o que identifica o
+                          registro aqui dentro. O do fornecedor fica ao lado,
+                          para quem chega com o papel deles na mão. */}
+                      <TableCell className="font-medium tabular-nums">
+                        {formatarNumero(c.numero_registro)}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{c.numero}</TableCell>
                       <TableCell>
                         {c.obraCodigo ? `${c.obraCodigo} — ${c.obraNome}` : "—"}
                       </TableCell>
