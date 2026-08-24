@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.35.0";
+export const APP_VERSION = "0.36.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,17 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.36.0",
+    data: "2026-08-24",
+    titulo: "Seis formulários que recusavam campo em branco",
+    mudancas: [
+      { tipo: "correcao", texto: "Salvar os dados da empresa sem razão social, sem CNPJ ou sem qualquer outro campo opcional dava \"Invalid input: expected string, received null\". Corrigido." },
+      { tipo: "correcao", texto: "O mesmo erro impedia salvar fornecedor, contrato de equipamento, item locado sem devolução prevista, lançamento financeiro sem contrato e a redefinição de senha de um usuário." },
+      { tipo: "correcao", texto: "Salvar o relatório automático por e-mail não funcionava, pelo mesmo motivo." },
+      { tipo: "melhoria", texto: "Agora existe uma verificação que percorre TODOS os formulários do sistema e reprova a entrega se algum voltar a recusar campo em branco. O defeito tinha voltado três vezes." },
+    ],
+  },
   {
     versao: "0.35.0",
     data: "2026-08-24",

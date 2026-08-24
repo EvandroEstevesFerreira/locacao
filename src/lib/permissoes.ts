@@ -2,6 +2,7 @@
 // Pode ser importado tanto por Server Components quanto por Client Components.
 
 import { z } from "zod";
+import { opcional } from "@/lib/campos";
 
 export type Papel = "master" | "administrador" | "gestor" | "operador";
 
@@ -138,13 +139,9 @@ export const editarUsuarioSchema = z.object({
    * tem de respeitar o mínimo. O `.refine` cobre exatamente o caso que a
    * validação por campo do HTML não pega: "opcional, mas se vier tem regra".
    */
-  nova_senha: z
-    .string()
-    .optional()
-    .refine((v) => !v || v.length >= SENHA_MINIMA, {
-      message: `A nova senha deve ter ao menos ${SENHA_MINIMA} caracteres.`,
-    })
-    .transform((v) => (v && v.length > 0 ? v : null)),
+  nova_senha: opcional.refine((v) => v === null || v.length >= SENHA_MINIMA, {
+    message: `A nova senha deve ter ao menos ${SENHA_MINIMA} caracteres.`,
+  }),
 });
 
 export type CriarUsuarioInput = z.infer<typeof criarUsuarioSchema>;

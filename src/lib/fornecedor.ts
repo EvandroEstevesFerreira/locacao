@@ -9,38 +9,20 @@
 
 import { z } from "zod";
 import { cnpjValido, normalizarCnpj } from "@/lib/cnpj";
-
-const textoOpcional = (max: number) =>
-  z
-    .string()
-    .trim()
-    .max(max)
-    .optional()
-    .transform((v) => (v && v.length > 0 ? v : null));
+import { opcional, textoOpcional, emailOpcional } from "@/lib/campos";
 
 export const fornecedorSchema = z.object({
   id: z.string().uuid().optional(),
   nome: z.string().trim().min(1, "Informe o nome do fornecedor.").max(200),
-  cnpj: z
-    .string()
-    .trim()
-    .max(25)
-    .optional()
-    .refine((v) => !v || normalizarCnpj(v) === "" || cnpjValido(v), {
+  cnpj: opcional
+    .refine((v) => v === null || normalizarCnpj(v) === "" || cnpjValido(v), {
       message: "CNPJ inválido. Verifique o número (formato alfanumérico).",
     })
-    .transform((v) => (v && normalizarCnpj(v) !== "" ? v : null)),
+    // Um CNPJ que normaliza para vazio (só máscara digitada) é "não informado".
+    .transform((v) => (v !== null && normalizarCnpj(v) !== "" ? v : null)),
   contato_nome: textoOpcional(200),
   contato_telefone: textoOpcional(40),
-  contato_email: z
-    .string()
-    .trim()
-    .max(200)
-    .optional()
-    .refine((v) => !v || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v), {
-      message: "E-mail de contato inválido.",
-    })
-    .transform((v) => (v && v.length > 0 ? v : null)),
+  contato_email: emailOpcional(200),
   observacoes: textoOpcional(1000),
   ativo: z.boolean(),
   /** IDs das obras vinculadas (relação N:N com fornecedor_obra). */

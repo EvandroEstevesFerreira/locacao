@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { textoOpcional } from "@/lib/campos";
 
 export type TipoItem = "equipamento" | "material_retornavel" | "consumivel";
 
@@ -41,12 +42,7 @@ export const itemSchema = z.object({
   id: z.string().uuid().optional(),
   tipo: z.enum(TIPOS_ITEM),
   descricao: z.string().trim().min(1, "Informe a descrição do item.").max(200),
-  unidade: z
-    .string()
-    .trim()
-    .max(10)
-    .optional()
-    .transform((v) => (v && v.length > 0 ? v : null)),
+  unidade: textoOpcional(10),
   ativo: z.boolean(),
 });
 

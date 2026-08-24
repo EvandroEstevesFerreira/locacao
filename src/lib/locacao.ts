@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { differenceInCalendarDays } from "date-fns";
+import { dataOpcional as dataOpcionalCampo, textoOpcional } from "@/lib/campos";
 
 export type Cadencia = "diaria" | "semanal" | "quinzenal" | "mensal";
 
@@ -207,10 +208,9 @@ export function formatarDataHora(iso: string | null): string {
 export const CADENCIAS = ["diaria", "semanal", "quinzenal", "mensal"] as const;
 export const STATUS_CONTRATOS = ["ativo", "encerrado", "cancelado"] as const;
 
-const dataOpcional = z
-  .string()
-  .optional()
-  .transform((v) => (v && v.trim().length > 0 ? v.trim() : null));
+// Reexportado de `campos.ts` — a cópia local aceitava só `string | undefined`
+// e recusava o próprio output na re-validação da action.
+const dataOpcional = dataOpcionalCampo;
 
 export const contratoSchema = z
   .object({
@@ -222,12 +222,7 @@ export const contratoSchema = z
     data_inicio: z.string().min(1, "Informe a data de início."),
     data_fim_prevista: dataOpcional,
     status: z.enum(STATUS_CONTRATOS),
-    observacoes: z
-      .string()
-      .trim()
-      .max(1000)
-      .optional()
-      .transform((v) => (v && v.length > 0 ? v : null)),
+    observacoes: textoOpcional(1000),
     cobranca_prorata: z.boolean(),
   })
   // Regra cruzada: só o zod pega, porque depende de dois campos. Antes um
@@ -251,16 +246,8 @@ export const itemLocadoSchema = z
     quantidade: z.coerce.number().positive("A quantidade deve ser maior que zero."),
     valor_unitario_periodo: z.coerce.number().min(0, "Valor inválido."),
     data_retirada: z.string().min(1, "Informe a data de retirada."),
-    data_devolucao_prevista: z
-      .string()
-      .optional()
-      .transform((v) => (v && v.length > 0 ? v : null)),
-    identificacao: z
-      .string()
-      .trim()
-      .max(120)
-      .optional()
-      .transform((v) => (v && v.length > 0 ? v : null)),
+    data_devolucao_prevista: dataOpcional,
+    identificacao: textoOpcional(120),
   })
   // Regra cruzada: devolver antes de retirar não existe, e o custo por período
   // sairia negativo.
