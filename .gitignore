@@ -52,3 +52,6 @@ supabase/.temp/
 
 # Superpowers — mockups locais do brainstorming
 .superpowers/
+
+# Galeria local de e-mails (gerada pelo teste, não versionada)
+/.artefatos/

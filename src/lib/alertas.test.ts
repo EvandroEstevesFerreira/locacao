@@ -1,7 +1,13 @@
 import { describe, it, expect } from "vitest";
 import { obraSchema } from "./obra";
-import { montarEmailVencimentos, montarEmailVencimentosCentral } from "./email";
-import type { LinhaAlerta, GrupoAlerta } from "./email";
+import { vencimentosCentral, vencimentosObra } from "./emails/templates";
+import type { LinhaAlerta, GrupoAlerta } from "./emails/templates";
+import type { Contexto } from "./emails/base";
+
+const ctx: Contexto = {
+  remetente: { nome: "Sistenge", razaoSocial: null, cnpj: null },
+  appUrl: "https://loca.exemplo",
+};
 
 const linha = (descricao: string, obra?: string): LinhaAlerta => ({
   categoria: "Pagamento",
@@ -79,20 +85,20 @@ describe("obraSchema aceita o próprio output", () => {
   });
 });
 
-describe("montarEmailVencimentos", () => {
+describe("e-mail de vencimentos da obra", () => {
   it("mostra o subtítulo da obra quando informado", () => {
-    const html = montarEmailVencimentos("Sistenge", [linha("Aluguel")], "OB-042 — Vista Verde");
+    const { html } = vencimentosObra({ obra: "OB-042 — Vista Verde", linhas: [linha("Aluguel")] }, ctx);
     expect(html).toContain("Sistenge — OB-042 — Vista Verde");
   });
 
   it("sem subtítulo, mostra só a organização", () => {
-    const html = montarEmailVencimentos("Sistenge", [linha("Aluguel")]);
+    const { html } = vencimentosObra({ linhas: [linha("Aluguel")] }, ctx);
     expect(html).toContain("Sistenge");
     expect(html).not.toContain("Sistenge — ");
   });
 });
 
-describe("montarEmailVencimentosCentral", () => {
+describe("e-mail de vencimentos central", () => {
   const grupos: GrupoAlerta[] = [
     { obra: "OB-042 — Vista Verde", linhas: [linha("Aluguel"), linha("IPTU")] },
     { obra: "OB-063 — Alto da Serra", linhas: [linha("Andaime")], semDestinatarios: true },
@@ -100,12 +106,12 @@ describe("montarEmailVencimentosCentral", () => {
   ];
 
   it("soma o total de avisos de todos os grupos", () => {
-    const html = montarEmailVencimentosCentral("Sistenge", grupos);
+    const html = vencimentosCentral({ grupos }, ctx).html;
     expect(html).toContain("4 avisos em 3 grupos");
   });
 
   it("lista cada obra no índice com a contagem dela", () => {
-    const html = montarEmailVencimentosCentral("Sistenge", grupos);
+    const html = vencimentosCentral({ grupos }, ctx).html;
     expect(html).toContain("OB-042 — Vista Verde</strong> — 2 avisos");
     expect(html).toContain("OB-063 — Alto da Serra</strong> — 1 aviso");
   });
@@ -113,22 +119,22 @@ describe("montarEmailVencimentosCentral", () => {
   it("marca a obra que ficou sem destinatários próprios", () => {
     // É o aviso que impede a divisão por obra de virar perda silenciosa de
     // alerta: a central absorve e diz que absorveu.
-    const html = montarEmailVencimentosCentral("Sistenge", grupos);
+    const html = vencimentosCentral({ grupos }, ctx).html;
     expect(html).toContain("sem destinatários próprios");
   });
 
   it("não marca as obras que têm destinatários", () => {
-    const html = montarEmailVencimentosCentral("Sistenge", [grupos[0]]);
+    const html = vencimentosCentral({ grupos: [grupos[0]] }, ctx).html;
     expect(html).not.toContain("sem destinatários próprios");
   });
 
   it("um grupo com um aviso usa o singular", () => {
-    const html = montarEmailVencimentosCentral("Sistenge", [grupos[1]]);
+    const html = vencimentosCentral({ grupos: [grupos[1]] }, ctx).html;
     expect(html).toContain("1 aviso em 1 grupo");
   });
 
   it("cada seção traz a tabela completa do grupo", () => {
-    const html = montarEmailVencimentosCentral("Sistenge", grupos);
+    const html = vencimentosCentral({ grupos }, ctx).html;
     expect(html).toContain("Aluguel");
     expect(html).toContain("IPTU");
     expect(html).toContain("Andaime");

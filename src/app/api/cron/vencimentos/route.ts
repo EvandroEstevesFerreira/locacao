@@ -2,14 +2,18 @@ import { NextResponse } from "next/server";
 import { addDays, differenceInCalendarDays, format } from "date-fns";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logger, erroMeta } from "@/lib/logger";
+import { emailConfigurado, enviarEmail } from "@/lib/email";
+import { emTeste } from "@/lib/emails/modo-teste";
 import {
-  emailConfigurado,
-  enviarEmail,
-  montarEmailVencimentos,
-  montarEmailVencimentosCentral,
+  montarContexto,
+  SELECT_ORGANIZACAO_EMAIL,
+} from "@/lib/emails/contexto";
+import {
+  vencimentosCentral,
+  vencimentosObra,
   type LinhaAlerta,
   type GrupoAlerta,
-} from "@/lib/email";
+} from "@/lib/emails/templates";
 import {
   formatarData,
   formatarBRL,
@@ -305,12 +309,13 @@ export async function GET(request: Request) {
       ),
     );
 
+    // Razão social e CNPJ vão no rodapé de todo e-mail; vêm da mesma linha.
     const { data: org } = await supabase
       .from("organizacao")
-      .select("nome")
+      .select(SELECT_ORGANIZACAO_EMAIL)
       .eq("id", cfg.org_id)
       .single();
-    const orgNome = org?.nome ?? "Organização";
+    const ctx = montarContexto(org);
 
     // ── Destinatários por obra ───────────────────────────────────────────────
     // Vinculados à obra (a MESMA fonte que a RLS usa para o acesso) + a lista
@@ -405,8 +410,7 @@ export async function GET(request: Request) {
       try {
         await enviarEmail(
           destObra,
-          `Loca — Avisos de vencimento · ${rotulo}`,
-          montarEmailVencimentos(orgNome, novosObra.map((c) => c.linha), rotulo),
+          vencimentosObra({ obra: rotulo, linhas: novosObra.map((c) => c.linha) }, ctx),
         );
         enviados += novosObra.length;
         registros.push(
@@ -435,13 +439,27 @@ export async function GET(request: Request) {
     if (paraCentral.length > 0 && destinatarios.length > 0) {
       await enviarEmail(
         destinatarios,
-        "Loca — Avisos de vencimento",
-        montarEmailVencimentosCentral(orgNome, paraCentral),
+        vencimentosCentral({ grupos: paraCentral }, ctx),
       );
       enviados += paraCentral.reduce((s, g) => s + g.linhas.length, 0);
     }
 
-    if (registros.length > 0) {
+    // Em modo de teste NÃO se grava o log de notificação.
+    //
+    // A gravação é o que impede o reenvio. Em teste, ela marcaria como "já
+    // enviado" um aviso que só chegou às caixas de teste — e o destinatário real
+    // nunca receberia aquele aviso, porque amanhã ele já não seria candidato. O
+    // teste não encheria a caixa de ninguém: esvaziaria, em silêncio.
+    //
+    // Sem gravar, o mesmo aviso é reenviado a cada dia enquanto o teste durar —
+    // o que é exatamente o desejado: dá para conferir o e-mail de novo amanhã, e
+    // ao desligar a trava tudo que estava pendente sai para quem deve receber.
+    if (registros.length > 0 && emTeste()) {
+      logger.info("cron.vencimentos.log_suspenso", {
+        org_id: cfg.org_id,
+        registros: registros.length,
+      });
+    } else if (registros.length > 0) {
       // O erro deste insert NÃO era tratado. Se ele falhasse, os e-mails já
       // tinham saído e nada ficava registrado — e o mesmo aviso era reenviado
       // no dia seguinte, e no outro, sem que nada acusasse.

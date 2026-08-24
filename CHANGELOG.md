@@ -7,6 +7,62 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.38.0] — 2026-08-24
+
+Identidade visual Sistenge em toda a comunicação por e-mail. Um layout só —
+cartão branco sobre fundo cinza, cabeçalho em bloco slate-900 com o logotipo em
+negativo — escolhido entre três candidatos renderizados lado a lado.
+
+### Adicionado
+
+- **`src/lib/emails/`**: `layout.ts` (o desenho), `templates.ts` (os nove
+  e-mails), `base.ts` (primitivos e escape), `contexto.ts` (remetente lido de
+  `organizacao`), `relatorio.ts` (adaptador do domínio) e `galeria.ts`
+  (pré-visualização local dos dez cenários, sem disparar nada).
+- **Logotipo em PNG para e-mail**, gerado por `scripts/gen-logo-email.mjs` a
+  partir dos paths de `src/lib/pdf-logo.tsx` — uma cópia só da marca. O fundo vai
+  assado no arquivo: com transparência, o Outlook em modo escuro põe preto atrás
+  e o wordmark slate-900 desaparece.
+- **Quatro templates novos**, prontos e ainda sem gatilho: recebimento de
+  equipamento, documento gerado ao terceiro, avaria cobrada do fornecedor e
+  fluxo de caixa mensal.
+- **`EMAIL_REPLY_TO`** e parte `text/plain` em todo envio.
+
+- **Modo de teste interno** (`EMAIL_MODO_TESTE` + `EMAIL_TESTE_DESTINO`). Fica no
+  transporte, o único ponto por onde todo envio passa: desvia os destinatários,
+  prefixa o assunto com quem teria recebido e deixa o corpo intacto — é o corpo
+  que está sendo avaliado. Ligar sem destino **bloqueia** o envio em vez de cair
+  para os destinatários reais.
+- **`notificacao_log` suspenso em modo de teste.** A gravação é o que impede o
+  reenvio; em teste ela marcaria como "já enviado" um aviso que só chegou às
+  caixas de teste, e o destinatário real nunca o receberia. O teste não encheria
+  a caixa de ninguém — esvaziaria, em silêncio.
+- **`POST /api/dev/emails`** dispara os dez cenários com dados de exemplo, sem
+  tocar no banco. Protegida por `CRON_SECRET` e recusa funcionar fora do modo de
+  teste. `?somente=<id>` reenvia um só; `GET` lista os ids.
+
+### Corrigido
+
+- **Linhas de subtotal e total do e-mail de relatório não tinham fundo.** A cor
+  era interpolada dentro de uma string de aspas duplas, então o HTML recebia o
+  texto literal `${SLATE_100}` e o navegador descartava a declaração.
+- **Dado do banco entrava cru no HTML.** Um fornecedor cadastrado como
+  `Móveis & Equipamentos` já produzia marcação inválida; com `<` no nome,
+  engoliria o resto da tabela. Todo dado dinâmico passa por `esc()`.
+- **Os avisos de vencimento não tinham identidade nenhuma** — eram os dois
+  únicos e-mails que não usavam o layout compartilhado.
+- **`NEXT_PUBLIC_APP_URL` sem `https://` quebrava o logotipo de todo e-mail.**
+  Em desenvolvimento ela vale `http://localhost:3000`, que nenhuma caixa de
+  entrada resolve. Para e-mail, valor que não é `https://` passou a valer como
+  valor ausente.
+
+### Alterado
+
+- `enviarEmail` recebe o `EmailPronto` inteiro em vez de assunto e HTML soltos.
+  O assunto estava escrito no call site, longe do corpo que anuncia, e já havia
+  divergido entre as rotas.
+- `src/lib/email.ts` ficou só com o transporte.
+
 ## [0.37.0] — 2026-08-24
 
 Fase 0 de `docs/superpowers/specs/2026-08-23-recebimento-equipamento-design.md`.

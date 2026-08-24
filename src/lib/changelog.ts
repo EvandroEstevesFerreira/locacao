@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.37.0";
+export const APP_VERSION = "0.38.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,20 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.38.0",
+    data: "2026-08-24",
+    titulo: "Os e-mails do Loca com a identidade da Sistenge",
+    mudancas: [
+      { tipo: "novo", texto: "Todo e-mail do Loca passa a sair com o logotipo da Sistenge no cabeçalho e, no rodapé, a razão social e o CNPJ da empresa cadastrados em Configurações." },
+      { tipo: "melhoria", texto: "Os avisos de vencimento tinham ficado de fora do desenho: chegavam sem cabeçalho e sem rodapé. Agora são iguais aos outros." },
+      { tipo: "melhoria", texto: "Quem responder a um e-mail do Loca agora é atendido: as respostas passam a chegar em uma caixa de verdade, e não no endereço de automação." },
+      { tipo: "correcao", texto: "No e-mail de relatório, as linhas de subtotal e de total voltaram a ter fundo destacado. Sem ele, era fácil somar de novo o que já estava somado." },
+      { tipo: "correcao", texto: "Fornecedor com \"&\" no nome — \"Móveis & Equipamentos\" — não desmonta mais a tabela do e-mail." },
+      { tipo: "melhoria", texto: "Os e-mails passam a levar também uma versão em texto simples, o que reduz a chance de cair na caixa de spam." },
+      { tipo: "seguranca", texto: "Modo de teste de e-mail: enquanto ligado, todo e-mail do sistema é desviado para os endereços de teste e nenhum destinatário real recebe nada. Os avisos represados saem normalmente quando o modo é desligado." },
+    ],
+  },
   {
     versao: "0.37.0",
     data: "2026-08-24",

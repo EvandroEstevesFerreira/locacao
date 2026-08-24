@@ -10,7 +10,10 @@ import {
   type Relatorio,
 } from "@/lib/relatorios";
 import { DocumentoRelatorio } from "@/lib/pdf";
-import { emailConfigurado, enviarEmail, montarEmailRelatorio } from "@/lib/email";
+import { emailConfigurado, enviarEmail } from "@/lib/email";
+import { montarContexto, SELECT_ORGANIZACAO_EMAIL } from "@/lib/emails/contexto";
+import { dadosDeRelatorio } from "@/lib/emails/relatorio";
+import { relatorioAutomatico } from "@/lib/emails/templates";
 import { hojeISOSaoPaulo, dataDeISO } from "@/lib/locacao";
 
 export const runtime = "nodejs";
@@ -82,13 +85,12 @@ export async function GET(request: Request) {
 
     const { data: org } = await supabase
       .from("organizacao")
-      .select("nome")
+      .select(SELECT_ORGANIZACAO_EMAIL)
       .eq("id", cfg.org_id)
       .single();
-    const orgNome = org?.nome ?? "Organização";
+    const ctx = montarContexto(org);
 
     const periodoLabel = format(hojeData, "dd/MM/yyyy");
-    const html = montarEmailRelatorio(orgNome, relatorio, periodoLabel);
 
     const pdf = await renderRelatorioPdf(relatorio, periodoLabel);
     const anexo = {
@@ -96,10 +98,13 @@ export async function GET(request: Request) {
       content: Buffer.from(pdf).toString("base64"),
     };
 
+    // O nome do anexo entra no corpo: o e-mail diz qual arquivo procurar.
     await enviarEmail(
       destinatarios,
-      `Loca — ${relatorio.titulo}`,
-      html,
+      relatorioAutomatico(
+        dadosDeRelatorio(relatorio, periodoLabel, anexo.filename),
+        ctx,
+      ),
       [anexo],
     );
 
