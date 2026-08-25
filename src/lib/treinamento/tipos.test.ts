@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { validarTrilhas, type Trilha, type Modulo } from "./tipos";
+import { TRILHA_0 } from "./trilha-0";
 
 const modulo = (id: string, numero: number): Modulo => ({
   id,
@@ -80,5 +81,50 @@ describe("validarTrilhas", () => {
     const t = completas();
     t[1].modulos[3].numero = 9;
     expect(validarTrilhas(t)).toContainEqual(expect.stringContaining("numeração"));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Cobertura por trilha
+// ---------------------------------------------------------------------------
+
+describe("TRILHA_0", () => {
+  it("é válida sozinha, exceto pela contagem total", () => {
+    const problemas = validarTrilhas([TRILHA_0]);
+    expect(problemas.filter((p) => !p.includes("esperado 18"))).toEqual([]);
+  });
+
+  it("tem os seis módulos previstos, nesta ordem", () => {
+    expect(TRILHA_0.modulos.map((m) => m.id)).toEqual([
+      "visao-geral",
+      "primeiro-acesso",
+      "perfis",
+      "obras",
+      "fornecedores",
+      "financeiro-relatorios",
+    ]);
+  });
+
+  it("diz que são doze relatórios — o manual antigo dizia outro número", () => {
+    const m = TRILHA_0.modulos.find((x) => x.id === "financeiro-relatorios")!;
+    const texto = [m.problema, ...m.caminho, m.exemplo].join(" ");
+    expect(texto).toMatch(/doze|12/);
+  });
+
+  it("desfaz a confusão entre competência e vencimento", () => {
+    // É o erro de lançamento mais comum, e o que estraga o custo da obra nos
+    // dois meses. Se o módulo deixar de explicar isso, o teste cai.
+    const m = TRILHA_0.modulos.find((x) => x.id === "financeiro-relatorios")!;
+    const texto = [m.problema, ...m.caminho, ...m.perguntas.map((p) => p.comentario)]
+      .join(" ")
+      .toLowerCase();
+    expect(texto).toContain("competência");
+    expect(texto).toContain("vencimento");
+  });
+
+  it("o fio condutor começa aqui", () => {
+    const texto = TRILHA_0.modulos.map((m) => m.exemplo).join(" ");
+    expect(texto).toContain("Alto da Serra");
+    expect(texto).toContain("Bandeirantes");
   });
 });
