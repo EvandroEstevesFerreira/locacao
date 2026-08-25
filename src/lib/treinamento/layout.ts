@@ -27,6 +27,7 @@ import {
   DARK_TEXTO,
   DARK_TEXTO_FRACO,
 } from "@/lib/brand-colors";
+import type { Diagrama } from "./diagramas";
 import type { Modulo, PerfilKey, Trilha } from "./tipos";
 
 /**
@@ -205,8 +206,9 @@ main { max-width: 900px; margin: 0 auto; padding: 28px 20px 80px; }
 .bloco ol, .bloco ul { margin: 0; padding-left: 22px; }
 .bloco li { margin-bottom: 6px; }
 .exemplo { border-left: 3px solid var(--marca); padding-left: 14px; }
-figure { margin: 14px 0 0; overflow-x: auto; }
-figure svg { max-width: 100%; height: auto; }
+figure { margin: 14px 0 0; }
+figure svg { max-width: 100%; height: auto; display: block; }
+figcaption { margin-top: 8px; font-size: 13px; color: var(--fraco); }
 
 /* Exercícios */
 .exercicio { display: flex; gap: 10px; align-items: flex-start;
@@ -415,8 +417,14 @@ function blocoPerguntas(m: Modulo): string {
     .join("");
 }
 
-/** Uma seção de módulo, com os cinco blocos. `svg` já vem pronto ou é `null`. */
-export function secaoModulo(m: Modulo, svg: string | null): string {
+/**
+ * Uma seção de módulo, com os cinco blocos.
+ *
+ * Recebe o diagrama inteiro, e não só o SVG, porque a legenda é parte da figura:
+ * é ela que afirma o que o desenho mostra. Sem `<figcaption>`, o leitor tem de
+ * adivinhar por que aquele diagrama está ali.
+ */
+export function secaoModulo(m: Modulo, diagrama: Diagrama | null): string {
   const perfis = m.perfis
     .map((p) => `<span class="perfil">${esc(PERFIL_LABEL[p])}</span>`)
     .join("");
@@ -432,7 +440,9 @@ export function secaoModulo(m: Modulo, svg: string | null): string {
     )
     .join("");
 
-  const figura = svg ? `<figure>${svg}</figure>` : "";
+  const figura = diagrama
+    ? `<figure>${diagrama.svg}<figcaption>${esc(diagrama.legenda)}</figcaption></figure>`
+    : "";
 
   return `<article class="modulo" id="${esc(m.id)}" data-feito="0">
     <div class="mod-cab">

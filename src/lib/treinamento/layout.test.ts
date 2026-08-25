@@ -142,9 +142,17 @@ describe("secaoModulo", () => {
     }
   });
 
-  it("embute o diagrama quando recebe um", () => {
-    expect(secaoModulo(m, '<svg role="img"></svg>')).toContain("<svg");
+  it("embute o diagrama e a legenda quando recebe um", () => {
+    const html = secaoModulo(m, {
+      titulo: "Anatomia de uma tela de lista",
+      legenda: "Todas as listas do Loca repetem esta estrutura.",
+      svg: '<svg role="img"></svg>',
+    });
+    expect(html).toContain("<svg");
+    expect(html).toContain("<figcaption>");
+    expect(html).toContain("Todas as listas do Loca repetem esta estrutura.");
     expect(secaoModulo(m, null)).not.toContain("<svg");
+    expect(secaoModulo(m, null)).not.toContain("<figure>");
   });
 
   it("guarda a resposta correta em atributo de dado, não em texto visível", () => {
