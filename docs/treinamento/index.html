@@ -1,0 +1,990 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Treinamento do Loca</title>
+<!-- ARQUIVO GERADO por src/lib/treinamento/gerar.ts. Nao editar a mao: a
+     proxima execucao de "npm test" sobrescreve qualquer alteracao daqui.
+     Para mudar o conteudo, edite trilha-0.ts, trilha-a.ts ou trilha-b.ts;
+     para mudar o desenho, layout.ts. -->
+<style>
+:root {
+  --fundo: #F1F5F9;
+  --card: #FFFFFF;
+  --texto: #0F172A;
+  --fraco: #64748B;
+  --tenue: #94A3B8;
+  --linha: #E2E8F0;
+  --suave: #F8FAFC;
+  --acento: #0F172A;
+  --acento-texto: #FFFFFF;
+  --marca: #BE3A31;
+  --aviso-fundo: #FEF3C7;
+  --aviso-borda: #B45309;
+  --aviso-texto: #92400E;
+  --erro-fundo: #FEF2F2;
+  --erro-texto: #DC2828;
+  --certo-fundo: #ECFDF5;
+  --certo-texto: #065F46;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fundo: #070A13;
+    --card: #0B111E;
+    --texto: #E2E8F0;
+    --fraco: #94A3B8;
+    --tenue: #94A3B8;
+    --linha: #64748B;
+    --suave: #070A13;
+    --acento: #E2E8F0;
+    --acento-texto: #070A13;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--fundo);
+  color: var(--texto);
+  font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+}
+a { color: inherit; }
+
+/* Cabeçalho */
+.topo { background: var(--acento); color: var(--acento-texto); padding: 28px 20px 32px; }
+.topo-int { max-width: 900px; margin: 0 auto; }
+.marca { font-size: 13px; letter-spacing: 3px; text-transform: uppercase; opacity: .75; }
+.topo h1 { margin: 6px 0 8px; font-size: 28px; line-height: 1.2; }
+.topo p { margin: 0; max-width: 62ch; opacity: .85; font-size: 15px; }
+
+/* Navegação por trilha */
+.nav { max-width: 900px; margin: -18px auto 0; padding: 0 20px; }
+.nav-cartao {
+  background: var(--card); border: 1px solid var(--linha); border-radius: 8px;
+  padding: 14px 16px;
+}
+.nav-cartao h2 { margin: 0 0 10px; font-size: 13px; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--fraco); }
+.nav-trilha { margin-bottom: 12px; }
+.nav-trilha > a { display: block; font-weight: 700; text-decoration: none;
+  padding: 8px 4px; min-height: 44px; }
+.nav-mods { display: flex; flex-wrap: wrap; gap: 6px; padding-left: 4px; }
+.nav-mods a {
+  font-size: 13px; text-decoration: none; padding: 10px 12px; min-height: 44px;
+  display: inline-flex; align-items: center;
+  background: var(--suave); border: 1px solid var(--linha); border-radius: 6px;
+}
+.nav-mods a[data-feito="1"]::before { content: "✓ "; color: var(--certo-texto); }
+
+/* Corpo */
+main { max-width: 900px; margin: 0 auto; padding: 28px 20px 80px; }
+.trilha { margin-top: 40px; }
+.trilha-cab { border-bottom: 3px solid var(--acento); padding-bottom: 12px; }
+.trilha-n { font-size: 12px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--fraco); }
+.trilha-cab h2 { margin: 4px 0 6px; font-size: 24px; }
+.trilha-cab p { margin: 0 0 12px; color: var(--fraco); font-size: 15px; }
+.barra { height: 6px; background: var(--linha); border-radius: 3px; overflow: hidden; }
+.barra > span { display: block; height: 100%; width: 0; background: var(--acento); }
+
+/* Módulo */
+.modulo {
+  background: var(--card); border: 1px solid var(--linha); border-radius: 8px;
+  padding: 20px; margin-top: 20px;
+}
+.mod-cab { display: flex; flex-wrap: wrap; gap: 10px; align-items: baseline; }
+.mod-n {
+  flex: 0 0 auto; width: 30px; height: 30px; border-radius: 50%;
+  background: var(--acento); color: var(--acento-texto);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 700;
+}
+.mod-cab h3 { margin: 0; font-size: 20px; }
+.perfis { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; }
+.perfil {
+  font-size: 11px; letter-spacing: .5px; text-transform: uppercase;
+  border: 1px solid var(--linha); background: var(--suave); color: var(--fraco);
+  padding: 3px 8px; border-radius: 3px;
+}
+.bloco { margin-top: 20px; }
+.bloco > h4 {
+  margin: 0 0 8px; font-size: 12px; letter-spacing: 1.2px; text-transform: uppercase;
+  color: var(--fraco);
+}
+.bloco p { margin: 0 0 10px; }
+.bloco ol, .bloco ul { margin: 0; padding-left: 22px; }
+.bloco li { margin-bottom: 6px; }
+.exemplo { border-left: 3px solid var(--marca); padding-left: 14px; }
+figure { margin: 14px 0 0; }
+figure svg { max-width: 100%; height: auto; display: block; }
+figcaption { margin-top: 8px; font-size: 13px; color: var(--fraco); }
+
+/* Exercícios */
+.exercicio { display: flex; gap: 10px; align-items: flex-start;
+  padding: 10px 0; min-height: 44px; cursor: pointer; }
+.exercicio input { margin-top: 5px; width: 18px; height: 18px; flex: 0 0 auto; }
+
+/* Verificação */
+.pergunta { border: 1px solid var(--linha); border-radius: 6px; padding: 14px;
+  margin-bottom: 12px; }
+.pergunta > p { font-weight: 600; margin: 0 0 10px; }
+.alts { display: flex; flex-direction: column; gap: 6px; }
+.alt {
+  text-align: left; font: inherit; font-size: 15px; cursor: pointer;
+  background: var(--suave); color: var(--texto);
+  border: 1px solid var(--linha); border-radius: 6px;
+  padding: 12px 14px; min-height: 44px;
+}
+.alt[data-estado="certo"] { background: var(--certo-fundo); color: var(--certo-texto);
+  border-color: var(--certo-texto); font-weight: 700; }
+.alt[data-estado="errado"] { background: var(--erro-fundo); color: var(--erro-texto);
+  border-color: var(--erro-texto); }
+.comentario { display: none; margin: 10px 0 0; font-size: 14px;
+  border-left: 3px solid var(--aviso-borda); background: var(--aviso-fundo);
+  color: var(--aviso-texto); padding: 10px 12px; }
+.comentario[data-visivel="1"] { display: block; }
+
+/* Aviso de recurso inexistente */
+.em-construcao {
+  margin-top: 20px; border: 1px dashed var(--aviso-borda);
+  background: var(--aviso-fundo); color: var(--aviso-texto);
+  border-radius: 8px; padding: 18px;
+}
+.em-construcao h3 { margin: 0 0 8px; font-size: 17px; }
+.em-construcao p { margin: 0 0 8px; }
+
+@media (max-width: 780px) {
+  .topo h1 { font-size: 23px; }
+  .modulo { padding: 16px; }
+  main { padding: 20px 14px 60px; }
+  .nav { padding: 0 14px; }
+}
+</style>
+</head>
+<body>
+<header class="topo">
+  <div class="topo-int">
+    <div class="marca">Sistenge</div>
+    <h1>Treinamento do Loca</h1>
+    <p>Três trilhas. A Fundação vale para todos; depois siga a de ferramentas e
+    locações, a de imóveis e alojamento, ou as duas. Cada módulo tem exercícios
+    para fazer no sistema de verdade — o seu progresso fica salvo neste
+    navegador.</p>
+  </div>
+</header>
+<nav class="nav"><div class="nav-cartao">
+    <h2>Índice</h2>
+    <div class="nav-trilha">
+      <a href="#trilha-fundacao">Trilha 0 · Fundação</a>
+      <div class="nav-mods">
+        <a href="#visao-geral">1. O que o Loca resolve — e o que ele não é</a><a href="#primeiro-acesso">2. Primeiro acesso e instalação no celular</a><a href="#perfis">3. Perfis: quem pode o quê</a><a href="#obras">4. Obras — o centro de custo de tudo</a><a href="#fornecedores">5. Fornecedores — de quem se aluga</a><a href="#financeiro-relatorios">6. Financeiro e Relatórios — para onde tudo converge</a>
+      </div>
+    </div><div class="nav-trilha">
+      <a href="#trilha-ferramentas">Trilha 1 · Ferramentas, materiais e locações</a>
+      <div class="nav-mods">
+        <a href="#itens">1. Catálogo de itens — a escolha que decide todo o resto</a><a href="#contrato-fornecedor">2. O contrato com o fornecedor</a><a href="#recebimento">3. Recebimento — conferir o que chegou</a><a href="#vistoria-retirada">4. Vistoria de retirada — a foto que ganha a discussão</a><a href="#devolucao">5. Devolução — o custo que para de correr</a><a href="#avarias">6. Avarias — cobrar e contestar</a>
+      </div>
+    </div><div class="nav-trilha">
+      <a href="#trilha-imoveis">Trilha 2 · Imóveis e alojamento</a>
+      <div class="nav-mods">
+        <a href="#imovel-cadastro">1. Cadastro do imóvel</a><a href="#imovel-contrato">2. Contrato do imóvel: caução, reajuste e ciclo de vida</a><a href="#ocupantes">3. Ocupantes — quem mora onde</a><a href="#documentos-alojamento">4. Os sete documentos do alojamento</a><a href="#consumo">5. Contas de consumo</a><a href="#imovel-vistorias">6. Vistorias, reparos e ocorrências do imóvel</a>
+      </div>
+    </div>
+  </div></nav>
+<main><section class="trilha" id="trilha-fundacao">
+  <header class="trilha-cab">
+    <span class="trilha-n">Trilha 0</span>
+    <h2>Fundação</h2>
+    <p>Todos começam aqui. O que o Loca controla, como se entra nele, quem pode o quê, e as quatro telas que os dois controles compartilham.</p>
+    <div class="barra" data-trilha="fundacao"><span></span></div>
+  </header>
+  <article class="modulo" id="visao-geral" data-feito="0">
+    <div class="mod-cab">
+      <span class="mod-n">1</span>
+      <h3>O que o Loca resolve — e o que ele não é</h3>
+    </div>
+    <div class="perfis"><span class="perfil">Master</span><span class="perfil">Administrador</span><span class="perfil">Gestor</span><span class="perfil">Operador</span></div>
+
+    <div class="bloco"><h4>O problema</h4><p>O Loca controla o que a Sistenge ALUGA de terceiros: equipamentos, materiais e imóveis. A perspectiva é de locatária — o sistema cuida do custo que a empresa paga, nunca do que ela cobra de cliente. Ele existe para matar duas dores: pagar por equipamento parado, e aceitar cobrança de avaria sem ter prova do estado em que o item chegou.</p></div>
+    <div class="bloco"><h4>O caminho</h4><ol><li>Toda informação pertence a uma OBRA, que é o centro de custo. É por isso que quase toda tela tem um filtro de obra no topo.</li><li>De quem se aluga é o FORNECEDOR — locadora de equipamento ou proprietário de imóvel.</li><li>O que se aluga entra pelo CATÁLOGO DE ITENS, para equipamento e material, ou pelo cadastro de IMÓVEIS.</li><li>O acordo com o fornecedor é o CONTRATO, que tem obra, cadência de cobrança e itens.</li><li>O estado do que entra e do que sai é registrado em VISTORIA, com foto.</li><li>O que se paga vira LANÇAMENTO no financeiro, com competência, vencimento e baixa.</li><li>Todo registro do sistema tem número próprio: CTR-2026-0007 para contrato, REC para recebimento, VIS para vistoria, AVA para avaria.</li></ol></div>
+    <div class="bloco"><h4>No exemplo</h4><p class="exemplo">A obra Residencial Alto da Serra — Torre B vai alugar uma betoneira da Locadora Bandeirantes e um alojamento na Rua das Palmeiras, 412. Esses três nomes voltam em todos os dezoito módulos deste treinamento: é a mesma história, do início ao fim.</p></div>
+    <div class="bloco"><h4>Faça você</h4><label class="exercicio" for="ex-visao-geral-0">
+        <input type="checkbox" id="ex-visao-geral-0">
+        <span>Entre no Loca e abra a tela Início. Localize o filtro de obra no topo.</span>
+      </label><label class="exercicio" for="ex-visao-geral-1">
+        <input type="checkbox" id="ex-visao-geral-1">
+        <span>Percorra o menu da esquerda e associe cada item a um dos conceitos acima.</span>
+      </label></div>
+    <div class="bloco"><h4>Confira</h4><div class="pergunta" id="pg-visao-geral-0" data-correta="0">
+        <p>O Loca serve para controlar o quê?</p>
+        <div class="alts"><button type="button" class="alt" data-texto="O que a Sistenge aluga de terceiros e paga por isso">O que a Sistenge aluga de terceiros e paga por isso</button><button type="button" class="alt" data-texto="O que a Sistenge aluga para clientes e cobra por isso">O que a Sistenge aluga para clientes e cobra por isso</button><button type="button" class="alt" data-texto="O estoque de material comprado pela Sistenge">O estoque de material comprado pela Sistenge</button></div>
+        <p class="comentario">A Sistenge é a locatária. O Loca controla o custo pago a fornecedores e proprietários. Material comprado, que é da empresa, não entra aqui.</p>
+      </div></div>
+  </article><article class="modulo" id="primeiro-acesso" data-feito="0">
+    <div class="mod-cab">
+      <span class="mod-n">2</span>
+      <h3>Primeiro acesso e instalação no celular</h3>
+    </div>
+    <div class="perfis"><span class="perfil">Master</span><span class="perfil">Administrador</span><span class="perfil">Gestor</span><span class="perfil">Operador</span></div>
+
+    <div class="bloco"><h4>O problema</h4><p>A senha que chega por e-mail é temporária e serve uma vez só. E quem opera está na obra, com o celular na mão e sinal ruim — abrir o navegador e digitar endereço a cada consulta é atrito suficiente para a pessoa desistir e voltar ao papel.</p></div>
+    <div class="bloco"><h4>O caminho</h4><ol><li>Você recebe um e-mail com o endereço do sistema, seu login e uma senha temporária.</li><li>Entre com esses dados. O Loca vai OBRIGAR a criar uma senha pessoal antes de deixar continuar — a temporária não serve de novo.</li><li>Esqueceu a senha depois? Use o recuperar senha na tela de entrada, ou peça ao Master para redefinir.</li><li>No celular, use Adicionar à tela inicial (ou Instalar aplicativo). O Loca passa a abrir em tela cheia, com ícone próprio.</li><li>Sem sinal, o app mostra uma tela explicando em vez de dar erro. Quando a conexão volta, recarregue para continuar.</li></ol></div>
+    <div class="bloco"><h4>No exemplo</h4><p class="exemplo">O mestre da Torre B instala o Loca no celular no primeiro dia. Da obra, ele registra a devolução de um andaime sem precisar passar no escritório.</p></div>
+    <div class="bloco"><h4>Faça você</h4><label class="exercicio" for="ex-primeiro-acesso-0">
+        <input type="checkbox" id="ex-primeiro-acesso-0">
+        <span>Troque sua senha e confirme que a temporária deixou de funcionar.</span>
+      </label><label class="exercicio" for="ex-primeiro-acesso-1">
+        <input type="checkbox" id="ex-primeiro-acesso-1">
+        <span>Instale o Loca na tela inicial do seu celular.</span>
+      </label><label class="exercicio" for="ex-primeiro-acesso-2">
+        <input type="checkbox" id="ex-primeiro-acesso-2">
+        <span>Ative o modo avião e abra o app: confirme que aparece a tela de sem conexão, não um erro.</span>
+      </label></div>
+    <div class="bloco"><h4>Confira</h4><div class="pergunta" id="pg-primeiro-acesso-0" data-correta="0">
+        <p>Para que serve a senha que chega por e-mail?</p>
+        <div class="alts"><button type="button" class="alt" data-texto="Para o primeiro acesso apenas — o sistema exige criar uma nova">Para o primeiro acesso apenas — o sistema exige criar uma nova</button><button type="button" class="alt" data-texto="É a sua senha definitiva">É a sua senha definitiva</button><button type="button" class="alt" data-texto="Serve até você querer trocar">Serve até você querer trocar</button></div>
+        <p class="comentario">É temporária de verdade: o Loca não deixa navegar antes de você criar uma senha pessoal. O mesmo vale quando o Master redefine sua senha.</p>
+      </div></div>
+  </article><article class="modulo" id="perfis" data-feito="0">
+    <div class="mod-cab">
+      <span class="mod-n">3</span>
+      <h3>Perfis: quem pode o quê</h3>
+    </div>
+    <div class="perfis"><span class="perfil">Master</span><span class="perfil">Administrador</span></div>
+
+    <div class="bloco"><h4>O problema</h4><p>Dar acesso total a todos parece simpático e cobra o preço depois: alguém apaga um contrato por engano, ou o encarregado de uma obra vê o custo de outra. E quando uma pessoa sai de uma obra, o acesso dela precisa sair também — senão continua vendo o que já não é dela.</p></div>
+    <div class="bloco"><h4>O caminho</h4><ol><li>São quatro perfis. Master faz tudo, incluindo criar usuários e excluir registros. Administrador faz tudo menos usuários e configuração de sistema.</li><li>Gestor lê tudo e gera relatórios, e não edita nada. Operador opera contratos, devoluções e vistorias.</li><li>Além do perfil, existe o ACESSO POR OBRA: vincule a pessoa às obras dela e o Loca esconde o resto — imóveis, contratos, financeiro e relatórios de outras obras simplesmente não aparecem.</li><li>O Master ainda pode liberar ou bloquear MENUS por pessoa, em Usuários.</li><li>Dado sensível sai mascarado: CPF, conta bancária e chave PIX aparecem como pontinhos, com botão de revelar.</li><li>Exclusão é reversível. Obra, contrato, lançamento e imóvel excluídos podem ser recuperados, e o histórico fica.</li></ol><figure><svg viewBox="0 0 660 250" role="img" aria-label="Matriz de perfis e permissões"
+    xmlns="http://www.w3.org/2000/svg" style="max-width:100%;height:auto">
+    <title>Matriz de perfis e permissões</title>
+<text x="330" y="30" font-size="11" text-anchor="middle" fill="currentColor">CADASTRAR</text>
+<text x="450" y="30" font-size="11" text-anchor="middle" fill="currentColor">OPERAR</text>
+<text x="580" y="30" font-size="11" text-anchor="middle" fill="currentColor">LER E RELATAR</text>
+<line x1="20" y1="42" x2="640" y2="42" stroke="currentColor" stroke-width="1.5"/>
+<text x="20" y="72" font-size="13" fill="currentColor">Master</text>
+  <text x="330" y="72" font-size="15" text-anchor="middle" fill="currentColor">✓</text>
+  <text x="450" y="72" font-size="15" text-anchor="middle" fill="currentColor">✓</text>
+  <text x="580" y="72" font-size="15" text-anchor="middle" fill="currentColor">✓</text>
+  <line x1="20" y1="86" x2="640" y2="86" stroke="currentColor" stroke-width="0.5"/><text x="20" y="114" font-size="13" fill="currentColor">Administrador</text>
+  <text x="330" y="114" font-size="15" text-anchor="middle" fill="currentColor">✓</text>
+  <text x="450" y="114" font-size="15" text-anchor="middle" fill="currentColor">✓</text>
+  <text x="580" y="114" font-size="15" text-anchor="middle" fill="currentColor">✓</text>
+  <line x1="20" y1="128" x2="640" y2="128" stroke="currentColor" stroke-width="0.5"/><text x="20" y="156" font-size="13" fill="currentColor">Gestor</text>
+  <text x="330" y="156" font-size="15" text-anchor="middle" fill="currentColor">—</text>
+  <text x="450" y="156" font-size="15" text-anchor="middle" fill="currentColor">—</text>
+  <text x="580" y="156" font-size="15" text-anchor="middle" fill="currentColor">✓</text>
+  <line x1="20" y1="170" x2="640" y2="170" stroke="currentColor" stroke-width="0.5"/><text x="20" y="198" font-size="13" fill="currentColor">Operador</text>
+  <text x="330" y="198" font-size="15" text-anchor="middle" fill="currentColor">—</text>
+  <text x="450" y="198" font-size="15" text-anchor="middle" fill="currentColor">✓</text>
+  <text x="580" y="198" font-size="15" text-anchor="middle" fill="currentColor">✓</text>
+  <line x1="20" y1="212" x2="640" y2="212" stroke="currentColor" stroke-width="0.5"/>
+<text x="20" y="238" font-size="11" fill="currentColor">Além disto, o acesso por obra limita o que cada um vê dentro do que pode.</text>
+</svg><figcaption>Todos leem e geram relatórios. Cadastrar é de Master e Administrador; operar inclui o Operador. O Gestor analisa e não edita.</figcaption></figure></div>
+    <div class="bloco"><h4>No exemplo</h4><p class="exemplo">Na Torre B, o mestre entra como Operador e vinculado só àquela obra: ele registra devolução e vistoria, e não vê o custo do Galpão Contorno Norte. O engenheiro entra como Gestor, vê tudo e não altera nada.</p></div>
+    <div class="bloco"><h4>Faça você</h4><label class="exercicio" for="ex-perfis-0">
+        <input type="checkbox" id="ex-perfis-0">
+        <span>Em Usuários, abra o seu próprio perfil e confira quais obras estão vinculadas a você.</span>
+      </label><label class="exercicio" for="ex-perfis-1">
+        <input type="checkbox" id="ex-perfis-1">
+        <span>Peça ao Master para criar um usuário Gestor de teste e confirme que ele não consegue editar um contrato.</span>
+      </label></div>
+    <div class="bloco"><h4>Confira</h4><div class="pergunta" id="pg-perfis-0" data-correta="0">
+        <p>Um Operador vinculado apenas à Torre B abre a tela de Relatórios. O que ele vê?</p>
+        <div class="alts"><button type="button" class="alt" data-texto="Só os dados da Torre B">Só os dados da Torre B</button><button type="button" class="alt" data-texto="Os dados de todas as obras, porque relatório é leitura">Os dados de todas as obras, porque relatório é leitura</button><button type="button" class="alt" data-texto="Nada — Operador não acessa relatórios">Nada — Operador não acessa relatórios</button></div>
+        <p class="comentario">O acesso por obra vale em toda parte, inclusive em relatórios e no financeiro. Não é filtro de tela: o dado das outras obras não chega até ele.</p>
+      </div><div class="pergunta" id="pg-perfis-1" data-correta="0">
+        <p>Qual a diferença entre Gestor e Administrador?</p>
+        <div class="alts"><button type="button" class="alt" data-texto="O Gestor lê e relata sem editar; o Administrador cadastra e opera">O Gestor lê e relata sem editar; o Administrador cadastra e opera</button><button type="button" class="alt" data-texto="O Gestor é acima do Administrador">O Gestor é acima do Administrador</button><button type="button" class="alt" data-texto="Nenhuma, são nomes diferentes para o mesmo acesso">Nenhuma, são nomes diferentes para o mesmo acesso</button></div>
+        <p class="comentario">O Gestor é o perfil de quem analisa: enxerga tudo e não muda nada. É o certo para quem cobra resultado sem operar o sistema.</p>
+      </div></div>
+  </article><article class="modulo" id="obras" data-feito="0">
+    <div class="mod-cab">
+      <span class="mod-n">4</span>
+      <h3>Obras — o centro de custo de tudo</h3>
+    </div>
+    <div class="perfis"><span class="perfil">Master</span><span class="perfil">Administrador</span></div>
+
+    <div class="bloco"><h4>O problema</h4><p>Sem obra, nenhum custo tem dono. É a obra que responde à pergunta que a diretoria faz todo mês: quanto esta obra gastou de locação? Se um contrato entra sem obra, o valor dele fica órfão em todo relatório.</p></div>
+    <div class="bloco"><h4>O caminho</h4><ol><li>Abra Obras no menu e clique em nova obra.</li><li>Informe código, nome, responsável, endereço e o status: ativa, pausada ou encerrada.</li><li>Na lista, use a busca por código, nome ou responsável; clique no título da coluna para ordenar.</li><li>Só Master e Administrador editam. A exclusão é do Master e é reversível.</li></ol><figure><svg viewBox="0 0 660 330" role="img" aria-label="Anatomia de uma tela de lista"
+    xmlns="http://www.w3.org/2000/svg" style="max-width:100%;height:auto">
+    <title>Anatomia de uma tela de lista</title>
+<defs><marker id="seta-l" viewBox="0 0 10 10" refX="9" refY="5"
+    markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+
+<rect x="180" y="20" width="460" height="290" rx="8" fill="none"
+  stroke="currentColor" stroke-width="1.5"/>
+
+<rect x="200" y="40" width="200" height="30" rx="5" fill="none"
+  stroke="currentColor" stroke-width="1"/>
+<text x="212" y="60" font-size="12" fill="currentColor">Buscar…</text>
+
+<rect x="412" y="40" width="100" height="30" rx="5" fill="none"
+  stroke="currentColor" stroke-width="1"/>
+<text x="424" y="60" font-size="12" fill="currentColor">Obra ▾</text>
+<rect x="522" y="40" width="98" height="30" rx="5" fill="none"
+  stroke="currentColor" stroke-width="1"/>
+<text x="534" y="60" font-size="12" fill="currentColor">Status ▾</text>
+
+<line x1="200" y1="92" x2="620" y2="92" stroke="currentColor" stroke-width="1.5"/>
+<text x="206" y="108" font-size="11" fill="currentColor">NÚMERO</text>
+<text x="300" y="108" font-size="11" fill="currentColor">DESCRIÇÃO</text>
+<text x="470" y="108" font-size="11" fill="currentColor">OBRA</text>
+<text x="580" y="108" font-size="11" fill="currentColor">VALOR</text>
+<line x1="200" y1="118" x2="620" y2="118" stroke="currentColor" stroke-width="1"/>
+
+<line x1="200" y1="152" x2="620" y2="152" stroke="currentColor" stroke-width="0.5"/>
+<line x1="200" y1="186" x2="620" y2="186" stroke="currentColor" stroke-width="0.5"/>
+<line x1="200" y1="220" x2="620" y2="220" stroke="currentColor" stroke-width="0.5"/>
+<text x="206" y="141" font-size="12" fill="currentColor">CTR-2026-0007</text>
+<text x="206" y="175" font-size="12" fill="currentColor">CTR-2026-0008</text>
+<text x="206" y="209" font-size="12" fill="currentColor">CTR-2026-0009</text>
+
+<text x="620" y="258" text-anchor="end" font-size="12" fill="currentColor">‹ 1 2 3 ›</text>
+
+<text x="20" y="60" font-size="12" fill="currentColor">busca por número</text>
+<text x="20" y="76" font-size="12" fill="currentColor">e por nome</text>
+<path d="M150,60 H196" stroke="currentColor" stroke-width="1" marker-end="url(#seta-l)"/>
+
+<text x="20" y="112" font-size="12" fill="currentColor">filtros aplicam</text>
+<text x="20" y="128" font-size="12" fill="currentColor">na hora</text>
+<path d="M150,112 L404,60" stroke="currentColor" stroke-width="1" marker-end="url(#seta-l)"/>
+
+<text x="20" y="168" font-size="12" fill="currentColor">clique no título</text>
+<text x="20" y="184" font-size="12" fill="currentColor">ordena a coluna</text>
+<path d="M150,168 L196,108" stroke="currentColor" stroke-width="1" marker-end="url(#seta-l)"/>
+
+<text x="20" y="252" font-size="12" fill="currentColor">sem registro, a tela</text>
+<text x="20" y="268" font-size="12" fill="currentColor">explica o que falta</text>
+<path d="M150,258 L196,200" stroke="currentColor" stroke-width="1" marker-end="url(#seta-l)"/>
+</svg><figcaption>Obras, fornecedores, itens, contratos, imóveis, vistorias e financeiro repetem esta mesma estrutura. Aprender uma vez serve para todas.</figcaption></figure></div>
+    <div class="bloco"><h4>No exemplo</h4><p class="exemplo">Cadastre a obra Residencial Alto da Serra — Torre B com o mestre como responsável. Ela é a obra que vai receber a betoneira, o andaime e o alojamento nos próximos módulos.</p></div>
+    <div class="bloco"><h4>Faça você</h4><label class="exercicio" for="ex-obras-0">
+        <input type="checkbox" id="ex-obras-0">
+        <span>Cadastre uma obra de teste e depois mude o status dela para pausada.</span>
+      </label><label class="exercicio" for="ex-obras-1">
+        <input type="checkbox" id="ex-obras-1">
+        <span>Na lista de obras, ordene por responsável clicando no título da coluna.</span>
+      </label></div>
+    <div class="bloco"><h4>Confira</h4><div class="pergunta" id="pg-obras-0" data-correta="0">
+        <p>Por que quase toda tela do Loca tem filtro por obra?</p>
+        <div class="alts"><button type="button" class="alt" data-texto="Porque a obra é o centro de custo — todo gasto precisa de um dono">Porque a obra é o centro de custo — todo gasto precisa de um dono</button><button type="button" class="alt" data-texto="Para deixar a tela mais organizada">Para deixar a tela mais organizada</button><button type="button" class="alt" data-texto="Porque o sistema não consegue mostrar tudo junto">Porque o sistema não consegue mostrar tudo junto</button></div>
+        <p class="comentario">A obra é a unidade de custo do Loca. Todo contrato, imóvel, vistoria e lançamento se pendura numa obra, e é isso que permite responder quanto cada uma custou.</p>
+      </div></div>
+  </article><article class="modulo" id="fornecedores" data-feito="0">
+    <div class="mod-cab">
+      <span class="mod-n">5</span>
+      <h3>Fornecedores — de quem se aluga</h3>
+    </div>
+    <div class="perfis"><span class="perfil">Master</span><span class="perfil">Administrador</span></div>
+
+    <div class="bloco"><h4>O problema</h4><p>O fornecedor cadastrado torto aparece torto no contrato em PDF e no e-mail que o Loca manda para ele. Pior: o mesmo fornecedor cadastrado duas vezes com nomes ligeiramente diferentes parte o custo em dois no relatório, e ninguém percebe que aquela locadora é a maior despesa da obra.</p></div>
+    <div class="bloco"><h4>O caminho</h4><ol><li>Abra Fornecedores e clique em novo fornecedor.</li><li>Informe nome, CNPJ e os contatos. O CNPJ é validado, inclusive no formato alfanumérico novo.</li><li>Preencha o e-mail de contato: é para ele que o Loca envia o romaneio de recebimento e a cobrança de avaria.</li><li>Vincule as obras em que aquele fornecedor atua — útil quando há locadora local em vários estados.</li><li>Se o CNPJ já existir em outro cadastro, o Loca avisa. É possível salvar mesmo assim, marcando a confirmação — mas pare e confira antes.</li></ol></div>
+    <div class="bloco"><h4>No exemplo</h4><p class="exemplo">Cadastre a Locadora Bandeirantes, com o e-mail do contato dela e vínculo com a Torre B. É desse cadastro que sai o destinatário do romaneio quando a betoneira chegar.</p></div>
+    <div class="bloco"><h4>Faça você</h4><label class="exercicio" for="ex-fornecedores-0">
+        <input type="checkbox" id="ex-fornecedores-0">
+        <span>Cadastre um fornecedor de teste com CNPJ válido.</span>
+      </label><label class="exercicio" for="ex-fornecedores-1">
+        <input type="checkbox" id="ex-fornecedores-1">
+        <span>Tente cadastrar um segundo com o MESMO CNPJ e observe o aviso.</span>
+      </label><label class="exercicio" for="ex-fornecedores-2">
+        <input type="checkbox" id="ex-fornecedores-2">
+        <span>Vincule o fornecedor a uma obra e confirme que ele aparece no filtro por obra.</span>
+      </label></div>
+    <div class="bloco"><h4>Confira</h4><div class="pergunta" id="pg-fornecedores-0" data-correta="0">
+        <p>O Loca deixa cadastrar dois fornecedores com o mesmo CNPJ?</p>
+        <div class="alts"><button type="button" class="alt" data-texto="Deixa, mas avisa e pede confirmação">Deixa, mas avisa e pede confirmação</button><button type="button" class="alt" data-texto="Bloqueia completamente">Bloqueia completamente</button><button type="button" class="alt" data-texto="Deixa sem dizer nada">Deixa sem dizer nada</button></div>
+        <p class="comentario">Ele avisa e permite prosseguir marcando a confirmação, porque há casos legítimos — filial, troca de razão social. Mas duplicata por descuido parte o custo do fornecedor em dois no relatório.</p>
+      </div></div>
+  </article><article class="modulo" id="financeiro-relatorios" data-feito="0">
+    <div class="mod-cab">
+      <span class="mod-n">6</span>
+      <h3>Financeiro e Relatórios — para onde tudo converge</h3>
+    </div>
+    <div class="perfis"><span class="perfil">Master</span><span class="perfil">Administrador</span><span class="perfil">Gestor</span></div>
+
+    <div class="bloco"><h4>O problema</h4><p>Competência e vencimento são confundidos todo mês, e o erro é caro: a despesa entra no mês errado e o custo da obra fica torto para sempre. Competência é o mês a que a despesa PERTENCE; vencimento é o dia em que ela é PAGA. O aluguel de agosto pago em 5 de setembro tem competência 08 e vencimento 05/09.</p></div>
+    <div class="bloco"><h4>O caminho</h4><ol><li>Abra Financeiro. No topo, os números de a pagar, vencido e pago.</li><li>Cada lançamento tem competência, valor, vencimento e status pendente ou pago.</li><li>Em fluxo de caixa, o Loca projeta mês a mês somando os lançamentos reais e a estimativa dos contratos ativos e imóveis vigentes.</li><li>Em gerar recorrentes, ele cria uma conta por mês para cada contrato vigente, até o mês escolhido. Pode rodar duas vezes sem medo: não duplica mês já gerado.</li><li>Para dar baixa, use o ícone no lançamento pendente: informe o valor realmente pago, a data, o número da nota e anexe o comprovante.</li><li>Se pagou com atraso, o Loca sugere multa de 2% mais juros de 1% ao mês pró-rata, e você aplica num clique.</li><li>Em Relatórios são doze: seis do lado de equipamento (itens em aberto, contas a pagar, custo por obra, custo por fornecedor, ociosidade, avarias) e seis do lado de imóveis (custo mensal, contratos a vencer, sem contrato, consumo, reparos, caução).</li></ol></div>
+    <div class="bloco"><h4>No exemplo</h4><p class="exemplo">O aluguel do alojamento da Rua das Palmeiras vence todo dia 10. Em gerar recorrentes, você materializa os doze meses de uma vez; o fluxo de caixa passa a mostrar o desembolso da Torre B até o fim da obra.</p></div>
+    <div class="bloco"><h4>Faça você</h4><label class="exercicio" for="ex-financeiro-relatorios-0">
+        <input type="checkbox" id="ex-financeiro-relatorios-0">
+        <span>Abra o fluxo de caixa e identifique quais meses ainda são projeção, e não lançamento real.</span>
+      </label><label class="exercicio" for="ex-financeiro-relatorios-1">
+        <input type="checkbox" id="ex-financeiro-relatorios-1">
+        <span>Dê baixa num lançamento de teste com valor diferente do previsto.</span>
+      </label><label class="exercicio" for="ex-financeiro-relatorios-2">
+        <input type="checkbox" id="ex-financeiro-relatorios-2">
+        <span>Gere o relatório de custo por obra e confira se o total bate com o que você esperava.</span>
+      </label></div>
+    <div class="bloco"><h4>Confira</h4><div class="pergunta" id="pg-financeiro-relatorios-0" data-correta="0">
+        <p>O aluguel de agosto foi pago em 5 de setembro. Qual é a competência?</p>
+        <div class="alts"><button type="button" class="alt" data-texto="Agosto">Agosto</button><button type="button" class="alt" data-texto="Setembro">Setembro</button><button type="button" class="alt" data-texto="Depende da data da nota fiscal">Depende da data da nota fiscal</button></div>
+        <p class="comentario">Competência é o mês a que a despesa pertence — agosto. Setembro é só o vencimento. Lançar como setembro joga o custo para o mês errado e distorce o custo da obra nos dois meses.</p>
+      </div><div class="pergunta" id="pg-financeiro-relatorios-1" data-correta="0">
+        <p>Rodar gerar recorrentes duas vezes duplica as contas?</p>
+        <div class="alts"><button type="button" class="alt" data-texto="Não — o Loca não recria mês que já existe">Não — o Loca não recria mês que já existe</button><button type="button" class="alt" data-texto="Sim, cria tudo de novo">Sim, cria tudo de novo</button><button type="button" class="alt" data-texto="Sim, e é preciso apagar as duplicadas à mão">Sim, e é preciso apagar as duplicadas à mão</button></div>
+        <p class="comentario">A geração é idempotente: rodar de novo só cria o que falta. Isso existe justamente para você poder rodar sem conferir antes o que já foi gerado.</p>
+      </div></div>
+  </article>
+  
+</section><section class="trilha" id="trilha-ferramentas">
+  <header class="trilha-cab">
+    <span class="trilha-n">Trilha 1</span>
+    <h2>Ferramentas, materiais e locações</h2>
+    <p>Do catálogo à devolução: o que se aluga do fornecedor, como conferir o que chega, como provar o estado, e como o custo para de correr.</p>
+    <div class="barra" data-trilha="ferramentas"><span></span></div>
+  </header>
+  <article class="modulo" id="itens" data-feito="0">
+    <div class="mod-cab">
+      <span class="mod-n">1</span>
+      <h3>Catálogo de itens — a escolha que decide todo o resto</h3>
+    </div>
+    <div class="perfis"><span class="perfil">Master</span><span class="perfil">Administrador</span></div>
+
+    <div class="bloco"><h4>O problema</h4><p>O tipo e o controle que você escolhe ao cadastrar um item determinam o que o Loca consegue responder depois. Cadastrado por quantidade, o sistema sabe que chegaram duas betoneiras. Cadastrado por peça, ele sabe QUAIS duas — e é isso que decide uma discussão de avaria três meses depois.</p></div>
+    <div class="bloco"><h4>O caminho</h4><ol><li>Abra Itens e clique em novo item.</li><li>Escolha o tipo: equipamento, material retornável ou consumível.</li><li>Escolha o controle. Por peça significa rastreado por patrimônio; por quantidade significa por lote.</li><li>Para item controlado por peça, cadastre as unidades físicas com o número de série ou patrimônio.</li><li>Use por peça no que é caro e identificável — betoneira, vibrador, compressor. Use por quantidade no que é repetido e intercambiável — andaime, escora, prancha.</li></ol></div>
+    <div class="bloco"><h4>No exemplo</h4><p class="exemplo">Betoneira 400L entra como equipamento controlado POR PEÇA, com as unidades BT-4412 e BT-4413 cadastradas. O andaime fachadeiro entra como material retornável POR QUANTIDADE: ninguém vai discutir qual das 48 peças de andaime voltou torta.</p></div>
+    <div class="bloco"><h4>Faça você</h4><label class="exercicio" for="ex-itens-0">
+        <input type="checkbox" id="ex-itens-0">
+        <span>Cadastre um item controlado por peça e crie duas unidades para ele.</span>
+      </label><label class="exercicio" for="ex-itens-1">
+        <input type="checkbox" id="ex-itens-1">
+        <span>Cadastre um item por quantidade e observe que ele não pede patrimônio.</span>
+      </label><label class="exercicio" for="ex-itens-2">
+        <input type="checkbox" id="ex-itens-2">
+        <span>Tente registrar um recebimento do item por peça sem informar a peça: o Loca recusa.</span>
+      </label></div>
+    <div class="bloco"><h4>Confira</h4><div class="pergunta" id="pg-itens-0" data-correta="0">
+        <p>Quando usar controle por peça em vez de por quantidade?</p>
+        <div class="alts"><button type="button" class="alt" data-texto="Quando o item é caro e identificável, e vai importar saber qual unidade era">Quando o item é caro e identificável, e vai importar saber qual unidade era</button><button type="button" class="alt" data-texto="Sempre — é mais completo">Sempre — é mais completo</button><button type="button" class="alt" data-texto="Quando o fornecedor exigir">Quando o fornecedor exigir</button></div>
+        <p class="comentario">Por peça dá rastreabilidade e cobra o preço de exigir o patrimônio em cada movimento. Faz sentido na betoneira; em 48 peças de andaime intercambiáveis é burocracia sem retorno.</p>
+      </div></div>
+  </article><article class="modulo" id="contrato-fornecedor" data-feito="0">
+    <div class="mod-cab">
+      <span class="mod-n">2</span>
+      <h3>O contrato com o fornecedor</h3>
+    </div>
+    <div class="perfis"><span class="perfil">Master</span><span class="perfil">Administrador</span><span class="perfil">Operador</span></div>
+
+    <div class="bloco"><h4>O problema</h4><p>A cadência de cobrança é o que transforma dias em dinheiro: é ela que diz se aquele valor unitário é por dia, por semana, por quinzena ou por mês. Errar a cadência multiplica ou divide o custo da obra sem que nenhum campo pareça errado.</p></div>
+    <div class="bloco"><h4>O caminho</h4><ol><li>Abra Contratos e clique em novo contrato.</li><li>Vincule a obra e o fornecedor. O número do Loca vem sugerido no formato CTR-2026-0007 e é único; ao lado dele, guarde o número que o fornecedor usa.</li><li>Escolha a cadência: diária, semanal, quinzenal ou mensal.</li><li>Informe início e fim previsto, e marque cobrança pró-rata se o fornecedor cobrar proporcional.</li><li>Em itens do contrato, adicione item do catálogo, quantidade e valor unitário por período.</li><li>O custo de cada item é a quantidade em aberto vezes o valor vezes os períodos do mês, pela cadência.</li><li>Anexe o contrato original e, ao longo do tempo, os aditivos. Em gerar contrato sai um PDF no template da Sistenge.</li></ol></div>
+    <div class="bloco"><h4>No exemplo</h4><p class="exemplo">Contrato CTR-2026-0187 com a Locadora Bandeirantes para a Torre B, cadência mensal: duas betoneiras a R$ 620,00 por mês cada e 48 peças de andaime. O custo mensal do contrato passa a aparecer no fluxo de caixa da obra.</p></div>
+    <div class="bloco"><h4>Faça você</h4><label class="exercicio" for="ex-contrato-fornecedor-0">
+        <input type="checkbox" id="ex-contrato-fornecedor-0">
+        <span>Crie um contrato de teste com cadência mensal e um item.</span>
+      </label><label class="exercicio" for="ex-contrato-fornecedor-1">
+        <input type="checkbox" id="ex-contrato-fornecedor-1">
+        <span>Mude a cadência para diária e observe o custo mudar.</span>
+      </label><label class="exercicio" for="ex-contrato-fornecedor-2">
+        <input type="checkbox" id="ex-contrato-fornecedor-2">
+        <span>Gere o PDF do contrato e confira se os itens saíram certos.</span>
+      </label></div>
+    <div class="bloco"><h4>Confira</h4><div class="pergunta" id="pg-contrato-fornecedor-0" data-correta="0">
+        <p>Um item vale R$ 620,00 e o contrato tem cadência mensal. O que esse valor representa?</p>
+        <div class="alts"><button type="button" class="alt" data-texto="R$ 620,00 por mês, por unidade">R$ 620,00 por mês, por unidade</button><button type="button" class="alt" data-texto="R$ 620,00 pelo contrato inteiro">R$ 620,00 pelo contrato inteiro</button><button type="button" class="alt" data-texto="R$ 620,00 por dia">R$ 620,00 por dia</button></div>
+        <p class="comentario">O valor unitário é sempre POR PERÍODO da cadência e POR UNIDADE. Com cadência diária, o mesmo R$ 620,00 passaria a custar cerca de trinta vezes mais no mês.</p>
+      </div><div class="pergunta" id="pg-contrato-fornecedor-1" data-correta="0">
+        <p>Para que serve guardar o número do fornecedor além do número do Loca?</p>
+        <div class="alts"><button type="button" class="alt" data-texto="Para achar o contrato quando o fornecedor liga citando o número dele">Para achar o contrato quando o fornecedor liga citando o número dele</button><button type="button" class="alt" data-texto="É obrigatório por lei">É obrigatório por lei</button><button type="button" class="alt" data-texto="Não serve para nada, é campo antigo">Não serve para nada, é campo antigo</button></div>
+        <p class="comentario">São dois números para o mesmo acordo. A busca da lista acha pelos dois — e é o do fornecedor que vem na fatura que chega para pagamento.</p>
+      </div></div>
+  </article><article class="modulo" id="recebimento" data-feito="0">
+    <div class="mod-cab">
+      <span class="mod-n">3</span>
+      <h3>Recebimento — conferir o que chegou</h3>
+    </div>
+    <div class="perfis"><span class="perfil">Master</span><span class="perfil">Administrador</span><span class="perfil">Operador</span></div>
+
+    <div class="bloco"><h4>O problema</h4><p>Assinar o romaneio do fornecedor sem conferir é assumir o que vier: quantidade a menos, modelo trocado, equipamento já danificado. E quem digita no escritório dias depois costuma deixar a data do lançamento no lugar da data da entrega — e aí o custo começa a correr no dia errado.</p></div>
+    <div class="bloco"><h4>O caminho</h4><ol><li>Abra o contrato e vá até a seção Recebimentos. Clique em novo recebimento.</li><li>Informe a DATA DO RECEBIMENTO — é a data em que o equipamento chegou à obra, não a de hoje. O Loca não preenche sozinho de propósito.</li><li>Informe quem conferiu e o número da nota do fornecedor.</li><li>Lance item a item. Para item controlado por peça, informe QUAL peça chegou: o Loca recusa salvar sem o patrimônio.</li><li>Marque a condição de cada item: Conforme, Com avaria ou Divergência.</li><li>Divergência é o que permite registrar que chegou algo fora do contrato, ou em quantidade diferente, sem precisar forçar o lançamento para conseguir salvar.</li><li>Enquanto está em Rascunho, tudo é editável e nada saiu do sistema. Ao FECHAR, o recebimento é congelado e ganha número — REC-2026-0014.</li><li>O envio automático do romaneio ao fornecedor por e-mail ainda não existe; por ora, o PDF é enviado à mão.</li></ol><figure><svg viewBox="0 0 660 250" role="img" aria-label="Cadeia de custódia da ferramenta"
+    xmlns="http://www.w3.org/2000/svg" style="max-width:100%;height:auto">
+    <title>Cadeia de custódia da ferramenta</title>
+<defs><marker id="seta" viewBox="0 0 10 10" refX="9" refY="5"
+    markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+<defs><marker id="seta-pendente" viewBox="0 0 10 10" refX="9" refY="5"
+    markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <path d="M0,0 L10,5 L0,10 z" fill="#B45309"/></marker></defs>
+
+<rect x="20" y="100" width="160" height="56" rx="6"
+    fill="none" stroke="currentColor" stroke-width="1.5"/>
+  <text x="100" y="132" text-anchor="middle"
+    font-size="13" fill="currentColor">Fornecedor</text>
+<rect x="250" y="100" width="160" height="56" rx="6"
+    fill="none" stroke="currentColor" stroke-width="1.5"/>
+  <text x="330" y="132" text-anchor="middle"
+    font-size="13" fill="currentColor">Sistenge · obra</text>
+<rect x="480" y="100" width="160" height="56" rx="6"
+    fill="none" stroke="currentColor" stroke-width="1.5"/>
+  <text x="560" y="132" text-anchor="middle"
+    font-size="13" fill="currentColor">Funcionário</text>
+
+<path d="M180,116 H244" stroke="currentColor" stroke-width="1.5" marker-end="url(#seta)"/>
+<text x="212" y="106" text-anchor="middle" font-size="11" fill="currentColor">recebe</text>
+<text x="212" y="92" text-anchor="middle" font-size="11" fill="currentColor">REC</text>
+
+<path d="M244,140 H180" stroke="currentColor" stroke-width="1.5" marker-end="url(#seta)"/>
+<text x="212" y="166" text-anchor="middle" font-size="11" fill="currentColor">devolve</text>
+<text x="212" y="180" text-anchor="middle" font-size="11" fill="currentColor">DEV</text>
+
+<path d="M410,116 H474" stroke="#B45309" stroke-width="1.5"
+  stroke-dasharray="6 4" marker-end="url(#seta-pendente)"/>
+<text x="442" y="106" text-anchor="middle" font-size="11" fill="#B45309">entrega</text>
+
+<path d="M474,140 H410" stroke="#B45309" stroke-width="1.5"
+  stroke-dasharray="6 4" marker-end="url(#seta-pendente)"/>
+<text x="442" y="166" text-anchor="middle" font-size="11" fill="#B45309">devolve</text>
+
+<rect x="415" y="196" width="230" height="38" rx="5" fill="none"
+  stroke="#B45309" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="530" y="213" text-anchor="middle" font-size="11" fill="#B45309">tracejado = em construção</text>
+<text x="530" y="227" text-anchor="middle" font-size="11" fill="#B45309">o Loca ainda não controla isto</text>
+</svg><figcaption>O Loca controla a ferramenta entre o fornecedor e a obra. Os dois elos tracejados — a entrega ao funcionário e a devolução dele — ainda não existem no sistema.</figcaption></figure></div>
+    <div class="bloco"><h4>No exemplo</h4><p class="exemplo">Na Torre B, dia 24, chegam as duas betoneiras e 48 peças de andaime. A BT-4412 vem com a proteção da coroa amassada: entra como Com avaria, com a descrição do que foi encontrado. Chegaram também 4 escoras que não estão no contrato: entram como Divergência. O recebimento fecha como REC-2026-0014.</p></div>
+    <div class="bloco"><h4>Faça você</h4><label class="exercicio" for="ex-recebimento-0">
+        <input type="checkbox" id="ex-recebimento-0">
+        <span>Registre um recebimento com um item Conforme e um Com avaria.</span>
+      </label><label class="exercicio" for="ex-recebimento-1">
+        <input type="checkbox" id="ex-recebimento-1">
+        <span>Tente lançar um item controlado por peça sem informar o patrimônio e leia a mensagem.</span>
+      </label><label class="exercicio" for="ex-recebimento-2">
+        <input type="checkbox" id="ex-recebimento-2">
+        <span>Registre um item que não está no contrato, usando Divergência.</span>
+      </label><label class="exercicio" for="ex-recebimento-3">
+        <input type="checkbox" id="ex-recebimento-3">
+        <span>Feche o recebimento e confirme que ele não pode mais ser editado.</span>
+      </label></div>
+    <div class="bloco"><h4>Confira</h4><div class="pergunta" id="pg-recebimento-0" data-correta="0">
+        <p>A data do recebimento deve ser qual?</p>
+        <div class="alts"><button type="button" class="alt" data-texto="A data em que o equipamento chegou à obra">A data em que o equipamento chegou à obra</button><button type="button" class="alt" data-texto="A data em que você está digitando">A data em que você está digitando</button><button type="button" class="alt" data-texto="A data da nota fiscal do fornecedor">A data da nota fiscal do fornecedor</button></div>
+        <p class="comentario">É a data da entrega. O Loca não preenche esse campo sozinho justamente para você não deixar passar a data do lançamento — o custo da locação corre a partir da entrega.</p>
+      </div><div class="pergunta" id="pg-recebimento-1" data-correta="0">
+        <p>Chegou um item que não está no contrato. O que fazer?</p>
+        <div class="alts"><button type="button" class="alt" data-texto="Lançar como Divergência">Lançar como Divergência</button><button type="button" class="alt" data-texto="Não lançar, porque o sistema não aceita">Não lançar, porque o sistema não aceita</button><button type="button" class="alt" data-texto="Adicionar o item ao contrato primeiro, para depois lançar">Adicionar o item ao contrato primeiro, para depois lançar</button></div>
+        <p class="comentario">Divergência existe exatamente para isso. Sem ela, o conferente precisaria alterar o contrato ou mentir no documento só para conseguir salvar — e o registro perderia o valor de prova.</p>
+      </div><div class="pergunta" id="pg-recebimento-2" data-correta="0">
+        <p>Qual a diferença entre Rascunho e Fechado?</p>
+        <div class="alts"><button type="button" class="alt" data-texto="Rascunho é editável; Fechado é congelado e ganha número de registro">Rascunho é editável; Fechado é congelado e ganha número de registro</button><button type="button" class="alt" data-texto="Rascunho não é salvo no banco">Rascunho não é salvo no banco</button><button type="button" class="alt" data-texto="Fechado pode ser editado pelo Master a qualquer momento">Fechado pode ser editado pelo Master a qualquer momento</button></div>
+        <p class="comentario">O fechamento é o que dá valor de documento ao recebimento: a partir dali ele tem número e não muda mais. Reabrir é operação de Master e ainda não está disponível.</p>
+      </div></div>
+  </article><article class="modulo" id="vistoria-retirada" data-feito="0">
+    <div class="mod-cab">
+      <span class="mod-n">4</span>
+      <h3>Vistoria de retirada — a foto que ganha a discussão</h3>
+    </div>
+    <div class="perfis"><span class="perfil">Master</span><span class="perfil">Administrador</span><span class="perfil">Operador</span></div>
+
+    <div class="bloco"><h4>O problema</h4><p>Na devolução, o fornecedor aponta um dano e cobra. Sem foto da entrada, a palavra dele vale tanto quanto a da Sistenge, e quem paga é a obra. A vistoria de retirada custa dez minutos e é a única prova que existe de como o equipamento chegou.</p></div>
+    <div class="bloco"><h4>O caminho</h4><ol><li>No contrato, crie o relatório fotográfico de retirada ANTES de o equipamento entrar em uso.</li><li>Anexe foto de TODOS os itens, não só dos que parecem problemáticos.</li><li>O relatório nasce marcado como pendente de fotos e só perde essa marca quando tem ao menos uma.</li><li>Fotografe o que já está danificado com mais cuidado do que o resto: é o dano existente que vai ser cobrado de você depois.</li><li>A vistoria tem dois tipos: entrada, que é a retirada, e devolução.</li></ol></div>
+    <div class="bloco"><h4>No exemplo</h4><p class="exemplo">A coroa amassada da BT-4412 foi fotografada na vistoria de entrada, no mesmo dia do recebimento. Três meses depois, quando a Bandeirantes cobrar por ela, essa foto é a resposta.</p></div>
+    <div class="bloco"><h4>Faça você</h4><label class="exercicio" for="ex-vistoria-retirada-0">
+        <input type="checkbox" id="ex-vistoria-retirada-0">
+        <span>Crie uma vistoria de entrada num contrato de teste e anexe uma foto.</span>
+      </label><label class="exercicio" for="ex-vistoria-retirada-1">
+        <input type="checkbox" id="ex-vistoria-retirada-1">
+        <span>Observe a marca de pendente de fotos antes e depois de anexar.</span>
+      </label><label class="exercicio" for="ex-vistoria-retirada-2">
+        <input type="checkbox" id="ex-vistoria-retirada-2">
+        <span>Abra a lista de Vistorias e filtre por obra.</span>
+      </label></div>
+    <div class="bloco"><h4>Confira</h4><div class="pergunta" id="pg-vistoria-retirada-0" data-correta="0">
+        <p>Por que fotografar também o que já está danificado na entrada?</p>
+        <div class="alts"><button type="button" class="alt" data-texto="Porque é justamente o dano existente que o fornecedor vai cobrar na devolução">Porque é justamente o dano existente que o fornecedor vai cobrar na devolução</button><button type="button" class="alt" data-texto="Para o relatório ficar mais completo">Para o relatório ficar mais completo</button><button type="button" class="alt" data-texto="Não é necessário — só o que está intacto importa">Não é necessário — só o que está intacto importa</button></div>
+        <p class="comentario">O dano que você não registrou na entrada é indistinguível do dano que a obra causou. A foto do problema que já veio é o que impede a cobrança.</p>
+      </div></div>
+  </article><article class="modulo" id="devolucao" data-feito="0">
+    <div class="mod-cab">
+      <span class="mod-n">5</span>
+      <h3>Devolução — o custo que para de correr</h3>
+    </div>
+    <div class="perfis"><span class="perfil">Master</span><span class="perfil">Administrador</span><span class="perfil">Operador</span></div>
+
+    <div class="bloco"><h4>O problema</h4><p>Equipamento devolvido e não registrado continua sendo cobrado pelo Loca — e, o que é pior, muitas vezes pelo fornecedor também. É o custo mais silencioso da obra: nada dá erro, a fatura só continua chegando igual.</p></div>
+    <div class="bloco"><h4>O caminho</h4><ol><li>No contrato, no item, registre a devolução informando a quantidade que voltou.</li><li>A devolução pode ser parcial e repetida: 10, depois 3, depois 4, depois 3, até zerar o saldo.</li><li>Cada devolução cria um relatório fotográfico próprio e entra no histórico do item.</li><li>O custo respeita o saldo: devolveu 7 de 10, o Loca passa a cobrar por 3.</li><li>Informe a data real da devolução. É a partir dela que o custo para.</li></ol></div>
+    <div class="bloco"><h4>No exemplo</h4><p class="exemplo">As 48 peças de andaime voltam em três viagens: 20, 20 e 8. Depois da primeira, o Loca já cobra por 28. A betoneira BT-4413 volta inteira; a BT-4412 volta com a coroa dentada.</p></div>
+    <div class="bloco"><h4>Faça você</h4><label class="exercicio" for="ex-devolucao-0">
+        <input type="checkbox" id="ex-devolucao-0">
+        <span>Devolva parte da quantidade de um item e confira o custo mudar.</span>
+      </label><label class="exercicio" for="ex-devolucao-1">
+        <input type="checkbox" id="ex-devolucao-1">
+        <span>Devolva o restante e confirme que o item saiu de em aberto.</span>
+      </label><label class="exercicio" for="ex-devolucao-2">
+        <input type="checkbox" id="ex-devolucao-2">
+        <span>Abra o histórico do item e veja as devoluções na ordem.</span>
+      </label></div>
+    <div class="bloco"><h4>Confira</h4><div class="pergunta" id="pg-devolucao-0" data-correta="0">
+        <p>Você devolveu 7 de 10 andaimes. O que o Loca cobra a partir daí?</p>
+        <div class="alts"><button type="button" class="alt" data-texto="Por 3, que é o saldo em aberto">Por 3, que é o saldo em aberto</button><button type="button" class="alt" data-texto="Por 10, até a devolução total">Por 10, até a devolução total</button><button type="button" class="alt" data-texto="Nada, porque houve devolução">Nada, porque houve devolução</button></div>
+        <p class="comentario">O custo acompanha o saldo em aberto, período por período. É por isso que registrar devolução parcial no dia certo vale dinheiro.</p>
+      </div><div class="pergunta" id="pg-devolucao-1" data-correta="0">
+        <p>O que acontece se o equipamento voltar e ninguém registrar?</p>
+        <div class="alts"><button type="button" class="alt" data-texto="O Loca continua cobrando por ele, e nada acusa o erro">O Loca continua cobrando por ele, e nada acusa o erro</button><button type="button" class="alt" data-texto="O sistema detecta pela vistoria e corrige">O sistema detecta pela vistoria e corrige</button><button type="button" class="alt" data-texto="O custo para automaticamente no fim do contrato">O custo para automaticamente no fim do contrato</button></div>
+        <p class="comentario">Nenhum sistema adivinha uma devolução que não foi registrada. É o custo mais silencioso da obra: não dá erro em lugar nenhum, só aparece na fatura.</p>
+      </div></div>
+  </article><article class="modulo" id="avarias" data-feito="0">
+    <div class="mod-cab">
+      <span class="mod-n">6</span>
+      <h3>Avarias — cobrar e contestar</h3>
+    </div>
+    <div class="perfis"><span class="perfil">Master</span><span class="perfil">Administrador</span><span class="perfil">Operador</span></div>
+
+    <div class="bloco"><h4>O problema</h4><p>Avaria tem dois lados. Quando a obra danificou, o custo precisa entrar no financeiro para não virar surpresa. Quando o fornecedor cobra por dano que já existia, é preciso ter como recusar — e recusar com prova, não com discussão.</p></div>
+    <div class="bloco"><h4>O caminho</h4><ol><li>A avaria é registrada dentro da vistoria: descrição do que foi encontrado e custo estimado.</li><li>Ela tem três estados: aberta, cobrada e resolvida.</li><li>Em gerar cobrança, o Loca cria uma conta a pagar com o custo, marca a avaria como cobrada e amarra as duas — o que impede o mesmo dano de gerar duas cobranças. Exige permissão financeira.</li><li>Para contestar cobrança do fornecedor, abra a vistoria de ENTRADA e use a foto de lá.</li><li>O relatório de avarias lista tudo por obra e por período.</li></ol></div>
+    <div class="bloco"><h4>No exemplo</h4><p class="exemplo">A Bandeirantes cobra R$ 1.850,00 pela coroa da BT-4412. A vistoria de entrada da Torre B mostra a proteção já amassada no dia 24. A cobrança é recusada com a foto anexa — e a avaria, que nunca foi da obra, não gera lançamento.</p></div>
+    <div class="bloco"><h4>Faça você</h4><label class="exercicio" for="ex-avarias-0">
+        <input type="checkbox" id="ex-avarias-0">
+        <span>Registre uma avaria numa vistoria de devolução com custo estimado.</span>
+      </label><label class="exercicio" for="ex-avarias-1">
+        <input type="checkbox" id="ex-avarias-1">
+        <span>Gere a cobrança e confirme que apareceu um lançamento no Financeiro.</span>
+      </label><label class="exercicio" for="ex-avarias-2">
+        <input type="checkbox" id="ex-avarias-2">
+        <span>Tente gerar a cobrança de novo e observe que o Loca não duplica.</span>
+      </label><label class="exercicio" for="ex-avarias-3">
+        <input type="checkbox" id="ex-avarias-3">
+        <span>Gere o relatório de avarias da sua obra.</span>
+      </label></div>
+    <div class="bloco"><h4>Confira</h4><div class="pergunta" id="pg-avarias-0" data-correta="0">
+        <p>Gerar cobrança de uma avaria faz o quê?</p>
+        <div class="alts"><button type="button" class="alt" data-texto="Cria a conta a pagar, marca a avaria como cobrada e amarra as duas">Cria a conta a pagar, marca a avaria como cobrada e amarra as duas</button><button type="button" class="alt" data-texto="Só muda o status da avaria">Só muda o status da avaria</button><button type="button" class="alt" data-texto="Envia a cobrança ao fornecedor por e-mail">Envia a cobrança ao fornecedor por e-mail</button></div>
+        <p class="comentario">O vínculo entre a avaria e o lançamento é o que impede o mesmo dano de virar duas contas. O envio ao fornecedor por e-mail ainda não é automático.</p>
+      </div><div class="pergunta" id="pg-avarias-1" data-correta="0">
+        <p>O fornecedor cobra por um dano que já existia. O que resolve?</p>
+        <div class="alts"><button type="button" class="alt" data-texto="A foto da vistoria de ENTRADA, que mostra o dano na chegada">A foto da vistoria de ENTRADA, que mostra o dano na chegada</button><button type="button" class="alt" data-texto="A vistoria de devolução">A vistoria de devolução</button><button type="button" class="alt" data-texto="O contrato assinado">O contrato assinado</button></div>
+        <p class="comentario">Só a vistoria de entrada prova o estado em que o item chegou. É por isso que os dez minutos gastos com ela na retirada valem mais que qualquer discussão depois.</p>
+      </div></div>
+  </article>
+  <aside class="em-construcao" id="recibo-ferramenta">
+  <h3>Recibo de ferramenta por funcionário — em construção</h3>
+  <p>O controle de <strong>quem está com cada ferramenta</strong> ainda não
+  existe no Loca. Hoje o sistema acompanha o equipamento do fornecedor até a
+  obra; a entrega para a pessoa que vai usá-la é feita fora do sistema.</p>
+  <p>É o elo tracejado no diagrama da cadeia de custódia, no módulo de
+  recebimento. Está em projeto — quando entrar, este treinamento ganha o
+  módulo.</p>
+</aside>
+</section><section class="trilha" id="trilha-imoveis">
+  <header class="trilha-cab">
+    <span class="trilha-n">Trilha 2</span>
+    <h2>Imóveis e alojamento</h2>
+    <p>Kitnet, apartamento, casa, galpão e escritório locados: contrato, caução, ocupantes, os sete documentos do RH, consumo e vistoria.</p>
+    <div class="barra" data-trilha="imoveis"><span></span></div>
+  </header>
+  <article class="modulo" id="imovel-cadastro" data-feito="0">
+    <div class="mod-cab">
+      <span class="mod-n">1</span>
+      <h3>Cadastro do imóvel</h3>
+    </div>
+    <div class="perfis"><span class="perfil">Master</span><span class="perfil">Administrador</span></div>
+
+    <div class="bloco"><h4>O problema</h4><p>O imóvel guarda os dados bancários de quem recebe o aluguel, e é por eles que o pagamento sai todo mês. Cadastro incompleto vira aluguel atrasado, e aluguel atrasado de alojamento vira gente sem lugar para dormir.</p></div>
+    <div class="bloco"><h4>O caminho</h4><ol><li>Abra Imóveis e clique em novo imóvel.</li><li>Escolha o tipo: kitnet, apartamento, casa, galpão, escritório ou outro.</li><li>Informe apelido, endereço, cidade, UF, capacidade e a obra vinculada.</li><li>Cadastre o proprietário ou a imobiliária.</li><li>Preencha os dados bancários: banco, agência, conta, titular e chave PIX. Eles aparecem mascarados na tela, com botão de revelar.</li><li>A capacidade importa: é ela que diz quantas pessoas aquele alojamento comporta.</li></ol></div>
+    <div class="bloco"><h4>No exemplo</h4><p class="exemplo">Cadastre o alojamento da Rua das Palmeiras, 412, kitnet, capacidade 6, vinculado à Torre B, com o proprietário e a chave PIX dele.</p></div>
+    <div class="bloco"><h4>Faça você</h4><label class="exercicio" for="ex-imovel-cadastro-0">
+        <input type="checkbox" id="ex-imovel-cadastro-0">
+        <span>Cadastre um imóvel de teste com dados bancários e confirme que a conta aparece mascarada.</span>
+      </label><label class="exercicio" for="ex-imovel-cadastro-1">
+        <input type="checkbox" id="ex-imovel-cadastro-1">
+        <span>Clique em revelar e observe o comportamento.</span>
+      </label><label class="exercicio" for="ex-imovel-cadastro-2">
+        <input type="checkbox" id="ex-imovel-cadastro-2">
+        <span>Vincule o imóvel a uma obra e confira que ele aparece no filtro daquela obra.</span>
+      </label></div>
+    <div class="bloco"><h4>Confira</h4><div class="pergunta" id="pg-imovel-cadastro-0" data-correta="0">
+        <p>Por que CPF, conta bancária e chave PIX aparecem mascarados?</p>
+        <div class="alts"><button type="button" class="alt" data-texto="Porque são dados sensíveis, e quem precisa vê sob demanda clicando em revelar">Porque são dados sensíveis, e quem precisa vê sob demanda clicando em revelar</button><button type="button" class="alt" data-texto="Porque o sistema não consegue exibi-los">Porque o sistema não consegue exibi-los</button><button type="button" class="alt" data-texto="Para economizar espaço na tela">Para economizar espaço na tela</button></div>
+        <p class="comentario">O dado está lá e é acessível a quem tem permissão; o que o mascaramento evita é ele ficar exposto na tela para qualquer um que passe por perto.</p>
+      </div></div>
+  </article><article class="modulo" id="imovel-contrato" data-feito="0">
+    <div class="mod-cab">
+      <span class="mod-n">2</span>
+      <h3>Contrato do imóvel: caução, reajuste e ciclo de vida</h3>
+    </div>
+    <div class="perfis"><span class="perfil">Master</span><span class="perfil">Administrador</span></div>
+
+    <div class="bloco"><h4>O problema</h4><p>O aluguel não é um número só: soma condomínio, IPTU e, dependendo da flag, seguro fiança. E a caução segue um caminho próprio — encerrar o contrato não devolve a caução, e é aí que o dinheiro fica esquecido com o proprietário.</p></div>
+    <div class="bloco"><h4>O caminho</h4><ol><li>No imóvel, crie o contrato. Informe aluguel, condomínio, IPTU e seguro fiança, marcando se o seguro soma à parcela mensal.</li><li>Informe o dia de vencimento, o índice de reajuste e a data do próximo reajuste.</li><li>Registre o valor da caução. Ela nasce em aberto.</li><li>Só existe UM contrato vigente por imóvel; os anteriores ficam no histórico.</li><li>Na aba de ações: em reajuste, informe o percentual — o aluguel é atualizado e a próxima data avança cerca de doze meses.</li><li>Em aditivo, altere valor ou prazo informando o motivo; o histórico é preservado.</li><li>Em encerramento, informe data e motivo. O contrato sai da projeção do fluxo de caixa.</li><li>A caução precisa ser resolvida por decisão própria: devolvida, quando não há avaria, ou retida, quando há.</li></ol><figure><svg viewBox="0 0 660 290" role="img" aria-label="Ciclo de vida do contrato de imóvel"
+    xmlns="http://www.w3.org/2000/svg" style="max-width:100%;height:auto">
+    <title>Ciclo de vida do contrato de imóvel</title>
+<defs><marker id="seta-c" viewBox="0 0 10 10" refX="9" refY="5"
+    markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+
+<text x="20" y="34" font-size="11" fill="currentColor">CONTRATO</text>
+<rect x="20" y="46" width="170" height="52" rx="6"
+    fill="none" stroke="currentColor" stroke-width="1.5"/>
+  <text x="105" y="76" text-anchor="middle"
+    font-size="13" fill="currentColor">Ativo</text>
+<rect x="245" y="46" width="170" height="52" rx="6"
+    fill="none" stroke="currentColor" stroke-width="1.5"/>
+  <text x="330" y="76" text-anchor="middle"
+    font-size="13" fill="currentColor">Em desocupação</text>
+<rect x="470" y="46" width="170" height="52" rx="6"
+    fill="none" stroke="currentColor" stroke-width="1.5"/>
+  <text x="555" y="76" text-anchor="middle"
+    font-size="13" fill="currentColor">Encerrado</text>
+<path d="M190,72 H239" stroke="currentColor" stroke-width="1.5" marker-end="url(#seta-c)"/>
+<text x="214" y="38" text-anchor="middle" font-size="11" fill="currentColor">aviso</text>
+<path d="M415,72 H464" stroke="currentColor" stroke-width="1.5" marker-end="url(#seta-c)"/>
+<text x="440" y="38" text-anchor="middle" font-size="11" fill="currentColor">chaves</text>
+
+<line x1="20" y1="128" x2="640" y2="128" stroke="currentColor" stroke-width="0.5"
+  stroke-dasharray="3 3"/>
+
+<text x="20" y="158" font-size="11" fill="currentColor">CAUÇÃO — caminho próprio</text>
+<rect x="20" y="170" width="170" height="52" rx="6"
+    fill="none" stroke="currentColor" stroke-width="1.5"/>
+  <text x="105" y="200" text-anchor="middle"
+    font-size="13" fill="currentColor">Em aberto</text>
+<rect x="300" y="140" width="170" height="52" rx="6"
+    fill="none" stroke="currentColor" stroke-width="1.5"/>
+  <text x="385" y="170" text-anchor="middle"
+    font-size="13" fill="currentColor">Devolvida</text>
+<rect x="300" y="210" width="170" height="52" rx="6"
+    fill="none" stroke="currentColor" stroke-width="1.5"/>
+  <text x="385" y="240" text-anchor="middle"
+    font-size="13" fill="currentColor">Retida</text>
+<path d="M190,186 L294,170" stroke="currentColor" stroke-width="1.5" marker-end="url(#seta-c)"/>
+<text x="242" y="164" text-anchor="middle" font-size="11" fill="currentColor">sem avaria</text>
+<path d="M190,200 L294,232" stroke="currentColor" stroke-width="1.5" marker-end="url(#seta-c)"/>
+<text x="242" y="230" text-anchor="middle" font-size="11" fill="currentColor">com avaria</text>
+
+<text x="500" y="192" font-size="11" fill="currentColor">encerrar o contrato</text>
+<text x="500" y="208" font-size="11" fill="currentColor">não resolve a caução</text>
+</svg><figcaption>O contrato e a caução seguem caminhos paralelos. Encerrar o contrato não resolve a caução — ela precisa ser devolvida ou retida por decisão própria.</figcaption></figure></div>
+    <div class="bloco"><h4>No exemplo</h4><p class="exemplo">O contrato do alojamento da Rua das Palmeiras: R$ 1.800,00 de aluguel mais R$ 320,00 de condomínio, vencimento dia 10, reajuste pelo IGP-M em agosto do ano seguinte, caução de R$ 3.600,00. Quando a obra terminar, alguém tem de decidir o destino desses R$ 3.600,00 — o encerramento do contrato não decide por ninguém.</p></div>
+    <div class="bloco"><h4>Faça você</h4><label class="exercicio" for="ex-imovel-contrato-0">
+        <input type="checkbox" id="ex-imovel-contrato-0">
+        <span>Crie um contrato de imóvel de teste com caução.</span>
+      </label><label class="exercicio" for="ex-imovel-contrato-1">
+        <input type="checkbox" id="ex-imovel-contrato-1">
+        <span>Aplique um reajuste de 4% e confira o aluguel novo e a nova data de reajuste.</span>
+      </label><label class="exercicio" for="ex-imovel-contrato-2">
+        <input type="checkbox" id="ex-imovel-contrato-2">
+        <span>Encerre o contrato e confirme que ele saiu da projeção do fluxo de caixa.</span>
+      </label><label class="exercicio" for="ex-imovel-contrato-3">
+        <input type="checkbox" id="ex-imovel-contrato-3">
+        <span>Confira em que estado a caução ficou depois do encerramento.</span>
+      </label></div>
+    <div class="bloco"><h4>Confira</h4><div class="pergunta" id="pg-imovel-contrato-0" data-correta="0">
+        <p>Encerrar o contrato do imóvel resolve a caução?</p>
+        <div class="alts"><button type="button" class="alt" data-texto="Não — a caução tem caminho próprio e precisa ser devolvida ou retida">Não — a caução tem caminho próprio e precisa ser devolvida ou retida</button><button type="button" class="alt" data-texto="Sim, é devolvida automaticamente">Sim, é devolvida automaticamente</button><button type="button" class="alt" data-texto="Sim, é retida automaticamente">Sim, é retida automaticamente</button></div>
+        <p class="comentario">São duas trilhas paralelas. O contrato encerra; a caução continua em aberto até alguém decidir. É assim que caução fica esquecida com o proprietário por anos.</p>
+      </div><div class="pergunta" id="pg-imovel-contrato-1" data-correta="0">
+        <p>Quantos contratos vigentes um imóvel pode ter?</p>
+        <div class="alts"><button type="button" class="alt" data-texto="Um">Um</button><button type="button" class="alt" data-texto="Um por obra vinculada">Um por obra vinculada</button><button type="button" class="alt" data-texto="Quantos forem necessários">Quantos forem necessários</button></div>
+        <p class="comentario">Um vigente por vez. Os anteriores ficam no histórico, e é o histórico que mostra a evolução do aluguel ao longo dos reajustes.</p>
+      </div></div>
+  </article><article class="modulo" id="ocupantes" data-feito="0">
+    <div class="mod-cab">
+      <span class="mod-n">3</span>
+      <h3>Ocupantes — quem mora onde</h3>
+    </div>
+    <div class="perfis"><span class="perfil">Master</span><span class="perfil">Administrador</span></div>
+
+    <div class="bloco"><h4>O problema</h4><p>Sem saber quem está em cada quarto, não há como cobrar responsabilidade por dano, nem aplicar medida disciplinar que se sustente. E o aceite da política registrado é o que transforma uma regra afixada na parede em obrigação de quem assinou.</p></div>
+    <div class="bloco"><h4>O caminho</h4><ol><li>No imóvel, cadastre os ocupantes. O CPF aparece mascarado.</li><li>Informe cargo, quarto e armário de cada um: é o que permite responsabilizar por dano localizado.</li><li>Registre o aceite da Política de Alojamento. O Loca guarda a data, a hora e o endereço de rede de onde o aceite partiu.</li><li>É esse aceite que sustenta uma medida disciplinar depois — sem ele, a defesa é sempre que a pessoa não conhecia a regra.</li><li>Respeite a capacidade do imóvel cadastrada.</li></ol></div>
+    <div class="bloco"><h4>No exemplo</h4><p class="exemplo">O alojamento da Rua das Palmeiras recebe seis ocupantes da Torre B. Cada um com quarto e armário, e o aceite da política registrado no dia da chegada.</p></div>
+    <div class="bloco"><h4>Faça você</h4><label class="exercicio" for="ex-ocupantes-0">
+        <input type="checkbox" id="ex-ocupantes-0">
+        <span>Cadastre um ocupante de teste com quarto e armário.</span>
+      </label><label class="exercicio" for="ex-ocupantes-1">
+        <input type="checkbox" id="ex-ocupantes-1">
+        <span>Registre o aceite da política e confira a data e hora gravadas.</span>
+      </label><label class="exercicio" for="ex-ocupantes-2">
+        <input type="checkbox" id="ex-ocupantes-2">
+        <span>Confira o CPF mascarado e o botão de revelar.</span>
+      </label></div>
+    <div class="bloco"><h4>Confira</h4><div class="pergunta" id="pg-ocupantes-0" data-correta="0">
+        <p>Para que serve registrar o aceite da Política de Alojamento?</p>
+        <div class="alts"><button type="button" class="alt" data-texto="Para sustentar uma medida disciplinar — prova que a pessoa conhecia a regra">Para sustentar uma medida disciplinar — prova que a pessoa conhecia a regra</button><button type="button" class="alt" data-texto="É exigência do sistema para salvar o ocupante">É exigência do sistema para salvar o ocupante</button><button type="button" class="alt" data-texto="Serve apenas como estatística">Serve apenas como estatística</button></div>
+        <p class="comentario">Medida disciplinar sem prova de que a regra era conhecida cai. O aceite com data, hora e endereço de rede é o que fecha essa porta.</p>
+      </div></div>
+  </article><article class="modulo" id="documentos-alojamento" data-feito="0">
+    <div class="mod-cab">
+      <span class="mod-n">4</span>
+      <h3>Os sete documentos do alojamento</h3>
+    </div>
+    <div class="perfis"><span class="perfil">Master</span><span class="perfil">Administrador</span></div>
+
+    <div class="bloco"><h4>O problema</h4><p>O alojamento é a parte mais documental do Loca: sete dos oito documentos que o sistema gera pertencem a ele. Cada um existe para fechar uma porta — e o que não é emitido na hora certa não se emite depois, porque ninguém assina retroativo.</p></div>
+    <div class="bloco"><h4>O caminho</h4><ol><li>Contrato de locação de imóvel: sai do contrato do imóvel, assinado pelo proprietário e pela Sistenge. Fica no imóvel.</li><li>Termo de Compromisso de Alojamento (FRM-RH-001): sai na chegada do ocupante, assinado por ele. Cita a política e a entrega de chaves.</li><li>Política de Alojamento (POL-RH-001): é o normativo. Não se assina — se aceita, e o aceite fica no cadastro do ocupante.</li><li>Entrega e devolução de chaves (FRM-RH-003): sai na entrada e volta a sair na saída, com conferência do que foi devolvido.</li><li>Recebimento e devolução do kit (FRM-RH-004): mesma lógica das chaves, para colchão, roupa de cama, utensílios. Registra avaria e a tratativa.</li><li>Checklist semanal de limpeza (FRM-RH-005): sai toda semana, com as tarefas conferidas.</li><li>Medida disciplinar — advertência e suspensão (FRM-RH-002): sai quando há infração. Registra o fato, o local, as testemunhas, as regras violadas da política e a alínea do artigo 482 da CLT quando cabe.</li><li>Todos ficam na biblioteca de documentos do imóvel, organizados por categoria: normativo, formulário, placa e comunicação.</li></ol></div>
+    <div class="bloco"><h4>No exemplo</h4><p class="exemplo">Na chegada dos seis ocupantes à Rua das Palmeiras: FRM-RH-001 assinado por cada um, aceite da POL-RH-001 registrado, FRM-RH-003 com as chaves de cada quarto e FRM-RH-004 com o kit. A partir da primeira semana, FRM-RH-005 toda sexta-feira.</p></div>
+    <div class="bloco"><h4>Faça você</h4><label class="exercicio" for="ex-documentos-alojamento-0">
+        <input type="checkbox" id="ex-documentos-alojamento-0">
+        <span>Gere o Termo de Compromisso (FRM-RH-001) de um ocupante de teste e confira o bloco de identificação.</span>
+      </label><label class="exercicio" for="ex-documentos-alojamento-1">
+        <input type="checkbox" id="ex-documentos-alojamento-1">
+        <span>Registre uma entrega de chaves (FRM-RH-003) e depois a devolução.</span>
+      </label><label class="exercicio" for="ex-documentos-alojamento-2">
+        <input type="checkbox" id="ex-documentos-alojamento-2">
+        <span>Registre uma entrega de kit (FRM-RH-004) com avaria e escolha a tratativa.</span>
+      </label><label class="exercicio" for="ex-documentos-alojamento-3">
+        <input type="checkbox" id="ex-documentos-alojamento-3">
+        <span>Gere um checklist de limpeza (FRM-RH-005) e marque as tarefas.</span>
+      </label><label class="exercicio" for="ex-documentos-alojamento-4">
+        <input type="checkbox" id="ex-documentos-alojamento-4">
+        <span>Abra a biblioteca do imóvel e localize a POL-RH-001 na categoria de normativos.</span>
+      </label></div>
+    <div class="bloco"><h4>Confira</h4><div class="pergunta" id="pg-documentos-alojamento-0" data-correta="0">
+        <p>A Política de Alojamento (POL-RH-001) é assinada pelo ocupante?</p>
+        <div class="alts"><button type="button" class="alt" data-texto="Não — ela é aceita, e o aceite fica registrado no cadastro do ocupante">Não — ela é aceita, e o aceite fica registrado no cadastro do ocupante</button><button type="button" class="alt" data-texto="Sim, como qualquer formulário">Sim, como qualquer formulário</button><button type="button" class="alt" data-texto="Só quando há medida disciplinar">Só quando há medida disciplinar</button></div>
+        <p class="comentario">Ela é o normativo, não o formulário. O que se registra é o aceite, com data, hora e endereço de rede — e é ele que sustenta a medida disciplinar depois.</p>
+      </div><div class="pergunta" id="pg-documentos-alojamento-1" data-correta="0">
+        <p>Uma medida disciplinar (FRM-RH-002) precisa citar o quê para se sustentar?</p>
+        <div class="alts"><button type="button" class="alt" data-texto="O fato, o local, as testemunhas e as regras da política que foram violadas">O fato, o local, as testemunhas e as regras da política que foram violadas</button><button type="button" class="alt" data-texto="Apenas a descrição do fato">Apenas a descrição do fato</button><button type="button" class="alt" data-texto="Apenas a alínea da CLT">Apenas a alínea da CLT</button></div>
+        <p class="comentario">É o conjunto que sustenta: o fato descrito, onde aconteceu, quem viu, qual regra da POL-RH-001 foi violada e, quando cabe, a alínea do artigo 482. Faltando a regra violada, a medida vira opinião.</p>
+      </div></div>
+  </article><article class="modulo" id="consumo" data-feito="0">
+    <div class="mod-cab">
+      <span class="mod-n">5</span>
+      <h3>Contas de consumo</h3>
+    </div>
+    <div class="perfis"><span class="perfil">Master</span><span class="perfil">Administrador</span></div>
+
+    <div class="bloco"><h4>O problema</h4><p>Água, luz e gás do alojamento chegam separados do aluguel e é fácil pagá-los sem nunca saber quanto aquele imóvel custa de verdade. Sem o consumo lançado, o custo do alojamento no relatório é só o aluguel — e a decisão de trocar de imóvel é tomada com o número errado.</p></div>
+    <div class="bloco"><h4>O caminho</h4><ol><li>No imóvel, abra contas de consumo e registre mês a mês.</li><li>Os tipos são água, luz, gás, internet, IPTU e outros.</li><li>Marque a opção de lançar no financeiro para que a conta entre nas contas a pagar.</li><li>Confira contra o contrato o que é do proprietário e o que é da Sistenge — nem todo condomínio inclui água.</li><li>O relatório de consumo de imóveis consolida tudo por obra e por período.</li></ol></div>
+    <div class="bloco"><h4>No exemplo</h4><p class="exemplo">A Rua das Palmeiras custa R$ 2.120,00 de aluguel mais condomínio. Com água, luz e gás de seis pessoas, passa de R$ 2.800,00 — e é esse número que serve para comparar com a alternativa.</p></div>
+    <div class="bloco"><h4>Faça você</h4><label class="exercicio" for="ex-consumo-0">
+        <input type="checkbox" id="ex-consumo-0">
+        <span>Registre uma conta de luz de teste e lance no financeiro.</span>
+      </label><label class="exercicio" for="ex-consumo-1">
+        <input type="checkbox" id="ex-consumo-1">
+        <span>Confirme que ela apareceu nas contas a pagar.</span>
+      </label><label class="exercicio" for="ex-consumo-2">
+        <input type="checkbox" id="ex-consumo-2">
+        <span>Gere o relatório de consumo de imóveis do período.</span>
+      </label></div>
+    <div class="bloco"><h4>Confira</h4><div class="pergunta" id="pg-consumo-0" data-correta="0">
+        <p>Qual o risco de não lançar as contas de consumo?</p>
+        <div class="alts"><button type="button" class="alt" data-texto="O custo do imóvel no relatório fica só com o aluguel, e a comparação entre imóveis sai errada">O custo do imóvel no relatório fica só com o aluguel, e a comparação entre imóveis sai errada</button><button type="button" class="alt" data-texto="Nenhum — consumo não é custo de locação">Nenhum — consumo não é custo de locação</button><button type="button" class="alt" data-texto="O sistema bloqueia o pagamento do aluguel">O sistema bloqueia o pagamento do aluguel</button></div>
+        <p class="comentario">O relatório só sabe o que foi lançado. Decidir trocar de alojamento comparando aluguel contra aluguel, sem consumo, é comparar metade do custo.</p>
+      </div></div>
+  </article><article class="modulo" id="imovel-vistorias" data-feito="0">
+    <div class="mod-cab">
+      <span class="mod-n">6</span>
+      <h3>Vistorias, reparos e ocorrências do imóvel</h3>
+    </div>
+    <div class="perfis"><span class="perfil">Master</span><span class="perfil">Administrador</span></div>
+
+    <div class="bloco"><h4>O problema</h4><p>Na saída, o proprietário aponta dano e quer descontar da caução. Sem vistoria de entrada com foto, a discussão é de palavra — e a caução, que é dinheiro da obra, fica retida. Vale exatamente o mesmo raciocínio do equipamento.</p></div>
+    <div class="bloco"><h4>O caminho</h4><ol><li>No imóvel, registre a vistoria com fotos. Ela recebe número próprio, no formato VIM.</li><li>Reparos são registrados com anexo: o que foi feito, quando e quanto custou.</li><li>Ocorrências registram o que aconteceu no imóvel e recebem número OCO.</li><li>Faça a vistoria de entrada ANTES de o primeiro ocupante chegar. Depois disso, todo dano é discutível.</li><li>Na saída, a vistoria de devolução é o que decide se a caução volta ou é retida.</li></ol></div>
+    <div class="bloco"><h4>No exemplo</h4><p class="exemplo">A vistoria de entrada da Rua das Palmeiras registrou a infiltração no banheiro do quarto 2 antes de qualquer ocupante entrar. Na saída, o proprietário tenta descontar da caução de R$ 3.600,00 — e a foto de entrada decide.</p></div>
+    <div class="bloco"><h4>Faça você</h4><label class="exercicio" for="ex-imovel-vistorias-0">
+        <input type="checkbox" id="ex-imovel-vistorias-0">
+        <span>Registre uma vistoria de imóvel com foto e localize o número VIM gerado.</span>
+      </label><label class="exercicio" for="ex-imovel-vistorias-1">
+        <input type="checkbox" id="ex-imovel-vistorias-1">
+        <span>Registre um reparo com custo e anexo.</span>
+      </label><label class="exercicio" for="ex-imovel-vistorias-2">
+        <input type="checkbox" id="ex-imovel-vistorias-2">
+        <span>Registre uma ocorrência e confira o número OCO.</span>
+      </label></div>
+    <div class="bloco"><h4>Confira</h4><div class="pergunta" id="pg-imovel-vistorias-0" data-correta="0">
+        <p>Quando fazer a vistoria de entrada do imóvel?</p>
+        <div class="alts"><button type="button" class="alt" data-texto="Antes de o primeiro ocupante entrar">Antes de o primeiro ocupante entrar</button><button type="button" class="alt" data-texto="No primeiro mês de ocupação">No primeiro mês de ocupação</button><button type="button" class="alt" data-texto="Só na saída, comparando com o contrato">Só na saída, comparando com o contrato</button></div>
+        <p class="comentario">Depois que alguém mora ali, todo dano passa a ser discutível. É o mesmo raciocínio da vistoria de retirada do equipamento: a prova é o estado inicial, e ele só existe antes do uso.</p>
+      </div></div>
+  </article>
+  
+</section></main>
+<script>
+(function () {
+  var CHAVE = "loca-treinamento:";
+
+  function ler(k) {
+    try { return localStorage.getItem(CHAVE + k); } catch (e) { return null; }
+  }
+  function gravar(k, v) {
+    try { localStorage.setItem(CHAVE + k, v); } catch (e) { /* sem persistência */ }
+  }
+
+  function progresso() {
+    var trilhas = document.querySelectorAll("[data-trilha]");
+    for (var i = 0; i < trilhas.length; i++) {
+      var id = trilhas[i].getAttribute("data-trilha");
+      // Pelo ANCESTRAL, e não por atributo repetido em cada módulo: a seção da
+      // trilha já contém os módulos dela. A primeira versão filtrava os módulos
+      // por um atributo de trilha que secaoModulo nunca emitiu, e a barra ficava
+      // travada em zero para sempre.
+      var secao = document.getElementById("trilha-" + id);
+      var mods = secao ? secao.querySelectorAll(".modulo") : [];
+      var feitos = 0;
+      for (var j = 0; j < mods.length; j++) {
+        if (mods[j].getAttribute("data-feito") === "1") feitos++;
+      }
+      var pct = mods.length ? Math.round((feitos / mods.length) * 100) : 0;
+      var barra = trilhas[i].querySelector("span");
+      if (barra) barra.style.width = pct + "%";
+    }
+  }
+
+  function conferirModulo(mod) {
+    var caixas = mod.querySelectorAll('.exercicio input[type="checkbox"]');
+    var todas = caixas.length > 0;
+    for (var i = 0; i < caixas.length; i++) {
+      if (!caixas[i].checked) todas = false;
+    }
+    mod.setAttribute("data-feito", todas ? "1" : "0");
+    var link = document.querySelector('.nav-mods a[href="#' + mod.id + '"]');
+    if (link) link.setAttribute("data-feito", todas ? "1" : "0");
+  }
+
+  function ligarExercicios() {
+    var caixas = document.querySelectorAll('.exercicio input[type="checkbox"]');
+    for (var i = 0; i < caixas.length; i++) {
+      (function (caixa) {
+        if (ler("ex:" + caixa.id) === "1") caixa.checked = true;
+        caixa.addEventListener("change", function () {
+          gravar("ex:" + caixa.id, caixa.checked ? "1" : "0");
+          conferirModulo(caixa.closest(".modulo"));
+          progresso();
+        });
+      })(caixas[i]);
+    }
+  }
+
+  function revelar(pergunta, escolha) {
+    var correta = parseInt(pergunta.getAttribute("data-correta"), 10);
+    var alts = pergunta.querySelectorAll(".alt");
+    for (var i = 0; i < alts.length; i++) {
+      alts[i].setAttribute(
+        "data-estado",
+        i === correta ? "certo" : i === escolha ? "errado" : ""
+      );
+      alts[i].textContent =
+        (i === correta ? "\u2713 " : i === escolha ? "\u2715 " : "") +
+        alts[i].getAttribute("data-texto");
+    }
+    var com = pergunta.querySelector(".comentario");
+    if (com) com.setAttribute("data-visivel", "1");
+  }
+
+  function ligarPerguntas() {
+    var perguntas = document.querySelectorAll(".pergunta");
+    for (var i = 0; i < perguntas.length; i++) {
+      (function (pergunta) {
+        var salvo = ler("pg:" + pergunta.id);
+        if (salvo !== null) revelar(pergunta, parseInt(salvo, 10));
+        var alts = pergunta.querySelectorAll(".alt");
+        for (var j = 0; j < alts.length; j++) {
+          (function (indice) {
+            alts[indice].addEventListener("click", function () {
+              gravar("pg:" + pergunta.id, String(indice));
+              revelar(pergunta, indice);
+            });
+          })(j);
+        }
+      })(perguntas[i]);
+    }
+  }
+
+  ligarExercicios();
+  ligarPerguntas();
+  var mods = document.querySelectorAll(".modulo");
+  for (var k = 0; k < mods.length; k++) conferirModulo(mods[k]);
+  progresso();
+})();
+</script>
+</body>
+</html>
