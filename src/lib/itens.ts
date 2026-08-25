@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CONTROLES } from "@/lib/recebimento";
 import { textoOpcional } from "@/lib/campos";
 
 export type TipoItem = "equipamento" | "material_retornavel" | "consumivel";
@@ -43,6 +44,14 @@ export const itemSchema = z.object({
   tipo: z.enum(TIPOS_ITEM),
   descricao: z.string().trim().min(1, "Informe a descrição do item.").max(200),
   unidade: textoOpcional(10),
+  /**
+   * Como o item é conferido no recebimento (migration 0049).
+   *
+   * Default `quantidade` porque é o comportamento de todo item já cadastrado.
+   * Sem este campo na tela, os itens controlados por peça eram inalcançáveis
+   * pela interface — só por SQL — e metade da conferência ficava sem uso.
+   */
+  controle: z.enum(CONTROLES).default("quantidade"),
   ativo: z.boolean(),
 });
 

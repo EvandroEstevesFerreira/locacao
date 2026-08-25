@@ -30,7 +30,7 @@ export default async function EditarItemPage({
   const supabase = await createClient();
   const { data: item } = await supabase
     .from("item_catalogo")
-    .select("id, tipo, descricao, unidade, ativo")
+    .select("id, tipo, descricao, unidade, controle, ativo")
     .eq("id", id)
     .single();
 

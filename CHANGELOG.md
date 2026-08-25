@@ -7,6 +7,35 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.40.0] — 2026-08-25
+
+### Corrigido
+
+- **O botão "Registrar recebimento" não criava nada.** A guarda de data em
+  `criarRascunhoRecebimento` foi escrita como `/^d{4}-d{2}-d{2}$/` — sem as
+  contrabarras. O regex continua VÁLIDO, compila, passa por typecheck, lint e
+  build, e recusa toda data. A action retornava cedo, em silêncio, sem erro na
+  tela.
+
+  A correção não foi reescrever o regex: foi tirá-lo dali. A verificação passou
+  a ser `ehDataISO()`, exportada de `locacao.ts` a partir do `SO_DATA` que já
+  existia — uma implementação, sem contrabarra para perder numa próxima edição.
+
+### Adicionado
+
+- **Campo "Controle no recebimento" no cadastro de item**: por quantidade
+  (andaime, escora) ou por peça com patrimônio (betoneira, gerador). A coluna
+  existe desde a migration 0049 e não tinha tela: os itens controlados por peça
+  eram inalcançáveis pela interface, e metade da conferência ficava sem uso.
+- **`regex-integridade.test.ts`** — varre o código-fonte procurando
+  quantificador de dígito sem contrabarra. É a segunda vez que esta classe
+  aparece: `intervaloDoMes` saiu com o mesmo defeito na 0.34.0, pego pelos
+  testes do helper antes de chegar ao usuário; esta chegou à produção porque a
+  action não tinha teste. O detector foi provado contra o defeito real antes de
+  entrar — um teste que nunca viu a falha não prova nada.
+
+De 298 para 303 testes. Sem migration.
+
 ## [0.39.0] — 2026-08-24
 
 Fase 1a de `docs/superpowers/specs/2026-08-23-recebimento-equipamento-design.md`.

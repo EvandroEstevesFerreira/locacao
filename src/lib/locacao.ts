@@ -105,6 +105,18 @@ const DATA_SAO_PAULO = new Intl.DateTimeFormat("pt-BR", {
 /** Colunas `date` do Postgres chegam sempre neste formato. */
 const SO_DATA = /^\d{4}-\d{2}-\d{2}$/;
 
+/**
+ * A string é uma data de calendário 'yyyy-mm-dd'?
+ *
+ * Existe para NÃO haver uma segunda cópia do regex por aí. A primeira cópia
+ * escrita à mão saiu como `/^d{4}-d{2}-d{2}$/` — sem as contrabarras — e
+ * recusava TODA data válida, fazendo a action que a usava retornar cedo e não
+ * criar nada. Chamada silenciosa, sem erro, botão que não faz nada.
+ */
+export function ehDataISO(v: string | null | undefined): boolean {
+  return typeof v === "string" && SO_DATA.test(v);
+}
+
 export function formatarBRL(valor: number): string {
   return BRL.format(valor || 0);
 }

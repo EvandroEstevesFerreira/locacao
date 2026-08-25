@@ -10,6 +10,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeOperar } from "@/lib/auth";
+import { ehDataISO } from "@/lib/locacao";
 import {
   recebimentoSchema,
   recebimentoItemSchema,
@@ -41,7 +42,12 @@ export async function criarRascunhoRecebimento(formData: FormData): Promise<void
   }
   const contratoId = String(formData.get("contrato_id") ?? "").trim();
   const recebidoEm = String(formData.get("recebido_em") ?? "").trim();
-  if (!contratoId || !/^d{4}-d{2}-d{2}$/.test(recebidoEm)) return;
+  // `ehDataISO` e não um regex aqui: a cópia inline deste guarda foi escrita
+  // sem as contrabarras (`/^d{4}-d{2}-d{2}$/`), recusou toda data válida, e o
+  // botão "Registrar recebimento" não criava nada — sem erro nenhum na tela.
+  if (!contratoId || !ehDataISO(recebidoEm)) {
+    throw new Error("Data de recebimento inválida.");
+  }
 
   const supabase = await createClient();
   const { data: contrato } = await supabase
