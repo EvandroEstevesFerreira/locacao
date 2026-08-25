@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { validarTrilhas, type Trilha, type Modulo } from "./tipos";
 import { TRILHA_0 } from "./trilha-0";
 import { TRILHA_A } from "./trilha-a";
+import { TRILHA_B } from "./trilha-b";
+import { DOCUMENTOS } from "@/lib/templates";
 
 const modulo = (id: string, numero: number): Modulo => ({
   id,
@@ -173,5 +175,50 @@ describe("TRILHA_A", () => {
   it("nenhum módulo está marcado em construção", () => {
     // O recibo de ferramenta não é módulo: é aviso ao fim da trilha (gerar.ts).
     expect(TRILHA_A.modulos.filter((m) => m.emConstrucao)).toEqual([]);
+  });
+});
+
+describe("TRILHA_B", () => {
+  it("é válida sozinha, exceto pela contagem total", () => {
+    const problemas = validarTrilhas([TRILHA_B]);
+    expect(problemas.filter((p) => !p.includes("esperado 18"))).toEqual([]);
+  });
+
+  it("tem os seis módulos previstos, nesta ordem", () => {
+    expect(TRILHA_B.modulos.map((m) => m.id)).toEqual([
+      "imovel-cadastro",
+      "imovel-contrato",
+      "ocupantes",
+      "documentos-alojamento",
+      "consumo",
+      "imovel-vistorias",
+    ]);
+  });
+
+  it("cita TODOS os documentos do módulo de imóveis, pelo código", () => {
+    // Lê o catálogo de verdade. Se o Loca ganhar um documento e o treinamento
+    // não, este teste quebra — é o único mecanismo que impede o material de
+    // envelhecer em silêncio, que é exatamente o que houve com o manual .md.
+    const m = TRILHA_B.modulos.find((x) => x.id === "documentos-alojamento")!;
+    const texto = [m.problema, ...m.caminho, m.exemplo, ...m.exercicios].join(" ");
+    const doModulo = DOCUMENTOS.filter((d) => d.modulo === "imoveis");
+    expect(doModulo).toHaveLength(7);
+    for (const d of doModulo) {
+      const codigo = d.label.match(/\(([A-Z]{3}-RH-\d{3})\)/)?.[1];
+      if (codigo) expect(texto, `falta ${codigo}`).toContain(codigo);
+    }
+  });
+
+  it("o fio condutor atravessa a trilha", () => {
+    const texto = TRILHA_B.modulos.map((m) => m.exemplo).join(" ");
+    expect(texto).toContain("Palmeiras");
+  });
+
+  it("ensina que encerrar o contrato não resolve a caução", () => {
+    // É a confusão que faz caução ficar esquecida com o proprietário.
+    const m = TRILHA_B.modulos.find((x) => x.id === "imovel-contrato")!;
+    const texto = [m.problema, ...m.perguntas.map((p) => p.comentario)].join(" ");
+    expect(texto.toLowerCase()).toContain("caução");
+    expect(texto).toMatch(/não devolve|não resolve|continua em aberto/);
   });
 });
