@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { validarTrilhas, type Trilha, type Modulo } from "./tipos";
 import { TRILHA_0 } from "./trilha-0";
+import { TRILHA_A } from "./trilha-a";
 
 const modulo = (id: string, numero: number): Modulo => ({
   id,
@@ -126,5 +127,51 @@ describe("TRILHA_0", () => {
     const texto = TRILHA_0.modulos.map((m) => m.exemplo).join(" ");
     expect(texto).toContain("Alto da Serra");
     expect(texto).toContain("Bandeirantes");
+  });
+});
+
+describe("TRILHA_A", () => {
+  it("é válida sozinha, exceto pela contagem total", () => {
+    const problemas = validarTrilhas([TRILHA_A]);
+    expect(problemas.filter((p) => !p.includes("esperado 18"))).toEqual([]);
+  });
+
+  it("tem os seis módulos previstos, nesta ordem", () => {
+    expect(TRILHA_A.modulos.map((m) => m.id)).toEqual([
+      "itens",
+      "contrato-fornecedor",
+      "recebimento",
+      "vistoria-retirada",
+      "devolucao",
+      "avarias",
+    ]);
+  });
+
+  it("o recebimento cobre o que a 0.39.0 entregou", () => {
+    const m = TRILHA_A.modulos.find((x) => x.id === "recebimento")!;
+    const texto = [m.problema, ...m.caminho, m.exemplo].join(" ").toLowerCase();
+    for (const assunto of ["patrimônio", "nota", "fora do contrato", "data"]) {
+      expect(texto, `recebimento deve falar de ${assunto}`).toContain(assunto);
+    }
+  });
+
+  it("NÃO promete o e-mail ao fornecedor, que ainda não existe", () => {
+    // O texto de ajuda do próprio sistema diz que o recebimento fechado é
+    // "comunicado ao fornecedor" — e não é: a fase 1a não entregou o envio. O
+    // treinamento não repete isso.
+    const m = TRILHA_A.modulos.find((x) => x.id === "recebimento")!;
+    const texto = [...m.caminho, ...m.perguntas.map((p) => p.comentario)].join(" ");
+    expect(texto).toMatch(/ainda não existe|não é automático/);
+  });
+
+  it("o fio condutor atravessa a trilha", () => {
+    const texto = TRILHA_A.modulos.map((m) => m.exemplo).join(" ");
+    expect(texto).toContain("BT-4412");
+    expect(texto).toContain("Bandeirantes");
+  });
+
+  it("nenhum módulo está marcado em construção", () => {
+    // O recibo de ferramenta não é módulo: é aviso ao fim da trilha (gerar.ts).
+    expect(TRILHA_A.modulos.filter((m) => m.emConstrucao)).toEqual([]);
   });
 });
