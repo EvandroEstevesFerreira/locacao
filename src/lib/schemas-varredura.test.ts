@@ -219,5 +219,33 @@ describe("varredura de schemas", () => {
       const primeira = schema.parse(amostra);
       expect(schema.parse(primeira)).toEqual(primeira);
     });
+
+    // A SEGUNDA propriedade da varredura, e o furo que deixou a 0.39.1 passar.
+    //
+    // A amostra acima é o caso mínimo e OMITE o `id` — mas o browser não omite
+    // nada. Todo formulário que cria e edita no mesmo componente carrega o id
+    // num `<input type="hidden" {...register("id")} />`, e num cadastro NOVO
+    // esse input manda `""`: o react-hook-form semeia o valor do DOM quando o
+    // defaultValue é `undefined`. Um `id: z.string().uuid().optional()` recusa
+    // esse `""`, o `handleSubmit` engole o submit e o botão Salvar não faz nada
+    // — em silêncio, porque nenhum form renderiza `errors.id`.
+    //
+    // Só vale para quem já aceita a amostra sem `id`, que é exatamente o
+    // conjunto "schema de formulário que também cria". Quem exige `id` (baixa,
+    // fechamento de limpeza, editar usuário) fica fora por construção.
+    const objeto =
+      typeof amostra === "object" && amostra !== null && !Array.isArray(amostra);
+    const criaSemId = objeto && !("id" in amostra) && schema.safeParse(amostra).success;
+
+    if (criaSemId) {
+      it(`${modulo}.${nome} aceita id em branco (cadastro novo)`, () => {
+        const r = schema.safeParse({ ...(amostra as object), id: "" });
+        const detalhe = r.success
+          ? ""
+          : `Use \`idOpcional\` de @/lib/campos no campo id. ` +
+            `${r.error.issues[0].path.join(".") || "(raiz)"}: ${r.error.issues[0].message}`;
+        expect(r.success, detalhe).toBe(true);
+      });
+    }
   }
 });

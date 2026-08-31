@@ -1,6 +1,7 @@
 // Tipos e rótulos do módulo Imóveis (client-safe — sem imports de servidor).
 
 import { z } from "zod";
+import { idOpcional } from "@/lib/campos";
 
 export type TipoImovel =
   | "kitnet"
@@ -153,7 +154,7 @@ const dinheiro = (msg: string) =>
     .transform((v) => (v === "" ? 0 : Number(v)));
 
 export const imovelSchema = z.object({
-  id: z.string().uuid().optional(),
+  id: idOpcional,
   tipo: z.enum(TIPOS_IMOVEL as [TipoImovel, ...TipoImovel[]]),
   apelido: z
     .string()
@@ -196,7 +197,7 @@ export type ImovelDados = z.output<typeof imovelSchema>;
 
 export const contratoImovelSchema = z
   .object({
-    id: z.string().uuid().optional(),
+    id: idOpcional,
     imovel_id: z.string().uuid(),
     data_inicio: z
       .string()
@@ -240,7 +241,7 @@ export type ContratoImovelDados = z.output<typeof contratoImovelSchema>;
 
 export const contaConsumoSchema = z
   .object({
-    id: z.string().uuid().optional(),
+    id: idOpcional,
     imovel_id: z.string().uuid(),
     tipo: z.enum(TIPOS_CONSUMO as [TipoConsumo, ...TipoConsumo[]]),
     competencia: z

@@ -16,6 +16,7 @@ import {
   type ItemLocadoInput,
 } from "@/lib/locacao";
 import { FormError } from "@/components/shared/form-error";
+import { aoInvalidar } from "@/lib/validacao-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -103,7 +104,7 @@ export function AddItemLocadoForm({
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
+    <form onSubmit={handleSubmit(onSubmit, aoInvalidar(setErroServidor))} className="space-y-3">
       <input type="hidden" {...register("contrato_id")} />
 
       <div className="grid gap-3 sm:grid-cols-2">

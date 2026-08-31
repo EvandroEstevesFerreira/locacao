@@ -1,6 +1,6 @@
 {
   "name": "loca-app",
-  "version": "0.39.0",
+  "version": "0.39.1",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -41,6 +41,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.11",
+    "jsdom": "^29.1.1",
     "pg": "^8.22.0",
     "sharp": "^0.34.5",
     "tailwindcss": "^4",

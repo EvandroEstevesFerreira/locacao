@@ -92,11 +92,37 @@ export const numeroOpcional = z
   .optional()
   .transform((v) => (v === "" || v == null ? null : v));
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /** UUID opcional — para vínculos que o formulário deixa em branco. */
-export const uuidOpcional = opcional.refine(
-  (v) => v === null || /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v),
-  { message: "Selecione uma opção válida." },
-);
+export const uuidOpcional = opcional.refine((v) => v === null || UUID_RE.test(v), {
+  message: "Selecione uma opção válida.",
+});
+
+/**
+ * O `id` de um formulário que cria E edita: em branco = criação, uuid = edição.
+ *
+ * NUNCA escreva `id: z.string().uuid().optional()` aqui. O `<input
+ * type="hidden" {...register("id")} />` que carrega o id manda `""` quando não
+ * há registro para editar, e o react-hook-form SEMEIA esse `""` nos valores do
+ * form: em `updateValidAndValue`, quando o `defaultValue` é `undefined`, ele lê
+ * o valor do DOM. O schema então recebe `id: ""`, o `uuid()` recusa, o
+ * `handleSubmit` engole o submit — e o botão Salvar não faz NADA. Sem toast,
+ * sem mensagem, sem requisição: nenhum form renderiza `errors.id`.
+ *
+ * Foi o defeito da 0.39.1, e não era só um cadastro. Os SETE formulários que
+ * criam e editam no mesmo componente estavam impedidos de criar registro novo
+ * — item, obra, imóvel, contrato de imóvel, contrato de locação, fornecedor e
+ * lançamento — enquanto editar funcionava em todos, porque aí o id é um uuid
+ * de verdade. A varredura de idempotência não pegou porque a amostra mínima de
+ * cada schema OMITE o `id`, e é justamente o `""` que o browser manda.
+ *
+ * A mensagem existe por obrigação do refine; o usuário não deveria vê-la nunca,
+ * porque o único jeito de chegar nela é um id corrompido no HTML.
+ */
+export const idOpcional = opcional.refine((v) => v === null || UUID_RE.test(v), {
+  message: "Registro inválido. Recarregue a página e tente de novo.",
+});
 
 /** E-mail opcional. */
 export const emailOpcional = (max = 200) =>

@@ -16,6 +16,7 @@ import {
   type StatusObra,
 } from "@/lib/obra";
 import { FormError } from "@/components/shared/form-error";
+import { aoInvalidar } from "@/lib/validacao-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -84,8 +85,9 @@ export function ObraForm({
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-      {/* `id` é campo do schema, não mais um <input hidden>. */}
+    <form onSubmit={handleSubmit(onSubmit, aoInvalidar(setErroServidor))} className="space-y-5">
+      {/* Num cadastro novo este input manda `""`, e o schema TEM de aceitar —
+          ver `idOpcional` em @/lib/campos. */}
       <input type="hidden" {...register("id")} />
 
       <div className="grid gap-5 sm:grid-cols-2">

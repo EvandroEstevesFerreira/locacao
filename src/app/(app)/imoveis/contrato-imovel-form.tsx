@@ -16,6 +16,7 @@ import {
 } from "@/lib/imoveis";
 import { formatarBRL } from "@/lib/locacao";
 import { FormError } from "@/components/shared/form-error";
+import { aoInvalidar } from "@/lib/validacao-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -126,7 +127,7 @@ export function ContratoImovelForm({
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(onSubmit, aoInvalidar(setErroServidor))} className="space-y-4">
       <input type="hidden" {...register("imovel_id")} />
       <input type="hidden" {...register("id")} />
 

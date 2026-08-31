@@ -17,6 +17,7 @@ import {
 } from "@/lib/permissoes";
 import { MODULOS } from "@/lib/modulos";
 import { FormError } from "@/components/shared/form-error";
+import { aoInvalidar } from "@/lib/validacao-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -77,7 +78,7 @@ export function UsuarioForm({
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+    <form onSubmit={handleSubmit(onSubmit, aoInvalidar(setErroServidor))} className="space-y-5">
       <input type="hidden" {...register("id")} />
 
       <div className="space-y-1.5">

@@ -17,6 +17,7 @@ import {
   type EmpresaInput,
 } from "@/lib/config";
 import { FormError } from "@/components/shared/form-error";
+import { aoInvalidar } from "@/lib/validacao-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -135,7 +136,7 @@ export function EmpresaForm({ empresa }: { empresa: EmpresaExistente }) {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={handleSubmit(onSubmit, aoInvalidar(setErroServidor))} className="space-y-6">
       <fieldset className="space-y-4">
         <legend className="text-sm font-medium">Identificação</legend>
         <div className="grid gap-4 sm:grid-cols-2">
