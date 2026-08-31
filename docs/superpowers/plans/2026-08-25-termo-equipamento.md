@@ -25,14 +25,14 @@
 
 ---
 
-### Task 1: Migration 0050 e o espelho de prefixos
+### Task 1: Migration 0051 e o espelho de prefixos
 
 O `registros.test.ts` lê **a migration 0048 por caminho fixo** e exige que `PREFIXO_REGISTRO` a espelhe nos dois sentidos. Um prefixo novo declarado em outra migration quebra esse teste. Generalizar a leitura vem antes de tudo.
 
 **Files:**
 - Modify: `src/lib/registros.test.ts:18-21`
 - Modify: `src/lib/registros.ts:16-46`
-- Create: `supabase/migrations/0050_termo_equipamento.sql`
+- Create: `supabase/migrations/0051_termo_equipamento.sql`
 
 **Interfaces:**
 - Consumes: `public.proximo_numero(p_org uuid, p_tipo text, p_ano int) returns text` (0048); `public.prefixo_registro(p_tipo text)`; `public.is_member_of_obra(uuid)`, `public.pode_operar()`, `public.current_org_id()`, `public.pode_gerir_cadastros()` (0011/0034); `public.set_updated_at()`, `public.registrar_auditoria()`
@@ -97,7 +97,7 @@ Expected: FAIL em "todo tipo do TypeScript existe no banco com o mesmo prefixo",
 
 - [ ] **Step 6: Escrever a migration**
 
-Criar `supabase/migrations/0050_termo_equipamento.sql`:
+Criar `supabase/migrations/0051_termo_equipamento.sql`:
 
 ```sql
 -- ============================================================================
@@ -110,7 +110,8 @@ Criar `supabase/migrations/0050_termo_equipamento.sql`:
 -- ele, em que estado saiu e quando deveria voltar.
 -- ============================================================================
 
-create type public.estado_equipamento as enum ('novo','bom','regular','com_avaria');
+-- `estado_equipamento` NÃO nasce aqui: é criado pela migration 0050
+-- (cadastro de frota). Esta migration apenas o usa.
 
 -- ---------------------------------------------------------------------------
 -- funcionario — o primeiro cadastro de PESSOA do sistema
@@ -348,12 +349,12 @@ notify pgrst, 'reload schema';
 - [ ] **Step 7: Rodar o teste para verificar que passa**
 
 Run: `npx vitest run src/lib/registros.test.ts`
-Expected: PASS — a leitura generalizada encontra a 0050, que declara `TRM`
+Expected: PASS — a leitura generalizada encontra a 0051, que declara `TRM`
 
 - [ ] **Step 8: Aplicar a migration**
 
 ```bash
-supabase db push --dry-run < /dev/null   # deve listar SÓ a 0050
+supabase db push --dry-run < /dev/null   # deve listar SÓ a 0051
 supabase db push < /dev/null
 ```
 
@@ -362,7 +363,7 @@ O projeto está linkado e o histórico remoto reparado; `db push` aplica só o q
 - [ ] **Step 9: Commit**
 
 ```bash
-git add supabase/migrations/0050_termo_equipamento.sql src/lib/registros.ts
+git add supabase/migrations/0051_termo_equipamento.sql src/lib/registros.ts
 git commit -m "feat(termo): modelo de dados do termo de equipamento"
 ```
 
