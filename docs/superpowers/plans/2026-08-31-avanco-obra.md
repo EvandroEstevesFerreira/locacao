@@ -747,7 +747,7 @@ git commit -m "feat(obras): período da obra no cadastro"
 
 ---
 
-### Task 4: Leitura e a tela `/avanco` em lote
+### Task 4: Leitura e a tela `/avanco` em lote ✅ CONCLUÍDA (conferência na tela pendente da migration)
 
 O centro da entrega. É esta tela que faz o dado existir.
 
@@ -766,7 +766,7 @@ O centro da entrega. É esta tela que faz o dado existir.
   - `type ObraAvanco = { id: string; codigo: string; nome: string; data_inicio: string | null; data_fim_prevista: string | null; semanaAtual: number | null; semanaAnterior: number | null }`
   - `salvarAvancos(raw: unknown): Promise<ActionResult>` em `src/app/(app)/avanco/actions.ts`
 
-- [ ] **Step 1: A camada de leitura**
+- [x] **Step 1: A camada de leitura**
 
 Criar `src/lib/data/avanco.ts`:
 
@@ -842,7 +842,7 @@ export async function listarObrasComAvanco(semanaISO: string): Promise<ObraAvanc
 }
 ```
 
-- [ ] **Step 2: A action de gravação em lote**
+- [x] **Step 2: A action de gravação em lote**
 
 Criar `src/app/(app)/avanco/actions.ts`:
 
@@ -902,7 +902,7 @@ export async function salvarAvancos(raw: unknown): Promise<ActionResult> {
 
 Confirme o nome do campo do id do perfil (`perfil.id`) contra `src/lib/auth.ts` antes de rodar; se for outro, use o real.
 
-- [ ] **Step 3: A tela em lote**
+- [x] **Step 3: A tela em lote**
 
 Criar `src/app/(app)/avanco/_components/lancamento-semanal.tsx`:
 
@@ -1043,7 +1043,7 @@ Requisitos que o código acima já satisfaz, e que a revisão deve conferir:
 
 E `src/app/(app)/avanco/page.tsx` como Server Component: chama `hojeISOSaoPaulo()`, passa `segundaDaSemana(hoje)` para `listarObrasComAvanco`, e renderiza o componente com `PageHeader` no padrão das outras telas. `EmptyState` quando não há obra ativa.
 
-- [ ] **Step 4: Registrar o módulo e a navegação**
+- [x] **Step 4: Registrar o módulo e a navegação**
 
 Em `src/lib/modulos.ts`, acrescentar `"avanco"` ao tipo `ModuloKey` e ao array `MODULOS`:
 
@@ -1059,11 +1059,11 @@ Em `src/lib/nav.ts`, acrescentar `"trending-up"` ao tipo `NavIconName` e o item,
 
 E mapear o ícone novo em `src/components/layout/nav-icon.tsx`. **Sem isso a rota nasce invisível** para quem não é master, e o sintoma é 404 sem explicação.
 
-- [ ] **Step 5: Conferir na tela**
+- [ ] **Step 5: Conferir na tela** — ⛔ BLOQUEADO: a tela grava em `avanco_obra`, que só existe depois da migration 0050 aplicar
 
 Rode `npm run dev`, abra `/avanco`, lance duas obras, recarregue e confirme que os valores voltam. Depois relance uma delas com número diferente e confirme que **corrigiu** em vez de duplicar.
 
-- [ ] **Step 6: Auditoria de PT-BR, ritual e commit**
+- [x] **Step 6: Auditoria de PT-BR, ritual e commit**
 
 ```bash
 grep -rEn "(nao|usuario|permissao|funcao|endereco|numero|voce|tambem)" "src/app/(app)/avanco" --include=*.tsx

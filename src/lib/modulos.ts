@@ -4,6 +4,7 @@
 
 export type ModuloKey =
   | "obras"
+  | "avanco"
   | "fornecedores"
   | "itens"
   | "contratos"
@@ -15,6 +16,7 @@ export type ModuloKey =
 /** Módulos que o Master pode liberar/bloquear por usuário. */
 export const MODULOS: { chave: ModuloKey; label: string; href: string }[] = [
   { chave: "obras", label: "Obras", href: "/obras" },
+  { chave: "avanco", label: "Avanço", href: "/avanco" },
   { chave: "fornecedores", label: "Fornecedores", href: "/fornecedores" },
   { chave: "itens", label: "Itens", href: "/itens" },
   { chave: "contratos", label: "Contratos", href: "/contratos" },
