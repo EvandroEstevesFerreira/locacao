@@ -20,7 +20,7 @@ export default async function EditarObraPage({
   const { data: obra } = await supabase
     .from("obra")
     .select(
-      "id, codigo, nome, endereco, responsavel, centro_custo, status, destinatarios_alerta",
+      "id, codigo, nome, endereco, responsavel, centro_custo, status, destinatarios_alerta, data_inicio, data_fim_prevista, data_fim_real",
     )
     .eq("id", id)
     .single();

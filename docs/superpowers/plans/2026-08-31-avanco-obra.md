@@ -584,11 +584,12 @@ git commit -m "feat(avanco): migration do período da obra e do avanço semanal"
 
 ---
 
-### Task 3: As três datas no cadastro da obra
+### Task 3: As três datas no cadastro da obra ✅ CONCLUÍDA
 
 **Files:**
 - Modify: `src/lib/obra.ts`
 - Modify: `src/app/(app)/obras/obra-form.tsx`
+- Modify: `src/app/(app)/obras/[id]/page.tsx` (o plano não previa: o `select` é explícito por coluna, então as três novas precisam ser pedidas)
 - Create: `src/lib/obra.test.ts`
 
 **Interfaces:**
@@ -597,7 +598,7 @@ git commit -m "feat(avanco): migration do período da obra e do avanço semanal"
 
 `src/app/(app)/obras/actions.ts` **não muda**: ele faz `const { id, ...dados } = parsed.data` e passa `dados` inteiro para o insert/update, então as colunas novas fluem sozinhas.
 
-- [ ] **Step 1: Escrever o teste que falha**
+- [x] **Step 1: Escrever o teste que falha**
 
 Criar `src/lib/obra.test.ts` — o módulo ainda não tinha teste próprio, e pendurar teste de obra dentro de `avanco.test.ts` esconderia isso:
 
@@ -642,12 +643,12 @@ describe("obraSchema — período", () => {
 });
 ```
 
-- [ ] **Step 2: Rodar e confirmar que falha**
+- [x] **Step 2: Rodar e confirmar que falha**
 
 Run: `npx vitest run src/lib/obra.test.ts`
 Expected: FAIL — `data_inicio` não existe no tipo de saída.
 
-- [ ] **Step 3: Acrescentar as datas ao schema**
+- [x] **Step 3: Acrescentar as datas ao schema**
 
 Em `src/lib/obra.ts`, trocar o import de campos para incluir `dataOpcional`:
 
@@ -689,12 +690,12 @@ export const obraSchema = z
 
 Comparar `'yyyy-mm-dd'` como string funciona e é de propósito: o formato é ordenável lexicograficamente, então não há conversão de data — nem fuso — no caminho.
 
-- [ ] **Step 4: Rodar e confirmar que passa**
+- [x] **Step 4: Rodar e confirmar que passa**
 
 Run: `npx vitest run src/lib/obra.test.ts`
 Expected: PASS
 
-- [ ] **Step 5: Os campos no formulário**
+- [x] **Step 5: Os campos no formulário**
 
 Em `src/app/(app)/obras/obra-form.tsx`, acrescentar aos `defaultValues`:
 
@@ -736,7 +737,7 @@ E o bloco de campos, depois do campo de status:
 
 Também atualizar o `type Obra` do componente para incluir os três campos como `string | null`.
 
-- [ ] **Step 6: Ritual e commit**
+- [x] **Step 6: Ritual e commit**
 
 ```bash
 npm run typecheck && npm run lint && npm test && npm run build
