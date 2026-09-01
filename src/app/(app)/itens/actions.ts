@@ -1,11 +1,16 @@
 "use server";
 
-import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeEditarCadastros } from "@/lib/auth";
 import { falha, primeiroErro, type ActionResult } from "@/lib/acoes";
 import { itemSchema } from "@/lib/itens";
+import {
+  unidadeSchema,
+  podeTransicionar,
+  motivoBloqueio,
+  type Situacao,
+} from "@/lib/frota";
 
 /**
  * Salva item do catálogo.
@@ -58,18 +63,6 @@ export async function excluirItem(formData: FormData) {
   revalidatePath("/itens");
 }
 
-const unidadeSchema = z.object({
-  item_id: z.string().uuid(),
-  identificador: z.string().trim().min(1, "Informe o identificador.").max(80),
-  observacoes: z
-    .string()
-    .trim()
-    .max(300)
-    .optional()
-    // "" precisa virar NULL, senão "sem observação" fica gravado como string
-    // vazia e qualquer `is null` deixa de encontrá-la.
-    .transform((v) => (v && v.length > 0 ? v : null)),
-});
 
 export type UnidadeFormState = { error?: string };
 
@@ -86,10 +79,27 @@ export async function adicionarUnidade(
   const parsed = unidadeSchema.safeParse({
     item_id: formData.get("item_id"),
     identificador: formData.get("identificador"),
+    numero_serie: formData.get("numero_serie") ?? undefined,
+    propriedade: formData.get("propriedade") ?? undefined,
+    situacao: formData.get("situacao") ?? undefined,
+    obra_id: formData.get("obra_id") ?? undefined,
+    ano: formData.get("ano") ?? undefined,
+    estado: formData.get("estado") ?? undefined,
     observacoes: formData.get("observacoes") ?? undefined,
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+
+  // Peça nova nasce em `disponivel`. Chegar cadastrando já "em uso" seria
+  // registrar posse sem ninguém ter assinado por ela — a matriz de
+  // `src/lib/frota.ts` é a fonte única dessa regra.
+  if (!podeTransicionar("disponivel", parsed.data.situacao as Situacao, "manual")) {
+    return {
+      error:
+        motivoBloqueio("disponivel", parsed.data.situacao as Situacao) ??
+        "Situação inválida para uma peça nova.",
+    };
   }
 
   const supabase = await createClient();
@@ -97,6 +107,12 @@ export async function adicionarUnidade(
     org_id: perfil.org_id,
     item_id: parsed.data.item_id,
     identificador: parsed.data.identificador,
+    numero_serie: parsed.data.numero_serie,
+    propriedade: parsed.data.propriedade,
+    situacao: parsed.data.situacao,
+    obra_id: parsed.data.obra_id,
+    ano: parsed.data.ano,
+    estado: parsed.data.estado,
     observacoes: parsed.data.observacoes,
   });
   if (error) {
