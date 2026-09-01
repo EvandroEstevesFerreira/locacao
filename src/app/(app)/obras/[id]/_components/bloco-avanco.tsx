@@ -50,9 +50,19 @@ function pct(v: number | null): string {
 export function BlocoAvanco({
   obra,
   historico,
+  consumido,
 }: {
   obra: PeriodoObra & { data_fim_prevista: string | null };
   historico: PontoAvanco[];
+  /**
+   * Percentual do orçamento consumido, ou null sem orçamento cadastrado.
+   *
+   * Vem de fora porque o cálculo é do domínio de orçamento (src/lib/orcamento.ts)
+   * e este bloco é de avanço. Ele entra aqui porque é ao LADO do avanço que o
+   * número faz sentido: "62% de orçamento" só diagnostica algo perto de "31% de
+   * obra".
+   */
+  consumido: number | null;
 }) {
   // `hojeISOSaoPaulo`, nunca `new Date()`: comparação com coluna `date`, e o
   // Vercel roda em UTC — das 21h à meia-noite em Brasília a conta sai um dia
@@ -78,7 +88,7 @@ export function BlocoAvanco({
           </p>
         ) : (
           <>
-            <div className="grid gap-4 sm:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-5">
               <Numero
                 label="Avanço físico"
                 valor={pct(fisico)}
@@ -103,6 +113,16 @@ export function BlocoAvanco({
                 }
                 destaque={
                   pontos === null ? undefined : pontos > 0 ? "atraso" : "adiantada"
+                }
+              />
+              <Numero
+                label="Orçamento consumido"
+                valor={pct(consumido)}
+                detalhe={consumido === null ? "sem orçamento" : undefined}
+                destaque={
+                  consumido !== null && fisico !== null && consumido > fisico + 10
+                    ? "atraso"
+                    : undefined
                 }
               />
               <Numero
