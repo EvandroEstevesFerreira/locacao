@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.45.0";
+export const APP_VERSION = "0.45.1";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,14 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.45.1",
+    data: "2026-09-01",
+    titulo: "Ajuste de segurança no fechamento",
+    mudancas: [
+      { tipo: "seguranca", texto: "A função interna que protege o mês fechado deixou de ficar exposta na API pública. Nada muda no uso: a proteção continua ativa." },
+    ],
+  },
   {
     versao: "0.45.0",
     data: "2026-09-01",

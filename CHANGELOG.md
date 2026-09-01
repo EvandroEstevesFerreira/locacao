@@ -7,6 +7,31 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.45.1] — 2026-09-01
+
+### Segurança
+
+- **`guard_fechamento_imutavel` deixou de ser executável via API.**
+  `get_advisors` apontou a função de trigger da 0053 como `SECURITY DEFINER`
+  chamável por `anon` e `authenticated` em `/rest/v1/rpc`. Chamá-la direto
+  falharia ("trigger functions can only be called as triggers"), mas função de
+  trigger não tem motivo nenhum para estar no PostgREST.
+
+  **A primeira tentativa não funcionou, e a verificação foi o que pegou.**
+  Revogar de `anon, authenticated` não surtiu efeito algum: o `EXECUTE` de
+  função é concedido a `PUBLIC` por padrão e os dois papéis herdam dali.
+  `has_function_privilege` continuava devolvendo `true` depois da migration
+  "bem-sucedida". Corrigido revogando de `public`, e confirmado: os dois papéis
+  sem `EXECUTE`, trigger ativo, e o apontamento fora da lista de advisors.
+
+  Registrado no arquivo da migration o que NÃO se deve replicar: revogar
+  `EXECUTE` de `current_org_id`, `current_papel`, `is_member_of_obra` ou
+  `pode_*` quebraria a RLS inteira, porque essas são avaliadas dentro das
+  policies com o privilégio de quem consulta.
+
+  As outras quatro funções de trigger do projeto têm o mesmo apontamento, de
+  antes desta fatia, e ficam para uma passagem própria de higiene.
+
 ## [0.45.0] — 2026-09-01
 
 Subprojeto D, o último do pedido da diretoria. "Abater o saldo dos contratos ao
