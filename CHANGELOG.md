@@ -7,6 +7,77 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.41.0] — 2026-09-01
+
+Primeira fatia de `docs/superpowers/specs/2026-08-31-avanco-obra-design.md`.
+Entrega dois dos três percentuais que a diretoria pediu — prazo decorrido e
+avanço físico — sem tocar em dinheiro. O terceiro (orçamento consumido) vem nas
+fatias B, C e D.
+
+### Adicionado
+
+- **Período da obra** — `data_inicio`, `data_fim_prevista` e `data_fim_real`.
+  Todas opcionais: nenhuma obra cadastrada tinha estas datas, e exigi-las
+  quebraria todas de uma vez. A validação de "fim previsto não antes do início"
+  vive nos dois lados — `check` na migration e `superRefine` no schema. A
+  duplicação é deliberada: o banco recusaria com erro cru, sem nome de campo, e
+  o formulário não teria onde pendurá-lo.
+- **`avanco_obra`** — avanço físico ACUMULADO, um lançamento por obra por
+  semana, com `unique (obra_id, semana)`. Acumulado e não incremental porque se
+  autocorrige: semana esquecida não corrompe o total, e semana esquecida é
+  certeza num processo semanal, não hipótese. O `unique` é o que torna relançar
+  uma correção em vez de duplicata.
+- **Tela `/avanco`** — uma linha por obra ativa, todas na mesma página. Não é
+  conveniência, é a condição de existência do dado: 8 navegações por semana
+  matam a rotina no segundo mês. Mostra os pontos de atraso ao vivo enquanto o
+  número é digitado.
+- **Bloco de avanço** no detalhe da obra, com avanço, prazo, desvio, previsão de
+  término e as últimas 8 semanas.
+- **E-mail semanal** (`avanco-obra`, cron de segunda 08:20) para os
+  destinatários de cada obra, mais a cobrança consolidada das obras sem
+  lançamento para `config_alerta.destinatarios`.
+
+### Decisões
+
+- **`previsaoTermino` devolve `null` com ritmo zero ou negativo**, e a tela diz
+  "ritmo insuficiente para projetar". Obra parada dividiria por zero e correção
+  para baixo projetaria data no passado; "término em 2183" destrói a confiança
+  no painel inteiro. A janela do ritmo é de LANÇAMENTOS, não de semanas de
+  calendário — semana não informada não pode virar ritmo zero, senão a projeção
+  mente para pior exatamente quando o dado está faltando.
+- **Linha em branco na tela em lote é descartada, não vira zero.** Como o avanço
+  é acumulado, salvar zero apagaria o progresso real de toda obra não
+  preenchida.
+- **Obra sem período e sem lançamento não recebe e-mail.** Sairia com cinco
+  travessões e uma bronca, para quem talvez não saiba que a tela existe. Ruído
+  no primeiro contato queima a credibilidade do aviso.
+- **Aritmética de data em UTC** em `src/lib/avanco.ts`: os valores são dia de
+  calendário, e conta em horário local faria o horário de verão comer ou
+  inventar um dia. "Hoje" é sempre `hojeISOSaoPaulo()`.
+
+### Corrigido durante a execução
+
+- A policy da migration usava `current_papel() in ('master','admin','gestor')`.
+  `admin` **não existe** desde a 0011 — papel inexistente em policy não dá erro,
+  só nega tudo em silêncio. E usava `has_obra_access()`, superada pela 0004 por
+  recursão de RLS. Agora usa `is_member_of_obra()` e `pode_gerir_cadastros()`.
+- A cobrança das obras sem lançamento estava indo no e-mail de cada obra, e a
+  spec dizia "ao administrativo". Passou a ser envio único à organização.
+
+### Testes
+
+- `avanco.test.ts` — 26 casos: canonização da segunda-feira em todo dia da
+  semana (inclusive domingo, que a conta ingênua erra), obra de um dia sem
+  divisão por zero, clamp em 0 e 100, ritmo zero e negativo, e a janela de
+  lançamentos.
+- `obra.test.ts` — novo: o módulo não tinha teste próprio. Exige que o erro de
+  período saia NO CAMPO, não na raiz — erro de raiz não é renderizado por campo
+  nenhum.
+- Migration validada executando num Postgres descartável antes de ir a
+  produção, e `get_advisors` de segurança não aponta nada em `avanco_obra`.
+- Cron exercitado ponta a ponta com a trava de e-mail em "bloqueado": zero
+  envios, 401 sem segredo, semana correta.
+
 ## [0.40.0] — 2026-08-31
 
 ### Corrigido

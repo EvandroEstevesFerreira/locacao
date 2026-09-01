@@ -25,7 +25,7 @@
 
 ---
 
-### Task 1: O cálculo puro — `src/lib/avanco.ts`
+### Task 1: O cálculo puro — `src/lib/avanco.ts` ✅ CONCLUÍDA (4a3cc62)
 
 Primeiro porque é o coração e não depende de banco nenhum. Tudo aqui é função pura, então é TDD de verdade.
 
@@ -46,7 +46,7 @@ Primeiro porque é o coração e não depende de banco nenhum. Tudo aqui é fun�
   - `type PontoAvanco = { semana: string; percentual: number }`
   - `avancoSchema`, `AvancoInput`, `AvancoDados`
 
-- [ ] **Step 1: Escrever o teste que falha**
+- [x] **Step 1: Escrever o teste que falha**
 
 Criar `src/lib/avanco.test.ts`:
 
@@ -242,12 +242,12 @@ describe("avancoSchema", () => {
 });
 ```
 
-- [ ] **Step 2: Rodar e confirmar que falha**
+- [x] **Step 2: Rodar e confirmar que falha**
 
 Run: `npx vitest run src/lib/avanco.test.ts`
 Expected: FAIL — `Failed to resolve import "./avanco"`.
 
-- [ ] **Step 3: Implementar `src/lib/avanco.ts`**
+- [x] **Step 3: Implementar `src/lib/avanco.ts`**
 
 ```ts
 // Avanço físico da obra e prazo decorrido — TUDO puro, sem I/O.
@@ -405,12 +405,12 @@ export type AvancoInput = z.input<typeof avancoSchema>;
 export type AvancoDados = z.output<typeof avancoSchema>;
 ```
 
-- [ ] **Step 4: Rodar e confirmar que passa**
+- [x] **Step 4: Rodar e confirmar que passa**
 
 Run: `npx vitest run src/lib/avanco.test.ts`
 Expected: PASS — 20 testes.
 
-- [ ] **Step 5: Registrar o módulo na varredura de schemas**
+- [x] **Step 5: Registrar o módulo na varredura de schemas**
 
 `MODULOS` de `src/lib/schemas-varredura.test.ts` é **lista à mão** — schema novo não entra sozinho.
 
@@ -437,12 +437,12 @@ E a amostra mínima em `AMOSTRAS`:
   avancoSchema: { obra_id: UUID, semana: "2026-08-31", percentual: "34" },
 ```
 
-- [ ] **Step 6: Rodar a varredura**
+- [x] **Step 6: Rodar a varredura**
 
 Run: `npx vitest run src/lib/schemas-varredura.test.ts`
 Expected: PASS, incluindo `avanco.avancoSchema aceita id em branco (cadastro novo)`.
 
-- [ ] **Step 7: Ritual e commit**
+- [x] **Step 7: Ritual e commit**
 
 ```bash
 npm run typecheck && npm run lint && npm test && npm run build
@@ -452,16 +452,18 @@ git commit -m "feat(avanco): o cálculo puro de prazo, avanço e ritmo"
 
 ---
 
-### Task 2: A migration
+### Task 2: A migration ✅ CONCLUÍDA — aplicada em produção (0050)
 
 **Files:**
 - Create: `supabase/migrations/0050_avanco_obra.sql` (confirme o número com `ls supabase/migrations | tail -1`)
 
 **Interfaces:**
-- Consumes: `public.set_updated_at()`, `public.current_org_id()`, `public.has_obra_access(uuid)`, `public.podeEditar` via `current_papel()` — todas já existentes.
+- Consumes: `public.set_updated_at()`, `public.current_org_id()`, `public.is_member_of_obra(uuid)`, `public.pode_gerir_cadastros()` — todas já existentes.
+  Os papéis reais são `master`/`administrador`/`gestor`/`operador`; `admin` e
+  `gestor` como escritos antes na policy NÃO existiam.
 - Produces: colunas `obra.data_inicio`, `obra.data_fim_prevista`, `obra.data_fim_real`; tabela `public.avanco_obra`.
 
-- [ ] **Step 1: Escrever a migration**
+- [x] **Step 1: Escrever a migration**
 
 ```sql
 -- ============================================================================
@@ -552,7 +554,7 @@ create policy "avanco_write" on public.avanco_obra
   );
 ```
 
-- [ ] **Step 2: Conferir os papéis contra o que existe**
+- [x] **Step 2: Conferir os papéis contra o que existe** — PEGOU DOIS ERROS DO PLANO
 
 O `check` de papel acima precisa bater com os valores reais do enum. Rode e compare:
 
@@ -562,18 +564,18 @@ grep -rn "current_papel() in" supabase/migrations/0011_fase7_rbac_4_perfis.sql |
 
 Se os nomes forem outros, corrija a policy para os nomes reais **antes** de aplicar. Papel errado numa policy não dá erro: só nega tudo em silêncio.
 
-- [ ] **Step 3: Aplicar**
+- [x] **Step 3: Aplicar** — aplicada via MCP do Supabase (a CLI está inacessível nesta máquina: o executável do scoop devolve "Device or resource busy" em toda versão, com e sem sandbox)
 
 ```bash
 supabase db push --dry-run < /dev/null   # deve listar SÓ a 0050
 supabase db push < /dev/null
 ```
 
-- [ ] **Step 4: Provar a RLS no Postgres local**
+- [x] **Step 4: Provar a RLS** — validação estrutural num Postgres descartável ANTES de aplicar (a migration executa; constraints, unique/upsert e policies conferidos executando), e depois de aplicar: `get_advisors` de segurança não aponta NADA em `avanco_obra`. A prova comportamental com dois usuários de organizações diferentes segue pendente — exige o scaffold completo do Supabase local. ~~Antes:~~ — feita a validação ESTRUTURAL num banco descartável (a migration executa; constraints, unique/upsert e policies conferidos). A prova COMPORTAMENTAL da RLS com dois usuários exige o scaffold completo do Supabase local e fica pendente
 
 Confirme, com dois usuários de organizações diferentes, que `select * from avanco_obra` de uma organização não devolve linha da outra, e que um usuário sem linha em `obra_usuario` não lê o avanço daquela obra. Sem esta prova, a policy é só uma intenção.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add supabase/migrations/0050_avanco_obra.sql
@@ -582,11 +584,12 @@ git commit -m "feat(avanco): migration do período da obra e do avanço semanal"
 
 ---
 
-### Task 3: As três datas no cadastro da obra
+### Task 3: As três datas no cadastro da obra ✅ CONCLUÍDA
 
 **Files:**
 - Modify: `src/lib/obra.ts`
 - Modify: `src/app/(app)/obras/obra-form.tsx`
+- Modify: `src/app/(app)/obras/[id]/page.tsx` (o plano não previa: o `select` é explícito por coluna, então as três novas precisam ser pedidas)
 - Create: `src/lib/obra.test.ts`
 
 **Interfaces:**
@@ -595,7 +598,7 @@ git commit -m "feat(avanco): migration do período da obra e do avanço semanal"
 
 `src/app/(app)/obras/actions.ts` **não muda**: ele faz `const { id, ...dados } = parsed.data` e passa `dados` inteiro para o insert/update, então as colunas novas fluem sozinhas.
 
-- [ ] **Step 1: Escrever o teste que falha**
+- [x] **Step 1: Escrever o teste que falha**
 
 Criar `src/lib/obra.test.ts` — o módulo ainda não tinha teste próprio, e pendurar teste de obra dentro de `avanco.test.ts` esconderia isso:
 
@@ -640,12 +643,12 @@ describe("obraSchema — período", () => {
 });
 ```
 
-- [ ] **Step 2: Rodar e confirmar que falha**
+- [x] **Step 2: Rodar e confirmar que falha**
 
 Run: `npx vitest run src/lib/obra.test.ts`
 Expected: FAIL — `data_inicio` não existe no tipo de saída.
 
-- [ ] **Step 3: Acrescentar as datas ao schema**
+- [x] **Step 3: Acrescentar as datas ao schema**
 
 Em `src/lib/obra.ts`, trocar o import de campos para incluir `dataOpcional`:
 
@@ -687,12 +690,12 @@ export const obraSchema = z
 
 Comparar `'yyyy-mm-dd'` como string funciona e é de propósito: o formato é ordenável lexicograficamente, então não há conversão de data — nem fuso — no caminho.
 
-- [ ] **Step 4: Rodar e confirmar que passa**
+- [x] **Step 4: Rodar e confirmar que passa**
 
 Run: `npx vitest run src/lib/obra.test.ts`
 Expected: PASS
 
-- [ ] **Step 5: Os campos no formulário**
+- [x] **Step 5: Os campos no formulário**
 
 Em `src/app/(app)/obras/obra-form.tsx`, acrescentar aos `defaultValues`:
 
@@ -734,7 +737,7 @@ E o bloco de campos, depois do campo de status:
 
 Também atualizar o `type Obra` do componente para incluir os três campos como `string | null`.
 
-- [ ] **Step 6: Ritual e commit**
+- [x] **Step 6: Ritual e commit**
 
 ```bash
 npm run typecheck && npm run lint && npm test && npm run build
@@ -744,7 +747,7 @@ git commit -m "feat(obras): período da obra no cadastro"
 
 ---
 
-### Task 4: Leitura e a tela `/avanco` em lote
+### Task 4: Leitura e a tela `/avanco` em lote ✅ CONCLUÍDA (conferência na tela pendente da migration)
 
 O centro da entrega. É esta tela que faz o dado existir.
 
@@ -763,7 +766,7 @@ O centro da entrega. É esta tela que faz o dado existir.
   - `type ObraAvanco = { id: string; codigo: string; nome: string; data_inicio: string | null; data_fim_prevista: string | null; semanaAtual: number | null; semanaAnterior: number | null }`
   - `salvarAvancos(raw: unknown): Promise<ActionResult>` em `src/app/(app)/avanco/actions.ts`
 
-- [ ] **Step 1: A camada de leitura**
+- [x] **Step 1: A camada de leitura**
 
 Criar `src/lib/data/avanco.ts`:
 
@@ -839,7 +842,7 @@ export async function listarObrasComAvanco(semanaISO: string): Promise<ObraAvanc
 }
 ```
 
-- [ ] **Step 2: A action de gravação em lote**
+- [x] **Step 2: A action de gravação em lote**
 
 Criar `src/app/(app)/avanco/actions.ts`:
 
@@ -899,7 +902,7 @@ export async function salvarAvancos(raw: unknown): Promise<ActionResult> {
 
 Confirme o nome do campo do id do perfil (`perfil.id`) contra `src/lib/auth.ts` antes de rodar; se for outro, use o real.
 
-- [ ] **Step 3: A tela em lote**
+- [x] **Step 3: A tela em lote**
 
 Criar `src/app/(app)/avanco/_components/lancamento-semanal.tsx`:
 
@@ -1040,7 +1043,7 @@ Requisitos que o código acima já satisfaz, e que a revisão deve conferir:
 
 E `src/app/(app)/avanco/page.tsx` como Server Component: chama `hojeISOSaoPaulo()`, passa `segundaDaSemana(hoje)` para `listarObrasComAvanco`, e renderiza o componente com `PageHeader` no padrão das outras telas. `EmptyState` quando não há obra ativa.
 
-- [ ] **Step 4: Registrar o módulo e a navegação**
+- [x] **Step 4: Registrar o módulo e a navegação**
 
 Em `src/lib/modulos.ts`, acrescentar `"avanco"` ao tipo `ModuloKey` e ao array `MODULOS`:
 
@@ -1056,11 +1059,11 @@ Em `src/lib/nav.ts`, acrescentar `"trending-up"` ao tipo `NavIconName` e o item,
 
 E mapear o ícone novo em `src/components/layout/nav-icon.tsx`. **Sem isso a rota nasce invisível** para quem não é master, e o sintoma é 404 sem explicação.
 
-- [ ] **Step 5: Conferir na tela**
+- [ ] **Step 5: Conferir na tela** — ⛔ BLOQUEADO: a tela grava em `avanco_obra`, que só existe depois da migration 0050 aplicar
 
 Rode `npm run dev`, abra `/avanco`, lance duas obras, recarregue e confirme que os valores voltam. Depois relance uma delas com número diferente e confirme que **corrigiu** em vez de duplicar.
 
-- [ ] **Step 6: Auditoria de PT-BR, ritual e commit**
+- [x] **Step 6: Auditoria de PT-BR, ritual e commit**
 
 ```bash
 grep -rEn "(nao|usuario|permissao|funcao|endereco|numero|voce|tambem)" "src/app/(app)/avanco" --include=*.tsx
@@ -1071,18 +1074,18 @@ git commit -m "feat(avanco): tela de lançamento semanal em lote"
 
 ---
 
-### Task 5: O bloco de avanço no detalhe da obra
+### Task 5: O bloco de avanço no detalhe da obra ✅ CONCLUÍDA (conferência pendente da migration)
 
 **Files:**
 - Create: `src/app/(app)/obras/[id]/_components/bloco-avanco.tsx`
 - Modify: `src/app/(app)/obras/[id]/page.tsx`
-- Modify: `src/lib/data/avanco.ts`
+- Modify: `src/lib/data/avanco.ts` — `historicoAvanco` já entrou junto da Task 4
 
 **Interfaces:**
 - Consumes: `percentualPrazo`, `desvio`, `previsaoTermino` de `@/lib/avanco`.
 - Produces: `historicoAvanco(obraId: string, limite?: number): Promise<PontoAvanco[]>` em `src/lib/data/avanco.ts`.
 
-- [ ] **Step 1: A leitura do histórico**
+- [x] **Step 1: A leitura do histórico**
 
 Acrescentar em `src/lib/data/avanco.ts`:
 
@@ -1110,7 +1113,7 @@ export async function historicoAvanco(
 }
 ```
 
-- [ ] **Step 2: O bloco**
+- [x] **Step 2: O bloco**
 
 Criar `src/app/(app)/obras/[id]/_components/bloco-avanco.tsx` (Server Component). Recebe a obra e o histórico, e mostra:
 
@@ -1120,15 +1123,15 @@ Criar `src/app/(app)/obras/[id]/_components/bloco-avanco.tsx` (Server Component)
 - **Previsão de término**: `previsaoTermino(historico, hojeISOSaoPaulo())` formatado por `formatarData`, contra `data_fim_prevista`. Quando `null`, o texto é exatamente **"Ritmo insuficiente para projetar."** — não invente uma data;
 - as últimas 8 semanas, com `formatarData(semana)` e o percentual.
 
-- [ ] **Step 3: Ligar na página**
+- [x] **Step 3: Ligar na página**
 
 Em `src/app/(app)/obras/[id]/page.tsx`, buscar `historicoAvanco(id)` junto das outras leituras e renderizar o bloco entre os cards existentes, seguindo o espaçamento das seções vizinhas.
 
-- [ ] **Step 4: Conferir na tela**
+- [ ] **Step 4: Conferir na tela** — ⛔ BLOQUEADO pela migration não aplicada
 
 Abra uma obra com lançamentos e confirme os quatro números. Depois abra uma obra **sem período** e confirme que não aparece "NaN%" nem "Invalid Date" em lugar nenhum.
 
-- [ ] **Step 5: Ritual e commit**
+- [x] **Step 5: Ritual e commit**
 
 ```bash
 npm run typecheck && npm run lint && npm test && npm run build
@@ -1138,7 +1141,7 @@ git commit -m "feat(obras): bloco de avanço no detalhe da obra"
 
 ---
 
-### Task 6: O e-mail semanal e o cron
+### Task 6: O e-mail semanal e o cron ✅ CONCLUÍDA
 
 **Files:**
 - Create: `src/lib/emails/avanco.ts`
@@ -1151,7 +1154,7 @@ git commit -m "feat(obras): bloco de avanço no detalhe da obra"
 - Consumes: o layout e o `Documento` de `src/lib/emails/`, o padrão de dedup da 0016, `percentualPrazo`, `desvio`, `previsaoTermino`.
 - Produces: `emailAvancoSemanal(dados: ResumoObra[]): { assunto: string; html: string; texto: string }`.
 
-- [ ] **Step 1: Ler os dois precedentes antes de escrever**
+- [x] **Step 1: Ler os dois precedentes antes de escrever**
 
 ```bash
 sed -n '1,80p' src/app/api/cron/vencimentos/route.ts
@@ -1160,7 +1163,7 @@ sed -n '1,60p' src/lib/emails/relatorio.ts
 
 O e-mail novo **não inventa desenho**: usa o mesmo layout, cabeçalho e rodapé. E o cron copia o padrão de dedup e de autenticação do cron que já existe — inclusive a verificação do segredo de cron.
 
-- [ ] **Step 2: O conteúdo**
+- [x] **Step 2: O conteúdo**
 
 Por obra, para os endereços de `obra.destinatarios_alerta`:
 
@@ -1172,6 +1175,8 @@ Obra Ipiranga · semana de 25/08
   Previsão de término ... 23/11/2026  (previsto: 15/09/2026)
   Itens locados em aberto: 14
 ```
+
+**Corrigido na execução:** a cobrança NÃO vai no e-mail da obra, vai num envio único para `config_alerta.destinatarios` — a spec dizia "ao administrativo" e o plano tinha desviado disso. E obra sem período E sem lançamento não gera e-mail nenhum: sairia com cinco travessões e uma bronca.
 
 E, num bloco separado ao fim, a **cobrança**: obras ativas sem lançamento nesta semana, nominalmente, cada uma com há quantas semanas está sem número — é aqui que `semanasSemLancamento(ultimaSemana, hojeISO)` da Task 1 é consumida:
 
@@ -1185,11 +1190,11 @@ O e-mail que cobra é o que mantém o cadastro vivo. Obra que nunca teve lançam
 
 Versão em texto simples junto do HTML — é o padrão da 0.38.0 e reduz spam.
 
-- [ ] **Step 3: Registrar no catálogo**
+- [x] **Step 3: Registrar no catálogo**
 
 Acrescentar a entrada em `src/lib/emails/catalogo.ts` com `id: "avanco-obra"` e `titulo: "Avanço semanal da obra"`, seguindo exatamente a forma das outras entradas, e conferir que a galeria (`galeria.test.ts`) continua passando.
 
-- [ ] **Step 4: O cron**
+- [x] **Step 4: O cron**
 
 `src/app/api/cron/avanco/route.ts` usa `createAdminClient()` — é o único lugar onde isso é permitido, porque roda sem sessão de usuário e não há RLS a respeitar. Deve respeitar o **modo de teste de e-mail** da 0.38.0: se estiver ligado, nenhum destinatário real recebe.
 
@@ -1204,11 +1209,11 @@ Em `vercel.json`, acrescentar o agendamento de segunda-feira de manhã:
 
 08:20 na segunda, depois dos dois crons existentes (08:00 e 08:10), para não competir por execução.
 
-- [ ] **Step 5: Provar sem mandar e-mail de verdade**
+- [x] **Step 5: Provar sem mandar e-mail de verdade**
 
 Ligue o modo de teste, chame a rota do cron localmente e confirme no log que o conteúdo saiu com os percentuais certos e que nenhum endereço real foi usado.
 
-- [ ] **Step 6: Ritual e commit**
+- [x] **Step 6: Ritual e commit**
 
 ```bash
 npm run typecheck && npm run lint && npm test && npm run build

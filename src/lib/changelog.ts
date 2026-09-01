@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.40.0";
+export const APP_VERSION = "0.41.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,19 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.41.0",
+    data: "2026-09-01",
+    titulo: "Avanço da obra, semana a semana",
+    mudancas: [
+      { tipo: "novo", texto: "A obra passa a ter início, fim previsto e fim real. Com isso o sistema calcula sozinho quanto do prazo já correu." },
+      { tipo: "novo", texto: "Tela de Avanço: uma linha por obra, todas na mesma página, para lançar o percentual da semana de uma vez só. Lançar de novo na mesma semana corrige o número, não duplica." },
+      { tipo: "novo", texto: "Enquanto você digita, a tela já mostra quantos pontos a obra está atrasada — prazo decorrido contra avanço informado." },
+      { tipo: "novo", texto: "O detalhe da obra ganhou o bloco de avanço: percentual atual, prazo, desvio em pontos, previsão de término pelo ritmo das últimas semanas e as últimas 8 semanas lançadas." },
+      { tipo: "novo", texto: "E-mail de segunda-feira para os responsáveis de cada obra, com prazo contra avanço, previsão de término e quantidade de itens locados em aberto." },
+      { tipo: "novo", texto: "Quem lança o avanço recebe, no mesmo dia, a lista das obras que ficaram sem informação — para nenhuma semana passar em branco sem ninguém notar." },
+    ],
+  },
   {
     versao: "0.40.0",
     data: "2026-08-31",

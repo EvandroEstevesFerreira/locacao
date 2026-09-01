@@ -8,6 +8,7 @@
 import type { Contexto } from "./base";
 import type {
   DadosAcessoCriado,
+  DadosAvancoSemanal,
   DadosAvaria,
   DadosDocumento,
   DadosFluxo,
@@ -195,4 +196,38 @@ export const FLUXO: DadosFluxo = {
   totalPrevisto: "R$ 336.150,00",
   totalRealizado: "R$ 31.440,00",
   anexo: "fluxo-caixa-2026-09.xlsx",
+};
+
+export const AVANCO_SEMANAL: DadosAvancoSemanal = {
+  semana: "31/08/2026",
+  linhas: [
+    {
+      obra: "OB-042 — Residencial Alto da Serra",
+      fisico: "31%",
+      prazo: "55%",
+      desvio: "24 pts de atraso",
+      previsao: "23/11/2027",
+      itens: "14",
+    },
+    {
+      obra: "OB-051 — Galpão Logístico Contorno Norte",
+      fisico: "68%",
+      prazo: "61%",
+      desvio: "7 pts adiantada",
+      previsao: "12/02/2027",
+      itens: "6",
+    },
+    {
+      obra: "OB-055 — Subestação Vila Prado",
+      fisico: "12%",
+      prazo: "—",
+      desvio: "—",
+      previsao: "ritmo insuficiente para projetar",
+      itens: "3",
+    },
+  ],
+  semLancamento: [
+    { obra: "OB-048 — Ampliação Ala Leste", desde: "3 semanas sem informação" },
+    { obra: "OB-060 — Reforma Bloco C", desde: "nunca informada" },
+  ],
 };

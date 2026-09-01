@@ -6,7 +6,11 @@
 // não pode ser importado por componente cliente.
 
 import { z } from "zod";
-import { idOpcional, textoOpcional as textoOpcionalCampo } from "@/lib/campos";
+import {
+  idOpcional,
+  dataOpcional,
+  textoOpcional as textoOpcionalCampo,
+} from "@/lib/campos";
 
 export const STATUS_OBRA = ["ativa", "pausada", "encerrada"] as const;
 export type StatusObra = (typeof STATUS_OBRA)[number];
@@ -63,18 +67,40 @@ const emailsOpcionais = z
     message: "Use no máximo 20 endereços. Para mais que isso, vincule usuários à obra.",
   });
 
-export const obraSchema = z.object({
-  // `id` presente = edição; em branco = criação (o <input hidden> do form
-  // manda `""`, e é por isso que o campo é `idOpcional`).
-  id: idOpcional,
-  codigo: z.string().trim().min(1, "Informe o código da obra.").max(50),
-  nome: z.string().trim().min(1, "Informe o nome da obra.").max(200),
-  endereco: textoOpcional(300),
-  responsavel: textoOpcional(200),
-  centro_custo: textoOpcional(100),
-  status: z.enum(STATUS_OBRA),
-  destinatarios_alerta: emailsOpcionais,
-});
+export const obraSchema = z
+  .object({
+    // `id` presente = edição; em branco = criação (o <input hidden> do form
+    // manda `""`, e é por isso que o campo é `idOpcional`).
+    id: idOpcional,
+    codigo: z.string().trim().min(1, "Informe o código da obra.").max(50),
+    nome: z.string().trim().min(1, "Informe o nome da obra.").max(200),
+    endereco: textoOpcional(300),
+    responsavel: textoOpcional(200),
+    centro_custo: textoOpcional(100),
+    status: z.enum(STATUS_OBRA),
+    destinatarios_alerta: emailsOpcionais,
+    // O período é o denominador do "% de prazo decorrido" (ver
+    // `percentualPrazo` em src/lib/avanco.ts). Opcional porque nenhuma obra
+    // cadastrada tem estas datas, e exigir quebraria todas de uma vez.
+    data_inicio: dataOpcional,
+    data_fim_prevista: dataOpcional,
+    data_fim_real: dataOpcional,
+  })
+  .superRefine((d, ctx) => {
+    // A mesma regra vive no `check` da migration 0050. Aqui ela existe para dar
+    // MENSAGEM: o banco recusaria com erro cru, sem nome de campo, e o
+    // formulário não teria onde pendurá-lo.
+    //
+    // Comparar 'yyyy-mm-dd' como string é de propósito: o formato é ordenável
+    // lexicograficamente, então não há conversão de data — nem fuso — no meio.
+    if (d.data_inicio && d.data_fim_prevista && d.data_fim_prevista < d.data_inicio) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["data_fim_prevista"],
+        message: "O fim previsto não pode ser anterior ao início.",
+      });
+    }
+  });
 
 export type ObraInput = z.input<typeof obraSchema>;
 export type ObraDados = z.output<typeof obraSchema>;

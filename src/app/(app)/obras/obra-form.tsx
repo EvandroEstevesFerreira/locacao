@@ -33,6 +33,9 @@ type Obra = {
   centro_custo: string | null;
   status: StatusObra;
   destinatarios_alerta: string[] | null;
+  data_inicio: string | null;
+  data_fim_prevista: string | null;
+  data_fim_real: string | null;
 };
 
 export function ObraForm({
@@ -116,6 +119,51 @@ export function ObraForm({
               </option>
             ))}
           </NativeSelect>
+        </div>
+      </div>
+
+      {/* O período alimenta o "% de prazo decorrido" no acompanhamento da obra.
+          Todas opcionais: nenhuma obra cadastrada tem estas datas. */}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="data_inicio">Início da obra</Label>
+          <Input
+            id="data_inicio"
+            type="date"
+            disabled={pendente}
+            {...register("data_inicio")}
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="data_fim_prevista">Fim previsto</Label>
+          <Input
+            id="data_fim_prevista"
+            type="date"
+            aria-invalid={!!errors.data_fim_prevista}
+            disabled={pendente}
+            {...register("data_fim_prevista")}
+          />
+          {errors.data_fim_prevista ? (
+            <p className="text-xs text-destructive">
+              {errors.data_fim_prevista.message}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="data_fim_real">
+            Fim real{" "}
+            <span className="font-normal text-muted-foreground">
+              (no encerramento)
+            </span>
+          </Label>
+          <Input
+            id="data_fim_real"
+            type="date"
+            disabled={pendente}
+            {...register("data_fim_real")}
+          />
         </div>
       </div>
 

@@ -30,6 +30,12 @@ export const CATALOGO: ItemCatalogo[] = [
     render: (ctx) => t.vencimentosObra(ex.VENCIMENTOS_OBRA, ctx),
   },
   {
+    id: "avanco-obra",
+    titulo: "Avanço semanal da obra",
+    gatilho: "Cron de segunda-feira, para os destinatários de cada obra",
+    render: (ctx) => t.avancoSemanal(ex.AVANCO_SEMANAL, ctx),
+  },
+  {
     id: "vencimentos-central",
     titulo: "Avisos de vencimento — resumo geral",
     gatilho: "Cron diário, para quem gerencia todos os contratos",

@@ -17,6 +17,7 @@ import type { ModuloKey } from "@/lib/modulos";
 export type NavIconName =
   | "layout-dashboard"
   | "hard-hat"
+  | "trending-up"
   | "truck"
   | "package"
   | "file-text"
@@ -42,6 +43,7 @@ export type NavItem = {
 export const NAV_ITEMS: readonly NavItem[] = [
   { label: "Início", href: "/", icon: "layout-dashboard" },
   { label: "Obras", href: "/obras", icon: "hard-hat", modulo: "obras" },
+  { label: "Avanço", href: "/avanco", icon: "trending-up", modulo: "avanco" },
   { label: "Fornecedores", href: "/fornecedores", icon: "truck", modulo: "fornecedores" },
   { label: "Itens", href: "/itens", icon: "package", modulo: "itens" },
   { label: "Contratos", href: "/contratos", icon: "file-text", modulo: "contratos" },

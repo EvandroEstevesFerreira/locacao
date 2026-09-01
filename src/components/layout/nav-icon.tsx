@@ -17,6 +17,7 @@ import {
   Package,
   Settings,
   Sparkles,
+  TrendingUp,
   Truck,
   Wallet,
   type LucideIcon,
@@ -26,6 +27,7 @@ import type { NavIconName } from "@/lib/nav";
 const ICONES: Record<NavIconName, LucideIcon> = {
   "layout-dashboard": LayoutDashboard,
   "hard-hat": HardHat,
+  "trending-up": TrendingUp,
   truck: Truck,
   package: Package,
   "file-text": FileText,
