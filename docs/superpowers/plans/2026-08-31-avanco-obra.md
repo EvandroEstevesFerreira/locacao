@@ -25,7 +25,7 @@
 
 ---
 
-### Task 1: O cálculo puro — `src/lib/avanco.ts`
+### Task 1: O cálculo puro — `src/lib/avanco.ts` ✅ CONCLUÍDA (4a3cc62)
 
 Primeiro porque é o coração e não depende de banco nenhum. Tudo aqui é função pura, então é TDD de verdade.
 
@@ -46,7 +46,7 @@ Primeiro porque é o coração e não depende de banco nenhum. Tudo aqui é fun�
   - `type PontoAvanco = { semana: string; percentual: number }`
   - `avancoSchema`, `AvancoInput`, `AvancoDados`
 
-- [ ] **Step 1: Escrever o teste que falha**
+- [x] **Step 1: Escrever o teste que falha**
 
 Criar `src/lib/avanco.test.ts`:
 
@@ -242,12 +242,12 @@ describe("avancoSchema", () => {
 });
 ```
 
-- [ ] **Step 2: Rodar e confirmar que falha**
+- [x] **Step 2: Rodar e confirmar que falha**
 
 Run: `npx vitest run src/lib/avanco.test.ts`
 Expected: FAIL — `Failed to resolve import "./avanco"`.
 
-- [ ] **Step 3: Implementar `src/lib/avanco.ts`**
+- [x] **Step 3: Implementar `src/lib/avanco.ts`**
 
 ```ts
 // Avanço físico da obra e prazo decorrido — TUDO puro, sem I/O.
@@ -405,12 +405,12 @@ export type AvancoInput = z.input<typeof avancoSchema>;
 export type AvancoDados = z.output<typeof avancoSchema>;
 ```
 
-- [ ] **Step 4: Rodar e confirmar que passa**
+- [x] **Step 4: Rodar e confirmar que passa**
 
 Run: `npx vitest run src/lib/avanco.test.ts`
 Expected: PASS — 20 testes.
 
-- [ ] **Step 5: Registrar o módulo na varredura de schemas**
+- [x] **Step 5: Registrar o módulo na varredura de schemas**
 
 `MODULOS` de `src/lib/schemas-varredura.test.ts` é **lista à mão** — schema novo não entra sozinho.
 
@@ -437,12 +437,12 @@ E a amostra mínima em `AMOSTRAS`:
   avancoSchema: { obra_id: UUID, semana: "2026-08-31", percentual: "34" },
 ```
 
-- [ ] **Step 6: Rodar a varredura**
+- [x] **Step 6: Rodar a varredura**
 
 Run: `npx vitest run src/lib/schemas-varredura.test.ts`
 Expected: PASS, incluindo `avanco.avancoSchema aceita id em branco (cadastro novo)`.
 
-- [ ] **Step 7: Ritual e commit**
+- [x] **Step 7: Ritual e commit**
 
 ```bash
 npm run typecheck && npm run lint && npm test && npm run build
