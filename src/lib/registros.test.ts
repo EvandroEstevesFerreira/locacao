@@ -15,15 +15,42 @@ describe("PREFIXO_REGISTRO espelha o banco", () => {
   // no Postgres (migration 0048) e exibido aqui; se as duas tabelas de prefixo
   // divergirem, a tela chama de CTR o que o banco gravou como outra coisa — e
   // nada acusa, porque os dois lados continuam funcionando isoladamente.
-  const sql = fs.readFileSync(
-    path.join(process.cwd(), "supabase/migrations/0048_numeracao_registros.sql"),
-    "utf8",
-  );
+  // Lê a ÚLTIMA migration que declara `prefixo_registro`, não um arquivo
+  // cravado.
+  //
+  // Antes isto apontava para a 0048 e só para ela. Mas `prefixo_registro` é um
+  // CASE: acrescentar um ramo exige `create or replace` da função inteira, e
+  // toda fatia que cria um tipo de registro novo redeclara. Com o arquivo
+  // cravado, o teste ficava cego a partir da segunda redeclaração — e a
+  // divergência que ele existe para pegar passaria batida.
+  //
+  // O Postgres aplica as migrations em ordem de nome, então a última declaração
+  // é a que vale. Ordenar e pegar a última reproduz isso, e a lista se mantém
+  // sozinha.
+  const dir = path.join(process.cwd(), "supabase/migrations");
+  const declaram = fs
+    .readdirSync(dir)
+    .filter((f) => f.endsWith(".sql"))
+    .sort()
+    .filter((f) =>
+      fs.readFileSync(path.join(dir, f), "utf8").includes(
+        "function public.prefixo_registro",
+      ),
+    );
+
+  const sql = fs.readFileSync(path.join(dir, declaram[declaram.length - 1]), "utf8");
 
   const doBanco = new Map<string, string>();
   for (const m of sql.matchAll(/when '([a-z_]+)'\s+then '([A-Z]{3})'/g)) {
     doBanco.set(m[1], m[2]);
   }
+
+  it("achou a migration que declara os prefixos", () => {
+    // Se `create or replace function public.prefixo_registro` for renomeado,
+    // `declaram` fica vazio e o `readFileSync` acima estouraria — mas se algum
+    // dia passar a devolver caminho vazio em silêncio, esta trava acusa.
+    expect(declaram.length).toBeGreaterThan(0);
+  });
 
   it("a migration declara prefixos", () => {
     // Se o regex parar de casar (renomearam a função, mudaram o formato), este
