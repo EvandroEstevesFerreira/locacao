@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.41.0";
+export const APP_VERSION = "0.42.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,18 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.42.0",
+    data: "2026-09-01",
+    titulo: "Orçamento de locação, e o estouro previsto antes de acontecer",
+    mudancas: [
+      { tipo: "novo", texto: "A obra passa a ter orçamento de locação, com detalhamento opcional por item. Revisar o orçamento cria uma nova versão — a anterior fica guardada, para o desvio poder ser explicado depois." },
+      { tipo: "novo", texto: "O detalhe da obra mostra os três números juntos pela primeira vez: prazo decorrido, avanço físico e orçamento consumido." },
+      { tipo: "novo", texto: "Projeção de estouro: se a obra consumiu 62% do orçamento tendo entregado 31%, o sistema avisa que ela terminaria no dobro do orçado — e diz quanto isso é em reais." },
+      { tipo: "novo", texto: "Um veredito em uma frase: consumindo mais rápido que entrega, entregando mais que consome, ou consumo alinhado ao avanço." },
+      { tipo: "melhoria", texto: "Quando há lançamentos na obra sem contrato vinculado, a tela informa o valor. Sem isso o consumo apareceria como 0% e pareceria que nada foi gasto." },
+    ],
+  },
   {
     versao: "0.41.0",
     data: "2026-09-01",

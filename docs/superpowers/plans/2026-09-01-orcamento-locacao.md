@@ -26,7 +26,7 @@
 
 ---
 
-### Task 1: O cálculo puro — `src/lib/orcamento.ts`
+### Task 1: ✅ O cálculo puro — `src/lib/orcamento.ts`
 
 **Files:**
 - Create: `src/lib/orcamento.ts`
@@ -42,7 +42,7 @@
   - `totalDetalhado(itens: { valor_previsto: number }[]): number`
   - `orcamentoSchema`, `OrcamentoInput`, `OrcamentoDados`
 
-- [ ] **Step 1: Escrever o teste que falha**
+- [x] **Step 1: Escrever o teste que falha**
 
 Criar `src/lib/orcamento.test.ts`:
 
@@ -195,12 +195,12 @@ describe("orcamentoSchema", () => {
 });
 ```
 
-- [ ] **Step 2: Rodar e confirmar que falha**
+- [x] **Step 2: Rodar e confirmar que falha**
 
 Run: `npx vitest run src/lib/orcamento.test.ts`
 Expected: FAIL — `Failed to resolve import "./orcamento"`.
 
-- [ ] **Step 3: Implementar `src/lib/orcamento.ts`**
+- [x] **Step 3: Implementar `src/lib/orcamento.ts`**
 
 ```ts
 // Orçamento de locação: o terceiro percentual, e o cruzamento dos três.
@@ -341,12 +341,12 @@ export type OrcamentoInput = z.input<typeof orcamentoSchema>;
 export type OrcamentoDados = z.output<typeof orcamentoSchema>;
 ```
 
-- [ ] **Step 4: Rodar e confirmar que passa**
+- [x] **Step 4: Rodar e confirmar que passa**
 
 Run: `npx vitest run src/lib/orcamento.test.ts`
 Expected: PASS
 
-- [ ] **Step 5: Registrar na varredura de schemas**
+- [x] **Step 5: Registrar na varredura de schemas**
 
 `MODULOS` de `src/lib/schemas-varredura.test.ts` é lista à mão. Acrescentar o
 import junto dos outros e a entrada no mapa (ordem alfabética, depois de
@@ -369,12 +369,12 @@ E a amostra mínima em `AMOSTRAS`:
   orcamentoItemSchema: { item_id: UUID, valor_previsto: "120000" },
 ```
 
-- [ ] **Step 6: Rodar a varredura**
+- [x] **Step 6: Rodar a varredura**
 
 Run: `npx vitest run src/lib/schemas-varredura.test.ts`
 Expected: PASS, incluindo `orcamento.orcamentoSchema aceita id em branco (cadastro novo)`.
 
-- [ ] **Step 7: Ritual e commit**
+- [x] **Step 7: Ritual e commit**
 
 ```bash
 npm run typecheck && npm run lint && npm test && npm run build
@@ -384,7 +384,7 @@ git commit -m "feat(orcamento): o cálculo puro de consumo, projeção e diagnó
 
 ---
 
-### Task 2: A migration
+### Task 2: ✅ A migration (aplicada em produção)
 
 **Files:**
 - Create: `supabase/migrations/0051_orcamento_locacao.sql`
@@ -393,7 +393,7 @@ git commit -m "feat(orcamento): o cálculo puro de consumo, projeção e diagnó
 - Consumes: `set_updated_at()`, `current_org_id()`, `current_papel()`, `is_member_of_obra(uuid)`, `pode_gerir_cadastros()` — as mesmas da 0050, todas confirmadas existentes.
 - Produces: `public.orcamento_locacao`, `public.orcamento_item`.
 
-- [ ] **Step 1: Escrever a migration**
+- [x] **Step 1: Escrever a migration**
 
 ```sql
 -- ============================================================================
@@ -510,7 +510,7 @@ create policy "orcamento_item_write" on public.orcamento_item
   );
 ```
 
-- [ ] **Step 2: Validar executando, num Postgres descartável**
+- [x] **Step 2: Validar executando, num Postgres descartável**
 
 Antes de produção. Criar banco novo com stubs só do que a migration referencia
 (`organizacao`, `obra`, `perfil`, `item_catalogo`, `set_updated_at`,
@@ -524,18 +524,18 @@ Provar três comportamentos, não só que a migration roda:
 2. duas versões conviverem, uma vigente e outra não, é aceito;
 3. o mesmo `item_id` duas vezes no mesmo orçamento é recusado.
 
-- [ ] **Step 3: Aplicar em produção**
+- [x] **Step 3: Aplicar em produção**
 
 Via `apply_migration` do MCP do Supabase, com `name: "orcamento_locacao"`. A CLI
 está inacessível nesta máquina.
 
-- [ ] **Step 4: Conferir o que foi criado e a segurança**
+- [x] **Step 4: Conferir o que foi criado e a segurança**
 
 `execute_sql` para contar colunas, policies, índices e triggers; e
 `get_advisors` com `type: "security"` — não deve apontar nada nas duas tabelas
 novas.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add supabase/migrations/0051_orcamento_locacao.sql
@@ -544,7 +544,7 @@ git commit -m "feat(orcamento): migration do orçamento versionado por obra"
 
 ---
 
-### Task 3: Leitura e gravação
+### Task 3: ✅ Leitura e gravação
 
 **Files:**
 - Create: `src/lib/data/orcamento.ts`
@@ -561,7 +561,7 @@ git commit -m "feat(orcamento): migration do orçamento versionado por obra"
   - `realizadoLocacao(obraId: string): Promise<RealizadoObra>`
   - `salvarOrcamento(raw: unknown): Promise<ActionResult>`
 
-- [ ] **Step 1: A camada de leitura**
+- [x] **Step 1: A camada de leitura**
 
 Criar `src/lib/data/orcamento.ts`:
 
@@ -702,7 +702,7 @@ export async function realizadoLocacao(obraId: string): Promise<RealizadoObra> {
 }
 ```
 
-- [ ] **Step 2: A action que revisa criando versão**
+- [x] **Step 2: A action que revisa criando versão**
 
 Criar `src/app/(app)/obras/[id]/orcamento-actions.ts`:
 
@@ -797,7 +797,7 @@ export async function salvarOrcamento(raw: unknown): Promise<ActionResult> {
 }
 ```
 
-- [ ] **Step 3: Ritual e commit**
+- [x] **Step 3: Ritual e commit**
 
 ```bash
 npm run typecheck && npm run lint && npm test && npm run build
@@ -807,7 +807,7 @@ git commit -m "feat(orcamento): leitura do vigente e revisão por versão"
 
 ---
 
-### Task 4: O bloco na obra e os três percentuais juntos
+### Task 4: ✅ O bloco na obra e os três percentuais juntos
 
 **Files:**
 - Create: `src/app/(app)/obras/[id]/_components/bloco-orcamento.tsx`
@@ -819,7 +819,7 @@ git commit -m "feat(orcamento): leitura do vigente e revisão por versão"
 - Consumes: `percentualConsumido`, `projecaoFinal`, `estouroPrevisto`, `diagnostico`, `totalDetalhado` de `@/lib/orcamento`; `orcamentoVigente`, `historicoOrcamento`, `realizadoLocacao` de `@/lib/data/orcamento`; `percentualPrazo` de `@/lib/avanco`.
 - Produces: `BlocoOrcamento`, `OrcamentoForm`.
 
-- [ ] **Step 1: O bloco de orçamento**
+- [x] **Step 1: O bloco de orçamento**
 
 Server Component. Recebe obra, orçamento vigente, histórico, realizado e o
 avanço físico atual. Mostra:
@@ -853,7 +853,7 @@ Detalhado: {formatarBRL(detalhado)} de {formatarBRL(orcamento.valor_total)}
 Sem orçamento cadastrado o bloco não mostra zeros: mostra um `<p>` mudo e o
 formulário.
 
-- [ ] **Step 2: O formulário**
+- [x] **Step 2: O formulário**
 
 `"use client"`, com `react-hook-form` + `zodResolver(orcamentoSchema)` — são ≥3
 campos com validação cruzada (a checagem de item duplicado), o que justifica o
@@ -866,7 +866,7 @@ Obrigatório: `handleSubmit(onSubmit, aoInvalidar(setErroServidor))` e
 Quando já existe orçamento vigente, o botão diz **"Salvar como nova versão"** —
 não "Salvar". A pessoa precisa saber que está criando revisão, não editando.
 
-- [ ] **Step 3: Os três percentuais no bloco de avanço**
+- [x] **Step 3: Os três percentuais no bloco de avanço**
 
 Em `bloco-avanco.tsx`, aceitar `consumido: number | null` como prop e
 acrescentar o quarto `<Numero>` na grade (que passa de `sm:grid-cols-4` para
@@ -874,20 +874,20 @@ acrescentar o quarto `<Numero>` na grade (que passa de `sm:grid-cols-4` para
 
 É aqui que o pedido da diretoria aparece inteiro numa tela só.
 
-- [ ] **Step 4: Ligar na página**
+- [x] **Step 4: Ligar na página**
 
 Em `page.tsx`, buscar em paralelo `orcamentoVigente(id)`,
 `historicoOrcamento(id)` e `realizadoLocacao(id)` junto do
 `historicoAvanco(id)` que já existe, calcular o consumido e passar aos dois
 blocos.
 
-- [ ] **Step 5: Conferir na tela**
+- [~] **Step 5: Conferir na tela** — pendente: exige login, que eu não tenho
 
 `npm run dev`, abrir uma obra, cadastrar orçamento, conferir os números.
 Depois salvar de novo com valor diferente e confirmar que **criou v2** e que o
 histórico mostra as duas.
 
-- [ ] **Step 6: Auditoria de PT-BR, ritual e commit**
+- [x] **Step 6: Auditoria de PT-BR, ritual e commit**
 
 ```bash
 grep -rEn "(nao|usuario|permissao|funcao|endereco|numero|voce|tambem)" "src/app/(app)/obras/[id]" --include=*.tsx
@@ -898,27 +898,27 @@ git commit -m "feat(obras): bloco de orçamento e os três percentuais juntos"
 
 ---
 
-### Task 5: Fechamento — versão e publicação
+### Task 5: ✅ Fechamento — versão e publicação
 
-- [ ] **Step 1: Bumpar os três pontos**
+- [x] **Step 1: Bumpar os três pontos**
 
 MINOR: da 0.41.0 para a **0.42.0**. `APP_VERSION` em `src/lib/changelog.ts`, um
 `Release` no topo com texto voltado ao usuário, resumo em `CHANGELOG.md` e
 `version` em `package.json`.
 
-- [ ] **Step 2: Ritual completo**
+- [x] **Step 2: Ritual completo**
 
 ```bash
 npm run typecheck && npm run lint && npm test && npm run build
 ```
 
-- [ ] **Step 3: Revisar o diff inteiro**
+- [x] **Step 3: Revisar o diff inteiro**
 
 ```bash
 git diff main...HEAD --stat && git diff main...HEAD
 ```
 
-- [ ] **Step 4: Merge, ritual de novo, publicação**
+- [x] **Step 4: Merge, ritual de novo, publicação**
 
 ```bash
 git checkout main
@@ -931,7 +931,7 @@ O ritual roda **de novo depois do merge**: resolução de conflito à mão é
 exatamente onde entra quebra silenciosa, e foi o que pegou o campo `controle`
 faltando num fixture quando as duas correções se encontraram na 0.40.0.
 
-- [ ] **Step 5: Conferir a publicação**
+- [~] **Step 5: Conferir a publicação** — o rodapé da sidebar mostra a versão; pendente de conferência humana
 
 O rodapé da sidebar mostra `Loca vX.Y.Z`. Sem a CLI da Vercel, é o jeito de
 saber qual versão está no ar.
