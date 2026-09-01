@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.43.0";
+export const APP_VERSION = "0.44.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,17 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.44.0",
+    data: "2026-09-01",
+    titulo: "A conta de cada item",
+    mudancas: [
+      { tipo: "novo", texto: "Um lançamento com contrato pode ser rateado entre os itens do contrato. Agora dá para responder quanto a betoneira custou, e não só quanto o contrato custou." },
+      { tipo: "novo", texto: "Botão \"Ratear proporcionalmente\" preenche a sugestão pelo valor contratado de cada item — e você ajusta antes de salvar. O valor que fica gravado é o que você confirmou." },
+      { tipo: "novo", texto: "O detalhe da obra ganhou o quadro Custo por item: orçado contra realizado, item por item, do maior desvio para o menor." },
+      { tipo: "melhoria", texto: "A tela de rateio mostra quanto do lançamento ainda não foi atribuído a item nenhum. Atribuir só uma parte é permitido — o que não pode é você achar que fechou quando não fechou." },
+    ],
+  },
   {
     versao: "0.43.0",
     data: "2026-09-01",

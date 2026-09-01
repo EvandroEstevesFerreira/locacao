@@ -4,6 +4,7 @@ import { z } from "zod";
 import * as alojamento from "./alojamento";
 import * as avanco from "./avanco";
 import * as config from "./config";
+import * as custoItem from "./custo-item";
 import * as financeiro from "./financeiro";
 import * as fornecedor from "./fornecedor";
 import * as imoveis from "./imoveis";
@@ -41,6 +42,7 @@ const MODULOS: Record<string, Record<string, unknown>> = {
   alojamento,
   avanco,
   config,
+  custoItem,
   financeiro,
   fornecedor,
   imoveis,
@@ -105,6 +107,8 @@ const AMOSTRAS: Record<string, unknown> = {
   avancoSchema: { obra_id: UUID, semana: "2026-08-31", percentual: "34" },
   orcamentoSchema: { obra_id: UUID, valor_total: "400000" },
   orcamentoItemSchema: { item_id: UUID, valor_previsto: "120000" },
+  rateioSchema: { lancamento_id: UUID },
+  parcelaItemSchema: { item_locado_id: UUID, valor: "100" },
   empresaSchema: { nome: "Sistenge Engenharia" },
   fornecedorSchema: {
     nome: "Fornecedor X",

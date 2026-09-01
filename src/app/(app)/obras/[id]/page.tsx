@@ -15,6 +15,8 @@ import { percentualConsumido } from "@/lib/orcamento";
 import { ObraForm } from "../obra-form";
 import { BlocoAvanco } from "./_components/bloco-avanco";
 import { BlocoOrcamento } from "./_components/bloco-orcamento";
+import { BlocoCustoItem } from "./_components/bloco-custo-item";
+import { custoPorItemDaObra } from "@/lib/data/custo-item";
 
 export const metadata = { title: "Editar obra — Loca" };
 
@@ -52,11 +54,12 @@ export default async function EditarObraPage({
 
   // Em paralelo: são quatro leituras independentes, e serializá-las somaria
   // latência sem motivo.
-  const [historico, orcamento, historicoOrc, realizado, catalogo] = await Promise.all([
+  const [historico, orcamento, historicoOrc, realizado, custoItens, catalogo] = await Promise.all([
     historicoAvanco(id),
     orcamentoVigente(id),
     historicoOrcamento(id),
     realizadoLocacao(id),
+    custoPorItemDaObra(id),
     supabase
       .from("item_catalogo")
       .select("id, descricao")
@@ -92,6 +95,8 @@ export default async function EditarObraPage({
         prazo={prazo}
         catalogo={catalogo}
       />
+
+      <BlocoCustoItem entradas={custoItens} />
     </div>
   );
 }

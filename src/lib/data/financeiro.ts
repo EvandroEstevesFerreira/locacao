@@ -17,6 +17,13 @@ export type LancamentoListItem = {
   vencimento: string;
   status: StatusLancamento;
   obraCodigo: string | null;
+  /**
+   * Presença de contrato, para a lista saber se o rateio por item é possível.
+   *
+   * O rateio distribui o custo entre as LINHAS de um contrato; sem contrato não
+   * há linhas, e oferecer o botão levaria a uma tela que só diz "não dá".
+   */
+  contrato_id: string | null;
 };
 
 /** Totais do financeiro sobre TODO o filtro, não só a página visível. */
@@ -70,7 +77,7 @@ export async function listarLancamentos(
   const base = supabase
     .from("lancamento_financeiro")
     .select(
-      "id, descricao, competencia, valor, vencimento, status, obra:obra_id(codigo)",
+      "id, descricao, competencia, valor, vencimento, status, contrato_id, obra:obra_id(codigo)",
       { count: "exact" },
     );
 

@@ -7,6 +7,54 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.44.0] — 2026-09-01
+
+Subprojeto C: o elo que faltava entre a nota e o equipamento.
+`lancamento_financeiro` se liga ao CONTRATO, e um contrato de R$ 40.000 com
+betoneira, gerador e 200 escoras era uma linha só no financeiro.
+
+### Adicionado
+
+- **`lancamento_item`** — o valor de cada item, GRAVADO. `cascade` do lançamento
+  (parcela não tem vida própria) e `restrict` da linha do contrato (apagá-la
+  apagaria a explicação do custo).
+- **`/financeiro/[id]/rateio`** — editor de rateio, com o botão "Ratear
+  proporcionalmente" que pré-preenche pelo custo mensal contratado.
+- **Bloco "Custo por item"** no detalhe da obra: orçado (do subprojeto B) contra
+  realizado (do rateio), do maior desvio para o menor.
+
+### Decisões
+
+- **Não existe regra oculta de rateio.** O valor por item é gravado
+  explicitamente; o proporcional é só pré-preenchimento. Rateio automático
+  invisível produz um número que ninguém explica quando o diretor pergunta "por
+  que a betoneira deu isso?" — valor gravado se explica olhando a linha.
+- **A última parcela absorve o arredondamento.** Dividir R$ 100 entre 3 itens
+  daria 33,33 × 3 = 99,99 e sobraria um centavo órfão, que num painel é a linha
+  que ninguém concilia.
+- **Peso total zero devolve divisão igual** — é o único palpite defensável sem
+  peso, e melhor que devolver vazio.
+- **Atribuição parcial é permitida, e o resto é exibido.** Sem trigger de
+  fechamento: forçar a vírgula obrigaria a detalhar tudo ou nada.
+- **Item sem orçamento vai para o FIM da tabela.** "Não orçado" não é "dentro do
+  orçamento".
+- **O confronto é por item do CATÁLOGO, não por linha de contrato** — é a
+  betoneira que a diretoria reconhece, não a linha 3 do contrato 7.
+- **O rateio é substituído por inteiro** ao salvar. Diferenciar o que mudou
+  criaria bug de parcela órfã quando alguém remove uma linha.
+- **Parcela zero não é gravada:** "não atribuí" e "atribuí R$ 0,00" são a mesma
+  coisa, e a segunda só polui a leitura.
+
+### Testes
+
+- `custo-item.test.ts` — 17 casos: proporcional com fechamento exato, divisão
+  igual sem peso, o resto positivo e negativo, o lixo de ponto flutuante, a
+  ordenação com item sem orçamento no fim, e a recusa de item repetido com a
+  mensagem na linha.
+- Migration validada num Postgres descartável com cinco comportamentos:
+  atribuição parcial aceita, item repetido recusado, valor negativo recusado,
+  `restrict` protegendo a linha do contrato e `cascade` levando o rateio.
+
 ## [0.43.0] — 2026-09-01
 
 Subprojeto F do pedido da diretoria: o painel e os indicadores quinzenais. Não
