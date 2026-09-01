@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.39.1";
+export const APP_VERSION = "0.40.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,15 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.40.0",
+    data: "2026-08-31",
+    titulo: "Correção do botão de recebimento",
+    mudancas: [
+      { tipo: "correcao", texto: "O botão \"Registrar recebimento\" não criava nada — clicava e não acontecia nada, sem mensagem de erro. Corrigido." },
+      { tipo: "novo", texto: "O cadastro de item ganhou o campo \"Controle no recebimento\": por quantidade (andaime, escora) ou por peça com patrimônio (betoneira, gerador). Sem ele, a conferência por patrimônio era inalcançável pela tela." },
+    ],
+  },
   {
     versao: "0.39.1",
     data: "2026-08-31",

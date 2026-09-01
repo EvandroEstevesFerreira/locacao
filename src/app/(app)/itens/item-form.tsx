@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -16,6 +16,7 @@ import {
   type ItemInput,
   type TipoItem,
 } from "@/lib/itens";
+import { CONTROLES, CONTROLE_INFO } from "@/lib/recebimento";
 import { FormError } from "@/components/shared/form-error";
 import { aoInvalidar } from "@/lib/validacao-form";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,7 @@ type Item = {
   tipo: TipoItem;
   descricao: string;
   unidade: string | null;
+  controle: "peca" | "quantidade";
   ativo: boolean;
 };
 
@@ -40,6 +42,7 @@ export function ItemForm({ item }: { item?: Item }) {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
   } = useForm<ItemInput, unknown, ItemDados>({
     resolver: zodResolver(itemSchema),
@@ -48,9 +51,12 @@ export function ItemForm({ item }: { item?: Item }) {
       tipo: item?.tipo ?? "equipamento",
       descricao: item?.descricao ?? "",
       unidade: item?.unidade ?? "",
+      controle: item?.controle ?? "quantidade",
       ativo: item?.ativo ?? true,
     },
   });
+
+  const controleEscolhido = useWatch({ control, name: "controle" }) ?? "quantidade";
 
   function onSubmit(values: ItemDados) {
     setErroServidor(null);
@@ -121,6 +127,23 @@ export function ItemForm({ item }: { item?: Item }) {
             <option key={u} value={u} />
           ))}
         </datalist>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="controle">Controle no recebimento</Label>
+        <NativeSelect id="controle" disabled={pendente} {...register("controle")}>
+          {CONTROLES.map((c) => (
+            <option key={c} value={c}>
+              {CONTROLE_INFO[c].label}
+            </option>
+          ))}
+        </NativeSelect>
+        {/* A ajuda muda com a escolha porque a diferença não é óbvia pelo
+            rótulo: "por peça" só faz sentido para quem sabe que existe
+            patrimônio cadastrado por trás. */}
+        <p className="text-xs text-muted-foreground">
+          {CONTROLE_INFO[controleEscolhido].ajuda}
+        </p>
       </div>
 
       <label className="flex items-center gap-2 text-sm">

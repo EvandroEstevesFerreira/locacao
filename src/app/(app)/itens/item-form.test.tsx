@@ -126,6 +126,8 @@ describe("ItemForm", () => {
       tipo: "equipamento",
       descricao: "Betoneira 300L",
       unidade: null,
+      // Campo da 0.40.0 (migration 0049): o tipo `Item` o exige.
+      controle: "quantidade",
       ativo: true,
     });
 
