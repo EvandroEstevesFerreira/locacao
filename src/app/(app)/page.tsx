@@ -12,6 +12,9 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import { formatarBRL, formatarData, hojeSaoPaulo } from "@/lib/locacao";
 import { gerarFluxoCaixa } from "@/lib/fluxo";
+import { entradasPainel } from "@/lib/data/painel";
+import { montarPainel, resumirPainel } from "@/lib/painel";
+import { SituacaoObras } from "./_components/situacao-obras";
 import {
   Card,
   CardContent,
@@ -111,6 +114,7 @@ export default async function HomePage({
     pendentesRes,
     devolucoesRes,
     fluxo,
+    entradas,
   ] = await Promise.all([
     listarObrasParaFiltro(),
     obra ? contratosQ.eq("obra_id", obra) : contratosQ,
@@ -120,9 +124,19 @@ export default async function HomePage({
     pendentesQ,
     devolucoesQ,
     gerarFluxoCaixa(supabase, obra ? { obra_id: obra } : {}),
+    entradasPainel(format(hoje, "yyyy-MM-dd")),
   ]);
 
   const hojeStr = format(hoje, "yyyy-MM-dd");
+
+  // O painel respeita o filtro de obra da própria tela: filtrar aqui, e não na
+  // leitura, mantém `entradasPainel` com uma assinatura só — ela também serve
+  // ao cron, que nunca filtra por obra.
+  const linhasPainel = montarPainel(
+    obra ? entradas.filter((e) => e.obra.id === obra) : entradas,
+    hojeStr,
+  );
+  const resumoPainel = resumirPainel(linhasPainel);
   const pendentes = pendentesRes.data ?? [];
   const totalPendente = pendentes.reduce((s, l) => s + Number(l.valor), 0);
   const totalVencido = pendentes
@@ -187,6 +201,8 @@ export default async function HomePage({
           );
         })}
       </div>
+
+      <SituacaoObras linhas={linhasPainel} resumo={resumoPainel} />
 
       {/* Série temporal: desembolso previsto por mês */}
       <Card>

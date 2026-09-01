@@ -7,6 +7,55 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.43.0] — 2026-09-01
+
+Subprojeto F do pedido da diretoria: o painel e os indicadores quinzenais. Não
+tem migration — é agregação do que as fatias A, E e B já gravam.
+
+### Adicionado
+
+- **`src/lib/painel.ts`** — a linha do painel de cada obra, montada a partir de
+  `avanco.ts` e `orcamento.ts`, e **ordenada por gravidade**. A ordenação é a
+  razão de o módulo existir: um diretor com 7 obras não lê 7 linhas procurando o
+  problema.
+- **Card "Situação das obras"** na tela de Início, com os três percentuais,
+  projeção, itens em aberto e o veredito de cada obra. Respeita o filtro de obra
+  da própria tela.
+- **E-mail `indicadores-quinzenais`** e cron `0 7 1,16 * *`, para
+  `config_alerta.destinatarios`. Leva o que a diretoria pediu: percentuais por
+  obra, quantidade de itens locados, previsão de desembolso até o fim dos
+  contratos e o estouro projetado somado.
+
+### Decisões
+
+- **Quinzenal são dias fixos (1 e 16), não "a cada 14 dias".** Dias fixos tornam
+  a primeira e a segunda metade do mês comparáveis mês a mês; a cada 14 dias a
+  janela deriva pelo calendário e a comparação morre — que é justamente o que um
+  indicador de diretoria existe para permitir.
+- **Obra sem dado nenhum vai para o FIM da ordenação, não para o topo.** "Não se
+  sabe" não é "está mal", e enterrar uma obra saudável embaixo de uma
+  desconhecida seria pior.
+- **Gravidade prioriza estouro em reais** sobre qualquer percentual: é o número
+  sobre o qual a diretoria decide.
+- **`entradasPainel` LANÇA em erro de leitura**, em vez de devolver vazio. A
+  regra de devolver `[]` vale para tela de listagem, onde vazio é honesto; aqui
+  o agregado alimenta e-mail de diretoria, e um `[]` silencioso viraria "nenhuma
+  obra com problema" — plausível e errado. Mesma regra de `gerarRelatorio`.
+- **Painel e e-mail declaram quantas obras estão sem diagnóstico.** É o número
+  que impede o conjunto de mentir por otimismo.
+- **Previsão até o fim usa `Math.max(0, …)` nos meses restantes.** Contrato
+  vencido não gera desembolso futuro, e sem a trava a previsão sairia negativa —
+  aparecendo como crédito no e-mail.
+
+### Testes
+
+- `painel.test.ts` — 10 casos: o cruzamento completo, obra sem orçamento, sem
+  avanço e sem período, a ordenação com estouro no topo, a obra sem dado no fim,
+  e os totais do resumo.
+- Cron exercitado ponta a ponta com a trava de e-mail em "bloqueado": 401 sem
+  segredo, período correto, zero envios, e o agregado lido contra o schema real
+  de produção sem lançar.
+
 ## [0.42.0] — 2026-09-01
 
 Subprojeto B de `docs/superpowers/specs/2026-09-01-orcamento-locacao-design.md`.

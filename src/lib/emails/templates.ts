@@ -653,3 +653,113 @@ export function avancoSemanal(d: DadosAvancoSemanal, ctx: Contexto): EmailPronto
     ),
   );
 }
+
+// ── Indicadores quinzenais ───────────────────────────────────────────────────
+// O e-mail da diretoria. Uma linha por obra, ordenada por quem precisa de
+// atenção primeiro — quem tem 7 obras não lê 7 linhas procurando o problema.
+
+export type LinhaIndicador = {
+  obra: string;
+  prazo: string;
+  avanco: string;
+  consumido: string;
+  /** Projeção com o estouro embutido, ou o motivo de não haver projeção. */
+  projecao: string;
+  itens: string;
+  /** Desembolso previsto até o fim dos contratos. */
+  previsao: string;
+  situacao: string;
+};
+
+export type DadosIndicadores = {
+  /** "1ª quinzena de setembro/2026" ou "2ª quinzena…". */
+  periodo: string;
+  linhas: LinhaIndicador[];
+  /** Quantas obras projetam estouro, e a soma em reais já formatada. */
+  comEstouro: number;
+  estouroTotal: string;
+  /** Obras sem dado suficiente — o que impede o e-mail de mentir por otimismo. */
+  semDados: number;
+  previsaoTotal: string;
+};
+
+const COLUNAS_INDICADOR = [
+  { label: "Obra" },
+  { label: "Prazo" },
+  { label: "Avanço" },
+  { label: "Consumido" },
+  { label: "Projeção" },
+  { label: "Itens" },
+  { label: "Até o fim" },
+  { label: "Situação" },
+];
+
+export function indicadoresQuinzenais(
+  d: DadosIndicadores,
+  ctx: Contexto,
+): EmailPronto {
+  const metricas: Metrica[] = [
+    { valor: String(d.linhas.length), rotulo: d.linhas.length === 1 ? "obra" : "obras" },
+    {
+      valor: String(d.comEstouro),
+      rotulo: d.comEstouro === 1 ? "projeta estouro" : "projetam estouro",
+    },
+  ];
+
+  const corpo =
+    L.p(
+      `Indicadores de locação da <strong>${esc(d.periodo)}</strong>. O que se lê é a ` +
+        "relação entre os três: prazo decorrido, avanço físico e orçamento " +
+        "consumido. Consumo acima da entrega significa equipamento alugado " +
+        "parado, e diária que continua contando.",
+    ) +
+    (d.comEstouro > 0
+      ? L.aviso(
+          `${d.comEstouro} ${d.comEstouro === 1 ? "obra projeta" : "obras projetam"} ` +
+            `estouro de orçamento, somando <strong>${esc(d.estouroTotal)}</strong>.`,
+          "critico",
+        )
+      : "") +
+    (d.linhas.length > 0
+      ? L.tabela(
+          COLUNAS_INDICADOR,
+          linhasSimples(
+            d.linhas.map((l) => [
+              esc(l.obra),
+              esc(l.prazo),
+              esc(l.avanco),
+              esc(l.consumido),
+              esc(l.projecao),
+              esc(l.itens),
+              esc(l.previsao),
+              esc(l.situacao),
+            ]),
+          ),
+        )
+      : L.nota("Nenhuma obra ativa no período."))
+    +
+    L.dados([["Desembolso previsto até o fim dos contratos", d.previsaoTotal]]) +
+    // A ressalva vem DEPOIS dos números, de propósito: quem lê a tabela precisa
+    // saber quantas linhas são conclusão e quantas são ausência de dado.
+    (d.semDados > 0
+      ? L.nota(
+          `${d.semDados} de ${d.linhas.length} obras estão sem dado suficiente para ` +
+            "diagnosticar — falta orçamento cadastrado, avanço lançado ou período " +
+            "da obra. Linha sem diagnóstico não é obra saudável.",
+        )
+      : "") +
+    L.botao(`${ctx.appUrl}/`, "Abrir o painel");
+
+  return pronto(
+    `Loca · Indicadores de locação — ${d.periodo}`,
+    L.pagina(
+      {
+        titulo: "Indicadores de locação",
+        subtitulo: `${ctx.remetente.nome} — ${d.periodo}`,
+        metricas,
+      },
+      corpo,
+      ctx,
+    ),
+  );
+}
