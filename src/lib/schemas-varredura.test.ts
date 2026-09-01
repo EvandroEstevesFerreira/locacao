@@ -8,6 +8,7 @@ import * as custoItem from "./custo-item";
 import * as fechamento from "./fechamento";
 import * as financeiro from "./financeiro";
 import * as fornecedor from "./fornecedor";
+import * as frota from "./frota";
 import * as imoveis from "./imoveis";
 import * as itens from "./itens";
 import * as locacao from "./locacao";
@@ -47,6 +48,7 @@ const MODULOS: Record<string, Record<string, unknown>> = {
   fechamento,
   financeiro,
   fornecedor,
+  frota,
   imoveis,
   itens,
   locacao,
@@ -111,6 +113,8 @@ const AMOSTRAS: Record<string, unknown> = {
   orcamentoItemSchema: { item_id: UUID, valor_previsto: "120000" },
   rateioSchema: { lancamento_id: UUID },
   fechamentoSchema: { obra_id: UUID, competencia: "2026-09" },
+  unidadeSchema: { item_id: UUID, identificador: "PAT-0431" },
+  categoriaSchema: { nome: "Concretagem" },
   parcelaItemSchema: { item_locado_id: UUID, valor: "100" },
   empresaSchema: { nome: "Sistenge Engenharia" },
   fornecedorSchema: {

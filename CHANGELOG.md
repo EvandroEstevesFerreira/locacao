@@ -7,6 +7,84 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.46.0] — 2026-09-01
+
+Fatia 1 de `docs/superpowers/specs/2026-08-31-cadastro-frota-design.md`: "onde
+está e com quem". Valor, NF e especificação técnica são a fatia 2; capacitação e
+inspeção periódica, a 3.
+
+### Adicionado
+
+- **`categoria_equipamento`** — tabela semeada com 8 categorias em ordem de
+  obra, não alfabética. Categoria em texto livre viraria "Ferramenta elétrica",
+  "ferramentas eletricas" e "Fer. Elétr." em seis meses, e nenhum relatório
+  fecharia.
+- **Seis colunas em `equipamento_unidade`** — `propriedade`, `situacao`,
+  `obra_id`, `numero_serie`, `ano`, `estado`. A peça tinha DOIS campos úteis; é
+  lá que faltava tudo.
+- **`/frota`** — lista de peças, não de modelos, com filtros ao vivo por
+  situação, propriedade, categoria e obra. É a tela que entrega o valor: sem
+  ela, os campos novos ficariam cadastrados e ilegíveis.
+- **A matriz de transição** em `src/lib/frota.ts`, fonte única.
+
+### Decisões
+
+- **`em_uso` só muda por evento**, nunca à mão. E peça em uso **não pode** ir
+  para manutenção, baixada nem perdida — nem por evento. É a linha que dá
+  sentido a todas as outras: marcar "perdida" com a peça em uso apagaria em
+  silêncio o fato de alguém ter ASSINADO por ela.
+- **Defaults honestos:** `locada` e `disponivel` descrevem exatamente o que já
+  estava cadastrado — o Loca só teve equipamento de terceiro, e nenhuma peça
+  está registrada como entregue. Nada migra.
+- **`obra_id` nulo é o almoxarifado central**, um estado legítimo, e a tela
+  escreve isso em vez de mostrar travessão.
+- **`estado` entra numa fatia sobre localização** porque sem ele `disponivel`
+  passa a mentir: o sistema ofereceria para entrega uma furadeira quebrada.
+- **Leitura livre na organização**, exceção consciente ao escopo por obra: um
+  gestor precisa ver que a betoneira está na Obra B justamente para ir buscá-la.
+- **`unidadeSchema` saiu de `itens/actions.ts`** para `src/lib/frota.ts`. Estava
+  dentro de um arquivo `"use server"` — inalcançável para componente cliente e
+  invisível para a varredura de schemas.
+- **O formulário continua em `useActionState`.** São 7 campos, mas nenhuma
+  validação cruzada, e a regra do AGENTS.md pede resolver só com ≥3 campos E
+  validação cruzada.
+
+### Testes
+
+- `frota.test.ts` — 20 casos: a matriz inteira, incluindo as seis transições
+  bloqueadas, e o schema com string vazia virando null, ano fora da faixa e
+  idempotência.
+- Migration validada num Postgres descartável com **duas organizações e uma peça
+  pré-existente**, provando seis comportamentos: a peça antiga sobreviveu com
+  defaults honestos, a semeadura acertou as duas organizações, reaplicar não
+  duplica, situação e ano fora do check são recusados, e apagar categoria não
+  apaga o item.
+
+### Corrigido — a suíte, que ficou instável nesta fatia
+
+Os testes que renderizam PDF de verdade passaram a falhar por TIMEOUT, de forma
+intermitente (1 a 4 falhas em 477, em cerca de uma rodada em três). Não era
+asserção errada: os 12 casos de `pdf-form.test.tsx` passam em **6,2s isolados** e
+estouravam o teto global de 30s na suíte completa.
+
+Causa: `renderToBuffer` é CPU-bound e disputa com os outros arquivos em paralelo.
+Esta fatia acrescentou 5 arquivos de teste (23 → 28), e o render de PDF, que já
+estava na fronteira desde que o teto subiu de 5s para 30s, perdeu a disputa.
+
+Diagnóstico registrado, porque descarta as saídas fáceis: limitar `maxWorkers`
+para 4 e para 6 **não** estabilizou, e a mesma suíte completou em 33s numa rodada
+e em 231s em outra, sem mudança de código. Sete vezes de variação — a máquina
+oscila, e nenhum teto fixo modesto sobrevive a isso.
+
+Correção: `vi.setConfig({ testTimeout: 120_000 })` nos três arquivos que
+renderizam PDF. Não é mascarar. O que esses testes afirmam é contagem de páginas,
+não velocidade; o timeout existe para pegar travamento, e 120s continua pegando.
+Quando a máquina está saudável o teste termina em 6s de qualquer jeito. E um
+teste que falha por contenção treina a equipe a ignorar a suíte, o que é pior que
+não ter o teste.
+
+Verificado: três suítes completas seguidas, 477/477.
+
 ## [0.45.1] — 2026-09-01
 
 ### Segurança

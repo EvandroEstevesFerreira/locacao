@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.45.1";
+export const APP_VERSION = "0.46.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,19 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.46.0",
+    data: "2026-09-01",
+    titulo: "Frota — onde está cada peça",
+    mudancas: [
+      { tipo: "novo", texto: "Nova tela Frota: uma linha por peça de equipamento, com patrimônio, situação, onde está e de quem é. É a tela que responde \"onde está minha betoneira\"." },
+      { tipo: "novo", texto: "A peça ganhou situação (disponível, em uso, em manutenção, baixada, perdida), obra onde está, propriedade (própria ou locada), número de série, ano e estado de conservação." },
+      { tipo: "novo", texto: "Equipamento próprio da Sistenge passa a conviver com o locado no mesmo cadastro — notebook e desktop entram naturalmente, sem gambiarra." },
+      { tipo: "novo", texto: "Categorias de equipamento já vêm cadastradas: Concretagem, Ferramenta manual, Ferramenta elétrica, Acesso e altura, Movimentação de carga, Energia, Medição e ensaio e TI." },
+      { tipo: "melhoria", texto: "O cadastro da peça passou de 2 para 7 campos, e só o patrimônio é obrigatório: dá para cadastrar rápido agora e completar depois, peça por peça." },
+      { tipo: "seguranca", texto: "Peça em uso não pode ser marcada como perdida ou baixada à mão. Isso apagaria em silêncio o fato de alguém ter assinado por ela — primeiro encerra-se o termo." },
+    ],
+  },
   {
     versao: "0.45.1",
     data: "2026-09-01",

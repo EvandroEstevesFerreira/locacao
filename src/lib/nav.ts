@@ -20,6 +20,7 @@ export type NavIconName =
   | "trending-up"
   | "truck"
   | "package"
+  | "boxes"
   | "file-text"
   | "building-2"
   | "clipboard-check"
@@ -46,6 +47,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { label: "Avanço", href: "/avanco", icon: "trending-up", modulo: "avanco" },
   { label: "Fornecedores", href: "/fornecedores", icon: "truck", modulo: "fornecedores" },
   { label: "Itens", href: "/itens", icon: "package", modulo: "itens" },
+  { label: "Frota", href: "/frota", icon: "boxes", modulo: "frota" },
   { label: "Contratos", href: "/contratos", icon: "file-text", modulo: "contratos" },
   { label: "Imóveis", href: "/imoveis", icon: "building-2", modulo: "imoveis" },
   { label: "Vistorias", href: "/vistorias", icon: "clipboard-check", modulo: "vistorias" },

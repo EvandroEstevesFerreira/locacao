@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { renderToBuffer, Text } from "@react-pdf/renderer";
 import {
   Documento,
@@ -17,6 +17,23 @@ import {
   type Coluna,
   type LinhaTabela,
 } from "./pdf-form";
+
+// Timeout generoso para os testes que renderizam PDF de verdade.
+//
+// O que eles afirmam é CONTAGEM DE PÁGINAS, não velocidade. Isolados, os 12
+// casos deste arquivo rodam em 6,2s — mas o `renderToBuffer` é CPU-bound e, na
+// suíte completa, disputa com os outros arquivos em paralelo.
+//
+// Medido em 2026-09-01: a mesma suíte completou em 33s numa rodada e em 231s em
+// outra, sem nenhuma mudança de código. Sete vezes de variação. Limitar
+// `maxWorkers` para 4 e 6 não estabilizou. Com essa amplitude, o teto global de
+// 30s do vitest.config.ts produz falso negativo — e um teste que falha por
+// contenção treina a equipe a ignorar a suíte, que é pior que não ter o teste.
+//
+// 120s continua pegando travamento de verdade (o alvo do timeout) e não custa
+// nada quando a máquina está saudável: o teste termina em 6s de qualquer jeito.
+vi.setConfig({ testTimeout: 120_000 });
+
 
 describe("contarPaginas", () => {
   it("conta as páginas de um PDF renderizado", async () => {

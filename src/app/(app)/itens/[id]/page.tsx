@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ItemForm } from "../item-form";
+import { listarObrasParaFiltro } from "@/lib/data/obras";
 import { AddUnidadeForm } from "../add-unidade-form";
 import { excluirUnidade } from "../actions";
 import { ConfirmDelete } from "@/components/confirm-delete";
@@ -41,10 +42,15 @@ export default async function EditarItemPage({
     tipo === "equipamento"
       ? await supabase
           .from("equipamento_unidade")
-          .select("id, identificador, observacoes")
+          .select(
+            "id, identificador, numero_serie, situacao, propriedade, obra_id, ano, estado, observacoes, obra:obra_id(codigo, nome)",
+          )
           .eq("item_id", id)
           .order("identificador")
       : { data: [] };
+
+  // As obras alimentam o campo "onde está" do formulário da peça.
+  const obras = tipo === "equipamento" ? await listarObrasParaFiltro() : [];
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -65,7 +71,11 @@ export default async function EditarItemPage({
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <AddUnidadeForm key={unidades?.length ?? 0} itemId={item.id} />
+            <AddUnidadeForm
+              key={unidades?.length ?? 0}
+              itemId={item.id}
+              obras={obras}
+            />
 
             {(unidades?.length ?? 0) > 0 ? (
               <ul className="divide-y rounded-md border">

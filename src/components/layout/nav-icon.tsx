@@ -9,6 +9,7 @@
 
 import {
   BarChart3,
+  Boxes,
   Building2,
   ClipboardCheck,
   FileText,
@@ -30,6 +31,7 @@ const ICONES: Record<NavIconName, LucideIcon> = {
   "trending-up": TrendingUp,
   truck: Truck,
   package: Package,
+  boxes: Boxes,
   "file-text": FileText,
   "building-2": Building2,
   "clipboard-check": ClipboardCheck,
