@@ -1223,14 +1223,14 @@ git commit -m "feat(avanco): e-mail semanal de prazo contra avanço"
 
 ---
 
-### Task 7: Fechamento — versão e publicação
+### Task 7: Fechamento — versão e publicação ✅ CONCLUÍDA (0.41.0 mergeada e empurrada)
 
 **Files:**
 - Modify: `src/lib/changelog.ts`
 - Modify: `CHANGELOG.md`
 - Modify: `package.json`
 
-- [ ] **Step 1: Bumpar os três pontos**
+- [x] **Step 1: Bumpar os três pontos**
 
 É funcionalidade nova sem quebra de compatibilidade: **MINOR**. Da 0.40.0 para a **0.41.0**.
 
@@ -1252,20 +1252,20 @@ Em `src/lib/changelog.ts`, `APP_VERSION = "0.41.0"` e um `Release` no topo, com 
 
 Replicar o resumo em `CHANGELOG.md` (Keep a Changelog) e igualar `package.json`.
 
-- [ ] **Step 2: Ritual completo**
+- [x] **Step 2: Ritual completo**
 
 ```bash
 npm run typecheck && npm run lint && npm test && npm run build
 ```
 
-- [ ] **Step 3: Revisar o diff inteiro**
+- [x] **Step 3: Revisar o diff inteiro**
 
 ```bash
 git diff main...HEAD --stat
 git diff main...HEAD
 ```
 
-- [ ] **Step 4: Commit, merge e publicação**
+- [x] **Step 4: Commit, merge e publicação**
 
 ```bash
 git add -A
@@ -1278,6 +1278,6 @@ git push origin main
 
 O ritual roda **de novo depois do merge**: resolução de conflito à mão é exatamente onde entra quebra silenciosa, e foi o que pegou o campo `controle` faltando no fixture quando as duas correções se encontraram na 0.40.0.
 
-- [ ] **Step 5: Conferir a publicação**
+- [~] **Step 5: Conferir a publicação** — o site responde 200, mas a versão no ar não é verificável daqui: /novidades exige login e a CLI da Vercel está inacessível nesta máquina. PENDENTE de conferência humana
 
 A Vercel publica sozinha no push. Confirme que a versão em `/novidades` é a 0.41.0 — se for uma anterior, o deploy republicou commit velho (ver o histórico de incidente com o botão de variável de ambiente).
