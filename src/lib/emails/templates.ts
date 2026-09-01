@@ -552,3 +552,104 @@ export function fluxoCaixaMensal(
     ),
   );
 }
+
+// ── Avanço semanal da obra ───────────────────────────────────────────────────
+// O e-mail que cruza prazo com avanço. Nenhum dos dois números decide nada
+// sozinho: "31% de obra" só vira diagnóstico ao lado de "55% de prazo". E isso
+// pesa mais em locação do que em qualquer outra conta, porque equipamento
+// alugado cobra por TEMPO, não por produção — obra atrasada paga diária de
+// betoneira parada.
+
+export type LinhaAvanco = {
+  /** Rótulo da obra, "OB-042 — Vista Verde". */
+  obra: string;
+  /** Avanço físico acumulado, já formatado ("31%") ou "—". */
+  fisico: string;
+  /** Prazo decorrido, já formatado ("55%") ou "—". */
+  prazo: string;
+  /** Desvio em pontos, com o sentido escrito ("24 pts de atraso"). */
+  desvio: string;
+  /** Previsão de término, ou a frase de ritmo insuficiente. */
+  previsao: string;
+  /** Itens locados em aberto na obra. */
+  itens: string;
+};
+
+/** Obra ativa que ficou sem lançamento nesta semana. */
+export type LinhaSemLancamento = {
+  obra: string;
+  /** "3 semanas sem informação" ou "nunca informada". */
+  desde: string;
+};
+
+const COLUNAS_AVANCO = [
+  { label: "Obra" },
+  { label: "Avanço" },
+  { label: "Prazo" },
+  { label: "Desvio" },
+  { label: "Previsão" },
+  { label: "Itens" },
+];
+
+export type DadosAvancoSemanal = {
+  /** Segunda-feira da semana, já formatada em pt-BR. */
+  semana: string;
+  linhas: LinhaAvanco[];
+  /** Cobrança: sem ela o cadastro seca e três subprojetos perdem o insumo. */
+  semLancamento: LinhaSemLancamento[];
+};
+
+export function avancoSemanal(d: DadosAvancoSemanal, ctx: Contexto): EmailPronto {
+  const atrasadas = d.linhas.filter((l) => l.desvio.includes("atraso")).length;
+
+  const metricas: Metrica[] = [
+    { valor: String(d.linhas.length), rotulo: d.linhas.length === 1 ? "obra" : "obras" },
+    { valor: String(atrasadas), rotulo: atrasadas === 1 ? "atrasada" : "atrasadas" },
+  ];
+
+  const corpo =
+    L.p(
+      `Prazo decorrido contra avanço físico, na semana de <strong>${esc(d.semana)}</strong>. ` +
+        "O desvio é o que se lê: prazo correndo mais rápido que a obra significa " +
+        "equipamento alugado parado, e diária que continua contando.",
+    ) +
+    (d.linhas.length > 0
+      ? L.tabela(
+          COLUNAS_AVANCO,
+          linhasSimples(
+            d.linhas.map((l) => [
+              esc(l.obra),
+              esc(l.fisico),
+              esc(l.prazo),
+              esc(l.desvio),
+              esc(l.previsao),
+              esc(l.itens),
+            ]),
+          ),
+        )
+      : L.nota("Nenhuma obra com avanço lançado ainda.")) +
+    (d.semLancamento.length > 0
+      ? L.secao("Sem lançamento nesta semana") +
+        L.lista(d.semLancamento.map((l) => `${esc(l.obra)} — ${esc(l.desde)}`)) +
+        L.aviso(
+          "Semana sem lançamento deixa o acompanhamento cego: sem avanço físico, " +
+            "o percentual de orçamento consumido não tem contraponto.",
+          "atencao",
+        )
+      : "") +
+    L.botao(`${ctx.appUrl}/avanco`, "Lançar o avanço") +
+    L.nota("Cada obra recebe apenas o que é dela.");
+
+  return pronto(
+    `Loca · Avanço das obras — semana de ${d.semana}`,
+    L.pagina(
+      {
+        titulo: "Avanço das obras",
+        subtitulo: `${ctx.remetente.nome} — semana de ${d.semana}`,
+        metricas,
+      },
+      corpo,
+      ctx,
+    ),
+  );
+}

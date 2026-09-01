@@ -8,6 +8,10 @@
     {
       "path": "/api/cron/relatorio-email",
       "schedule": "10 8 * * *"
+    },
+    {
+      "path": "/api/cron/avanco",
+      "schedule": "20 8 * * 1"
     }
   ]
 }
