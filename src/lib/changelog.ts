@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.44.0";
+export const APP_VERSION = "0.45.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,17 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.45.0",
+    data: "2026-09-01",
+    titulo: "Fechamento mensal — o mês fechado para de mudar",
+    mudancas: [
+      { tipo: "novo", texto: "A obra ganhou o fechamento mensal: ao fechar uma competência, os números daquele mês ficam GRAVADOS — orçado, realizado do mês, acumulado, saldo, consumo e avanço." },
+      { tipo: "novo", texto: "Mês fechado não muda mais. Se um preço for corrigido em outubro, setembro continua exatamente como foi fechado — o relatório que você já enviou continua batendo com o sistema." },
+      { tipo: "novo", texto: "Dá para reabrir uma competência quando precisar corrigir, e a reabertura fica registrada com quem fez e quando." },
+      { tipo: "melhoria", texto: "Cada mês mostra a variação contra o mês anterior, em pontos. \"Consumido 62%\" sozinho não diz se piorou; ao lado de \"+12 pts\", diz." },
+    ],
+  },
   {
     versao: "0.44.0",
     data: "2026-09-01",

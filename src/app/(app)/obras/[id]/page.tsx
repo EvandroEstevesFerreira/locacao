@@ -17,6 +17,9 @@ import { BlocoAvanco } from "./_components/bloco-avanco";
 import { BlocoOrcamento } from "./_components/bloco-orcamento";
 import { BlocoCustoItem } from "./_components/bloco-custo-item";
 import { custoPorItemDaObra } from "@/lib/data/custo-item";
+import { fechamentosDaObra } from "@/lib/data/orcamento";
+import { competenciaAnterior } from "@/lib/fechamento";
+import { BlocoFechamento } from "./_components/bloco-fechamento";
 
 export const metadata = { title: "Editar obra — Loca" };
 
@@ -54,12 +57,13 @@ export default async function EditarObraPage({
 
   // Em paralelo: são quatro leituras independentes, e serializá-las somaria
   // latência sem motivo.
-  const [historico, orcamento, historicoOrc, realizado, custoItens, catalogo] = await Promise.all([
+  const [historico, orcamento, historicoOrc, realizado, custoItens, fechamentos, catalogo] = await Promise.all([
     historicoAvanco(id),
     orcamentoVigente(id),
     historicoOrcamento(id),
     realizadoLocacao(id),
     custoPorItemDaObra(id),
+    fechamentosDaObra(id),
     supabase
       .from("item_catalogo")
       .select("id, descricao")
@@ -97,6 +101,14 @@ export default async function EditarObraPage({
       />
 
       <BlocoCustoItem entradas={custoItens} />
+
+      <BlocoFechamento
+        obraId={id}
+        fechamentos={fechamentos}
+        // O candidato natural a fechar é o mês ANTERIOR: fechar o mês corrente
+        // fotografaria uma competência que ainda vai receber lançamento.
+        competenciaSugerida={competenciaAnterior(`${hojeISO.slice(0, 7)}-01`).slice(0, 7)}
+      />
     </div>
   );
 }
