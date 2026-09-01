@@ -69,18 +69,16 @@ próprias — são problemas diferentes, com públicos diferentes.
 | Devolução parcial | **Registrada sem assinatura**; o encerramento é que é assinado |
 | Número | **`TRM-` no fechamento**, não no rascunho (precedente do `recebimento`) |
 
-## Modelo de dados — migration 0051
+## Modelo de dados
 
-> **Renumerada de 0050 para 0051**, e o enum `estado_equipamento` saiu daqui.
-> A fatia do cadastro de frota (`2026-08-31-cadastro-frota-design.md`) chega
-> antes, ocupa a 0050 e **cria** o enum; aqui ele é dependência, não criação.
-> Aquela fatia também deixa pronta a matriz de transição de
-> `src/lib/frota.ts`, que o fechamento do termo deve chamar:
-> `disponivel` → `em_uso` na assinatura, `em_uso` → `disponivel` na devolução.
+> **Número da migration:** atribuído na implementação. Esta fatia é a ÚLTIMA das
+> três pendentes — vem depois de `2026-08-31-avanco-obra-design.md` e de
+> `2026-08-31-cadastro-frota-design.md`, que é quem cria `estado_equipamento`.
+
+
 
 ```sql
--- `estado_equipamento` NÃO nasce aqui: é criado pela migration 0050
--- (cadastro de frota). Esta migration apenas o usa.
+-- `estado_equipamento` NÃO nasce aqui: é criado pela migration do cadastro de frota. Esta migration apenas o usa.
 
 create table public.funcionario (
   id uuid primary key default gen_random_uuid(),
@@ -256,7 +254,7 @@ esse par que sustenta uma cobrança de avaria.
 
 | Fase | Entrega | Migrations |
 |---|---|---|
-| 1 | Migration 0051, cadastro de funcionários, CRUD do rascunho | 1 |
+| 1 | Migration desta fatia, cadastro de funcionários, CRUD do rascunho | 1 |
 | 2 | Passo a passo, emissão com número, assinatura na tela, PDF | 0 |
 | 3 | Devolução, encerramento com pendência, cancelamento | 0 |
 

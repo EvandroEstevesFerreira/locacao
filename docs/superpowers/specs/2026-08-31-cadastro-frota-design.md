@@ -70,11 +70,17 @@ teria por onde ser lida. Esta fatia cria essa tela, e é ela que entrega o valor
 | Leitura por obra | **Livre na organização** (ver seção RLS) |
 | Escopo de campos | Fabricante, modelo, valor, NF, foto e especificação técnica **fora** |
 
-## Modelo de dados — migration 0050
+## Modelo de dados
+
+> **Número da migration:** atribuído na implementação, não aqui. Numerar
+> dentro da spec já causou colisão entre três fatias pendentes — o que importa é
+> a ORDEM: esta fatia vem depois de `2026-08-31-avanco-obra-design.md` e antes de
+> `2026-08-25-termo-equipamento-design.md`.
+
 
 ```sql
 -- O enum foi declarado na spec do termo (2026-08-25), que ainda não foi
--- implementada. Esta fatia chega antes, então ele nasce aqui e a 0051 (termo)
+-- implementada. Esta fatia chega antes, então ele nasce aqui e a fatia do termo
 -- passa a só USAR. Ver "Colisão com a spec do termo".
 create type public.estado_equipamento as enum ('novo','bom','regular','com_avaria');
 
@@ -278,15 +284,14 @@ de funcionário — que nasce na fatia do termo, não aqui.
 ## Colisão com a spec do termo
 
 A spec `2026-08-25-termo-equipamento-design.md` (branch
-`docs/spec-termo-equipamento`, não integrada) reivindica a **migration 0050** e
-declara `create type public.estado_equipamento`. Esta fatia chega antes e ocupa a
-0050.
+`docs/spec-termo-equipamento`, não integrada) reivindica a **migration desta fatia** e
+declara `create type public.estado_equipamento`. Esta fatia chega antes e vem antes dela.
 
 Ajustes necessários naquela spec, a fazer no mesmo movimento:
 
-1. Migration passa de **0050 para 0051**.
+1. Migration passa de **para depois desta fatia**.
 2. Remover o `create type estado_equipamento` — passa a ser dependência, criada
-   aqui.
+   nesta fatia.
 3. Acrescentar a chamada da matriz de `src/lib/frota.ts` no fechamento do termo
    (`disponivel` → `em_uso`) e na devolução (`em_uso` → `disponivel`). É o gancho
    que esta fatia deixa pronto.
