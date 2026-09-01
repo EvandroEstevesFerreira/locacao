@@ -7,6 +7,49 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.45.0] — 2026-09-01
+
+Subprojeto D, o último do pedido da diretoria. "Abater o saldo dos contratos ao
+fim do mês" não pedia uma conta nova — pedia PARAR DE RECALCULAR.
+
+### Adicionado
+
+- **`fechamento_mensal`** — a fotografia da competência. Orçado, realizado do
+  mês, acumulado, saldo, consumo e avanço ficam GRAVADOS, com autor e data.
+- **Trigger `guard_fechamento_imutavel`** — recusa `UPDATE` em fechamento não
+  reaberto, com mensagem legível: "Competência fechada em 09/2026 não pode ser
+  alterada. Reabra o fechamento primeiro."
+- **Reabertura registrada** — `reaberto_em` e `reaberto_por`. É o único `UPDATE`
+  que o trigger aceita numa linha fechada; depois dela, a linha aceita correção.
+- **Bloco de fechamento** no detalhe da obra, com a variação em pontos contra o
+  mês anterior.
+
+### Decisões
+
+- **Se o fechamento fosse consulta, não seria fechamento.** Mudar um preço em
+  outubro reescreveria setembro em silêncio, o e-mail que o diretor tem na caixa
+  deixaria de bater com o sistema, e a partir daí nenhum número do histórico
+  seria defensável.
+- **O saldo é sobre o ACUMULADO, não sobre o mês.** Ninguém orça locação por
+  mês; orça a obra. Saldo mensal seria uma fração sem significado.
+- **O avanço fotografado é o do FIM da competência**, não o de hoje. Fechar
+  setembro em outubro tem de registrar o avanço de setembro.
+- **`check (extract(day from competencia) = 1)`** impede competência no meio do
+  mês, que geraria duas fotografias do mesmo período.
+- **A sugestão de competência é o mês ANTERIOR.** Fechar o mês corrente
+  fotografaria um período que ainda vai receber lançamento.
+- **Variação `null` sem mês anterior fechado.** Melhor que mostrar 62 pontos de
+  variação que só existem porque não havia base.
+
+### Testes
+
+- `fechamento.test.ts` — 15 casos: saldo sobre o acumulado, saldo negativo,
+  orçado zero sem divisão por zero, o lixo de ponto flutuante, a virada de ano
+  na competência anterior, e a variação com e sem base.
+- Migration validada num Postgres descartável com cinco comportamentos, sendo o
+  terceiro o que justifica a tabela: alterar mês fechado é recusado pelo
+  trigger; reabrir é aceito; e depois de reaberta a linha aceita correção.
+
 ## [0.44.0] — 2026-09-01
 
 Subprojeto C: o elo que faltava entre a nota e o equipamento.

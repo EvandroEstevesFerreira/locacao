@@ -139,3 +139,44 @@ export async function realizadoLocacao(obraId: string): Promise<RealizadoObra> {
   }
   return { comContrato, semContrato, pago };
 }
+
+export type FechamentoLinha = {
+  competencia: string;
+  orcado: number;
+  realizadoAcumulado: number;
+  realizadoMes: number;
+  saldo: number;
+  avancoFisico: number | null;
+  consumido: number | null;
+  fechadoEm: string;
+  reabertoEm: string | null;
+};
+
+/** Os fechamentos de uma obra, do mais recente para o mais antigo. */
+export async function fechamentosDaObra(obraId: string): Promise<FechamentoLinha[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("fechamento_mensal")
+    .select(
+      "competencia, orcado, realizado_acumulado, realizado_mes, saldo, avanco_fisico, consumido, fechado_em, reaberto_em",
+    )
+    .eq("obra_id", obraId)
+    .order("competencia", { ascending: false });
+
+  if (error || !data) {
+    console.error("fechamentosDaObra", error);
+    return [];
+  }
+
+  return data.map((f) => ({
+    competencia: f.competencia,
+    orcado: Number(f.orcado),
+    realizadoAcumulado: Number(f.realizado_acumulado),
+    realizadoMes: Number(f.realizado_mes),
+    saldo: Number(f.saldo),
+    avancoFisico: f.avanco_fisico === null ? null : Number(f.avanco_fisico),
+    consumido: f.consumido === null ? null : Number(f.consumido),
+    fechadoEm: f.fechado_em,
+    reabertoEm: f.reaberto_em,
+  }));
+}
