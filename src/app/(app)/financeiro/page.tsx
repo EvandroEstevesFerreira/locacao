@@ -1,13 +1,14 @@
 import Link from "next/link";
 import {
-  Plus,
-  Pencil,
-  Undo2,
-  Coins,
-  RefreshCw,
-  Clock,
   AlertTriangle,
   CheckCircle2,
+  Clock,
+  Coins,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Split,
+  Undo2,
 } from "lucide-react";
 import { getCurrentPerfil, podeGerenciarFinanceiro } from "@/lib/auth";
 import {
@@ -251,6 +252,18 @@ export default async function FinanceiroPage({
                                 <Coins />
                               </Button>
                             )}
+                            {/* Ratear só faz sentido com contrato: é entre as
+                                linhas DELE que o custo se distribui. */}
+                            {l.contrato_id ? (
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                aria-label="Ratear por item"
+                                render={<Link href={`/financeiro/${l.id}/rateio`} />}
+                              >
+                                <Split />
+                              </Button>
+                            ) : null}
                             <Button
                               variant="ghost"
                               size="icon-sm"
