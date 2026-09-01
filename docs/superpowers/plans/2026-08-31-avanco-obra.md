@@ -1074,18 +1074,18 @@ git commit -m "feat(avanco): tela de lançamento semanal em lote"
 
 ---
 
-### Task 5: O bloco de avanço no detalhe da obra
+### Task 5: O bloco de avanço no detalhe da obra ✅ CONCLUÍDA (conferência pendente da migration)
 
 **Files:**
 - Create: `src/app/(app)/obras/[id]/_components/bloco-avanco.tsx`
 - Modify: `src/app/(app)/obras/[id]/page.tsx`
-- Modify: `src/lib/data/avanco.ts`
+- Modify: `src/lib/data/avanco.ts` — `historicoAvanco` já entrou junto da Task 4
 
 **Interfaces:**
 - Consumes: `percentualPrazo`, `desvio`, `previsaoTermino` de `@/lib/avanco`.
 - Produces: `historicoAvanco(obraId: string, limite?: number): Promise<PontoAvanco[]>` em `src/lib/data/avanco.ts`.
 
-- [ ] **Step 1: A leitura do histórico**
+- [x] **Step 1: A leitura do histórico**
 
 Acrescentar em `src/lib/data/avanco.ts`:
 
@@ -1113,7 +1113,7 @@ export async function historicoAvanco(
 }
 ```
 
-- [ ] **Step 2: O bloco**
+- [x] **Step 2: O bloco**
 
 Criar `src/app/(app)/obras/[id]/_components/bloco-avanco.tsx` (Server Component). Recebe a obra e o histórico, e mostra:
 
@@ -1123,15 +1123,15 @@ Criar `src/app/(app)/obras/[id]/_components/bloco-avanco.tsx` (Server Component)
 - **Previsão de término**: `previsaoTermino(historico, hojeISOSaoPaulo())` formatado por `formatarData`, contra `data_fim_prevista`. Quando `null`, o texto é exatamente **"Ritmo insuficiente para projetar."** — não invente uma data;
 - as últimas 8 semanas, com `formatarData(semana)` e o percentual.
 
-- [ ] **Step 3: Ligar na página**
+- [x] **Step 3: Ligar na página**
 
 Em `src/app/(app)/obras/[id]/page.tsx`, buscar `historicoAvanco(id)` junto das outras leituras e renderizar o bloco entre os cards existentes, seguindo o espaçamento das seções vizinhas.
 
-- [ ] **Step 4: Conferir na tela**
+- [ ] **Step 4: Conferir na tela** — ⛔ BLOQUEADO pela migration não aplicada
 
 Abra uma obra com lançamentos e confirme os quatro números. Depois abra uma obra **sem período** e confirme que não aparece "NaN%" nem "Invalid Date" em lugar nenhum.
 
-- [ ] **Step 5: Ritual e commit**
+- [x] **Step 5: Ritual e commit**
 
 ```bash
 npm run typecheck && npm run lint && npm test && npm run build

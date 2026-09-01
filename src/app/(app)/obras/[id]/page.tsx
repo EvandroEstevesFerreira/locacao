@@ -3,7 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeEditarCadastros } from "@/lib/auth";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent } from "@/components/ui/card";
+import { historicoAvanco } from "@/lib/data/avanco";
 import { ObraForm } from "../obra-form";
+import { BlocoAvanco } from "./_components/bloco-avanco";
 
 export const metadata = { title: "Editar obra — Loca" };
 
@@ -39,6 +41,8 @@ export default async function EditarObraPage({
     .filter((p): p is { email: string; ativo: boolean } => Boolean(p?.ativo && p.email))
     .map((p) => p.email);
 
+  const historico = await historicoAvanco(id);
+
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <PageHeader titulo="Editar obra" descricao={obra.nome} />
@@ -47,6 +51,8 @@ export default async function EditarObraPage({
           <ObraForm obra={obra} vinculados={vinculados} />
         </CardContent>
       </Card>
+
+      <BlocoAvanco obra={obra} historico={historico} />
     </div>
   );
 }
