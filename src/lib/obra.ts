@@ -6,7 +6,7 @@
 // não pode ser importado por componente cliente.
 
 import { z } from "zod";
-import { textoOpcional as textoOpcionalCampo } from "@/lib/campos";
+import { idOpcional, textoOpcional as textoOpcionalCampo } from "@/lib/campos";
 
 export const STATUS_OBRA = ["ativa", "pausada", "encerrada"] as const;
 export type StatusObra = (typeof STATUS_OBRA)[number];
@@ -64,8 +64,9 @@ const emailsOpcionais = z
   });
 
 export const obraSchema = z.object({
-  // `id` presente = edição. Vem do schema em vez de um <input hidden>.
-  id: z.string().uuid().optional(),
+  // `id` presente = edição; em branco = criação (o <input hidden> do form
+  // manda `""`, e é por isso que o campo é `idOpcional`).
+  id: idOpcional,
   codigo: z.string().trim().min(1, "Informe o código da obra.").max(50),
   nome: z.string().trim().min(1, "Informe o nome da obra.").max(200),
   endereco: textoOpcional(300),

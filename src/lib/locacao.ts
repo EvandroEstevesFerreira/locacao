@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { differenceInCalendarDays } from "date-fns";
-import { dataOpcional as dataOpcionalCampo, textoOpcional } from "@/lib/campos";
+import { idOpcional, dataOpcional as dataOpcionalCampo, textoOpcional } from "@/lib/campos";
 
 export type Cadencia = "diaria" | "semanal" | "quinzenal" | "mensal";
 
@@ -214,7 +214,7 @@ const dataOpcional = dataOpcionalCampo;
 
 export const contratoSchema = z
   .object({
-    id: z.string().uuid().optional(),
+    id: idOpcional,
     obra_id: z.string().uuid("Selecione a obra."),
     fornecedor_id: z.string().uuid("Selecione o fornecedor."),
     numero: z.string().trim().min(1, "Informe o número do contrato.").max(60),

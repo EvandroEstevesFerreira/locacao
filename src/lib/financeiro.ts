@@ -2,7 +2,7 @@
 // mensais recorrentes e encargos por atraso (multa + juros).
 
 import { z } from "zod";
-import { opcional, dataOpcional, textoOpcional } from "@/lib/campos";
+import { idOpcional, opcional, dataOpcional, textoOpcional } from "@/lib/campos";
 import {
   addMonths,
   format,
@@ -109,7 +109,7 @@ export function competenciaParaData(v: string): string {
 
 export const lancamentoSchema = z
   .object({
-    id: z.string().uuid().optional(),
+    id: idOpcional,
     obra_id: z.string().uuid("Selecione a obra."),
     contrato_id: opcional,
     descricao: z.string().trim().min(1, "Informe a descrição.").max(200),

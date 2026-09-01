@@ -17,6 +17,7 @@ import {
   type StatusImovel,
 } from "@/lib/imoveis";
 import { FormError } from "@/components/shared/form-error";
+import { aoInvalidar } from "@/lib/validacao-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -115,7 +116,7 @@ export function ImovelForm({
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={handleSubmit(onSubmit, aoInvalidar(setErroServidor))} className="space-y-6">
       <input type="hidden" {...register("id")} />
 
       <div className="grid gap-4 sm:grid-cols-2">

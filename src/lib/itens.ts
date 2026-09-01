@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { textoOpcional } from "@/lib/campos";
+import { idOpcional, textoOpcional } from "@/lib/campos";
 
 export type TipoItem = "equipamento" | "material_retornavel" | "consumivel";
 
@@ -39,7 +39,7 @@ export const TIPOS_ITEM = [
 ] as const;
 
 export const itemSchema = z.object({
-  id: z.string().uuid().optional(),
+  id: idOpcional,
   tipo: z.enum(TIPOS_ITEM),
   descricao: z.string().trim().min(1, "Informe a descrição do item.").max(200),
   unidade: textoOpcional(10),

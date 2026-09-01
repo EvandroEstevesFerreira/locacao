@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.39.0";
+export const APP_VERSION = "0.39.1";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,16 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.39.1",
+    data: "2026-08-31",
+    titulo: "O botão Salvar dos cadastros novos voltou a salvar",
+    mudancas: [
+      { tipo: "correcao", texto: "Cadastrar um item novo não gravava nada: o botão Salvar não dava erro, não dava aviso e não fazia nada. Corrigido." },
+      { tipo: "correcao", texto: "O mesmo defeito impedia CRIAR obra, imóvel, contrato de imóvel, contrato de locação, fornecedor e lançamento financeiro. Editar um registro que já existia sempre funcionou; era só o cadastro novo. Todos os sete estão corrigidos." },
+      { tipo: "melhoria", texto: "Nenhum formulário do sistema fica mais em silêncio: se algo impede o envio, o motivo aparece escrito acima dos botões. Era o que faltava para este defeito ter sido visto no primeiro clique, em vez de virar um Salvar que não fazia nada." },
+    ],
+  },
   {
     versao: "0.39.0",
     data: "2026-08-24",

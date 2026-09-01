@@ -9,10 +9,10 @@
 
 import { z } from "zod";
 import { cnpjValido, normalizarCnpj } from "@/lib/cnpj";
-import { opcional, textoOpcional, emailOpcional } from "@/lib/campos";
+import { idOpcional, opcional, textoOpcional, emailOpcional } from "@/lib/campos";
 
 export const fornecedorSchema = z.object({
-  id: z.string().uuid().optional(),
+  id: idOpcional,
   nome: z.string().trim().min(1, "Informe o nome do fornecedor.").max(200),
   cnpj: opcional
     .refine((v) => v === null || normalizarCnpj(v) === "" || cnpjValido(v), {

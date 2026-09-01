@@ -7,6 +7,56 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.39.1] — 2026-08-31
+
+### Corrigido
+
+- **Sete cadastros não criavam registro novo.** Reportado no cadastro de itens:
+  clicar em Salvar não gravava, não navegava e não mostrava mensagem nenhuma. O
+  mesmo defeito estava em obra, imóvel, contrato de imóvel, contrato de locação,
+  fornecedor e lançamento. Editar sempre funcionou.
+
+  Causa: todo formulário que cria E edita no mesmo componente carrega o id num
+  `<input type="hidden" {...register("id")} />`. Num cadastro novo o
+  `defaultValue` é `undefined`, e aí o react-hook-form semeia os valores do form
+  com o valor do DOM — que é `""` (`updateValidAndValue`). O schema declarava
+  `id: z.string().uuid().optional()`, que **recusa `""`**; o `handleSubmit`
+  abortava antes de chamar a action. Em silêncio, porque nenhum desses forms
+  renderiza `errors.id`.
+
+  Correção: `idOpcional` em [`src/lib/campos.ts`](src/lib/campos.ts) — uma
+  implementação, na fonte única de campos opcionais, usada pelos sete schemas.
+
+### Alterado
+
+- **Formulário nenhum reprova em silêncio.** Corrigir a causa não fechava o
+  mecanismo que a escondeu: `handleSubmit(onSubmit)` devolve sem chamar nada
+  quando a validação reprova, e o que o usuário vê depende de o form renderizar
+  `errors.<campo>` daquele campo — para campo oculto, ninguém renderiza. Os 19
+  formulários com `react-hook-form` passaram a usar
+  `handleSubmit(onSubmit, aoInvalidar(setErroServidor))`
+  ([`src/lib/validacao-form.ts`](src/lib/validacao-form.ts)), que joga a primeira
+  mensagem no `FormError` que todos já tinham. Quando o campo também mostra a
+  mensagem, ela aparece duas vezes — de propósito: o bloco fica onde o olho está
+  no instante do clique, e em form longo a mensagem do campo pode estar fora da
+  tela.
+
+### Testes
+
+- `schemas-varredura.test.ts` ganhou a segunda propriedade: todo schema que
+  aceita a amostra mínima sem `id` tem de aceitar `id: ""`, que é o que o
+  browser manda. A varredura só checava idempotência, e a amostra mínima omite
+  o `id` — foi o furo por onde este defeito passou.
+- `src/app/(app)/itens/item-form.test.tsx` — primeiro teste com DOM do projeto
+  (`jsdom` por arquivo; a suíte segue em `node`). Monta o formulário, digita,
+  aperta Salvar e exige que a action seja chamada. Prova o sintoma, não só a
+  propriedade do schema: quem manda o `""` é biblioteca de terceiro, e uma
+  atualização pode mudar isso de novo. Cobre também a rede: submit reprovado tem
+  de escrever o motivo na tela.
+- `validacao-form.test.ts` — a busca da primeira mensagem na árvore de
+  `FieldErrors`, incluindo a trava de não descer no `ref` (que é nó do DOM, e
+  tem ciclo).
+
 ## [0.39.0] — 2026-08-24
 
 Fase 1a de `docs/superpowers/specs/2026-08-23-recebimento-equipamento-design.md`.

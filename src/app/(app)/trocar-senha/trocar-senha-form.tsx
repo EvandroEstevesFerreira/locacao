@@ -8,6 +8,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { trocarSenhaSchema, type TrocarSenhaInput } from "@/lib/permissoes";
 import { FormError } from "@/components/shared/form-error";
+import { aoInvalidar } from "@/lib/validacao-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,7 +45,7 @@ export function TrocarSenhaForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(onSubmit, aoInvalidar(setErroServidor))} className="space-y-4">
       <div className="space-y-1.5">
         <Label htmlFor="senha">Nova senha</Label>
         <Input
