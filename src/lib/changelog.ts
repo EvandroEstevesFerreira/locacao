@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.42.0";
+export const APP_VERSION = "0.43.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,17 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.43.0",
+    data: "2026-09-01",
+    titulo: "Painel das obras e indicadores quinzenais",
+    mudancas: [
+      { tipo: "novo", texto: "A tela de Início ganhou o quadro Situação das obras: uma linha por obra, com prazo, avanço, orçamento consumido, projeção de estouro e o veredito de cada uma." },
+      { tipo: "novo", texto: "As obras aparecem ordenadas por quem precisa de atenção primeiro. Quem projeta estouro em reais vem no topo; quem está sem informação vai para o fim, porque não saber não é o mesmo que estar mal." },
+      { tipo: "novo", texto: "E-mail de indicadores nos dias 1 e 16, para os destinatários da organização: percentuais por obra, itens locados, previsão de desembolso até o fim dos contratos e o total de estouro projetado." },
+      { tipo: "melhoria", texto: "O painel e o e-mail informam quantas obras estão sem dado suficiente para diagnosticar. Sem isso, obra em branco pareceria obra saudável." },
+    ],
+  },
   {
     versao: "0.42.0",
     data: "2026-09-01",

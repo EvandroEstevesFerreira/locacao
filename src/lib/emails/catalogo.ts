@@ -30,6 +30,12 @@ export const CATALOGO: ItemCatalogo[] = [
     render: (ctx) => t.vencimentosObra(ex.VENCIMENTOS_OBRA, ctx),
   },
   {
+    id: "indicadores-quinzenais",
+    titulo: "Indicadores de locação — quinzenal",
+    gatilho: "Cron dos dias 1 e 16, para os destinatários da organização",
+    render: (ctx) => t.indicadoresQuinzenais(ex.INDICADORES, ctx),
+  },
+  {
     id: "avanco-obra",
     titulo: "Avanço semanal da obra",
     gatilho: "Cron de segunda-feira, para os destinatários de cada obra",

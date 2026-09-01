@@ -12,6 +12,7 @@ import type {
   DadosAvaria,
   DadosDocumento,
   DadosFluxo,
+  DadosIndicadores,
   DadosRecebimento,
   DadosRelatorio,
   DadosSenhaRedefinida,
@@ -230,4 +231,44 @@ export const AVANCO_SEMANAL: DadosAvancoSemanal = {
     { obra: "OB-048 — Ampliação Ala Leste", desde: "3 semanas sem informação" },
     { obra: "OB-060 — Reforma Bloco C", desde: "nunca informada" },
   ],
+};
+
+export const INDICADORES: DadosIndicadores = {
+  periodo: "1ª quinzena de setembro de 2026",
+  linhas: [
+    {
+      obra: "OB-042 — Residencial Alto da Serra",
+      prazo: "55%",
+      avanco: "31%",
+      consumido: "62%",
+      projecao: "200% · +R$ 400.000,00",
+      itens: "14",
+      previsao: "R$ 180.000,00",
+      situacao: "Consumindo mais rápido que entrega.",
+    },
+    {
+      obra: "OB-051 — Galpão Logístico Contorno Norte",
+      prazo: "61%",
+      avanco: "68%",
+      consumido: "54%",
+      projecao: "79%",
+      itens: "6",
+      previsao: "R$ 42.000,00",
+      situacao: "Entregando mais que consome.",
+    },
+    {
+      obra: "OB-055 — Subestação Vila Prado",
+      prazo: "—",
+      avanco: "12%",
+      consumido: "—",
+      projecao: "sem orçamento",
+      itens: "3",
+      previsao: "R$ 15.000,00",
+      situacao: "Sem orçamento cadastrado.",
+    },
+  ],
+  comEstouro: 1,
+  estouroTotal: "R$ 400.000,00",
+  semDados: 1,
+  previsaoTotal: "R$ 237.000,00",
 };
