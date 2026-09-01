@@ -10,6 +10,7 @@ import * as imoveis from "./imoveis";
 import * as itens from "./itens";
 import * as locacao from "./locacao";
 import * as obra from "./obra";
+import * as orcamento from "./orcamento";
 import * as permissoes from "./permissoes";
 import * as recebimento from "./recebimento";
 
@@ -46,6 +47,7 @@ const MODULOS: Record<string, Record<string, unknown>> = {
   itens,
   locacao,
   obra,
+  orcamento,
   permissoes,
   recebimento,
 };
@@ -101,6 +103,8 @@ const AMOSTRAS: Record<string, unknown> = {
   tarefaLimpezaSchema: { grupo: "BANHEIROS", descricao: "Lavar piso", frequencia: "D" },
   obraSchema: { codigo: "OB-01", nome: "Obra", status: "ativa" },
   avancoSchema: { obra_id: UUID, semana: "2026-08-31", percentual: "34" },
+  orcamentoSchema: { obra_id: UUID, valor_total: "400000" },
+  orcamentoItemSchema: { item_id: UUID, valor_previsto: "120000" },
   empresaSchema: { nome: "Sistenge Engenharia" },
   fornecedorSchema: {
     nome: "Fornecedor X",
