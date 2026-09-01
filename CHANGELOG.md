@@ -7,6 +7,65 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.42.0] — 2026-09-01
+
+Subprojeto B de `docs/superpowers/specs/2026-09-01-orcamento-locacao-design.md`.
+Fecha o terceiro percentual do pedido da diretoria: com prazo, avanço e consumo
+na mesma tela, dois números viram diagnóstico.
+
+### Adicionado
+
+- **`orcamento_locacao`** — orçamento por obra, **versionado**. Revisão cria
+  versão nova e aposenta a anterior; um índice parcial garante um único vigente
+  por obra. Sobrescrever faria o orçamento perseguir o realizado: nunca haveria
+  estouro, porque o alvo se move.
+- **`orcamento_item`** — detalhamento opcional por item do catálogo. `cascade`
+  do orçamento (item de orçamento não tem vida própria) e `restrict` do catálogo
+  (apagar item orçado apagaria história).
+- **Projeção de estouro** — `projecaoFinal` faz a regra de três entre consumo e
+  entrega: 62% de orçamento com 31% de obra projeta 200%. É o número que muda
+  decisão.
+- **Veredito em uma frase** — consumindo mais rápido que entrega, entregando
+  mais que consome, ou alinhado, com margem de 10 pontos para não oscilar por
+  arredondamento.
+- **Os três percentuais juntos** no bloco de avanço da obra.
+
+### Decisões
+
+- **Realizado é `valor`, não `valor_pago`.** Orçamento é consumido quando o custo
+  é incorrido; tratar nota pendente como não consumida faria o percentual
+  despencar todo mês e subir na data de pagamento, sem nada mudar na obra.
+- **Realizado conta só lançamento com `contrato_id`.** `lancamento_financeiro`
+  não tem categoria de custo — `origem` diz como o lançamento nasceu, não de que
+  tipo é — e a única distinção entre locação de equipamento e aluguel de imóvel
+  é o FK.
+- **A tela confessa o dado faltante.** Hoje nenhum lançamento tem contrato
+  vinculado, então o bloco declara em reais quanto foi lançado sem vínculo, para
+  o 0% ser lido como "falta vincular" e não como "não gastamos".
+- **A soma dos itens pode divergir do total, e a diferença é exibida.** Forçar
+  igualdade obrigaria a detalhar tudo ou nada.
+- **`percentualConsumido` não trava em 100.** Travar esconderia o estouro: obra
+  em 130% precisa aparecer como 130%.
+- **`projecaoFinal` devolve nada sem avanço.** Obra em 0% que já gastou
+  projetaria infinito, e "estouro de ∞" destrói a confiança no painel inteiro.
+
+### Testes
+
+- `orcamento.test.ts` — 25 casos: divisão por zero em orçado e em avanço, o caso
+  62/31, obra eficiente, o veredito nos quatro quadrantes, valor com vírgula, e a
+  recusa de item repetido com a mensagem na linha do item.
+- Migration validada num Postgres descartável antes de produção, com seis
+  comportamentos provados: dois vigentes recusados, duas versões convivendo,
+  item repetido recusado, valor negativo recusado, `restrict` protegendo o
+  catálogo e `cascade` levando os itens.
+- `get_advisors` de segurança não aponta nada nas duas tabelas novas.
+
+### Nota sobre o estado dos dados
+
+O realizado começa em zero: nenhum dos lançamentos existentes tem contrato
+vinculado. Não é defeito da fatia — é o hábito que precisa mudar, e a tela diz
+isso em vez de esconder atrás de um percentual.
+
 ## [0.41.0] — 2026-09-01
 
 Primeira fatia de `docs/superpowers/specs/2026-08-31-avanco-obra-design.md`.
