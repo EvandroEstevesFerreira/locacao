@@ -452,16 +452,18 @@ git commit -m "feat(avanco): o cálculo puro de prazo, avanço e ritmo"
 
 ---
 
-### Task 2: A migration
+### Task 2: A migration ⚠️ PARCIAL — arquivo pronto, não aplicado
 
 **Files:**
 - Create: `supabase/migrations/0050_avanco_obra.sql` (confirme o número com `ls supabase/migrations | tail -1`)
 
 **Interfaces:**
-- Consumes: `public.set_updated_at()`, `public.current_org_id()`, `public.has_obra_access(uuid)`, `public.podeEditar` via `current_papel()` — todas já existentes.
+- Consumes: `public.set_updated_at()`, `public.current_org_id()`, `public.is_member_of_obra(uuid)`, `public.pode_gerir_cadastros()` — todas já existentes.
+  Os papéis reais são `master`/`administrador`/`gestor`/`operador`; `admin` e
+  `gestor` como escritos antes na policy NÃO existiam.
 - Produces: colunas `obra.data_inicio`, `obra.data_fim_prevista`, `obra.data_fim_real`; tabela `public.avanco_obra`.
 
-- [ ] **Step 1: Escrever a migration**
+- [x] **Step 1: Escrever a migration**
 
 ```sql
 -- ============================================================================
@@ -552,7 +554,7 @@ create policy "avanco_write" on public.avanco_obra
   );
 ```
 
-- [ ] **Step 2: Conferir os papéis contra o que existe**
+- [x] **Step 2: Conferir os papéis contra o que existe** — PEGOU DOIS ERROS DO PLANO
 
 O `check` de papel acima precisa bater com os valores reais do enum. Rode e compare:
 
@@ -562,18 +564,18 @@ grep -rn "current_papel() in" supabase/migrations/0011_fase7_rbac_4_perfis.sql |
 
 Se os nomes forem outros, corrija a policy para os nomes reais **antes** de aplicar. Papel errado numa policy não dá erro: só nega tudo em silêncio.
 
-- [ ] **Step 3: Aplicar**
+- [ ] **Step 3: Aplicar** — ⛔ BLOQUEADO, aguardando autorização do usuário para tocar o banco de produção
 
 ```bash
 supabase db push --dry-run < /dev/null   # deve listar SÓ a 0050
 supabase db push < /dev/null
 ```
 
-- [ ] **Step 4: Provar a RLS no Postgres local**
+- [~] **Step 4: Provar a RLS no Postgres local** — feita a validação ESTRUTURAL num banco descartável (a migration executa; constraints, unique/upsert e policies conferidos). A prova COMPORTAMENTAL da RLS com dois usuários exige o scaffold completo do Supabase local e fica pendente
 
 Confirme, com dois usuários de organizações diferentes, que `select * from avanco_obra` de uma organização não devolve linha da outra, e que um usuário sem linha em `obra_usuario` não lê o avanço daquela obra. Sem esta prova, a policy é só uma intenção.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add supabase/migrations/0050_avanco_obra.sql
