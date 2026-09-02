@@ -21,6 +21,7 @@ export type NavIconName =
   | "truck"
   | "package"
   | "boxes"
+  | "warehouse"
   | "file-text"
   | "building-2"
   | "clipboard-check"
@@ -65,6 +66,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
 
   { label: "Itens", href: "/itens", icon: "package", modulo: "itens", grupo: "Equipamento" },
   { label: "Frota", href: "/frota", icon: "boxes", modulo: "frota", grupo: "Equipamento" },
+  { label: "Estoque", href: "/estoque", icon: "warehouse", modulo: "estoque", grupo: "Equipamento" },
   { label: "Contratos", href: "/contratos", icon: "file-text", modulo: "contratos", grupo: "Equipamento" },
   { label: "Recebimentos", href: "/recebimentos", icon: "clipboard-list", modulo: "recebimentos", grupo: "Equipamento" },
   { label: "Vistorias", href: "/vistorias", icon: "clipboard-check", modulo: "vistorias", grupo: "Equipamento" },

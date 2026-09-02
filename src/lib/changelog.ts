@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.47.0";
+export const APP_VERSION = "0.48.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,18 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.48.0",
+    data: "2026-09-02",
+    titulo: "Módulo Estoque",
+    mudancas: [
+      { tipo: "novo", texto: "Estoque com saldo de verdade para itens controlados por quantidade — cimento, escora, EPI, consumível. Entrada, saída, ajuste de inventário e baixa, com o saldo somado a cada lançamento." },
+      { tipo: "novo", texto: "Painel com os quatro sinais que interessam: itens em ruptura (abaixo do ponto de pedido), itens parados há mais de 90 dias, saldos negativos e o consumo do período." },
+      { tipo: "novo", texto: "Curva ABC por consumo: A são os itens que somam 80% do que saiu, B até 95%, C o resto. Ordenada por consumo, não por saldo — item parado com saldo alto é capital empatado, não item importante." },
+      { tipo: "novo", texto: "Ponto de pedido por item. Quem não tiver o mínimo configurado simplesmente não aparece na lista de ruptura, em vez de poluir o alerta." },
+      { tipo: "seguranca", texto: "Movimento lançado não pode ser editado nem apagado. Corrigir é estornar, e as duas linhas ficam visíveis no histórico — apagar faria o saldo bater sem que ninguém pudesse explicar a diferença depois." },
+    ],
+  },
   {
     versao: "0.47.0",
     data: "2026-09-01",

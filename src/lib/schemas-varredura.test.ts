@@ -5,6 +5,7 @@ import * as alojamento from "./alojamento";
 import * as avanco from "./avanco";
 import * as config from "./config";
 import * as custoItem from "./custo-item";
+import * as estoque from "./estoque";
 import * as fechamento from "./fechamento";
 import * as financeiro from "./financeiro";
 import * as fornecedor from "./fornecedor";
@@ -45,6 +46,7 @@ const MODULOS: Record<string, Record<string, unknown>> = {
   avanco,
   config,
   custoItem,
+  estoque,
   fechamento,
   financeiro,
   fornecedor,
@@ -115,6 +117,7 @@ const AMOSTRAS: Record<string, unknown> = {
   fechamentoSchema: { obra_id: UUID, competencia: "2026-09" },
   unidadeSchema: { item_id: UUID, identificador: "PAT-0431" },
   categoriaSchema: { nome: "Concretagem" },
+  movimentoSchema: { item_id: UUID, tipo: "entrada", quantidade: "10", data: "2026-09-02" },
   parcelaItemSchema: { item_locado_id: UUID, valor: "100" },
   empresaSchema: { nome: "Sistenge Engenharia" },
   fornecedorSchema: {
