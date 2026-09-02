@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { salvarRelatorioVistoria, type VistoriaFormState } from "./actions";
-import { SignaturePad } from "./signature-pad";
+import { SignaturePad } from "@/components/shared/signature-pad";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

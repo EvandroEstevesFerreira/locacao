@@ -1,5 +1,15 @@
 "use client";
 
+// Captura de assinatura desenhada, compartilhada.
+//
+// Morava em `(app)/vistorias/` porque só a vistoria assinava. O termo de
+// responsabilidade passou a assinar também, e componente usado por dois
+// módulos não pertence à pasta de um deles — é a regra de
+// `src/components/shared/` do AGENTS.md.
+//
+// O traço sai daqui como PNG em data URI, e o `modo="imagem"` de
+// `<Assinaturas>` em `src/lib/pdf-form.tsx` é quem o imprime no documento.
+
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { SLATE_900 } from "@/lib/brand-colors";
@@ -12,10 +22,19 @@ export function SignaturePad({
   name,
   defaultValue = "",
   label,
+  onChange,
 }: {
   name: string;
   defaultValue?: string;
   label: string;
+  /**
+   * Avisa o traço a cada mudança, como data URI.
+   *
+   * O input oculto continua existindo para quem usa `<form action={...}>` — é
+   * o caso da vistoria. O termo é emitido por server action chamada de estado
+   * React, sem submit de formulário, e precisa do valor na mão.
+   */
+  onChange?: (valor: string) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawing = useRef(false);
@@ -71,13 +90,16 @@ export function SignaturePad({
   function terminar() {
     if (!drawing.current) return;
     drawing.current = false;
-    setValue(canvasRef.current!.toDataURL("image/png"));
+    const dado = canvasRef.current!.toDataURL("image/png");
+    setValue(dado);
+    onChange?.(dado);
   }
 
   function limpar() {
     const c = canvasRef.current!;
     c.getContext("2d")!.clearRect(0, 0, c.width, c.height);
     setValue("");
+    onChange?.("");
   }
 
   return (
