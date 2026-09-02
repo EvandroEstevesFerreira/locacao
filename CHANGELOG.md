@@ -7,6 +7,45 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.47.0] — 2026-09-01
+
+Modularização: fechar o buraco de acesso e organizar o menu que cresceu.
+
+### Segurança
+
+- **`/recebimentos` era acessível a qualquer usuário autenticado.** A rota existe
+  desde a 0.39.0 e nunca foi registrada em `MODULOS`. O middleware só checa
+  permissão quando `moduloDaRota` devolve algo; para uma rota não registrada
+  devolve `null`, e o acesso passa direto. Nenhum teste pegava, porque a tela
+  funcionava perfeitamente — para todo mundo.
+
+### Adicionado
+
+- **Varredura de rotas contra módulos** em `modulos.test.ts`. Lê o diretório
+  `src/app/(app)` em vez de uma lista escrita à mão: rota nova entra na
+  checagem por EXISTIR. A única forma de escapar é declará-la em `SEM_MODULO`
+  **com o motivo** — decisão consciente, não esquecimento. Mais duas travas: a
+  lista de exceções não pode conter rota que já não existe, e todo módulo
+  declarado tem de ter pasta no disco.
+- **Grupos no menu** — Obra, Equipamento, Imóveis, Financeiro. O grupo é só
+  rótulo visual; quem controla acesso continua sendo `modulo`.
+
+### Decisões
+
+- **O grupo não é um nível de permissão.** Seria tentador liberar "Equipamento"
+  inteiro de uma vez, mas isso trocaria 7 decisões explícitas por 1 grosseira —
+  e quem precisa ver Frota não necessariamente pode ver Contratos.
+- **Rótulo de grupo aparece só com a sidebar expandida.** Recolhida só há espaço
+  para o ícone, e um rótulo cortado é pior que nenhum.
+- **`termos` foi registrado e depois removido** no mesmo trabalho: a varredura
+  acusou "módulo aponta para rota que não existe". Volta quando a Task 5 do
+  termo criar `/termos` — que é o teste funcionando como projetado.
+
+### Verificado
+
+A varredura foi testada removendo `recebimentos` de propósito: acusa com o nome
+da rota órfã e a explicação de por que aquilo é um problema. 482 testes.
+
 ## [0.46.0] — 2026-09-01
 
 Fatia 1 de `docs/superpowers/specs/2026-08-31-cadastro-frota-design.md`: "onde

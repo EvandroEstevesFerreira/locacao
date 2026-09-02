@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.46.0";
+export const APP_VERSION = "0.47.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,16 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.47.0",
+    data: "2026-09-01",
+    titulo: "Menu organizado em grupos, e Recebimentos com acesso controlado",
+    mudancas: [
+      { tipo: "seguranca", texto: "A tela de Recebimentos estava acessível a qualquer usuário conectado, independente dos módulos liberados para ele. Agora é um módulo como os outros e respeita a permissão de cada pessoa." },
+      { tipo: "melhoria", texto: "O menu passou a ser agrupado por área — Obra, Equipamento, Imóveis e Financeiro. O Loca cresceu de 8 para 14 telas, e lista corrida desse tamanho faz a pessoa desistir de procurar." },
+      { tipo: "melhoria", texto: "Recebimentos apareceu no menu. Existia desde agosto e só era alcançável digitando o endereço." },
+    ],
+  },
   {
     versao: "0.46.0",
     data: "2026-09-01",

@@ -91,7 +91,7 @@ export function MobileNav({
 
           <div className="scrollbar-sutil flex-1 overflow-y-auto p-3">
             <nav aria-label="Navegação principal" className="flex flex-col gap-0.5">
-              {itens.map((item) => {
+              {itens.map((item, i) => {
                 const ativo =
                   item.href === "/"
                     ? pathname === "/"
@@ -100,6 +100,13 @@ export function MobileNav({
                   <div key={item.href} className="contents">
                     {item.separadorAntes ? (
                       <div className="my-1.5 h-px bg-border" aria-hidden />
+                    ) : null}
+                    {/* Mesmo agrupamento da sidebar. No celular ele importa
+                        mais: a lista inteira não cabe na tela. */}
+                    {item.grupo && item.grupo !== itens[i - 1]?.grupo ? (
+                      <p className="mt-3 mb-1 px-3 text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
+                        {item.grupo}
+                      </p>
                     ) : null}
                     <Link
                       href={item.href}

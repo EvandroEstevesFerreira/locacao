@@ -64,10 +64,24 @@ export default async function AppLayout({
 
         <div className="scrollbar-sutil flex-1 overflow-x-hidden overflow-y-auto p-3.5">
           <nav aria-label="Navegação principal" className="flex flex-col gap-0.5">
-            {itens.map((item) => (
+            {itens.map((item, i) => (
               <div key={item.href} className="contents">
                 {item.separadorAntes ? (
                   <div className="my-1.5 h-px bg-border" aria-hidden />
+                ) : null}
+                {/* Rótulo do grupo, só quando o grupo MUDA. O Loca passou de 8
+                    para 14 itens em uma semana, e lista plana desse tamanho é o
+                    que faz o usuário desistir de procurar. O rótulo desaparece
+                    com a sidebar recolhida, onde só há espaço para o ícone. */}
+                {item.grupo && item.grupo !== itens[i - 1]?.grupo ? (
+                  <p
+                    className="mt-3 mb-1 px-2.5 text-[10px] font-medium tracking-wide
+                               text-muted-foreground uppercase opacity-0 transition-opacity
+                               duration-150 group-hover/sidebar:opacity-100
+                               group-focus-within/sidebar:opacity-100"
+                  >
+                    {item.grupo}
+                  </p>
                 ) : null}
                 <NavLink href={item.href} label={item.label} icon={item.icon} />
               </div>
