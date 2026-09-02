@@ -7,6 +7,71 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.48.0] — 2026-09-02
+
+Módulo Estoque. Antes de construir, a auditoria mostrou que boa parte de um
+módulo de estoque JÁ existia no Loca:
+
+| Função | Onde já estava |
+|---|---|
+| Entrada | `recebimento` + `recebimento_item` (0049) |
+| Saída para contrato | `item_locado` (0006) |
+| Saída para pessoa | `termo_equipamento_item` (0056) |
+| Devolução | `movimentacao` (0006) |
+| Baixa e perda | `equipamento_unidade.situacao` (0055) |
+| Onde está | `equipamento_unidade.obra_id` (0055) |
+
+O que NÃO existia é **saldo por quantidade**. Esta fatia é esse razão.
+
+### Adicionado
+
+- **`movimento_estoque`** — razão append-only. Entrada, saída, ajuste positivo,
+  ajuste negativo e baixa, com origem (manual, recebimento, termo, contrato,
+  inventário) e estorno apontando para o movimento original.
+- **`item_catalogo.estoque_minimo`** — ponto de pedido.
+- **`/estoque`** — saldo por item com classe ABC, quatro KPIs de atenção,
+  formulário de lançamento e os últimos 50 movimentos.
+
+### Decisões
+
+- **NÃO cria controle paralelo de equipamento por peça.** Isso daria ao sistema
+  duas verdades sobre onde a betoneira está — "em uso" na frota e "disponível"
+  no estoque — e ninguém saberia em qual acreditar. Peça continua em `/frota`.
+- **Não há coluna de saldo.** Coluna de saldo é a fonte clássica de divergência:
+  qualquer escrita que esqueça de atualizá-la faz o número mentir para sempre, e
+  ninguém descobre até o inventário.
+- **Quantidade é sempre positiva; o TIPO dá o sinal.** Guardar negativo obriga
+  toda consulta a lembrar da convenção, e a primeira que esquecer soma saída
+  como entrada.
+- **Saldo negativo é PERMITIDO e destacado.** Travar em zero esconderia
+  exatamente o erro de lançamento que o razão existe para revelar — e a tela põe
+  os negativos acima de tudo, porque contaminam o consumo e a curva ABC.
+- **O razão é imutável.** Trigger recusa `UPDATE` e `DELETE` com mensagem que
+  ensina o caminho: registre um estorno. As duas linhas ficam visíveis e
+  riscadas.
+- **Consumo conta só `saida`.** Ajuste de inventário e baixa reduzem saldo mas
+  não são consumo; misturá-los inflaria a curva ABC e o giro com correção de
+  erro.
+- **Item sem mínimo não entra em ruptura.** Sem parâmetro não há ruptura, e
+  apontar todo item sem configuração faria a lista nascer inútil.
+
+### Corrigido durante a implementação
+
+- **A curva ABC classificava errado.** Eu usava o acumulado DEPOIS de somar o
+  item, então o item que cruza os 80% caía na classe seguinte: com dois itens em
+  que o maior era 99,9% do consumo, justamente ele virava C. A convenção de
+  Pareto é o contrário — o item que LEVA ao corte pertence à classe superior. O
+  teste pegou.
+
+### Testes
+
+- `estoque.test.ts` — 29 casos: o sinal de cada tipo, saldo negativo permitido,
+  precisão de 3 casas, os cortes de Pareto em 80 e 95, empate mantendo ordem
+  alfabética, giro sem divisão por zero, e ruptura ignorando item sem mínimo.
+- Migration validada num Postgres descartável com sete comportamentos, entre
+  eles o saldo somado dando exatamente o mesmo 67 do teste puro, `UPDATE` e
+  `DELETE` recusados pelo trigger, e estorno aceito uma única vez.
+
 ## [0.47.0] — 2026-09-01
 
 Modularização: fechar o buraco de acesso e organizar o menu que cresceu.

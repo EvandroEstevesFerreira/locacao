@@ -22,6 +22,7 @@ import {
   Sparkles,
   TrendingUp,
   Truck,
+  Warehouse,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
@@ -34,6 +35,7 @@ const ICONES: Record<NavIconName, LucideIcon> = {
   truck: Truck,
   package: Package,
   boxes: Boxes,
+  warehouse: Warehouse,
   "file-text": FileText,
   "building-2": Building2,
   "clipboard-check": ClipboardCheck,

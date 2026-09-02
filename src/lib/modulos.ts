@@ -8,6 +8,7 @@ export type ModuloKey =
   | "fornecedores"
   | "itens"
   | "frota"
+  | "estoque"
   | "contratos"
   | "recebimentos"
   | "imoveis"
@@ -22,6 +23,7 @@ export const MODULOS: { chave: ModuloKey; label: string; href: string }[] = [
   { chave: "fornecedores", label: "Fornecedores", href: "/fornecedores" },
   { chave: "itens", label: "Itens", href: "/itens" },
   { chave: "frota", label: "Frota", href: "/frota" },
+  { chave: "estoque", label: "Estoque", href: "/estoque" },
   { chave: "contratos", label: "Contratos", href: "/contratos" },
   { chave: "recebimentos", label: "Recebimentos", href: "/recebimentos" },
   { chave: "imoveis", label: "Imóveis", href: "/imoveis" },
