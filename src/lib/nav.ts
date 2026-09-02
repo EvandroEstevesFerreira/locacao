@@ -24,6 +24,8 @@ export type NavIconName =
   | "file-text"
   | "building-2"
   | "clipboard-check"
+  | "clipboard-list"
+  | "file-signature"
   | "wallet"
   | "bar-chart-3"
   | "sparkles"
@@ -39,20 +41,40 @@ export type NavItem = {
   modulo?: ModuloKey;
   /** Separador visual antes do item — marca o começo da "cauda de sistema". */
   separadorAntes?: boolean;
+  /**
+   * Grupo do menu. Existe porque o Loca passou de 8 para 15 itens em uma
+   * semana, e lista plana desse tamanho é o que faz o usuário desistir de
+   * procurar. O grupo é só rótulo visual: quem controla acesso é `modulo`.
+   */
+  grupo?: GrupoNav;
 };
+
+export const GRUPOS_NAV = [
+  "Obra",
+  "Equipamento",
+  "Imóveis",
+  "Financeiro",
+] as const;
+export type GrupoNav = (typeof GRUPOS_NAV)[number];
 
 export const NAV_ITEMS: readonly NavItem[] = [
   { label: "Início", href: "/", icon: "layout-dashboard" },
-  { label: "Obras", href: "/obras", icon: "hard-hat", modulo: "obras" },
-  { label: "Avanço", href: "/avanco", icon: "trending-up", modulo: "avanco" },
-  { label: "Fornecedores", href: "/fornecedores", icon: "truck", modulo: "fornecedores" },
-  { label: "Itens", href: "/itens", icon: "package", modulo: "itens" },
-  { label: "Frota", href: "/frota", icon: "boxes", modulo: "frota" },
-  { label: "Contratos", href: "/contratos", icon: "file-text", modulo: "contratos" },
-  { label: "Imóveis", href: "/imoveis", icon: "building-2", modulo: "imoveis" },
-  { label: "Vistorias", href: "/vistorias", icon: "clipboard-check", modulo: "vistorias" },
-  { label: "Financeiro", href: "/financeiro", icon: "wallet", modulo: "financeiro" },
-  { label: "Relatórios", href: "/relatorios", icon: "bar-chart-3", modulo: "relatorios" },
+
+  { label: "Obras", href: "/obras", icon: "hard-hat", modulo: "obras", grupo: "Obra" },
+  { label: "Avanço", href: "/avanco", icon: "trending-up", modulo: "avanco", grupo: "Obra" },
+
+  { label: "Itens", href: "/itens", icon: "package", modulo: "itens", grupo: "Equipamento" },
+  { label: "Frota", href: "/frota", icon: "boxes", modulo: "frota", grupo: "Equipamento" },
+  { label: "Contratos", href: "/contratos", icon: "file-text", modulo: "contratos", grupo: "Equipamento" },
+  { label: "Recebimentos", href: "/recebimentos", icon: "clipboard-list", modulo: "recebimentos", grupo: "Equipamento" },
+  { label: "Vistorias", href: "/vistorias", icon: "clipboard-check", modulo: "vistorias", grupo: "Equipamento" },
+  { label: "Fornecedores", href: "/fornecedores", icon: "truck", modulo: "fornecedores", grupo: "Equipamento" },
+
+  { label: "Imóveis", href: "/imoveis", icon: "building-2", modulo: "imoveis", grupo: "Imóveis" },
+
+  { label: "Financeiro", href: "/financeiro", icon: "wallet", modulo: "financeiro", grupo: "Financeiro" },
+  { label: "Relatórios", href: "/relatorios", icon: "bar-chart-3", modulo: "relatorios", grupo: "Financeiro" },
+
   { label: "Novidades", href: "/novidades", icon: "sparkles", separadorAntes: true },
   { label: "Configurações", href: "/configuracoes", icon: "settings", apenasMaster: true },
 ] as const;
