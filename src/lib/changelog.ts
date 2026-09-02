@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.49.0";
+export const APP_VERSION = "0.49.1";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,14 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.49.1",
+    data: "2026-09-02",
+    titulo: "Correção de segurança na consulta de situação dos termos",
+    mudancas: [
+      { tipo: "seguranca", texto: "A consulta que calcula a situação de cada termo (rascunho, em uso, devolvido) não respeitava o isolamento por empresa. Corrigido no mesmo dia em que o módulo entrou, antes de qualquer termo real ser emitido." },
+    ],
+  },
   {
     versao: "0.49.0",
     data: "2026-09-02",

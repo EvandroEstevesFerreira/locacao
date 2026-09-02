@@ -7,6 +7,33 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.49.1] — 2026-09-02
+
+### Corrigido — segurança
+
+A view `termo_equipamento_situacao` (migration 0056) nasceu com
+`security_invoker` desligado, que é o padrão do Postgres 15+: ela executava com
+os privilégios do DONO (`postgres`), não de quem consulta. Como o dono ignora
+RLS, qualquer usuário autenticado podia ler pela view o id e a situação de todo
+termo de TODAS as organizações, sem passar pela policy `termo_select` — o mesmo
+tipo de furo que o AGENTS.md descreve para o `createAdminClient()`, por outra
+porta.
+
+Apontado pelo advisor de segurança do Supabase (lint 0010, nível ERROR) e
+confirmado por `reloptions` nulo em `pg_class`. Corrigido pela migration 0058;
+verificado depois que `reloptions` passou a `security_invoker=on` e que o
+advisor não reporta mais nenhum ERROR.
+
+Nenhum termo real havia sido emitido em produção entre a 0.49.0 e esta
+correção.
+
+### Adicionado
+
+- `src/lib/migrations-seguranca.test.ts` — varredura das migrations, sem lista
+  de nomes a manter: toda view precisa declarar `security_invoker = on` e
+  nenhuma migration pode desligar RLS. Verificado que a guarda reprova o estado
+  anterior à 0058.
+
 ## [0.49.0] — 2026-09-02
 
 Termo de responsabilidade por uso de equipamento (FRM-EQ-001). O equipamento
