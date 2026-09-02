@@ -7,6 +7,51 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.49.0] — 2026-09-02
+
+Termo de responsabilidade por uso de equipamento (FRM-EQ-001). O equipamento
+saía do almoxarifado para a mão do funcionário sem documento nenhum: quando
+sumia ou voltava quebrado, não havia papel dizendo quem estava com ele, em que
+estado saiu e quando deveria voltar.
+
+### Adicionado
+
+- Módulo **Termos** — lista, assistente de emissão e tela de detalhe.
+- Cadastro de **funcionários** que recebem equipamento (CPF, função,
+  matrícula, obra).
+- **Assinatura na tela** (dedo ou mouse) impressa no PDF, com hora e IP
+  registrados por assinatura — `SignaturePad` promovido para
+  `components/shared/` e `Assinaturas` do `pdf-form` ganhou `modo="imagem"`.
+- **Devolução parcial**, item a item, sem assinatura por item; a assinatura é
+  do encerramento. Exigi-la a cada furadeira que volta faria o almoxarife
+  perseguir o funcionário o dia inteiro, e o resultado seria ninguém registrar
+  devolução nenhuma.
+- **Documento FRM-EQ-001** (`src/lib/documentos/frm-eq-001.tsx`) com rota
+  `/api/termos/[id]/pdf`. A devolução é COLUNA na tabela de itens, não um
+  segundo documento: quem confere a volta vê, na mesma linha, em que estado a
+  peça saiu e em que estado voltou.
+- Tipo de template `termo_equipamento` — as cláusulas são editáveis em
+  Configurações › Templates, como o FRM-RH-001. Revisar cláusula é assunto do
+  Jurídico e não pode exigir deploy.
+- Migration `0056_termo_equipamento` — 4 tabelas, a view
+  `termo_equipamento_situacao` e o prefixo `TRM` na numeração de registros.
+
+### Integração com a Frota
+
+Emitir um termo move a peça para `em_uso`; devolver, encerrar ou cancelar a
+devolve para `disponivel`. As transições passam pela matriz única de
+`src/lib/frota.ts`, com origem `evento` — peça que volta com avaria vai para
+`disponivel`, e não para `manutencao`: quem decide mandar para conserto é quem
+olha para ela, na tela de Frota.
+
+### Segurança
+
+- Termo emitido **cancela**, com motivo, e continua no histórico. A guarda da
+  exclusão está no banco (`.is("emitido_em", null)`), não só na tela — a tela
+  pode estar velha, e apagar um termo emitido apagaria um documento assinado.
+- Emissão e encerramento são idempotentes: dois cliques não emitem duas vezes
+  nem estouram erro de unique na cara de quem está com o funcionário na frente.
+
 ## [0.48.0] — 2026-09-02
 
 Módulo Estoque. Antes de construir, a auditoria mostrou que boa parte de um

@@ -10,6 +10,8 @@ import {
   termoSchema,
   termoItemSchema,
   assinaturaSchema,
+  devolucaoItemSchema,
+  cancelamentoSchema,
 } from "@/lib/termo";
 import { hojeISOSaoPaulo } from "@/lib/locacao";
 // A matriz de transição da PEÇA é fonte única em frota.ts. O termo só a CHAMA.
@@ -276,4 +278,238 @@ export async function emitirTermo(
   // A Frota mostra a situação da peça, que acabou de mudar.
   revalidatePath("/frota");
   return { ok: true, id: termoId };
+}
+
+// ── Devolução, encerramento e cancelamento ───────────────────────────────────
+
+/**
+ * Devolve as peças das linhas informadas para `disponivel`.
+ *
+ * Chama a matriz de `frota.ts` com origem `"evento"`, como a emissão. Peça que
+ * volta COM AVARIA continua indo para `disponivel`, e não para `manutencao`: a
+ * matriz não permite o pulo, e quem decide se a peça vai para conserto é quem
+ * olha para ela, na tela de Frota. Mandar para manutenção automaticamente
+ * esconderia uma decisão que é de uma pessoa.
+ */
+async function liberarPecas(itemIds: string[]) {
+  if (itemIds.length === 0) return;
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("termo_equipamento_item")
+    .select("unidade_id, unidade:unidade_id(situacao)")
+    .in("id", itemIds)
+    .not("unidade_id", "is", null);
+
+  if (error || !data) {
+    console.error("liberarPecas/leitura", error);
+    return;
+  }
+
+  type Linha = { unidade_id: string; unidade: { situacao: SituacaoPeca } | null };
+  for (const l of data as unknown as Linha[]) {
+    const de = l.unidade?.situacao;
+    if (!de || !podeTransicionar(de, "disponivel", "evento")) continue;
+    const { error: erroUpd } = await supabase
+      .from("equipamento_unidade")
+      .update({ situacao: "disponivel" })
+      .eq("id", l.unidade_id);
+    if (erroUpd) console.error("liberarPecas/update", erroUpd);
+  }
+}
+
+/**
+ * Devolução PARCIAL: por item, sem assinatura.
+ *
+ * A assinatura é do encerramento, não de cada volta. Exigi-la a cada item faria
+ * o almoxarife perseguir o funcionário toda vez que uma furadeira voltasse — e
+ * o resultado seria ninguém registrar devolução nenhuma.
+ *
+ * Cada peça devolvida volta a `disponivel`. Sem isso ela ficaria "em uso" para
+ * sempre e sumiria da lista de peças disponíveis para o próximo termo.
+ */
+export async function registrarDevolucao(
+  termoId: string,
+  itens: {
+    item_id: string;
+    data_devolucao: string;
+    estado_devolucao: string;
+    observacoes?: string;
+  }[],
+): Promise<ActionResult> {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) {
+    return falha("Você não tem permissão para registrar devoluções.");
+  }
+  if (!itens.length) return falha("Marque ao menos um item devolvido.");
+
+  const supabase = await createClient();
+  const devolvidos: string[] = [];
+
+  for (const bruto of itens) {
+    const r = devolucaoItemSchema.safeParse(bruto);
+    if (!r.success) return falha(primeiroErro(r.error.issues));
+
+    const { error } = await supabase
+      .from("termo_equipamento_item")
+      .update({
+        data_devolucao: r.data.data_devolucao,
+        estado_devolucao: r.data.estado_devolucao,
+        observacoes: r.data.observacoes,
+      })
+      .eq("id", r.data.item_id)
+      .eq("termo_id", termoId);
+    if (error) {
+      console.error("registrarDevolucao", error);
+      return falha("Não foi possível registrar a devolução.");
+    }
+    devolvidos.push(r.data.item_id);
+  }
+
+  await liberarPecas(devolvidos);
+
+  revalidatePath(`/termos/${termoId}`);
+  revalidatePath("/termos");
+  revalidatePath("/frota");
+  return { ok: true };
+}
+
+/**
+ * Encerra o termo, com assinatura da devolução.
+ *
+ * Itens sem devolução CONTINUAM sem — ficam registrados como pendência no
+ * documento. É o que resolve o funcionário que devolveu dois de três itens e
+ * foi desligado: sem o encerramento, o termo ficaria aberto para sempre, e a
+ * pendência sumiria no meio de uma lista de termos vivos.
+ */
+export async function encerrarTermo(
+  termoId: string,
+  assinaturas: {
+    funcionario: { nome: string; cpf: string | null; imagem: string | null };
+    empresa: { nome: string; imagem: string | null };
+  },
+): Promise<ActionResult> {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) {
+    return falha("Você não tem permissão para encerrar termos.");
+  }
+  const func = assinaturaSchema.safeParse(assinaturas.funcionario);
+  if (!func.success) return falha(primeiroErro(func.error.issues));
+
+  const supabase = await createClient();
+  const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+
+  const { error: erroAss } = await supabase.from("termo_assinatura").upsert(
+    [
+      {
+        org_id: perfil.org_id,
+        termo_id: termoId,
+        momento: "devolucao",
+        papel: "funcionario",
+        nome: func.data.nome,
+        cpf: func.data.cpf,
+        imagem: func.data.imagem,
+        assinado_ip: ip,
+      },
+      {
+        org_id: perfil.org_id,
+        termo_id: termoId,
+        momento: "devolucao",
+        papel: "empresa",
+        nome: assinaturas.empresa.nome || (perfil.nome ?? "—"),
+        imagem: assinaturas.empresa.imagem,
+        assinado_ip: ip,
+      },
+    ],
+    // `upsert` e não `insert`: encerrar duas vezes por dois cliques não pode
+    // estourar erro de unique na cara de quem está com o funcionário na frente.
+    { onConflict: "termo_id,momento,papel" },
+  );
+  if (erroAss) {
+    console.error("encerrarTermo/assinaturas", erroAss);
+    return falha("Não foi possível gravar as assinaturas da devolução.");
+  }
+
+  const { error } = await supabase
+    .from("termo_equipamento")
+    .update({ encerrado_em: new Date().toISOString() })
+    .eq("id", termoId);
+  if (error) {
+    console.error("encerrarTermo/update", error);
+    return falha("Não foi possível encerrar o termo.");
+  }
+
+  // Encerrar libera o que ainda estava em uso: item não devolvido continua
+  // registrado como pendência no documento, mas a PEÇA não pode ficar presa a
+  // um termo encerrado.
+  await moverPecasDoTermo(termoId, "devolucao");
+
+  revalidatePath(`/termos/${termoId}`);
+  revalidatePath("/termos");
+  revalidatePath("/frota");
+  return { ok: true };
+}
+
+/** Cancela um termo emitido. Documento assinado não some — fica anulado com motivo. */
+export async function cancelarTermo(formData: FormData): Promise<ActionResult> {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id || !podeEditarCadastros(perfil.papel)) {
+    return falha("Somente master ou administrador pode cancelar um termo.");
+  }
+  const id = String(formData.get("id") ?? "").trim();
+  const parsed = cancelamentoSchema.safeParse({ motivo: formData.get("motivo") });
+  if (!id) return falha("Termo inválido.");
+  if (!parsed.success) return falha(primeiroErro(parsed.error.issues));
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("termo_equipamento")
+    .update({
+      cancelado_em: new Date().toISOString(),
+      motivo_cancelamento: parsed.data.motivo,
+    })
+    .eq("id", id);
+  if (error) {
+    console.error("cancelarTermo", error);
+    return falha("Não foi possível cancelar o termo.");
+  }
+
+  // Termo cancelado é termo que não valeu: as peças voltam a disponível, senão
+  // ficariam presas a um documento anulado.
+  await moverPecasDoTermo(id, "devolucao");
+
+  revalidatePath(`/termos/${id}`);
+  revalidatePath("/termos");
+  revalidatePath("/frota");
+  return { ok: true };
+}
+
+/** Só rascunho se apaga. Termo emitido CANCELA — documento assinado não some. */
+export async function excluirRascunho(formData: FormData): Promise<ActionResult> {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) {
+    return falha("Você não tem permissão para excluir termos.");
+  }
+  const id = String(formData.get("id") ?? "").trim();
+  if (!id) return falha("Termo inválido.");
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("termo_equipamento")
+    .delete()
+    .eq("id", id)
+    // A guarda é no BANCO, não só na tela: a tela pode estar velha, e apagar um
+    // termo emitido apagaria um documento assinado.
+    .is("emitido_em", null)
+    .select("id");
+  if (error) {
+    console.error("excluirRascunho", error);
+    return falha("Não foi possível excluir o rascunho.");
+  }
+  if (!data?.length) {
+    return falha("Este termo já foi emitido — cancele em vez de excluir.");
+  }
+
+  revalidatePath("/termos");
+  return { ok: true };
 }

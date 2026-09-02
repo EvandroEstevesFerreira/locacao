@@ -124,3 +124,37 @@ describe("termo de compromisso (FRM-RH-001)", () => {
     }
   });
 });
+
+describe("termo de equipamento (FRM-EQ-001)", () => {
+  const tpl = DEFAULT_TEMPLATES.termo_equipamento;
+
+  it("renderiza sem sobrar chaves quando há dados", () => {
+    const texto = renderTemplate(tpl.corpo, { empresa_nome: "Sistenge" });
+    expect(texto).not.toMatch(/\{\{/);
+  });
+
+  it("cita o art. 462 da CLT ao autorizar desconto por dano", () => {
+    // O desconto em folha sem previsão expressa é nulo. Sem esta cláusula o
+    // termo vira uma declaração de boas intenções: registra a entrega e não
+    // sustenta a cobrança do equipamento quebrado por mau uso.
+    expect(tpl.corpo).toContain("462");
+    expect(tpl.corpo).toMatch(/desgaste natural/);
+  });
+
+  it("toda variável usada no corpo está declarada no catálogo", () => {
+    const doc = DOCUMENTOS.find((d) => d.tipo === "termo_equipamento")!;
+    const declaradas = new Set(doc.variaveis.map((v) => v.chave));
+    const usadas = [...tpl.corpo.matchAll(/\{\{\s*([a-z_]+)\s*\}\}/gi)].map(
+      (m) => m[1],
+    );
+    expect(usadas.length).toBeGreaterThan(0);
+    for (const u of usadas) expect(declaradas, `variável {{${u}}}`).toContain(u);
+  });
+
+  it("pertence ao módulo de termos", () => {
+    // É o que faz o documento aparecer em Configurações › Templates para quem
+    // tem o módulo, e sumir para quem não tem — sem código novo de permissão.
+    const tipos = documentosDoModulo("termos").map((d) => d.tipo);
+    expect(tipos).toContain("termo_equipamento");
+  });
+});
