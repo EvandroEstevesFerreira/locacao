@@ -76,6 +76,13 @@ grep -rEn "(nao|usuario|permissao|funcao|endereco|numero|voce|tambem)" src/app s
     `auth.users` não é tabela da aplicação.
 
   Fora disso, e **sempre** em `src/lib/data/`, use `createClient()`.
+- **Toda view nasce com `security_invoker = on`.** No Postgres 15+ o padrão é
+  `off`: a view executa com os privilégios do DONO, que ignora RLS, e passa a
+  devolver as linhas de todas as organizações para qualquer usuário
+  autenticado — o mesmo furo do `createAdminClient()`, por outra porta, e
+  igualmente silencioso. Foi o incidente da 0.49.1 (migration 0058). A guarda
+  é `src/lib/migrations-seguranca.test.ts`, que varre as migrations sem lista
+  de nomes a manter.
 - **"Hoje" nunca é `new Date()`** quando a data vai ser comparada com coluna
   `date` do banco — use `hojeSaoPaulo()` (ou `hojeISOSaoPaulo()` para string).
   `new Date()` é um instante e o Vercel roda em UTC, então das 21h à meia-noite
