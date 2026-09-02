@@ -53,11 +53,22 @@ export const PROPRIEDADE_INFO: Record<Propriedade, { label: string }> = {
 export const ESTADOS = ["novo", "bom", "regular", "com_avaria"] as const;
 export type Estado = (typeof ESTADOS)[number];
 
-export const ESTADO_INFO: Record<Estado, { label: string }> = {
-  novo: { label: "Novo" },
-  bom: { label: "Bom" },
-  regular: { label: "Regular" },
-  com_avaria: { label: "Com avaria" },
+/**
+ * Estado de conservação — FONTE ÚNICA, espelho do enum `estado_equipamento`.
+ *
+ * O termo de responsabilidade usa exatamente estes valores (estado na entrega e
+ * na devolução) e importa daqui em vez de redeclarar: duas cópias do mesmo enum
+ * divergem, e a divergência aparece como badge com rótulo errado num documento
+ * assinado.
+ */
+export const ESTADO_INFO: Record<
+  Estado,
+  { label: string; variant: "default" | "secondary" | "outline" | "destructive" }
+> = {
+  novo: { label: "Novo", variant: "default" },
+  bom: { label: "Bom", variant: "secondary" },
+  regular: { label: "Regular", variant: "outline" },
+  com_avaria: { label: "Com avaria", variant: "destructive" },
 };
 
 /** De onde a mudança vem: da mão do usuário ou de um evento do sistema. */
