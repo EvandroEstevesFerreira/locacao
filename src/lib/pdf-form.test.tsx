@@ -181,6 +181,52 @@ describe("Assinaturas", () => {
     expect(contarPaginas(buffer)).toBe(1);
   });
 
+  // PNG 1x1 transparente, o menor data URI válido. O que se testa aqui é que o
+  // renderer ACEITA a imagem e fecha o documento — o desenho em si é do canvas,
+  // e verificá-lo pixel a pixel testaria o @react-pdf, não o nosso código.
+  const PNG_MINIMO =
+    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+
+  it("no modo imagem imprime o traço desenhado", async () => {
+    // Este modo é a correção de um buraco que existia desde a 0012: a vistoria
+    // guarda `assinatura_*_img` desde então e NENHUM PDF imprimia. Quem
+    // assinava na tela assinava no vazio.
+    const buffer = await renderToBuffer(
+      <Documento codigo="TESTE-006" titulo="Assinatura desenhada">
+        <Assinaturas
+          modo="imagem"
+          assinantes={[
+            {
+              papel: "Funcionário",
+              nome: "Fulano de Tal",
+              imagem: PNG_MINIMO,
+              detalhe: "Assinado em 02/09/2026 às 09:15 — IP 187.0.0.1",
+            },
+            { papel: "Sistenge Engenharia", nome: "Beltrano", imagem: PNG_MINIMO },
+          ]}
+        />
+      </Documento>,
+    );
+    expect(contarPaginas(buffer)).toBe(1);
+  });
+
+  it("no modo imagem, assinante SEM traço não quebra nem desalinha", async () => {
+    // O espaço da imagem é reservado mesmo vazio: sem isso, uma coluna com
+    // traço e outra sem sairiam com as linhas em alturas diferentes.
+    const buffer = await renderToBuffer(
+      <Documento codigo="TESTE-007" titulo="Assinatura parcial">
+        <Assinaturas
+          modo="imagem"
+          assinantes={[
+            { papel: "Funcionário", nome: "Fulano", imagem: PNG_MINIMO },
+            { papel: "Empresa", nome: "Beltrano", imagem: null },
+          ]}
+        />
+      </Documento>,
+    );
+    expect(contarPaginas(buffer)).toBe(1);
+  });
+
   it("no modo aceite imprime o registro em vez de deixar linha", async () => {
     const buffer = await renderToBuffer(
       <Documento codigo="TESTE-005" titulo="Aceite">

@@ -70,6 +70,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { label: "Contratos", href: "/contratos", icon: "file-text", modulo: "contratos", grupo: "Equipamento" },
   { label: "Recebimentos", href: "/recebimentos", icon: "clipboard-list", modulo: "recebimentos", grupo: "Equipamento" },
   { label: "Vistorias", href: "/vistorias", icon: "clipboard-check", modulo: "vistorias", grupo: "Equipamento" },
+  { label: "Termos", href: "/termos", icon: "file-signature", modulo: "termos", grupo: "Equipamento" },
   { label: "Fornecedores", href: "/fornecedores", icon: "truck", modulo: "fornecedores", grupo: "Equipamento" },
 
   { label: "Imóveis", href: "/imoveis", icon: "building-2", modulo: "imoveis", grupo: "Imóveis" },

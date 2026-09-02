@@ -9,7 +9,7 @@
 // (11pt/1.5, em pdf.tsx) — um formulário é para preencher, não para ler
 // corrido. Ver a seção "Densidade" da spec de 2026-08-22.
 
-import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
+import { Document, Page, Text, View, Image, StyleSheet } from "@react-pdf/renderer";
 import {
   BRANCO,
   SLATE_50,
@@ -269,6 +269,12 @@ const f = StyleSheet.create({
   assNome: { fontSize: 8.5 },
   assPapel: { fontSize: 7.5, color: SLATE_500 },
   assDetalhe: { fontSize: 7, color: SLATE_400 },
+  // Altura fixa para o traço: sem ela, assinaturas de proporções diferentes
+  // deslocariam a linha de baixo e as duas colunas sairiam desalinhadas.
+  assImagem: { height: 38, marginBottom: 2, objectFit: "contain" },
+  // Reserva o mesmo espaço quando não há traço, para que uma assinatura
+  // presente e uma ausente não desalinhem o par.
+  assVazio: { height: 38, marginBottom: 2 },
 });
 
 export type Campo = { label: string; valor?: string | null };
@@ -429,7 +435,13 @@ export function Anexo({
   );
 }
 
-export type Assinante = { papel: string; nome?: string | null; detalhe?: string };
+export type Assinante = {
+  papel: string;
+  nome?: string | null;
+  detalhe?: string;
+  /** PNG em data URI, vindo do `SignaturePad`. Só usado com `modo="imagem"`. */
+  imagem?: string | null;
+};
 
 /**
  * Grid de assinaturas, 2 por linha.
@@ -448,7 +460,7 @@ export function Assinaturas({
   localData,
 }: {
   assinantes: Assinante[];
-  modo?: "manual" | "aceite";
+  modo?: "manual" | "aceite" | "imagem";
   localData?: string;
 }) {
   return (
@@ -457,10 +469,33 @@ export function Assinaturas({
       <View style={f.assGrid}>
         {assinantes.map((a, i) => (
           <View key={i} style={f.assCol}>
+            {/* `modo="imagem"` imprime o traço desenhado ACIMA da linha, e não
+                no lugar dela: a linha continua servindo de base visual, e um
+                traço sem base flutua no meio do papel.
+
+                Este modo existia como buraco desde a 0012: a vistoria guarda
+                `assinatura_*_img` desde então, e NENHUM PDF do sistema
+                imprimia. Quem assinava na tela assinava no vazio — o traço
+                ficava no banco e sumia do papel. */}
+            {modo === "imagem" ? (
+              a.imagem ? (
+                /* eslint-disable-next-line jsx-a11y/alt-text --
+                   `Image` aqui é do @react-pdf/renderer, não `<img>` do DOM:
+                   não há leitor de tela lendo PDF gerado, e o componente não
+                   aceita `alt`. A regra é de acessibilidade web e não se
+                   aplica. */
+                <Image style={f.assImagem} src={a.imagem} />
+              ) : (
+                <View style={f.assVazio} />
+              )
+            ) : null}
             <View style={f.assLinha}>
               <Text style={f.assNome}>{a.nome || " "}</Text>
               <Text style={f.assPapel}>{a.papel}</Text>
-              {modo === "aceite" && a.detalhe ? (
+              {/* O detalhe (data, hora, IP) acompanha tanto o aceite digital
+                  quanto a assinatura desenhada: é a trilha que transforma um
+                  traço numa prova. */}
+              {(modo === "aceite" || modo === "imagem") && a.detalhe ? (
                 <Text style={f.assDetalhe}>{a.detalhe}</Text>
               ) : null}
             </View>

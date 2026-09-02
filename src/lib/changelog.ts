@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.48.0";
+export const APP_VERSION = "0.49.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,20 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.49.0",
+    data: "2026-09-02",
+    titulo: "Termo de responsabilidade por equipamento",
+    mudancas: [
+      { tipo: "novo", texto: "Novo módulo Termos: o equipamento sai do almoxarifado com documento assinado, dizendo quem recebeu, o que saiu, em que estado e até quando. Antes, quando a furadeira sumia, a conversa era memória contra memória." },
+      { tipo: "novo", texto: "Cadastro de funcionários que recebem equipamento, com CPF, função, matrícula e obra." },
+      { tipo: "novo", texto: "Assinatura na tela, com o dedo ou com o mouse, e ela sai impressa no PDF. O sistema guarda a hora e o IP de cada assinatura." },
+      { tipo: "novo", texto: "Devolução item a item: quem devolve três de cinco itens registra os três, e o termo continua aberto pelos outros dois. O encerramento é que é assinado — uma vez só." },
+      { tipo: "novo", texto: "O termo movimenta a Frota sozinho: emitir marca a peça como em uso, devolver a solta de volta para disponível. Ninguém precisa lembrar de atualizar duas telas." },
+      { tipo: "novo", texto: "Documento FRM-EQ-001 em PDF, com o texto das cláusulas editável em Configurações — revisar cláusula é assunto do Jurídico e não precisa de atualização do sistema." },
+      { tipo: "seguranca", texto: "Termo assinado não é apagado: cancela, com motivo, e continua no histórico. Só rascunho — que ainda não gastou número nem tirou peça da frota — pode ser excluído." },
+    ],
+  },
   {
     versao: "0.48.0",
     data: "2026-09-02",

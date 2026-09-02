@@ -8,6 +8,7 @@ export type TipoDocumento =
   | "contrato_imovel"
   | "contrato_equipamento"
   | "termo_responsabilidade"
+  | "termo_equipamento"
   | "medida_disciplinar"
   | "termo_chaves"
   | "kit_alojamento"
@@ -80,6 +81,24 @@ export const DOCUMENTOS: DocumentoInfo[] = [
       { chave: "cadencia", descricao: "Cadência de cobrança" },
       { chave: "itens", descricao: "Itens locados (descrição, quantidade e valor)" },
       { chave: "cidade", descricao: "Cidade da obra" },
+    ],
+  },
+  {
+    tipo: "termo_equipamento",
+    label: "Termo de responsabilidade por uso de equipamento (FRM-EQ-001)",
+    descricao: "Gerado no termo (botão “Gerar termo (PDF)”).",
+    eyebrow: "FRM-EQ-001 · Termo de responsabilidade",
+    modulo: "termos",
+    categoria: "formulario",
+    preenchimento: "com_dados",
+    variaveis: [
+      { chave: "empresa_nome", descricao: "Nome da empresa" },
+      { chave: "funcionario", descricao: "Nome do funcionário" },
+      { chave: "funcionario_cpf", descricao: "CPF do funcionário" },
+      { chave: "funcionario_cargo", descricao: "Função / cargo" },
+      { chave: "obra", descricao: "Obra vinculada" },
+      { chave: "data_entrega", descricao: "Data da entrega" },
+      { chave: "previsao_devolucao", descricao: "Previsão de devolução" },
     ],
   },
   {
@@ -221,6 +240,27 @@ export const DEFAULT_TEMPLATES: Record<
     ].join("\n\n"),
     versao: "1.0",
     publicadoEm: "2026-07-24",
+  },
+  termo_equipamento: {
+    titulo: "TERMO DE RESPONSABILIDADE POR USO DE EQUIPAMENTO",
+    corpo: [
+      "Declaro receber de {{empresa_nome}}, nesta data, os equipamentos, ferramentas e materiais discriminados neste termo, nas quantidades e nos estados de conservação acima registrados, para uso exclusivo no desempenho das minhas atividades profissionais.",
+      "Comprometo-me a:",
+      "— Utilizar os itens recebidos somente para fins de trabalho, conforme a destinação de cada um e as instruções do fabricante.",
+      "— Zelar pela conservação e pela guarda dos itens, mantendo-os em local seguro quando fora de uso.",
+      "— Utilizar os equipamentos de proteção individual exigidos para cada equipamento e não operar equipamento para o qual não tenha treinamento ou habilitação.",
+      "— Não emprestar, ceder, alugar ou vender os itens a terceiros, nem retirá-los da obra sem autorização do responsável.",
+      "— Não alterar, adulterar ou remover identificação, número de patrimônio, lacre ou dispositivo de segurança dos itens.",
+      "— Comunicar imediatamente ao responsável qualquer defeito, avaria, furto, roubo ou extravio, e nesses dois últimos casos apresentar o boletim de ocorrência.",
+      "— Devolver os itens ao término do uso, do contrato de trabalho ou quando solicitado pela empresa, no mesmo estado em que os recebi, ressalvado o desgaste natural decorrente do uso regular.",
+      "Estou ciente de que:",
+      "— O desgaste natural pelo uso regular é de responsabilidade da empresa e não me será cobrado.",
+      "— Danos, perdas ou extravios decorrentes de dolo ou de culpa comprovada (uso indevido, negligência, imprudência ou imperícia) poderão ser descontados dos meus haveres, mediante apuração prévia e nos termos do art. 462, § 1º, da CLT, para o qual dou expressa autorização.",
+      "— A recusa injustificada em devolver os itens caracteriza retenção indevida de patrimônio da empresa, sujeita às medidas administrativas, cíveis e criminais cabíveis.",
+      "— Este termo é parte integrante do meu contrato de trabalho e vale como comprovante de entrega e de devolução dos itens nele descritos.",
+    ].join("\n\n"),
+    versao: "1.0",
+    publicadoEm: "2026-09-02",
   },
   termo_responsabilidade: {
     titulo: "TERMO DE COMPROMISSO DE ALOJAMENTO",
