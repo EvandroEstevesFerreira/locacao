@@ -19,7 +19,14 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import { z } from "zod";
-import { idOpcional, opcional, textoOpcional, uuidOpcional } from "@/lib/campos";
+import {
+  enumOpcional,
+  idOpcional,
+  numeroOpcional,
+  opcional,
+  textoOpcional,
+  uuidOpcional,
+} from "@/lib/campos";
 import { ESTADOS } from "@/lib/frota";
 
 export const TIPOS_DETENTOR = [
@@ -161,30 +168,21 @@ export function montarLinhaDoTempo(posses: Posse[], hoje: string): PosseNaLinha[
     });
 }
 
-const anoOpcional = z
-  .union([z.literal(""), z.null(), z.coerce.number()])
-  .optional()
-  .transform((v) => (v === "" || v == null ? null : Number(v)))
-  .refine((v) => v === null || (Number.isInteger(v) && v >= 1950 && v <= 2100), {
-    message: "Ano deve estar entre 1950 e 2100.",
-  });
+const anoOpcional = numeroOpcional.refine(
+  (v) => v === null || (Number.isInteger(v) && v >= 1950 && v <= 2100),
+  { message: "Ano deve estar entre 1950 e 2100." },
+);
 
-const memoriaOpcional = z
-  .union([z.literal(""), z.null(), z.coerce.number()])
-  .optional()
-  .transform((v) => (v === "" || v == null ? null : Number(v)))
-  .refine((v) => v === null || (Number.isInteger(v) && v > 0 && v <= 1024), {
-    message: "Memória em GB, entre 1 e 1024.",
-  });
+const memoriaOpcional = numeroOpcional.refine(
+  (v) => v === null || (Number.isInteger(v) && v > 0 && v <= 1024),
+  { message: "Memória em GB, entre 1 e 1024." },
+);
 
 const imeiOpcional = opcional.refine((v) => v === null || /^\d{15}$/.test(v), {
   message: "IMEI tem 15 dígitos.",
 });
 
-const estadoOpcional = z
-  .union([z.literal(""), z.null(), z.enum(ESTADOS)])
-  .optional()
-  .transform((v) => (v === "" || v == null ? null : v));
+const estadoOpcional = enumOpcional(ESTADOS);
 
 /**
  * Mover a peça — e `funcionario` NÃO está entre os destinos.
