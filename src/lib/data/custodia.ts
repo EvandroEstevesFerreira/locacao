@@ -97,7 +97,7 @@ export async function listarPossesDaPeca(unidadeId: string): Promise<Posse[]> {
   const { data, error } = await supabase
     .from("custodia_peca")
     .select(
-      "id, tipo, inicio, fim, origem, termo_id, observacoes, " +
+      "id, tipo, inicio, fim, origem, termo_id, observacoes, detentor_rotulo, " +
         "obra:obra_id(codigo, nome), funcionario:funcionario_id(nome), " +
         "fornecedor:fornecedor_id(nome), " +
         "termo:termo_id(numero_registro, cancelado_em)",
@@ -122,6 +122,10 @@ export async function listarPossesDaPeca(unidadeId: string): Promise<Posse[]> {
     return {
       id: l.id as string,
       tipo: l.tipo as TipoDetentor,
+      // O snapshot da migration 0062 vem antes do vínculo em
+      // `descreverDetentor`: o embed abaixo respeita a RLS da tabela embutida,
+      // e `soft_delete` de obra apagaria o nome dela do histórico inteiro.
+      detentorRotulo: (l.detentor_rotulo as string | null) ?? null,
       obraRotulo: obra ? `${obra.codigo} — ${obra.nome}` : null,
       funcionarioNome: func?.nome ?? null,
       fornecedorNome: forn?.nome ?? null,

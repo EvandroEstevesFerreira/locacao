@@ -99,6 +99,72 @@ export async function fecharCustodia(
 }
 
 /**
+ * O nome de quem está ficando com a peça, para congelar na linha do livro.
+ *
+ * Resolvido AQUI, e não na leitura, porque o rótulo é dado do momento da posse:
+ * o embed da leitura respeita a RLS da tabela embutida (`obra_select` só libera
+ * tudo para master/administrador) e `soft_delete` de uma obra apagaria o nome
+ * dela de todo o histórico, para todo mundo. Num livro somente-inclusão a
+ * informação tem de sobreviver ao vínculo.
+ *
+ * Falha ou vínculo não encontrado devolvem `null` e a posse entra igual: o
+ * rótulo é conveniência, a posse é o fato. `almoxarifado` é nulo de propósito —
+ * o rótulo é constante e mora em `DETENTOR_INFO`.
+ */
+async function resolverDetentorRotulo(
+  supabase: Cliente,
+  e: AberturaCustodia,
+): Promise<string | null> {
+  if (e.tipo === "obra" && e.obraId) {
+    const { data, error } = await supabase
+      .from("obra")
+      .select("codigo, nome")
+      .eq("id", e.obraId)
+      .maybeSingle();
+    if (error || !data) {
+      console.error("resolverDetentorRotulo/obra", error ?? "obra nao encontrada");
+      return null;
+    }
+    const o = data as unknown as { codigo: string; nome: string };
+    return `${o.codigo} — ${o.nome}`;
+  }
+
+  if (e.tipo === "funcionario" && e.funcionarioId) {
+    const { data, error } = await supabase
+      .from("funcionario")
+      .select("nome")
+      .eq("id", e.funcionarioId)
+      .maybeSingle();
+    if (error || !data) {
+      console.error(
+        "resolverDetentorRotulo/funcionario",
+        error ?? "funcionario nao encontrado",
+      );
+      return null;
+    }
+    return (data as unknown as { nome: string }).nome;
+  }
+
+  if (e.tipo === "fornecedor" && e.fornecedorId) {
+    const { data, error } = await supabase
+      .from("fornecedor")
+      .select("nome")
+      .eq("id", e.fornecedorId)
+      .maybeSingle();
+    if (error || !data) {
+      console.error(
+        "resolverDetentorRotulo/fornecedor",
+        error ?? "fornecedor nao encontrado",
+      );
+      return null;
+    }
+    return (data as unknown as { nome: string }).nome;
+  }
+
+  return null;
+}
+
+/**
  * Abre uma posse nova, fechando a anterior na MESMA data.
  *
  * Fechar antes de abrir é o que impede o buraco de um dia entre duas posses —
@@ -120,6 +186,8 @@ export async function abrirCustodia(
   });
   if (!fechou.ok) return fechou;
 
+  const detentorRotulo = await resolverDetentorRotulo(supabase, e);
+
   const { error } = await supabase.from("custodia_peca").insert({
     org_id: e.orgId,
     unidade_id: e.unidadeId,
@@ -127,6 +195,7 @@ export async function abrirCustodia(
     obra_id: e.obraId ?? null,
     funcionario_id: e.funcionarioId ?? null,
     fornecedor_id: e.fornecedorId ?? null,
+    detentor_rotulo: detentorRotulo,
     inicio: e.inicio,
     origem: e.origem,
     termo_id: e.termoId ?? null,

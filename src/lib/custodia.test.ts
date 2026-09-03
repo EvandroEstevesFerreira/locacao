@@ -17,6 +17,7 @@ function posse(over: Partial<Posse> = {}): Posse {
   return {
     id: UUID,
     tipo: "obra",
+    detentorRotulo: null,
     obraRotulo: "800 — Administração",
     funcionarioNome: null,
     fornecedorNome: null,
@@ -66,6 +67,63 @@ describe("descreverDetentor", () => {
         posse({ tipo: "fornecedor", obraRotulo: null, fornecedorNome: "Mecânica Silva" }),
       ),
     ).toBe("Mecânica Silva (manutenção)");
+  });
+
+  it("o snapshot da posse vence o vínculo vivo", () => {
+    // O rótulo é dado do MOMENTO da posse. Se a obra foi renomeada depois — ou
+    // se o embed voltou nulo porque a RLS de `obra` filtrou a linha para quem
+    // não é membro — o livro continua dizendo o nome de quem ficou com a peça.
+    expect(
+      descreverDetentor(
+        posse({ detentorRotulo: "412 — Residencial Aurora", obraRotulo: "800 — Administração" }),
+      ),
+    ).toBe("412 — Residencial Aurora");
+    expect(
+      descreverDetentor(
+        posse({
+          tipo: "funcionario",
+          obraRotulo: null,
+          detentorRotulo: "Fulano de Tal",
+          funcionarioNome: "Outro Nome",
+        }),
+      ),
+    ).toBe("Fulano de Tal");
+    expect(
+      descreverDetentor(
+        posse({
+          tipo: "fornecedor",
+          obraRotulo: null,
+          detentorRotulo: "Mecânica Silva",
+          fornecedorNome: "Outra Oficina",
+        }),
+      ),
+    ).toBe("Mecânica Silva (manutenção)");
+  });
+
+  it("sem snapshot cai no vínculo vivo", () => {
+    // As posses gravadas antes da 0062 não têm rótulo, e continuam legíveis.
+    expect(descreverDetentor(posse({ detentorRotulo: null }))).toBe("800 — Administração");
+    expect(
+      descreverDetentor(
+        posse({ tipo: "funcionario", detentorRotulo: null, funcionarioNome: "Fulano de Tal" }),
+      ),
+    ).toBe("Fulano de Tal");
+  });
+
+  it("sem snapshot e sem vínculo ainda diz que não identificou", () => {
+    expect(descreverDetentor(posse({ detentorRotulo: null, obraRotulo: null }))).toBe(
+      "Obra não identificada",
+    );
+    expect(
+      descreverDetentor(
+        posse({ tipo: "funcionario", detentorRotulo: null, obraRotulo: null, funcionarioNome: null }),
+      ),
+    ).toBe("Funcionário não identificado");
+    expect(
+      descreverDetentor(
+        posse({ tipo: "fornecedor", detentorRotulo: null, obraRotulo: null, fornecedorNome: null }),
+      ),
+    ).toBe("Fornecedor não identificado (manutenção)");
   });
 
   it("vínculo apagado não vira string vazia", () => {

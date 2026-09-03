@@ -51,6 +51,12 @@ export const DETENTOR_INFO: Record<
 export type Posse = {
   id: string;
   tipo: TipoDetentor;
+  /**
+   * O nome do detentor CONGELADO no momento da posse. Preferido sobre o
+   * vínculo vivo: embed respeita a RLS da tabela embutida, e `soft_delete` de
+   * uma obra apagaria o nome dela de todo o histórico (migration 0062).
+   */
+  detentorRotulo: string | null;
   obraRotulo: string | null;
   funcionarioNome: string | null;
   fornecedorNome: string | null;
@@ -76,20 +82,26 @@ export type PosseNaLinha = Posse & {
 /**
  * Quem detém a peça, em uma linha de texto.
  *
+ * O SNAPSHOT vem primeiro (`detentorRotulo`, gravado na abertura da posse), e o
+ * vínculo vivo é o reserva. A ordem importa: o embed que resolve o vínculo
+ * respeita a RLS da tabela embutida, então para um gestor não membro da obra o
+ * nome volta nulo mesmo com a obra existindo; e `soft_delete` de uma obra
+ * apagaria o nome dela do histórico inteiro. O passado não se lê no presente.
+ *
  * As três FK são `on delete set null`: apagar a obra não pode apagar a
- * história. Quando o vínculo sumiu, dizemos isso — espaço em branco na tela
- * faria quem confere achar que ninguém preencheu.
+ * história. Quando nem snapshot nem vínculo há, dizemos isso — espaço em branco
+ * na tela faria quem confere achar que ninguém preencheu.
  */
 export function descreverDetentor(p: Posse): string {
   switch (p.tipo) {
     case "almoxarifado":
       return DETENTOR_INFO.almoxarifado.label;
     case "obra":
-      return p.obraRotulo ?? "Obra não identificada";
+      return p.detentorRotulo ?? p.obraRotulo ?? "Obra não identificada";
     case "funcionario":
-      return p.funcionarioNome ?? "Funcionário não identificado";
+      return p.detentorRotulo ?? p.funcionarioNome ?? "Funcionário não identificado";
     case "fornecedor":
-      return `${p.fornecedorNome ?? "Fornecedor não identificado"} (manutenção)`;
+      return `${p.detentorRotulo ?? p.fornecedorNome ?? "Fornecedor não identificado"} (manutenção)`;
   }
 }
 
