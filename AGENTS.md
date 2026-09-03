@@ -76,6 +76,13 @@ grep -rEn "(nao|usuario|permissao|funcao|endereco|numero|voce|tambem)" src/app s
     `auth.users` não é tabela da aplicação.
 
   Fora disso, e **sempre** em `src/lib/data/`, use `createClient()`.
+- **Escrita compartilhada entre grupos de rota mora em `src/lib/<dominio>-servidor.ts`**,
+  com `import "server-only"` no topo e recebendo o `supabase` de quem chama.
+  `src/lib/data/` é só leitura. O primeiro caso é
+  `src/lib/custodia-servidor.ts`, chamado por `termos/actions.ts` e por
+  `frota/actions.ts`: copiar o escritor nos dois é como as duas cópias
+  divergem, e a divergência num livro de custódia aparece como equipamento
+  que consta com duas pessoas.
 - **Toda view nasce com `security_invoker = on`.** No Postgres 15+ o padrão é
   `off`: a view executa com os privilégios do DONO, que ignora RLS, e passa a
   devolver as linhas de todas as organizações para qualquer usuário
