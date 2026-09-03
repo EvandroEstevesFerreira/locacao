@@ -120,9 +120,10 @@ begin
 end;
 $$;
 
--- `from public`, e não só de anon/authenticated: EXECUTE é concedido a PUBLIC
--- por padrão e os dois roles herdam de lá. Revogar só deles retorna sucesso e
--- não revoga nada — foi o incidente da 0.45.1.
+-- Este `revoke` sozinho NÃO bastou: em produção o Supabase concede EXECUTE a
+-- anon/authenticated/service_role de forma EXPLÍCITA, sem entrada de PUBLIC
+-- na ACL da função, então esta linha revogou uma concessão que não existia.
+-- A correção — as duas formas de revoke, e por quê — está na 0060.
 revoke execute on function public.guard_custodia_peca() from public;
 
 drop trigger if exists trg_custodia_imutavel on public.custodia_peca;
