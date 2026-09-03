@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.49.1";
+export const APP_VERSION = "0.50.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,21 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.50.0",
+    data: "2026-09-02",
+    titulo: "Histórico de quem está com cada equipamento",
+    mudancas: [
+      { tipo: "novo", texto: "Cada peça agora tem tela própria, com o histórico completo de quem ficou com ela e por quanto tempo. É a tela que responde \"onde está o notebook do Fulano\" e \"quem estava com esta furadeira em julho\"." },
+      { tipo: "novo", texto: "Dá para mover a peça entre obras e o almoxarifado, e mandar para manutenção em fornecedor. Antes o \"onde está\" era digitado no cadastro e nunca mais mudava — não havia como registrar que o equipamento saiu." },
+      { tipo: "novo", texto: "Campos de celular e computador: IMEI (os dois, para aparelho com dois chips), número da linha, operadora, service tag, memória e configuração. Aparecem só nas peças de TI." },
+      { tipo: "novo", texto: "Emitir e devolver termo passa a alimentar o histórico sozinho, na data do documento — não na data em que alguém lançou." },
+      { tipo: "seguranca", texto: "Movimentação registrada não pode ser editada nem apagada: corrigir é encerrar a posse e abrir a seguinte, e as duas ficam visíveis. Apagar faria o histórico bater sem que ninguém pudesse explicar a diferença depois." },
+      { tipo: "seguranca", texto: "Entregar equipamento a um funcionário exige termo assinado, sempre. Não existe caminho para registrar entrega a pessoa sem documento — é o que sustenta a cobrança por dano ou não devolução." },
+      { tipo: "correcao", texto: "A devolução de um item do termo não aceita mais data anterior à da entrega." },
+      { tipo: "correcao", texto: "O encerramento de um termo com devolução parcial anterior não grava mais uma linha duplicada, de duração zero, no histórico da peça." },
+    ],
+  },
   {
     versao: "0.49.1",
     data: "2026-09-02",
