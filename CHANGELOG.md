@@ -46,9 +46,10 @@ falta de tela, faltava o próprio ato de mover.
   almoxarifado para o almoxarifado"). A guarda passa a cobrir também a peça
   já solta pelo encerramento — e, de graça, a mesma peça repetida em duas
   linhas do mesmo termo.
-- UPDATE que atinge zero linhas não é erro para o PostgREST: os quatro
-  updates de `equipamento_unidade` desta fatia ganharam `.select("id")` e
-  tratam lista vazia como falha. Divergência silenciosa virou erro visível,
+- UPDATE que atinge zero linhas não é erro para o PostgREST: os cinco
+  updates de `equipamento_unidade` desta fatia (`abrirCustodia`, `moverPeca`,
+  `mudarSituacao`, `moverPecasDoTermo` e `liberarPecas`) ganharam
+  `.select("id")` e tratam lista vazia como falha. Divergência silenciosa virou erro visível,
   independentemente da migration 0061.
 - As falhas do livro de custódia deixam de ser descartadas nas quatro actions
   do termo (e o ramo `fim < inicio` passa a logar): termo retrodatado ficava
