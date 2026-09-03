@@ -96,12 +96,28 @@ export const termoItemSchema = z
   });
 export type TermoItemInput = z.infer<typeof termoItemSchema>;
 
-export const devolucaoItemSchema = z.object({
-  item_id: z.string().uuid(),
-  data_devolucao: z.string().min(1, "Informe a data da devolução."),
-  estado_devolucao: z.enum(ESTADOS),
-  observacoes: textoOpcional(300),
-});
+/**
+ * Devolução de um item do termo.
+ *
+ * `data_entrega` NÃO vai ao banco: entra só para a validação cruzada. Sem ela,
+ * devolução retrodatada passava aqui e estourava adiante no check
+ * `fim >= inicio` do livro de custódia, como erro cru de Postgres.
+ */
+export const devolucaoItemSchema = z
+  .object({
+    item_id: z.string().uuid(),
+    data_entrega: dataOpcional,
+    data_devolucao: z.string().min(1, "Informe a data da devolução."),
+    estado_devolucao: z.enum(ESTADOS),
+    observacoes: textoOpcional(300),
+  })
+  .refine(
+    (v) => v.data_entrega === null || v.data_devolucao >= v.data_entrega,
+    {
+      message: "A devolução não pode ser anterior à entrega.",
+      path: ["data_devolucao"],
+    },
+  );
 
 export const assinaturaSchema = z.object({
   nome: z.string().trim().min(1, "Informe o nome de quem assina."),

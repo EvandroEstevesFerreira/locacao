@@ -16,6 +16,7 @@ import {
 import { hojeISOSaoPaulo } from "@/lib/locacao";
 // A matriz de transição da PEÇA é fonte única em frota.ts. O termo só a CHAMA.
 import { podeTransicionar, type Situacao as SituacaoPeca } from "@/lib/frota";
+import { abrirCustodia } from "@/lib/custodia-servidor";
 
 export async function salvarFuncionario(
   _prev: ActionResult | null,
@@ -160,10 +161,29 @@ export async function salvarTermo(payload: {
  */
 async function moverPecasDoTermo(termoId: string, momento: "entrega" | "devolucao") {
   const supabase = await createClient();
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id) return;
+
+  const { data: termo, error: erroTermo } = await supabase
+    .from("termo_equipamento")
+    .select("funcionario_id, obra_id, data_entrega, encerrado_em, cancelado_em")
+    .eq("id", termoId)
+    .single();
+  if (erroTermo || !termo) {
+    console.error("moverPecasDoTermo/termo", erroTermo);
+    return;
+  }
+  const t = termo as unknown as {
+    funcionario_id: string;
+    obra_id: string | null;
+    data_entrega: string;
+    encerrado_em: string | null;
+    cancelado_em: string | null;
+  };
 
   const { data: itens, error } = await supabase
     .from("termo_equipamento_item")
-    .select("unidade_id, unidade:unidade_id(situacao)")
+    .select("unidade_id, data_devolucao, unidade:unidade_id(situacao)")
     .eq("termo_id", termoId)
     .not("unidade_id", "is", null);
 
@@ -172,8 +192,18 @@ async function moverPecasDoTermo(termoId: string, momento: "entrega" | "devoluca
     return;
   }
 
-  type Linha = { unidade_id: string; unidade: { situacao: SituacaoPeca } | null };
+  type Linha = {
+    unidade_id: string;
+    data_devolucao: string | null;
+    unidade: { situacao: SituacaoPeca } | null;
+  };
   const destino: SituacaoPeca = momento === "entrega" ? "em_uso" : "disponivel";
+
+  // Data do fechamento: a do fim do documento, não "hoje". Encerrar em
+  // 05/09 um termo cujo encerrado_em é 03/09 gravaria dois dias de posse que
+  // não houve. `hojeISOSaoPaulo()` é o último recurso, nunca `new Date()`.
+  const fimDoDocumento =
+    (t.cancelado_em ?? t.encerrado_em)?.slice(0, 10) ?? hojeISOSaoPaulo();
 
   for (const l of itens as unknown as Linha[]) {
     const de = l.unidade?.situacao;
@@ -184,6 +214,31 @@ async function moverPecasDoTermo(termoId: string, momento: "entrega" | "devoluca
       .update({ situacao: destino })
       .eq("id", l.unidade_id);
     if (erroUpd) console.error("moverPecasDoTermo/update", erroUpd);
+
+    if (momento === "entrega") {
+      await abrirCustodia(supabase, {
+        orgId: perfil.org_id,
+        unidadeId: l.unidade_id,
+        tipo: "funcionario",
+        obraId: t.obra_id,
+        funcionarioId: t.funcionario_id,
+        inicio: t.data_entrega,
+        origem: "termo",
+        termoId: termoId,
+      });
+    } else {
+      // Fecha e devolve a peça ao almoxarifado. `origem: "termo"` e não
+      // "manual": o evento que produziu esta posse foi o fim de um termo, e é
+      // isso que permite a linha do tempo dizer POR QUE a peça voltou.
+      await abrirCustodia(supabase, {
+        orgId: perfil.org_id,
+        unidadeId: l.unidade_id,
+        tipo: "almoxarifado",
+        inicio: l.data_devolucao ?? fimDoDocumento,
+        origem: "termo",
+        termoId: termoId,
+      });
+    }
   }
 }
 
@@ -291,13 +346,15 @@ export async function emitirTermo(
  * olha para ela, na tela de Frota. Mandar para manutenção automaticamente
  * esconderia uma decisão que é de uma pessoa.
  */
-async function liberarPecas(itemIds: string[]) {
+async function liberarPecas(termoId: string, itemIds: string[]) {
   if (itemIds.length === 0) return;
   const supabase = await createClient();
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id) return;
 
   const { data, error } = await supabase
     .from("termo_equipamento_item")
-    .select("unidade_id, unidade:unidade_id(situacao)")
+    .select("unidade_id, data_devolucao, unidade:unidade_id(situacao)")
     .in("id", itemIds)
     .not("unidade_id", "is", null);
 
@@ -306,7 +363,11 @@ async function liberarPecas(itemIds: string[]) {
     return;
   }
 
-  type Linha = { unidade_id: string; unidade: { situacao: SituacaoPeca } | null };
+  type Linha = {
+    unidade_id: string;
+    data_devolucao: string | null;
+    unidade: { situacao: SituacaoPeca } | null;
+  };
   for (const l of data as unknown as Linha[]) {
     const de = l.unidade?.situacao;
     if (!de || !podeTransicionar(de, "disponivel", "evento")) continue;
@@ -315,6 +376,16 @@ async function liberarPecas(itemIds: string[]) {
       .update({ situacao: "disponivel" })
       .eq("id", l.unidade_id);
     if (erroUpd) console.error("liberarPecas/update", erroUpd);
+
+    // A peça volta ao almoxarifado na data em que foi devolvida — não hoje.
+    await abrirCustodia(supabase, {
+      orgId: perfil.org_id,
+      unidadeId: l.unidade_id,
+      tipo: "almoxarifado",
+      inicio: l.data_devolucao ?? hojeISOSaoPaulo(),
+      origem: "termo",
+      termoId,
+    });
   }
 }
 
@@ -366,7 +437,7 @@ export async function registrarDevolucao(
     devolvidos.push(r.data.item_id);
   }
 
-  await liberarPecas(devolvidos);
+  await liberarPecas(termoId, devolvidos);
 
   revalidatePath(`/termos/${termoId}`);
   revalidatePath("/termos");
