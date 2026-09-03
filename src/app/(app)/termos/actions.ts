@@ -156,13 +156,24 @@ export async function salvarTermo(payload: {
  *
  * Peça que não pode transicionar é PULADA, e não derruba a operação: quando
  * chegamos aqui o termo já está assinado, e falhar agora deixaria um documento
- * assinado sem registro. A divergência aparece na tela de Frota, que é onde
- * alguém consegue resolvê-la.
+ * assinado sem registro.
+ *
+ * Devolve a PRIMEIRA falha, em texto de usuário, ou `null` quando tudo entrou.
+ * Quem chama decide se isso vira mensagem — e nenhum chamador desfaz o
+ * documento por causa disto. O `console.error` acontece de todo jeito: era o
+ * retorno descartado aqui que fazia um termo retrodatado ficar assinado sem
+ * linha de custódia, sem erro na tela e sem rastro no log.
  */
-async function moverPecasDoTermo(termoId: string, momento: "entrega" | "devolucao") {
+async function moverPecasDoTermo(
+  termoId: string,
+  momento: "entrega" | "devolucao",
+): Promise<string | null> {
   const supabase = await createClient();
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id) return;
+  if (!perfil?.org_id) {
+    console.error("moverPecasDoTermo/perfil", "sessao sem org_id");
+    return "Sessão inválida ao registrar o histórico de posse da peça.";
+  }
 
   const { data: termo, error: erroTermo } = await supabase
     .from("termo_equipamento")
@@ -171,7 +182,7 @@ async function moverPecasDoTermo(termoId: string, momento: "entrega" | "devoluca
     .single();
   if (erroTermo || !termo) {
     console.error("moverPecasDoTermo/termo", erroTermo);
-    return;
+    return "Não foi possível ler o termo para registrar o histórico de posse da peça.";
   }
   const t = termo as unknown as {
     funcionario_id: string;
@@ -189,7 +200,7 @@ async function moverPecasDoTermo(termoId: string, momento: "entrega" | "devoluca
 
   if (error || !itens) {
     console.error("moverPecasDoTermo/leitura", error);
-    return;
+    return "Não foi possível ler os itens do termo para registrar o histórico de posse da peça.";
   }
 
   type Linha = {
@@ -201,53 +212,90 @@ async function moverPecasDoTermo(termoId: string, momento: "entrega" | "devoluca
 
   // Data do fechamento: a do fim do documento, não "hoje". Encerrar em
   // 05/09 um termo cujo encerrado_em é 03/09 gravaria dois dias de posse que
-  // não houve. `hojeISOSaoPaulo()` é o último recurso, nunca `new Date()`.
-  const fimDoDocumento =
-    (t.cancelado_em ?? t.encerrado_em)?.slice(0, 10) ?? hojeISOSaoPaulo();
+  // não houve.
+  //
+  // E ela sai de `hojeISOSaoPaulo(instante)`, NUNCA de `.slice(0, 10)`:
+  // `encerrado_em` e `cancelado_em` são `timestamptz` gravados em UTC, e das
+  // 21h à meia-noite em Brasília o corte cru devolveria o dia SEGUINTE. A posse
+  // de almoxarifado nasceria com início amanhã, e qualquer movimentação na
+  // mesma noite seria recusada por `fim >= inicio` — a peça travava até o dia
+  // virar. `hojeISOSaoPaulo()` sem base é o último recurso, quando os dois
+  // campos são nulos.
+  const instanteDoFim = t.cancelado_em ?? t.encerrado_em;
+  const fimDoDocumento = instanteDoFim
+    ? hojeISOSaoPaulo(new Date(instanteDoFim))
+    : hojeISOSaoPaulo();
+
+  // Lista, e não variável reatribuída: o retorno é a PRIMEIRA falha, e a
+  // análise de fluxo do TypeScript não acompanha atribuição dentro de closure.
+  const problemas: string[] = [];
 
   for (const l of itens as unknown as Linha[]) {
-    // Item já devolvido foi fechado por `liberarPecas` na devolução parcial.
-    // Sem esta guarda, `podeTransicionar` devolve true por `de === para` e o
-    // encerramento reabre e refecha a mesma posse, deixando no livro uma linha
-    // de duração zero que não corresponde a movimento nenhum.
-    if (momento === "devolucao" && l.data_devolucao) continue;
-
+    // Peça sem situação legível não tem de onde transicionar.
     const de = l.unidade?.situacao;
-    if (!de || !podeTransicionar(de, destino, "evento")) continue;
+    if (!de) continue;
 
-    const { error: erroUpd } = await supabase
+    // Dois casos que NÃO são movimento, e nenhum dos dois pode virar linha no
+    // livro — em ambos `podeTransicionar` devolveria true por `de === para`:
+    //
+    // 1. item já devolvido, fechado por `liberarPecas` na devolução parcial: o
+    //    encerramento reabriria e refecharia a mesma posse, deixando uma linha
+    //    de duração zero;
+    // 2. peça já solta — `de === destino`. É o cancelamento de um termo JÁ
+    //    ENCERRADO: o encerramento abriu a posse de almoxarifado, e sem esta
+    //    guarda o cancelamento a fecharia para inserir outra igual, e o livro
+    //    passaria a dizer que a peça foi "do almoxarifado para o
+    //    almoxarifado". Fecha também a mesma peça repetida em duas linhas do
+    //    mesmo termo, que o wizard não deduplica.
+    if (momento === "devolucao" && (l.data_devolucao || de === destino)) continue;
+
+    if (!podeTransicionar(de, destino, "evento")) continue;
+
+    const { data: mudou, error: erroUpd } = await supabase
       .from("equipamento_unidade")
       .update({ situacao: destino })
-      .eq("id", l.unidade_id);
-    if (erroUpd) console.error("moverPecasDoTermo/update", erroUpd);
-
-    if (momento === "entrega") {
-      await abrirCustodia(supabase, {
-        orgId: perfil.org_id,
-        unidadeId: l.unidade_id,
-        tipo: "funcionario",
-        obraId: t.obra_id,
-        funcionarioId: t.funcionario_id,
-        inicio: t.data_entrega,
-        origem: "termo",
-        termoId: termoId,
-      });
-    } else {
-      // Fecha e devolve a peça ao almoxarifado. `origem: "termo"` e não
-      // "manual": o evento que produziu esta posse foi o fim de um termo, e é
-      // isso que permite a linha do tempo dizer POR QUE a peça voltou. A
-      // guarda acima já eliminou os itens com `data_devolucao`, então aqui
-      // resta só quem nunca foi devolvido — a data é sempre a do documento.
-      await abrirCustodia(supabase, {
-        orgId: perfil.org_id,
-        unidadeId: l.unidade_id,
-        tipo: "almoxarifado",
-        inicio: fimDoDocumento,
-        origem: "termo",
-        termoId: termoId,
-      });
+      .eq("id", l.unidade_id)
+      // `.select("id")` porque UPDATE de 0 linhas não é erro para o PostgREST:
+      // uma policy de RLS que filtre a linha deixaria a peça "disponível" com
+      // termo aberto, em silêncio. A peça é pulada, não derruba as outras.
+      .select("id");
+    if (erroUpd || !mudou?.length) {
+      console.error("moverPecasDoTermo/update", erroUpd ?? "update atingiu 0 linhas");
+      problemas.push(
+        "A situação de alguma peça não mudou no cadastro — provavelmente falta " +
+          "de permissão para alterar a peça. Avise um administrador.",
+      );
     }
+
+    const r =
+      momento === "entrega"
+        ? await abrirCustodia(supabase, {
+            orgId: perfil.org_id,
+            unidadeId: l.unidade_id,
+            tipo: "funcionario",
+            obraId: t.obra_id,
+            funcionarioId: t.funcionario_id,
+            inicio: t.data_entrega,
+            origem: "termo",
+            termoId: termoId,
+          })
+        : // Fecha e devolve a peça ao almoxarifado. `origem: "termo"` e não
+          // "manual": o evento que produziu esta posse foi o fim de um termo, e
+          // é isso que permite a linha do tempo dizer POR QUE a peça voltou. A
+          // guarda acima já eliminou os itens com `data_devolucao`, então aqui
+          // resta só quem nunca foi devolvido — a data é sempre a do documento.
+          await abrirCustodia(supabase, {
+            orgId: perfil.org_id,
+            unidadeId: l.unidade_id,
+            tipo: "almoxarifado",
+            inicio: fimDoDocumento,
+            origem: "termo",
+            termoId: termoId,
+          });
+    if (!r.ok) problemas.push(r.erro);
   }
+
+  return problemas[0] ?? null;
 }
 
 /**
@@ -334,12 +382,22 @@ export async function emitirTermo(
     return falha("O termo foi emitido, mas as assinaturas não foram gravadas.");
   }
 
-  await moverPecasDoTermo(termoId, "entrega");
+  const problemaNoLivro = await moverPecasDoTermo(termoId, "entrega");
 
   revalidatePath("/termos");
   revalidatePath(`/termos/${termoId}`);
   // A Frota mostra a situação da peça, que acabou de mudar.
   revalidatePath("/frota");
+
+  // O termo está emitido, numerado e assinado: falha no livro NÃO o desfaz. Mas
+  // também não pode ficar muda — é a mesma forma das assinaturas acima. Os
+  // `revalidatePath` vêm antes de propósito: as telas precisam mostrar o
+  // documento novo mesmo quando a mensagem é de erro.
+  if (problemaNoLivro) {
+    return falha(
+      `O termo foi emitido, mas o histórico de posse da peça não foi atualizado. ${problemaNoLivro}`,
+    );
+  }
   return { ok: true, id: termoId };
 }
 
@@ -353,12 +411,19 @@ export async function emitirTermo(
  * matriz não permite o pulo, e quem decide se a peça vai para conserto é quem
  * olha para ela, na tela de Frota. Mandar para manutenção automaticamente
  * esconderia uma decisão que é de uma pessoa.
+ *
+ * Devolve a PRIMEIRA falha em texto de usuário, ou `null`, no mesmo contrato de
+ * `moverPecasDoTermo`: a devolução já foi gravada quando se chega aqui, e quem
+ * chama decide se a falha do livro vira mensagem.
  */
-async function liberarPecas(termoId: string, itemIds: string[]) {
-  if (itemIds.length === 0) return;
+async function liberarPecas(termoId: string, itemIds: string[]): Promise<string | null> {
+  if (itemIds.length === 0) return null;
   const supabase = await createClient();
   const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id) return;
+  if (!perfil?.org_id) {
+    console.error("liberarPecas/perfil", "sessao sem org_id");
+    return "Sessão inválida ao registrar o histórico de posse da peça.";
+  }
 
   const { data, error } = await supabase
     .from("termo_equipamento_item")
@@ -368,7 +433,7 @@ async function liberarPecas(termoId: string, itemIds: string[]) {
 
   if (error || !data) {
     console.error("liberarPecas/leitura", error);
-    return;
+    return "Não foi possível ler os itens devolvidos para registrar o histórico de posse da peça.";
   }
 
   type Linha = {
@@ -376,17 +441,30 @@ async function liberarPecas(termoId: string, itemIds: string[]) {
     data_devolucao: string | null;
     unidade: { situacao: SituacaoPeca } | null;
   };
+  // Lista, e não variável reatribuída: o retorno é a PRIMEIRA falha, e a
+  // análise de fluxo do TypeScript não acompanha atribuição dentro de closure.
+  const problemas: string[] = [];
+
   for (const l of data as unknown as Linha[]) {
     const de = l.unidade?.situacao;
     if (!de || !podeTransicionar(de, "disponivel", "evento")) continue;
-    const { error: erroUpd } = await supabase
+    const { data: mudou, error: erroUpd } = await supabase
       .from("equipamento_unidade")
       .update({ situacao: "disponivel" })
-      .eq("id", l.unidade_id);
-    if (erroUpd) console.error("liberarPecas/update", erroUpd);
+      .eq("id", l.unidade_id)
+      // Mesmo motivo de `moverPecasDoTermo`: 0 linhas atualizadas não é erro
+      // para o PostgREST, e a peça ficaria "em uso" num termo devolvido.
+      .select("id");
+    if (erroUpd || !mudou?.length) {
+      console.error("liberarPecas/update", erroUpd ?? "update atingiu 0 linhas");
+      problemas.push(
+        "A situação de alguma peça não mudou no cadastro — provavelmente falta " +
+          "de permissão para alterar a peça. Avise um administrador.",
+      );
+    }
 
     // A peça volta ao almoxarifado na data em que foi devolvida — não hoje.
-    await abrirCustodia(supabase, {
+    const r = await abrirCustodia(supabase, {
       orgId: perfil.org_id,
       unidadeId: l.unidade_id,
       tipo: "almoxarifado",
@@ -394,7 +472,10 @@ async function liberarPecas(termoId: string, itemIds: string[]) {
       origem: "termo",
       termoId,
     });
+    if (!r.ok) problemas.push(r.erro);
   }
+
+  return problemas[0] ?? null;
 }
 
 /**
@@ -445,11 +526,17 @@ export async function registrarDevolucao(
     devolvidos.push(r.data.item_id);
   }
 
-  await liberarPecas(termoId, devolvidos);
+  const problemaNoLivro = await liberarPecas(termoId, devolvidos);
 
   revalidatePath(`/termos/${termoId}`);
   revalidatePath("/termos");
   revalidatePath("/frota");
+
+  if (problemaNoLivro) {
+    return falha(
+      `A devolução foi registrada, mas o histórico de posse da peça não foi atualizado. ${problemaNoLivro}`,
+    );
+  }
   return { ok: true };
 }
 
@@ -521,11 +608,17 @@ export async function encerrarTermo(
   // Encerrar libera o que ainda estava em uso: item não devolvido continua
   // registrado como pendência no documento, mas a PEÇA não pode ficar presa a
   // um termo encerrado.
-  await moverPecasDoTermo(termoId, "devolucao");
+  const problemaNoLivro = await moverPecasDoTermo(termoId, "devolucao");
 
   revalidatePath(`/termos/${termoId}`);
   revalidatePath("/termos");
   revalidatePath("/frota");
+
+  if (problemaNoLivro) {
+    return falha(
+      `O termo foi encerrado, mas o histórico de posse da peça não foi atualizado. ${problemaNoLivro}`,
+    );
+  }
   return { ok: true };
 }
 
@@ -555,11 +648,17 @@ export async function cancelarTermo(formData: FormData): Promise<ActionResult> {
 
   // Termo cancelado é termo que não valeu: as peças voltam a disponível, senão
   // ficariam presas a um documento anulado.
-  await moverPecasDoTermo(id, "devolucao");
+  const problemaNoLivro = await moverPecasDoTermo(id, "devolucao");
 
   revalidatePath(`/termos/${id}`);
   revalidatePath("/termos");
   revalidatePath("/frota");
+
+  if (problemaNoLivro) {
+    return falha(
+      `O termo foi cancelado, mas o histórico de posse da peça não foi atualizado. ${problemaNoLivro}`,
+    );
+  }
   return { ok: true };
 }
 

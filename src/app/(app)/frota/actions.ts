@@ -69,13 +69,20 @@ export async function moverPeca(raw: unknown): Promise<ActionResult> {
   });
   if (!r.ok) return falha(r.erro);
 
-  const { error } = await supabase
+  const { data: mudou, error } = await supabase
     .from("equipamento_unidade")
     .update({ situacao: destinoSituacao })
-    .eq("id", d.unidade_id);
-  if (error) {
-    console.error("moverPeca/situacao", error);
-    return falha("A posse foi registrada, mas a situação da peça não mudou.");
+    .eq("id", d.unidade_id)
+    // `.select("id")` porque UPDATE de ZERO linhas não é erro para o PostgREST:
+    // uma policy de RLS que filtra a linha devolve `error: null` e nada mudado,
+    // e sem isto a action diria "movido" com a peça parada.
+    .select("id");
+  if (error || !mudou?.length) {
+    console.error("moverPeca/situacao", error ?? "update atingiu 0 linhas");
+    return falha(
+      "A posse foi registrada, mas a situação da peça não mudou no cadastro — " +
+        "provavelmente falta de permissão para alterar a peça. Avise um administrador.",
+    );
   }
 
   revalidatePath("/frota");
@@ -176,13 +183,20 @@ export async function mudarSituacao(formData: FormData): Promise<ActionResult> {
     return falha(motivoBloqueio(de, para) ?? "Mudança de situação não permitida.");
   }
 
-  const { error } = await supabase
+  const { data: mudou, error } = await supabase
     .from("equipamento_unidade")
     .update({ situacao: para })
-    .eq("id", id);
-  if (error) {
-    console.error("mudarSituacao", error);
-    return falha("Não foi possível mudar a situação da peça.");
+    .eq("id", id)
+    // Mesmo motivo de `moverPeca`: 0 linhas atualizadas não é erro para o
+    // PostgREST, e "baixei a peça" com a peça ainda disponível é mentira que a
+    // tela repetiria sem nenhum sinal.
+    .select("id");
+  if (error || !mudou?.length) {
+    console.error("mudarSituacao", error ?? "update atingiu 0 linhas");
+    return falha(
+      "A situação da peça não mudou — provavelmente falta de permissão para " +
+        "alterar a peça. Avise um administrador.",
+    );
   }
 
   revalidatePath("/frota");

@@ -76,6 +76,10 @@ export async function fecharCustodia(
   // O check `fim >= inicio` do banco recusaria com erro cru de Postgres. Aqui
   // a recusa vira frase que quem digitou entende.
   if (fim < linha.inicio) {
+    // Loga como os outros três ramos do arquivo: este é o ramo que dispara
+    // quando alguém retrodata um termo para antes da posse aberta, e sem log
+    // ele seria o único modo de falha do livro sem rastro em produção.
+    console.error("fecharCustodia/ordem", { unidadeId, fim, inicio: linha.inicio });
     return {
       ok: false,
       erro: `A data informada (${fim}) é anterior ao início desta posse (${linha.inicio}).`,
@@ -134,15 +138,29 @@ export async function abrirCustodia(
     return { ok: false, erro: "Não foi possível registrar a posse da peça." };
   }
 
-  const { error: erroPeca } = await supabase
+  const { data: atualizada, error: erroPeca } = await supabase
     .from("equipamento_unidade")
     .update({ obra_id: e.obraId ?? null })
-    .eq("id", e.unidadeId);
+    .eq("id", e.unidadeId)
+    // O `.select("id")` é o que torna a divergência VISÍVEL. Sem ele, um UPDATE
+    // filtrado pela cláusula `using` de uma policy de RLS devolve `error: null`
+    // e ZERO linhas, e o PostgREST não trata isso como erro: a posse entraria
+    // no livro, a peça continuaria no lugar antigo, e a action devolveria
+    // sucesso. Divergência silenciosa é justamente o que este arquivo existe
+    // para impedir.
+    .select("id");
 
-  if (erroPeca) {
-    // A posse JÁ foi gravada e é a verdade. O campo é cache do livro, e a
-    // divergência aparece na tela de Frota, que é onde alguém a resolve.
-    console.error("abrirCustodia/cache", erroPeca);
+  if (erroPeca || !atualizada?.length) {
+    console.error("abrirCustodia/cache", erroPeca ?? "update atingiu 0 linhas");
+    // A posse JÁ foi gravada e é a verdade. Mas o campo que a Frota lê ficou
+    // para trás, e quem acabou de mover a peça precisa saber disso agora — a
+    // tela de Frota mostraria a peça no lugar antigo sem explicar por quê.
+    return {
+      ok: false,
+      erro:
+        "A posse foi registrada, mas a localização da peça não mudou no cadastro — " +
+        "provavelmente falta de permissão para alterar a peça. Avise um administrador.",
+    };
   }
 
   return { ok: true };
