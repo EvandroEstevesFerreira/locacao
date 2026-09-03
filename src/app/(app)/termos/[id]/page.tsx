@@ -220,6 +220,7 @@ export default async function TermoDetalhePage({
               funcionarioCpf={termo.funcionario_cpf}
               nomeEmpresa={nomeEmpresa}
               encerrado={encerrado}
+              dataEntrega={termo.data_entrega}
             />
           </CardContent>
         </Card>

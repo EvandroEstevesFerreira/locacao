@@ -147,7 +147,9 @@ export default async function FrotaPage({
                   pecas.map((p) => (
                     <TableRow key={p.id}>
                       <TableCell className="font-medium">
-                        {p.identificador}
+                        <Link href={`/frota/${p.id}`} className="hover:underline">
+                          {p.identificador}
+                        </Link>
                         {p.numeroSerie ? (
                           <span className="block text-xs text-muted-foreground">
                             série {p.numeroSerie}

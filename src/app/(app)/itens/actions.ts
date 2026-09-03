@@ -126,6 +126,18 @@ export async function adicionarUnidade(
   return {};
 }
 
+/**
+ * Exclui a peça — só enquanto ela não tem história.
+ *
+ * `custodia_peca.unidade_id` é `on delete cascade` (0059) e a guarda de
+ * imutabilidade do livro levanta exceção em `DELETE`: o CASCADE dispara a
+ * trigger BEFORE DELETE do filho e ABORTA o delete do pai. Provado em Postgres
+ * local. Sem a contagem abaixo, o botão excluir não fazia nada e não falava
+ * nada — a página revalidava e a peça continuava lá.
+ *
+ * A contagem é a mensagem, não a proteção: quem protege é o banco. Aqui a
+ * recusa vira frase que diz o que fazer em vez de erro cru de Postgres.
+ */
 export async function excluirUnidade(formData: FormData) {
   const perfil = await getCurrentPerfil();
   if (!perfil?.org_id || !podeEditarCadastros(perfil.papel)) {
@@ -135,6 +147,29 @@ export async function excluirUnidade(formData: FormData) {
   const itemId = (formData.get("item_id") as string | null)?.trim();
   if (!id) return;
   const supabase = await createClient();
-  await supabase.from("equipamento_unidade").delete().eq("id", id);
+
+  const { data: posses, error: erroPosses } = await supabase
+    .from("custodia_peca")
+    .select("id")
+    .eq("unidade_id", id)
+    .limit(1);
+  if (erroPosses) {
+    console.error("excluirUnidade/custodia", erroPosses);
+    return { error: "Não foi possível verificar o histórico da peça. Tente de novo." };
+  }
+  if (posses?.length) {
+    return {
+      error:
+        "Esta peça tem histórico de custódia, e histórico não se apaga. Para " +
+        "tirá-la de uso, abra a peça na Frota e use Baixar — assim o registro " +
+        "de quem ficou com ela continua existindo.",
+    };
+  }
+
+  const { error } = await supabase.from("equipamento_unidade").delete().eq("id", id);
+  if (error) {
+    console.error("excluirUnidade", error);
+    return { error: "Não foi possível excluir esta peça." };
+  }
   if (itemId) revalidatePath(`/itens/${itemId}`);
 }

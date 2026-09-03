@@ -32,6 +32,7 @@ export function TermoDevolucao({
   funcionarioCpf,
   nomeEmpresa,
   encerrado,
+  dataEntrega,
 }: {
   termoId: string;
   itens: TermoItemLinha[];
@@ -39,6 +40,7 @@ export function TermoDevolucao({
   funcionarioCpf: string | null;
   nomeEmpresa: string;
   encerrado: boolean;
+  dataEntrega: string;
 }) {
   const router = useRouter();
   const [erro, setErro] = useState<string | null>(null);
@@ -68,6 +70,7 @@ export function TermoDevolucao({
         termoId,
         marcadosIds.map((id) => ({
           item_id: id,
+          data_entrega: dataEntrega,
           data_devolucao: marcados[id].data,
           estado_devolucao: marcados[id].estado,
         })),

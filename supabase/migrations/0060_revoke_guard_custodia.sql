@@ -1,0 +1,38 @@
+-- ============================================================================
+-- Revoga EXECUTE do guard de custódia — desta vez, dos dois jeitos
+--
+-- A 0059 revogou só `from public`, copiando o comentário do brief ("EXECUTE é
+-- concedido a PUBLIC por padrão, os dois roles herdam de lá, revogar só deles
+-- não revoga nada"). Isso é verdade em geral, mas não foi o que aconteceu
+-- aqui: depois do apply em produção, `has_function_privilege('authenticated',
+-- 'public.guard_custodia_peca()', 'execute')` e a mesma checagem para `anon`
+-- continuaram `true`.
+--
+-- O `proacl` da função explica por quê — NÃO HÁ entrada de PUBLIC nela:
+--
+--   guard_custodia_peca:
+--     {postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}
+--
+-- O Supabase concede EXECUTE a `anon`, `authenticated` e `service_role`
+-- EXPLICITAMENTE, via `alter default privileges`, no momento em que a função
+-- é criada — não por herança de PUBLIC. `revoke ... from public` revogou uma
+-- concessão que não existia: retornou sucesso e não fez nada, e
+-- `has_function_privilege` foi o que pegou o engano, exatamente como pegou o
+-- engano oposto na 0054.
+--
+-- A 0054 tinha o problema inverso: lá, `from public` era o que faltava, e
+-- `from anon, authenticated` sozinho não tinha efeito. Aqui é o contrário.
+-- Conclusão que fica para o projeto todo: NÃO dá para saber de antemão se o
+-- grant chegou por herança de PUBLIC ou por concessão explícita do Supabase —
+-- as duas formas de revoke ficam juntas, sempre, e `has_function_privilege` é
+-- quem confirma qual delas surtiu efeito.
+--
+-- ATENÇÃO ao replicar: NÃO revogue de `current_org_id`, `pode_operar`,
+-- `registrar_auditoria` etc. Essas são chamadas DENTRO de policy ou de
+-- trigger que precisa ser invocável pelo evento normal — revogar delas
+-- quebraria RLS ou a própria escrita. Isto aqui é só para função de trigger
+-- de imutabilidade, que não tem motivo nenhum para estar exposta por RPC.
+-- ============================================================================
+
+revoke execute on function public.guard_custodia_peca() from public;
+revoke execute on function public.guard_custodia_peca() from anon, authenticated;

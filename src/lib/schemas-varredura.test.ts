@@ -4,6 +4,7 @@ import { z } from "zod";
 import * as alojamento from "./alojamento";
 import * as avanco from "./avanco";
 import * as config from "./config";
+import * as custodia from "./custodia";
 import * as custoItem from "./custo-item";
 import * as estoque from "./estoque";
 import * as fechamento from "./fechamento";
@@ -17,6 +18,7 @@ import * as obra from "./obra";
 import * as orcamento from "./orcamento";
 import * as permissoes from "./permissoes";
 import * as recebimento from "./recebimento";
+import * as termo from "./termo";
 
 /**
  * VARREDURA — o teste que a suíte de idempotência deveria ter sido desde o
@@ -45,6 +47,7 @@ const MODULOS: Record<string, Record<string, unknown>> = {
   alojamento,
   avanco,
   config,
+  custodia,
   custoItem,
   estoque,
   fechamento,
@@ -58,6 +61,7 @@ const MODULOS: Record<string, Record<string, unknown>> = {
   orcamento,
   permissoes,
   recebimento,
+  termo,
 };
 
 /**
@@ -117,6 +121,12 @@ const AMOSTRAS: Record<string, unknown> = {
   fechamentoSchema: { obra_id: UUID, competencia: "2026-09" },
   unidadeSchema: { item_id: UUID, identificador: "PAT-0431" },
   categoriaSchema: { nome: "Concretagem" },
+  moverPecaSchema: {
+    unidade_id: UUID,
+    tipo: "almoxarifado",
+    data: "2026-09-02",
+  },
+  editarPecaSchema: { id: UUID, identificador: "PAT-0431" },
   movimentoSchema: { item_id: UUID, tipo: "entrada", quantidade: "10", data: "2026-09-02" },
   parcelaItemSchema: { item_locado_id: UUID, valor: "100" },
   empresaSchema: { nome: "Sistenge Engenharia" },
@@ -185,6 +195,21 @@ const AMOSTRAS: Record<string, unknown> = {
     competencia: "2026-09",
     status: "pendente",
   },
+  funcionarioSchema: { nome: "Fulano de Tal" },
+  termoSchema: { funcionario_id: UUID, data_entrega: "2026-09-02" },
+  termoItemSchema: {
+    item_id: UUID,
+    controle: "quantidade",
+    quantidade: "1",
+    estado_entrega: "bom",
+  },
+  devolucaoItemSchema: {
+    item_id: UUID,
+    data_devolucao: "2026-09-02",
+    estado_devolucao: "bom",
+  },
+  assinaturaSchema: { nome: "Fulano de Tal" },
+  cancelamentoSchema: { motivo: "Emitido para o funcionário errado." },
 };
 
 /** Todo ZodObject exportado pelos módulos de domínio, com nome de origem. */

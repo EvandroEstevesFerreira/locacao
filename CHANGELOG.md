@@ -7,6 +7,70 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.50.0] — 2026-09-02
+
+Fatia 1 da custódia da peça. O achado que ordenou a fatia: a peça não podia
+ser alterada — `adicionarUnidade` gravava situação e obra no cadastro e
+nenhum caminho humano os alterava depois, então "com quem ficou" não era só
+falta de tela, faltava o próprio ato de mover.
+
+### Adicionado
+
+- Tela própria da peça (`/frota/[id]`), com o histórico completo de posse:
+  quem ficou com o equipamento e por quanto tempo.
+- `moverPeca`, `editarPeca` e `mudarSituacao` (`src/app/(app)/frota/actions.ts`)
+  — o ato de mover a peça entre obra e almoxarifado, ou para manutenção em
+  fornecedor, que não existia.
+- Livro `custodia_peca`, somente-inclusão: movimentação registrada não pode
+  ser editada nem apagada — corrigir é encerrar a posse e abrir a seguinte.
+- Campos de TI na peça (IMEI duplo, número de linha, operadora, service tag,
+  memória, configuração), com perfil de campos por categoria.
+- Emitir, devolver, encerrar e cancelar termo passam a abrir e fechar posse
+  de funcionário sozinhos, sempre na data do documento — não na data do
+  lançamento.
+
+### Corrigido
+
+- A devolução de um item do termo aceitava data anterior à da entrega. Agora
+  recusa.
+- O encerramento de um termo com devolução parcial anterior gravava uma
+  linha duplicada, de duração zero, no livro de custódia. Corrigido.
+- Excluir uma peça que já tem histórico de custódia não funcionava e não
+  dizia nada: o `on delete cascade` do livro dispara a guarda de
+  imutabilidade e aborta o delete, e `excluirUnidade` descartava o erro.
+  Agora a recusa é explicada, com o caminho certo (baixar a peça).
+- A data do fim da posse saía de `.slice(0, 10)` sobre `timestamptz`, que é
+  a data UTC do instante: das 21h à meia-noite em Brasília, o dia seguinte.
+  A posse de almoxarifado nascia no futuro e travava a peça até o dia virar.
+- Cancelar um termo já encerrado duplicava a posse de almoxarifado ("do
+  almoxarifado para o almoxarifado"). A guarda passa a cobrir também a peça
+  já solta pelo encerramento — e, de graça, a mesma peça repetida em duas
+  linhas do mesmo termo.
+- UPDATE que atinge zero linhas não é erro para o PostgREST: os cinco
+  updates de `equipamento_unidade` desta fatia (`abrirCustodia`, `moverPeca`,
+  `mudarSituacao`, `moverPecasDoTermo` e `liberarPecas`) ganharam
+  `.select("id")` e tratam lista vazia como falha. Divergência silenciosa virou erro visível,
+  independentemente da migration 0061.
+- As falhas do livro de custódia deixam de ser descartadas nas quatro actions
+  do termo (e o ramo `fim < inicio` passa a logar): termo retrodatado ficava
+  assinado sem linha de custódia, sem erro e sem rastro.
+
+### Alterado
+
+- `custodia_peca.detentor_rotulo` (migration **0062**, no repositório e
+  **não aplicada**): o nome do detentor é congelado na abertura da posse. O
+  embed que resolvia o rótulo respeita a RLS da tabela embutida — para
+  gestor/operador não membro da obra o nome voltava nulo — e `soft_delete`
+  de obra apagava o nome dela de todo o histórico, para todo mundo.
+
+### Segurança
+
+- Migrations 0059 (livro `custodia_peca`, campos de TI, perfil de campos da
+  categoria) e 0060 (revoke do guard) aplicadas em produção. **A migration
+  0061 (alarga a policy de RLS de atualização de unidade) está no
+  repositório e pendente de aplicação** — depende de uma decisão ainda não
+  tomada; não presuma que já vale em produção.
+
 ## [0.49.1] — 2026-09-02
 
 ### Corrigido — segurança
