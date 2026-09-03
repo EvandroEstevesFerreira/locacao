@@ -35,6 +35,32 @@ falta de tela, faltava o próprio ato de mover.
   recusa.
 - O encerramento de um termo com devolução parcial anterior gravava uma
   linha duplicada, de duração zero, no livro de custódia. Corrigido.
+- Excluir uma peça que já tem histórico de custódia não funcionava e não
+  dizia nada: o `on delete cascade` do livro dispara a guarda de
+  imutabilidade e aborta o delete, e `excluirUnidade` descartava o erro.
+  Agora a recusa é explicada, com o caminho certo (baixar a peça).
+- A data do fim da posse saía de `.slice(0, 10)` sobre `timestamptz`, que é
+  a data UTC do instante: das 21h à meia-noite em Brasília, o dia seguinte.
+  A posse de almoxarifado nascia no futuro e travava a peça até o dia virar.
+- Cancelar um termo já encerrado duplicava a posse de almoxarifado ("do
+  almoxarifado para o almoxarifado"). A guarda passa a cobrir também a peça
+  já solta pelo encerramento — e, de graça, a mesma peça repetida em duas
+  linhas do mesmo termo.
+- UPDATE que atinge zero linhas não é erro para o PostgREST: os quatro
+  updates de `equipamento_unidade` desta fatia ganharam `.select("id")` e
+  tratam lista vazia como falha. Divergência silenciosa virou erro visível,
+  independentemente da migration 0061.
+- As falhas do livro de custódia deixam de ser descartadas nas quatro actions
+  do termo (e o ramo `fim < inicio` passa a logar): termo retrodatado ficava
+  assinado sem linha de custódia, sem erro e sem rastro.
+
+### Alterado
+
+- `custodia_peca.detentor_rotulo` (migration **0062**, no repositório e
+  **não aplicada**): o nome do detentor é congelado na abertura da posse. O
+  embed que resolvia o rótulo respeita a RLS da tabela embutida — para
+  gestor/operador não membro da obra o nome voltava nulo — e `soft_delete`
+  de obra apagava o nome dela de todo o histórico, para todo mundo.
 
 ### Segurança
 

@@ -21,7 +21,6 @@
 import { z } from "zod";
 import {
   enumOpcional,
-  idOpcional,
   numeroOpcional,
   opcional,
   textoOpcional,
@@ -239,9 +238,7 @@ export const editarPecaSchema = z.object({
   numero_serie: textoOpcional(80),
   ano: anoOpcional,
   estado: estadoOpcional,
-  observacoes: opcional.refine((v) => v === null || v.length <= 300, {
-    message: "Use no máximo 300 caracteres.",
-  }),
+  observacoes: textoOpcional(300),
   imei: imeiOpcional,
   imei_2: imeiOpcional,
   linha_telefonica: textoOpcional(20),
@@ -253,18 +250,3 @@ export const editarPecaSchema = z.object({
 
 export type EditarPecaInput = z.input<typeof editarPecaSchema>;
 export type EditarPecaDados = z.output<typeof editarPecaSchema>;
-
-/** Schema do livro, para a action que grava. */
-export const custodiaSchema = z.object({
-  id: idOpcional,
-  unidade_id: z.string().uuid("Peça inválida."),
-  tipo: z.enum(TIPOS_DETENTOR),
-  obra_id: uuidOpcional,
-  funcionario_id: uuidOpcional,
-  fornecedor_id: uuidOpcional,
-  inicio: z.string().min(1, "Informe a data de início da posse."),
-  observacoes: textoOpcional(300),
-});
-
-export type CustodiaInput = z.input<typeof custodiaSchema>;
-export type CustodiaDados = z.output<typeof custodiaSchema>;

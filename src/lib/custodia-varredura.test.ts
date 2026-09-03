@@ -72,7 +72,9 @@ describe("escritor único de custódia", () => {
       // Só interessa quem escreve NA PEÇA. `from("obra")` e a situação do
       // termo usam os mesmos nomes de campo e não são desta varredura.
       if (!src.includes("equipamento_unidade")) continue;
-      if (/\.update\(\s*\{[^}]*\b(obra_id|situacao)\b/.test(src)) {
+      // `upsert` ao lado de `update`: é a variação mais provável de aparecer, e
+      // escreve os mesmos campos pela mesma porta.
+      if (/\.(update|upsert)\(\s*\{[^}]*\b(obra_id|situacao)\b/.test(src)) {
         infratores.push(rel);
       }
     }

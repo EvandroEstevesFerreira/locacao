@@ -50,6 +50,9 @@ export function PecaMover({
       });
       if (!r.ok) return setErro(r.erro);
       setObservacoes("");
+      // A data volta para hoje: mantida, o segundo movimento sairia com a data
+      // do primeiro e seria recusado pelo check `fim >= inicio` do livro.
+      setData(hojeISOSaoPaulo());
       toast.success("Movimentação registrada no histórico da peça.");
       router.refresh();
     });

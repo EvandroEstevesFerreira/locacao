@@ -41,6 +41,11 @@ export const CHANGELOG: Release[] = [
       { tipo: "seguranca", texto: "Entregar equipamento a um funcionário exige termo assinado, sempre. Não existe caminho para registrar entrega a pessoa sem documento — é o que sustenta a cobrança por dano ou não devolução." },
       { tipo: "correcao", texto: "A devolução de um item do termo não aceita mais data anterior à da entrega." },
       { tipo: "correcao", texto: "O encerramento de um termo com devolução parcial anterior não grava mais uma linha duplicada, de duração zero, no histórico da peça." },
+      { tipo: "correcao", texto: "Excluir uma peça que já tem histórico agora explica por que não dá — e o que fazer no lugar. Antes o botão parecia não funcionar: a página recarregava e a peça continuava na lista, sem nenhuma mensagem." },
+      { tipo: "correcao", texto: "Encerrar ou cancelar um termo à noite deixava de registrar a volta da peça na data certa, e a peça ficava travada até o dia seguinte. Corrigido." },
+      { tipo: "correcao", texto: "Cancelar um termo que já estava encerrado não repete mais a mesma linha no histórico da peça." },
+      { tipo: "correcao", texto: "Quando a movimentação não pode ser gravada no cadastro da peça — falta de permissão, por exemplo — a tela agora avisa, em vez de dizer que deu tudo certo e deixar a peça no lugar antigo." },
+      { tipo: "melhoria", texto: "O histórico guarda o nome de quem ficou com a peça no momento da posse. Renomear ou excluir uma obra depois não apaga mais o nome dela do histórico." },
     ],
   },
   {

@@ -127,7 +127,6 @@ const AMOSTRAS: Record<string, unknown> = {
     data: "2026-09-02",
   },
   editarPecaSchema: { id: UUID, identificador: "PAT-0431" },
-  custodiaSchema: { unidade_id: UUID, tipo: "almoxarifado", inicio: "2026-09-02" },
   movimentoSchema: { item_id: UUID, tipo: "entrada", quantidade: "10", data: "2026-09-02" },
   parcelaItemSchema: { item_locado_id: UUID, valor: "100" },
   empresaSchema: { nome: "Sistenge Engenharia" },

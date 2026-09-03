@@ -83,7 +83,7 @@ export default async function PecaDetalhePage({
             destaque
             valor={atual ? descreverDetentor(atual) : "Sem registro de posse"}
           />
-          <Campo label="Desde" valor={atual ? atual.periodo : null} />
+          <Campo label="Há" valor={atual ? atual.periodo : null} />
           <div>
             <p className="text-xs text-muted-foreground">Situação</p>
             <Badge variant={info.variant}>{info.label}</Badge>
