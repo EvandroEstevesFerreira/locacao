@@ -206,6 +206,12 @@ async function moverPecasDoTermo(termoId: string, momento: "entrega" | "devoluca
     (t.cancelado_em ?? t.encerrado_em)?.slice(0, 10) ?? hojeISOSaoPaulo();
 
   for (const l of itens as unknown as Linha[]) {
+    // Item já devolvido foi fechado por `liberarPecas` na devolução parcial.
+    // Sem esta guarda, `podeTransicionar` devolve true por `de === para` e o
+    // encerramento reabre e refecha a mesma posse, deixando no livro uma linha
+    // de duração zero que não corresponde a movimento nenhum.
+    if (momento === "devolucao" && l.data_devolucao) continue;
+
     const de = l.unidade?.situacao;
     if (!de || !podeTransicionar(de, destino, "evento")) continue;
 
@@ -229,12 +235,14 @@ async function moverPecasDoTermo(termoId: string, momento: "entrega" | "devoluca
     } else {
       // Fecha e devolve a peça ao almoxarifado. `origem: "termo"` e não
       // "manual": o evento que produziu esta posse foi o fim de um termo, e é
-      // isso que permite a linha do tempo dizer POR QUE a peça voltou.
+      // isso que permite a linha do tempo dizer POR QUE a peça voltou. A
+      // guarda acima já eliminou os itens com `data_devolucao`, então aqui
+      // resta só quem nunca foi devolvido — a data é sempre a do documento.
       await abrirCustodia(supabase, {
         orgId: perfil.org_id,
         unidadeId: l.unidade_id,
         tipo: "almoxarifado",
-        inicio: l.data_devolucao ?? fimDoDocumento,
+        inicio: fimDoDocumento,
         origem: "termo",
         termoId: termoId,
       });
