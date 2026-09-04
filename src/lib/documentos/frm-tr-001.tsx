@@ -60,6 +60,13 @@ export function ComprovanteTreinamento({
       publicadoEm={publicadoEm}
       titulo="Comprovante de Treinamento no Sistema"
       subtitulo={numero ? `${orgNome} — ${numero}` : orgNome}
+      // `rodape` explícito, no padrão do romaneio (`<empresa> — controle de
+      // locações`). Sem ele o default de `Documento` é "Sistenge Construções e
+      // Comércio Ltda — Recursos Humanos", errado por dois motivos: este
+      // comprovante é emitido pelo sistema de locações, não pelo RH; e o nome
+      // da empresa fica FIXO, então o comprovante de outra organização levaria
+      // o nome da Sistenge no pé de todas as folhas.
+      rodape={`${orgNome} — controle de locações`}
     >
       <Secao n={1} titulo="Identificação">
         <CampoGrid colunas={2} campos={campos} />
