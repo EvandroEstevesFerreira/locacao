@@ -15,8 +15,10 @@ resto do sistema, não numa tabela editável; e o manual (`/ajuda`) e a trilha
 (`/treinamento/[trilha]`) leem a mesma fonte de conteúdo, só em ordens
 diferentes — uma por aula, em sequência; a outra por tela, sob demanda.
 
-A migration 0063 (tabela `treinamento_conclusao`) já está no repositório e
-precisa ser aplicada em produção antes do deploy desta versão.
+A migration `0063_treinamento_conclusao.sql` já está aplicada em produção: a
+tabela do registro, a regra de aprovação no próprio banco
+(`acertos = total_perguntas`), a chave única por versão de conteúdo, escrita
+restrita à própria pessoa e nenhuma policy de exclusão.
 
 ### Adicionado
 
