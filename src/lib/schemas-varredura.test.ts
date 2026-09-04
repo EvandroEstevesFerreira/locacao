@@ -19,6 +19,7 @@ import * as orcamento from "./orcamento";
 import * as permissoes from "./permissoes";
 import * as recebimento from "./recebimento";
 import * as termo from "./termo";
+import * as treinamento from "./treinamento";
 
 /**
  * VARREDURA — o teste que a suíte de idempotência deveria ter sido desde o
@@ -62,6 +63,7 @@ const MODULOS: Record<string, Record<string, unknown>> = {
   permissoes,
   recebimento,
   termo,
+  treinamento,
 };
 
 /**
@@ -210,6 +212,7 @@ const AMOSTRAS: Record<string, unknown> = {
   },
   assinaturaSchema: { nome: "Fulano de Tal" },
   cancelamentoSchema: { motivo: "Emitido para o funcionário errado." },
+  respostasSchema: { trilha: "primeiros-passos", respostas: {} },
 };
 
 /** Todo ZodObject exportado pelos módulos de domínio, com nome de origem. */
