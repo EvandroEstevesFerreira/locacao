@@ -17,6 +17,9 @@ import {
 } from "@/components/ui/table";
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { ListSearch } from "@/components/shared/list-search";
+import { ListFilters } from "@/components/shared/list-filters";
+import { SelectFilter } from "@/components/shared/select-filter";
+import { listarCategorias } from "@/lib/data/frota";
 import { Pagination } from "@/components/pagination";
 import { SortHeader } from "@/components/sort-header";
 import { PAGE_SIZE, contagem, parseListParams } from "@/lib/lista";
@@ -38,15 +41,19 @@ export default async function ItensPage({
     defaultSort: "descricao",
   });
 
-  const { itens, total } = await listarItens({ q, sort, ascending, from, to });
+  const categoria = sp.categoria ?? "";
+  const [{ itens, total }, categorias] = await Promise.all([
+    listarItens({ q, sort, ascending, from, to, categoria }),
+    listarCategorias(),
+  ]);
   const tem = itens.length > 0;
-  const buscando = q.length > 0;
+  const buscando = q.length > 0 || categoria.length > 0;
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <PageHeader
         titulo="Itens"
-        descricao={`Catálogo de equipamentos e materiais que a organização aluga. · ${contagem(total, "item", "itens")} no filtro`}
+        descricao={`Catálogo de equipamentos e materiais — próprios e locados. · ${contagem(total, "item", "itens")} no filtro`}
         acoes={
           podeEditar ? (
             <Button render={<Link href="/itens/novo" />}>
@@ -59,13 +66,28 @@ export default async function ItensPage({
 
       {tem || buscando ? (
         <>
-          <ListSearch placeholder="Buscar por descrição ou unidade…" ariaLabel="Buscar item" />
+          {/* O catálogo passou de 5 para 32 itens com a importação do parque de
+              TI. Com essa diversidade, a categoria deixa de ser detalhe e vira
+              o primeiro corte de quem procura alguma coisa. */}
+          <ListFilters>
+            <ListSearch placeholder="Buscar por descrição ou unidade…" ariaLabel="Buscar item" />
+            <SelectFilter
+              param="categoria"
+              label="Categoria"
+              placeholder="Todas as categorias"
+              opcoes={[
+                ...categorias.map((c) => ({ value: c.id, label: c.nome })),
+                { value: "sem", label: "Sem categoria" },
+              ]}
+            />
+          </ListFilters>
           <Card>
           <CardContent className="p-0">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead><SortHeader column="descricao" label="Descrição" /></TableHead>
+                  <TableHead>Categoria</TableHead>
                   <TableHead><SortHeader column="tipo" label="Tipo" /></TableHead>
                   <TableHead><SortHeader column="unidade" label="Unidade" /></TableHead>
                   <TableHead><SortHeader column="ativo" label="Status" /></TableHead>
@@ -75,8 +97,8 @@ export default async function ItensPage({
               <TableBody>
                 {!tem ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
-                      Nenhum item encontrado para “{q}”.
+                    <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
+                      Nenhum item encontrado com esse filtro.
                     </TableCell>
                   </TableRow>
                 ) : null}
@@ -92,6 +114,9 @@ export default async function ItensPage({
                             {qtdUnidades} un.
                           </span>
                         ) : null}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {item.categoriaNome ?? "—"}
                       </TableCell>
                       <TableCell>
                         <Badge variant={t.variant}>{t.label}</Badge>
