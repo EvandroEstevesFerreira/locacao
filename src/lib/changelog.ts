@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.53.0";
+export const APP_VERSION = "0.54.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,21 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.54.0",
+    data: "2026-09-04",
+    titulo: "Treinamento do grupo Equipamento, e o estorno de estoque",
+    mudancas: [
+      { tipo: "novo", texto: "Quatro trilhas novas de treinamento: Catálogo de itens, Frota, Termo de responsabilidade e Estoque. Cada uma aparece só para quem tem o módulo liberado." },
+      { tipo: "novo", texto: "A trilha do catálogo ensina a escolha que mais gera dúvida no sistema: controle por peça manda o item para a Frota, controle por quantidade manda para o Estoque — e o item nunca aparece nas duas telas." },
+      { tipo: "novo", texto: "A trilha da frota ensina a ler o histórico de custódia, movimentar peça entre obras e entender por que “Em uso” não se escolhe à mão, e por que entregar a uma pessoa é sempre pelo termo." },
+      { tipo: "novo", texto: "A trilha do termo cobre o passo a passo da emissão, a devolução em partes e o encerramento com pendência — o caso de quem foi desligado sem devolver equipamento." },
+      { tipo: "novo", texto: "A trilha do estoque ensina a diferença entre baixa, saída e ajuste de inventário, e a ler os indicadores na ordem certa: saldo negativo é erro de lançamento e contamina todo o resto do painel." },
+      { tipo: "novo", texto: "O estoque agora tem o botão de estorno que a própria tela já prometia: corrigir um lançamento errado grava um movimento contrário, com o motivo, e as duas linhas ficam visíveis no razão." },
+      { tipo: "melhoria", texto: "O formulário de lançar movimento não aparece mais para quem não tem permissão de lançar. Antes a pessoa preenchia seis campos e só descobria no fim." },
+      { tipo: "correcao", texto: "Excluir um item do catálogo já usado em peça, contrato ou movimento agora explica por que não deu, dentro da própria janela de confirmação, e sugere deixar o item inativo. Antes a janela fechava como se tivesse excluído e o item continuava na lista." },
+    ],
+  },
   {
     versao: "0.53.0",
     data: "2026-09-04",
