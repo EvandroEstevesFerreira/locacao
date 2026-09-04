@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import { termoOr } from "@/lib/lista";
 
 // Leituras do recebimento de equipamento.
 //
@@ -237,4 +238,130 @@ export async function listarUnidades(): Promise<UnidadeDisponivel[]> {
     return [];
   }
   return (data ?? []) as UnidadeDisponivel[];
+}
+
+// ---------------------------------------------------------------------------
+// Listagem da organização
+// ---------------------------------------------------------------------------
+// `listarRecebimentos` é POR CONTRATO, e alimenta a seção do contrato. Faltava
+// a visão da organização — e o item "Recebimentos" do menu apontava para uma
+// rota sem página desde a 0.39.0, porque a pasta existia só com `[id]`.
+//
+// O recorte por obra continua na RLS (migration 0049, via `obra_do_contrato`):
+// esta função não filtra por obra por conta própria, e é de propósito.
+
+export type RecebimentoDaOrganizacao = {
+  id: string;
+  numeroRegistro: string | null;
+  recebidoEm: string;
+  status: string;
+  conferente: string | null;
+  notaFornecedor: string | null;
+  contratoId: string;
+  contratoNumero: string | null;
+  obraRotulo: string | null;
+  fornecedorNome: string | null;
+  itens: number;
+};
+
+export type FiltrosRecebimento = {
+  obra?: string;
+  status?: string;
+  q?: string;
+  from?: number;
+  to?: number;
+};
+
+export async function listarRecebimentosDaOrganizacao(
+  f: FiltrosRecebimento = {},
+): Promise<{ linhas: RecebimentoDaOrganizacao[]; total: number }> {
+  const supabase = await createClient();
+
+  // O filtro por obra atravessa o contrato, porque `recebimento` não guarda
+  // `obra_id`. Resolvido em DUAS consultas, e não com `contrato!inner` mais
+  // `.eq("contrato.obra_id", …)`: o `!inner` muda a cardinalidade do embed em
+  // silêncio, e o cliente tipado recusa filtro por coluna de relação — o que
+  // degrada a linha inteira para `GenericStringError` e derruba o typecheck
+  // num lugar que não tem nada a ver com a causa.
+  let contratosDaObra: string[] | null = null;
+  if (f.obra) {
+    const { data: cs, error: erroCs } = await supabase
+      .from("contrato_locacao")
+      .select("id")
+      .eq("obra_id", f.obra);
+    if (erroCs) {
+      console.error("listarRecebimentosDaOrganizacao.contratos", erroCs);
+      return { linhas: [], total: 0 };
+    }
+    contratosDaObra = (cs ?? []).map((c) => c.id);
+    // Obra sem contrato nenhum não tem recebimento — e um `.in` com lista
+    // vazia no PostgREST não filtra nada, ele traz TUDO.
+    if (contratosDaObra.length === 0) return { linhas: [], total: 0 };
+  }
+
+  let q = supabase
+    .from("recebimento")
+    // Uma STRING LITERAL só, sem concatenar com `+`: o cliente tipado do
+    // Supabase analisa o select no nível de tipo, e isso exige um literal.
+    // Concatenação produz `string`, o parser desiste e cada linha volta como
+    // `GenericStringError` — o typecheck então acusa "propriedade não existe"
+    // em toda a função de mapeamento, longe da causa real.
+    .select(
+      "id, numero_registro, recebido_em, status, conferente, nota_fornecedor, contrato:contrato_id(id, numero, obra:obra_id(id, codigo, nome)), fornecedor:fornecedor_id(nome), recebimento_item(count)",
+      { count: "exact" },
+    )
+    .order("recebido_em", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  if (f.status) q = q.eq("status", f.status);
+  if (contratosDaObra) q = q.in("contrato_id", contratosDaObra);
+  // `termoOr` e não interpolação à mão: vírgula e parêntese são a GRAMÁTICA do
+  // `.or()` do PostgREST, então um termo com vírgula viraria outro filtro.
+  if (f.q) {
+    q = q.or(termoOr(["numero_registro", "nota_fornecedor", "conferente"], f.q));
+  }
+  if (typeof f.from === "number" && typeof f.to === "number") {
+    q = q.range(f.from, f.to);
+  }
+
+  const { data, error, count } = await q;
+
+  // Erro em leitura de lista: registra e devolve vazio (ver AGENTS.md).
+  if (error) {
+    console.error("listarRecebimentosDaOrganizacao", error);
+    return { linhas: [], total: 0 };
+  }
+
+  const linhas = (data ?? []).map((r) => {
+    const contrato = achatar(
+      r.contrato as unknown as {
+        id: string;
+        numero: string | null;
+        obra: { id: string; codigo: string; nome: string } | { id: string; codigo: string; nome: string }[] | null;
+      } | null,
+    );
+    const obra = achatar(
+      (contrato?.obra ?? null) as { id: string; codigo: string; nome: string } | { id: string; codigo: string; nome: string }[] | null,
+    );
+    const fornecedor = achatar(r.fornecedor as unknown as { nome: string } | null);
+    const contagemItens = achatar(
+      r.recebimento_item as unknown as { count: number } | null,
+    );
+
+    return {
+      id: r.id,
+      numeroRegistro: r.numero_registro,
+      recebidoEm: r.recebido_em,
+      status: r.status,
+      conferente: r.conferente,
+      notaFornecedor: r.nota_fornecedor,
+      contratoId: contrato?.id ?? "",
+      contratoNumero: contrato?.numero ?? null,
+      obraRotulo: obra ? `${obra.codigo} — ${obra.nome}` : null,
+      fornecedorNome: fornecedor?.nome ?? null,
+      itens: contagemItens?.count ?? 0,
+    };
+  });
+
+  return { linhas, total: count ?? linhas.length };
 }
