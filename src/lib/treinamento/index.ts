@@ -8,6 +8,10 @@ import { CATALOGO } from "./catalogo";
 import { FROTA } from "./frota";
 import { TERMOS } from "./termos";
 import { ESTOQUE } from "./estoque";
+import { FORNECEDORES } from "./fornecedores";
+import { CONTRATOS } from "./contratos";
+import { RECEBIMENTOS } from "./recebimentos";
+import { VISTORIAS } from "./vistorias";
 
 export type { Passo, Aula, Pergunta, Trilha } from "./tipos";
 
@@ -36,6 +40,10 @@ export const TRILHAS: Trilha[] = [
   FROTA,
   TERMOS,
   ESTOQUE,
+  FORNECEDORES,
+  CONTRATOS,
+  RECEBIMENTOS,
+  VISTORIAS,
 ];
 
 export function trilhaPorChave(chave: string): Trilha | undefined {
