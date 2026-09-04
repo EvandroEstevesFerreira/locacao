@@ -25,7 +25,12 @@ import {
   ocupanteSchema,
   reparoSchema,
 } from "@/lib/imoveis";
-import { falha, primeiroErro, type ActionResult } from "@/lib/acoes";
+import {
+  erroDeEscrita,
+  falha,
+  primeiroErro,
+  type ActionResult,
+} from "@/lib/acoes";
 
 export type ImovelFormState = { error?: string; ok?: boolean };
 
@@ -107,11 +112,24 @@ export async function salvarContratoImovel(
   const supabase = await createClient();
 
   // Só um contrato vigente por imóvel.
+  //
+  // Falhar aqui em silêncio é caro: o contrato novo entra como vigente e o
+  // antigo continua vigente também, então o imóvel passa a somar DOIS custos
+  // mensais — no indicador da lista, no relatório de custo de imóveis e na
+  // projeção do fluxo de caixa. Zero linhas é legítimo (primeiro contrato do
+  // imóvel), por isso aqui se checa o erro, não a contagem.
   if (dados.vigente) {
-    await supabase
+    const { error: erroVigencia } = await supabase
       .from("contrato_imovel")
       .update({ vigente: false })
       .eq("imovel_id", imovelId);
+    if (erroVigencia) {
+      console.error("salvarContratoImovel/vigencia", erroVigencia);
+      return falha(
+        "Não foi possível encerrar a vigência do contrato anterior. " +
+          "Nada foi salvo — tente de novo.",
+      );
+    }
   }
 
   const { error } = id
@@ -134,7 +152,14 @@ export async function excluirContratoImovel(formData: FormData) {
   const imovelId = txt(formData.get("imovel_id"));
   if (!id) return;
   const supabase = await createClient();
-  await supabase.from("contrato_imovel").delete().eq("id", id);
+  const erro = erroDeEscrita(
+    await supabase.from("contrato_imovel").delete().eq("id", id).select("id"),
+    {
+      registro: "contrato do imóvel",
+      contexto: "excluirContratoImovel",
+    },
+  );
+  if (erro) return { error: erro };
   if (imovelId) revalidatePath(`/imoveis/${imovelId}`);
 }
 
@@ -150,9 +175,13 @@ async function logHistorico(
   descricao: string,
   dataEfeito: string,
 ) {
-  await supabase
+  // Trilha de auditoria: falhar aqui não desfaz o aditivo nem o reajuste que
+  // acabaram de ser gravados, então não é erro para devolver ao usuário — mas
+  // é o registro de POR QUE o valor mudou que deixa de existir.
+  const { error } = await supabase
     .from("contrato_imovel_historico")
     .insert({ ...base, tipo, descricao, data_efeito: dataEfeito });
+  if (error) console.error("logHistorico", tipo, error);
 }
 
 function brl(n: number) {
@@ -407,7 +436,23 @@ export async function alternarPagoConsumo(formData: FormData) {
   const novo = formData.get("novo_status") === "pago";
   if (!id) return;
   const supabase = await createClient();
-  await supabase.from("conta_consumo").update({ pago: novo }).eq("id", id);
+  // `<form action={…}>` simples: o React exige retorno `void` ali, então a
+  // mensagem NÃO sobe para a tela por este caminho. O que o usuário vê é o
+  // valor voltando ao anterior quando a página revalida — feedback fraco, mas
+  // não silêncio: o `erroDeEscrita` deixa a causa no log do servidor.
+  // Surfacear exigiria transformar a linha num componente cliente.
+  erroDeEscrita(
+    await supabase
+      .from("conta_consumo")
+      .update({ pago: novo })
+      .eq("id", id)
+      .select("id"),
+    {
+      registro: "conta de consumo",
+      contexto: "alternarPagoConsumo",
+      acao: "salvar",
+    },
+  );
   if (imovelId) revalidatePath(`/imoveis/${imovelId}`);
 }
 
@@ -420,7 +465,14 @@ export async function excluirContaConsumo(formData: FormData) {
   const imovelId = txt(formData.get("imovel_id"));
   if (!id) return;
   const supabase = await createClient();
-  await supabase.from("conta_consumo").delete().eq("id", id);
+  const erro = erroDeEscrita(
+    await supabase.from("conta_consumo").delete().eq("id", id).select("id"),
+    {
+      registro: "conta de consumo",
+      contexto: "excluirContaConsumo",
+    },
+  );
+  if (erro) return { error: erro };
   if (imovelId) revalidatePath(`/imoveis/${imovelId}`);
 }
 
@@ -466,7 +518,14 @@ export async function excluirReparo(formData: FormData) {
   const imovelId = txt(formData.get("imovel_id"));
   if (!id) return;
   const supabase = await createClient();
-  await supabase.from("reparo_imovel").delete().eq("id", id);
+  const erro = erroDeEscrita(
+    await supabase.from("reparo_imovel").delete().eq("id", id).select("id"),
+    {
+      registro: "reparo",
+      contexto: "excluirReparo",
+    },
+  );
+  if (erro) return { error: erro };
   if (imovelId) revalidatePath(`/imoveis/${imovelId}`);
 }
 
@@ -504,7 +563,14 @@ export async function excluirOcorrencia(formData: FormData) {
   const imovelId = txt(formData.get("imovel_id"));
   if (!id) return;
   const supabase = await createClient();
-  await supabase.from("ocorrencia_imovel").delete().eq("id", id);
+  const erro = erroDeEscrita(
+    await supabase.from("ocorrencia_imovel").delete().eq("id", id).select("id"),
+    {
+      registro: "registro",
+      contexto: "excluirOcorrencia",
+    },
+  );
+  if (erro) return { error: erro };
   if (imovelId) revalidatePath(`/imoveis/${imovelId}`);
 }
 
@@ -539,7 +605,14 @@ export async function excluirVistoriaImovel(formData: FormData) {
   const imovelId = txt(formData.get("imovel_id"));
   if (!id) return;
   const supabase = await createClient();
-  await supabase.from("vistoria_imovel").delete().eq("id", id);
+  const erro = erroDeEscrita(
+    await supabase.from("vistoria_imovel").delete().eq("id", id).select("id"),
+    {
+      registro: "vistoria",
+      contexto: "excluirVistoriaImovel",
+    },
+  );
+  if (erro) return { error: erro };
   if (imovelId) revalidatePath(`/imoveis/${imovelId}`);
 }
 
@@ -552,9 +625,15 @@ export async function salvarFotoVistoriaImovel(
   const perfil = await getCurrentPerfil();
   if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
   const supabase = await createClient();
-  await supabase
+  // O arquivo já subiu para o Storage. Sem a linha no banco ele vira órfão:
+  // ocupa espaço e nenhuma tela o mostra.
+  const { error } = await supabase
     .from("vistoria_imovel_foto")
     .insert({ org_id: perfil.org_id, vistoria_id: vistoriaId, path });
+  if (error) {
+    console.error("salvarFotoVistoriaImovel", error);
+    return { error: "A foto foi enviada, mas não ficou registrada na vistoria." };
+  }
   revalidatePath(`/imoveis/${imovelId}`);
 }
 
@@ -562,7 +641,19 @@ export async function salvarAnexoReparo(reparoId: string, imovelId: string, path
   const perfil = await getCurrentPerfil();
   if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
   const supabase = await createClient();
-  await supabase.from("reparo_imovel").update({ anexo_path: path }).eq("id", reparoId);
+  const erro = erroDeEscrita(
+    await supabase
+      .from("reparo_imovel")
+      .update({ anexo_path: path })
+      .eq("id", reparoId)
+      .select("id"),
+    {
+      registro: "anexo do reparo",
+      contexto: "salvarAnexoReparo",
+      acao: "salvar",
+    },
+  );
+  if (erro) return { error: erro };
   revalidatePath(`/imoveis/${imovelId}`);
 }
 
@@ -574,10 +665,19 @@ export async function salvarAnexoOcorrencia(
   const perfil = await getCurrentPerfil();
   if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
   const supabase = await createClient();
-  await supabase
-    .from("ocorrencia_imovel")
-    .update({ anexo_path: path })
-    .eq("id", ocorrenciaId);
+  const erro = erroDeEscrita(
+    await supabase
+      .from("ocorrencia_imovel")
+      .update({ anexo_path: path })
+      .eq("id", ocorrenciaId)
+      .select("id"),
+    {
+      registro: "anexo da ocorrência",
+      contexto: "salvarAnexoOcorrencia",
+      acao: "salvar",
+    },
+  );
+  if (erro) return { error: erro };
   revalidatePath(`/imoveis/${imovelId}`);
 }
 
@@ -627,7 +727,14 @@ export async function excluirOcupante(formData: FormData) {
   const imovelId = txt(formData.get("imovel_id"));
   if (!id) return;
   const supabase = await createClient();
-  await supabase.from("ocupante_imovel").delete().eq("id", id);
+  const erro = erroDeEscrita(
+    await supabase.from("ocupante_imovel").delete().eq("id", id).select("id"),
+    {
+      registro: "ocupante",
+      contexto: "excluirOcupante",
+    },
+  );
+  if (erro) return { error: erro };
   if (imovelId) revalidatePath(`/imoveis/${imovelId}`);
 }
 
@@ -644,7 +751,19 @@ export async function salvarAnexoImovelContrato(
   if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
   if (!CAMPOS_ANEXO.includes(campo)) return;
   const supabase = await createClient();
-  await supabase.from("contrato_imovel").update({ [campo]: path }).eq("id", contratoId);
+  const erro = erroDeEscrita(
+    await supabase
+      .from("contrato_imovel")
+      .update({ [campo]: path })
+      .eq("id", contratoId)
+      .select("id"),
+    {
+      registro: "anexo do contrato",
+      contexto: "salvarAnexoImovelContrato",
+      acao: "salvar",
+    },
+  );
+  if (erro) return { error: erro };
   revalidatePath(`/imoveis/${imovelId}`);
 }
 
@@ -708,7 +827,14 @@ export async function excluirDocumentoBiblioteca(formData: FormData) {
   if (!id) return;
   const supabase = await createClient();
   if (path) await supabase.storage.from("imoveis").remove([path]);
-  await supabase.from("biblioteca_documento").delete().eq("id", id);
+  const erro = erroDeEscrita(
+    await supabase.from("biblioteca_documento").delete().eq("id", id).select("id"),
+    {
+      registro: "documento",
+      contexto: "excluirDocumentoBiblioteca",
+    },
+  );
+  if (erro) return { error: erro };
   revalidatePath("/imoveis/documentos");
 }
 
@@ -729,7 +855,18 @@ export async function removerAnexoImovelContrato(formData: FormData) {
     .single();
   const path = (data as Record<string, string | null> | null)?.[campo];
   if (path) await supabase.storage.from("imoveis").remove([path]);
-  await supabase.from("contrato_imovel").update({ [campo]: null }).eq("id", contratoId);
+  const erro = erroDeEscrita(
+    await supabase
+      .from("contrato_imovel")
+      .update({ [campo]: null })
+      .eq("id", contratoId)
+      .select("id"),
+    {
+      registro: "anexo do contrato",
+      contexto: "removerAnexoImovelContrato",
+    },
+  );
+  if (erro) return { error: erro };
   if (imovelId) revalidatePath(`/imoveis/${imovelId}`);
 }
 

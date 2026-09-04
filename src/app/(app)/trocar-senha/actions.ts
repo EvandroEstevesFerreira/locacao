@@ -31,7 +31,11 @@ export async function trocarSenha(raw: unknown): Promise<ActionResult> {
   // usuário). Se falhar, a senha já foi trocada — o middleware apenas pediria a
   // troca outra vez, o que é melhor do que reportar erro numa operação
   // concluída.
-  await supabase.rpc("marcar_senha_trocada");
+  const { error: erroFlag } = await supabase.rpc("marcar_senha_trocada");
+  // Ignorar a falha é deliberado (ver acima), mas ela precisa deixar rastro:
+  // sem log, um usuário preso pedindo troca de senha a cada acesso vira um
+  // mistério sem ponto de partida.
+  if (erroFlag) console.error("marcarSenhaTrocada", erroFlag);
 
   return { ok: true };
 }

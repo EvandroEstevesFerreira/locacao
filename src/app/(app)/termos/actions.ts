@@ -138,7 +138,16 @@ export async function salvarTermo(payload: {
     console.error("salvarTermo/itens", erroItens);
     // Sem transação no PostgREST: desfaz o cabeçalho para não deixar termo sem
     // item, que é documento em branco esperando para ser assinado.
-    await supabase.from("termo_equipamento").delete().eq("id", criado.id);
+    const { error: erroDesfazer } = await supabase
+      .from("termo_equipamento")
+      .delete()
+      .eq("id", criado.id);
+    // A compensação falhar é pior que o erro original: sobra um termo em
+    // rascunho sem item nenhum, que ninguém sabe de onde veio. Não muda a
+    // mensagem ao usuário — muda o que dá para investigar depois.
+    if (erroDesfazer) {
+      console.error("salvarTermo/desfazer", criado.id, erroDesfazer);
+    }
     return falha("Não foi possível salvar os itens do termo.");
   }
 

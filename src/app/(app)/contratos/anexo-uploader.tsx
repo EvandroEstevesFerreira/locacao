@@ -41,7 +41,14 @@ export function AnexoUploader({
         toast.error("Falha ao enviar o arquivo.");
         return;
       }
-      await salvarAnexoContrato(contratoId, path);
+      // O arquivo já está no Storage; o que pode falhar agora é gravar o
+      // caminho no contrato. Anunciar "Contrato anexado" nesse caso deixa um
+      // arquivo órfão que ninguém encontra pela tela.
+      const r = await salvarAnexoContrato(contratoId, path);
+      if (r?.error) {
+        toast.error(r.error);
+        return;
+      }
       toast.success("Contrato anexado.");
       startTransition(() => router.refresh());
     } finally {

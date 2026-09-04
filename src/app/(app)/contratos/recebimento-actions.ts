@@ -435,13 +435,25 @@ export async function fecharRecebimento(raw: unknown): Promise<ActionResult> {
 
     await enviarEmail([destino], email, [{ filename: arquivo, content: pdf }]);
 
-    await supabase
+    // O e-mail JÁ saiu neste ponto. Se o carimbo não for gravado, a tela vai
+    // dizer "fornecedor ainda não avisado" para sempre — e alguém vai reenviar
+    // um romaneio que o fornecedor já recebeu.
+    const { error: erroCarimbo } = await supabase
       .from("recebimento")
       .update({ aviso_enviado_em: new Date().toISOString() })
       .eq("id", id);
+    if (erroCarimbo) console.error("fecharRecebimento/carimbo", erroCarimbo);
 
     revalidar(rec.contrato.id, id);
-    return { ok: true, id, aviso: "Recebimento " + numero + " fechado e fornecedor avisado." };
+    return {
+      ok: true,
+      id,
+      aviso: erroCarimbo
+        ? "Recebimento " +
+          numero +
+          " fechado e e-mail enviado, mas o registro do aviso não foi gravado — a tela ainda vai mostrar o fornecedor como não avisado."
+        : "Recebimento " + numero + " fechado e fornecedor avisado.",
+    };
   } catch (e) {
     console.error("fecharRecebimento.email", e);
     return {

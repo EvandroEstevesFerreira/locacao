@@ -3,7 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeEditarCadastros } from "@/lib/auth";
-import { falha, primeiroErro, type ActionResult } from "@/lib/acoes";
+import {
+  erroDeEscrita,
+  falha,
+  primeiroErro,
+  type ActionResult,
+} from "@/lib/acoes";
 import { formatarCnpj, normalizarCnpj } from "@/lib/cnpj";
 import { fornecedorSchema } from "@/lib/fornecedor";
 
@@ -63,21 +68,49 @@ export async function salvarFornecedor(
   }
 
   // Sincroniza os vínculos com obras (N:N).
+  //
+  // As duas escritas descartavam o erro. O fornecedor era salvo, o `delete`
+  // limpava os vínculos, o `insert` falhava — e o resultado era um fornecedor
+  // que perdeu TODAS as obras, anunciado como "Fornecedor atualizado". Na
+  // ordem em que acontece, o silêncio não deixa nem o estado anterior de pé.
+  //
+  // Zero linhas no `delete` é legítimo (fornecedor sem vínculo), por isso o
+  // que se checa é o erro, não a contagem.
+  let avisoObras: string | null = null;
   if (fornecedorId) {
-    await supabase.from("fornecedor_obra").delete().eq("fornecedor_id", fornecedorId);
-    if (obras.length > 0) {
-      await supabase.from("fornecedor_obra").insert(
+    const { error: erroApagar } = await supabase
+      .from("fornecedor_obra")
+      .delete()
+      .eq("fornecedor_id", fornecedorId);
+    if (erroApagar) {
+      console.error("salvarFornecedor/obras/apagar", erroApagar);
+      avisoObras =
+        "O fornecedor foi salvo, mas as obras dele não foram atualizadas.";
+    } else if (obras.length > 0) {
+      const { error: erroInserir } = await supabase.from("fornecedor_obra").insert(
         obras.map((obra_id) => ({
           fornecedor_id: fornecedorId!,
           obra_id,
           org_id: perfil.org_id!,
         })),
       );
+      if (erroInserir) {
+        console.error("salvarFornecedor/obras/inserir", erroInserir);
+        avisoObras =
+          "O fornecedor foi salvo, mas as obras dele não foram vinculadas. " +
+          "Abra o cadastro e marque as obras de novo.";
+      }
     }
   }
 
   revalidatePath("/fornecedores");
-  return { ok: true, id: fornecedorId ?? undefined };
+  // `ok: true` com `aviso`: o fornecedor foi salvo de verdade. Devolver
+  // `ok: false` faria a pessoa salvar outra vez e criar um duplicado.
+  return {
+    ok: true,
+    id: fornecedorId ?? undefined,
+    aviso: avisoObras ?? undefined,
+  };
 }
 
 export async function excluirFornecedor(formData: FormData) {
@@ -89,6 +122,14 @@ export async function excluirFornecedor(formData: FormData) {
   if (!id) return;
 
   const supabase = await createClient();
-  await supabase.from("fornecedor").delete().eq("id", id);
+  const erro = erroDeEscrita(
+    await supabase.from("fornecedor").delete().eq("id", id).select("id"),
+    {
+      registro: "fornecedor",
+      contexto: "excluirFornecedor",
+      dica: "Deixe-o inativo na edição para preservar o histórico.",
+    },
+  );
+  if (erro) return { error: erro };
   revalidatePath("/fornecedores");
 }

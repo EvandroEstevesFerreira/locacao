@@ -52,9 +52,19 @@ export function ImovelUpload({
         toast.error("Falha ao enviar o arquivo.");
         return;
       }
-      if (kind === "vistoria_foto") await salvarFotoVistoriaImovel(registroId, imovelId, path);
-      else if (kind === "reparo") await salvarAnexoReparo(registroId, imovelId, path);
-      else await salvarAnexoOcorrencia(registroId, imovelId, path);
+      // O arquivo já subiu. Se a referência no banco não for gravada, ele fica
+      // órfão no Storage e nenhuma tela o mostra — anunciar sucesso aí é
+      // esconder um arquivo perdido.
+      const r =
+        kind === "vistoria_foto"
+          ? await salvarFotoVistoriaImovel(registroId, imovelId, path)
+          : kind === "reparo"
+            ? await salvarAnexoReparo(registroId, imovelId, path)
+            : await salvarAnexoOcorrencia(registroId, imovelId, path);
+      if (r?.error) {
+        toast.error(r.error);
+        return;
+      }
       toast.success("Arquivo enviado.");
       startTransition(() => router.refresh());
     } finally {

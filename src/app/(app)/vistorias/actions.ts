@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeOperar, podeGerenciarFinanceiro } from "@/lib/auth";
 import { hojeSaoPaulo } from "@/lib/locacao";
+import { erroDeEscrita } from "@/lib/acoes";
 
 export type VistoriaFormState = { error?: string; ok?: boolean };
 
@@ -85,7 +86,14 @@ export async function excluirVistoria(formData: FormData) {
   if (fotos?.length) {
     await supabase.storage.from("vistorias").remove(fotos.map((f) => f.path));
   }
-  await supabase.from("vistoria").delete().eq("id", id);
+  const erro = erroDeEscrita(
+    await supabase.from("vistoria").delete().eq("id", id).select("id"),
+    {
+      registro: "vistoria",
+      contexto: "excluirVistoria",
+    },
+  );
+  if (erro) return { error: erro };
   revalidatePath("/vistorias");
   redirect("/vistorias");
 }
@@ -95,9 +103,15 @@ export async function registrarFoto(vistoriaId: string, path: string) {
   const perfil = await getCurrentPerfil();
   if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
   const supabase = await createClient();
-  await supabase
+  // O arquivo já subiu para o Storage. Sem a linha no banco ele vira órfão —
+  // e a vistoria fica sem a prova que alguém acabou de tirar.
+  const { error } = await supabase
     .from("vistoria_foto")
     .insert({ org_id: perfil.org_id, vistoria_id: vistoriaId, path });
+  if (error) {
+    console.error("registrarFoto", error);
+    return { error: "A foto foi enviada, mas não ficou registrada na vistoria." };
+  }
   revalidatePath(`/vistorias/${vistoriaId}`);
 }
 
@@ -112,7 +126,14 @@ export async function excluirFoto(formData: FormData) {
   if (!id || !path) return;
   const supabase = await createClient();
   await supabase.storage.from("vistorias").remove([path]);
-  await supabase.from("vistoria_foto").delete().eq("id", id);
+  const erro = erroDeEscrita(
+    await supabase.from("vistoria_foto").delete().eq("id", id).select("id"),
+    {
+      registro: "foto",
+      contexto: "excluirFoto",
+    },
+  );
+  if (erro) return { error: erro };
   if (vistoriaId) revalidatePath(`/vistorias/${vistoriaId}`);
 }
 
@@ -161,7 +182,19 @@ export async function atualizarStatusAvaria(formData: FormData) {
   const vistoriaId = (formData.get("vistoria_id") as string | null)?.trim();
   if (!id || !["aberta", "cobrada", "resolvida"].includes(status ?? "")) return;
   const supabase = await createClient();
-  await supabase.from("avaria").update({ status }).eq("id", id);
+  // `<form action={…}>` simples: o React exige retorno `void` ali, então a
+  // mensagem NÃO sobe para a tela por este caminho. O que o usuário vê é o
+  // valor voltando ao anterior quando a página revalida — feedback fraco, mas
+  // não silêncio: o `erroDeEscrita` deixa a causa no log do servidor.
+  // Surfacear exigiria transformar a linha num componente cliente.
+  erroDeEscrita(
+    await supabase.from("avaria").update({ status }).eq("id", id).select("id"),
+    {
+      registro: "avaria",
+      contexto: "atualizarStatusAvaria",
+      acao: "salvar",
+    },
+  );
   if (vistoriaId) revalidatePath(`/vistorias/${vistoriaId}`);
 }
 
@@ -220,10 +253,28 @@ export async function gerarLancamentoAvaria(formData: FormData) {
     .single();
   if (error || !lanc) return;
 
-  await supabase
-    .from("avaria")
-    .update({ status: "cobrada", lancamento_id: lanc.id })
-    .eq("id", id);
+  // O lançamento financeiro JÁ foi criado. Se a avaria não ficar marcada como
+  // cobrada, ela continua oferecendo o botão "Gerar cobrança" — e o segundo
+  // clique cria uma SEGUNDA conta a pagar para o mesmo dano. A idempotência
+  // desta ação depende inteiramente desta escrita.
+  const erroMarcar = erroDeEscrita(
+    await supabase
+      .from("avaria")
+      .update({ status: "cobrada", lancamento_id: lanc.id })
+      .eq("id", id)
+      .select("id"),
+    {
+      registro: "avaria",
+      contexto: "gerarLancamentoAvaria/marcar",
+      acao: "salvar",
+    },
+  );
+  if (erroMarcar) {
+    // `<form action={…}>`: não há canal de retorno. O que se pode fazer é não
+    // deixar o rastro sumir do log — e a tela continua mostrando a avaria como
+    // não cobrada, que é a verdade do banco.
+    console.error("gerarLancamentoAvaria: lançamento", lanc.id, "criado sem marcar a avaria", id);
+  }
 
   if (vistoriaId) revalidatePath(`/vistorias/${vistoriaId}`);
   revalidatePath("/financeiro");
@@ -238,7 +289,14 @@ export async function excluirAvaria(formData: FormData) {
   const vistoriaId = (formData.get("vistoria_id") as string | null)?.trim();
   if (!id) return;
   const supabase = await createClient();
-  await supabase.from("avaria").delete().eq("id", id);
+  const erro = erroDeEscrita(
+    await supabase.from("avaria").delete().eq("id", id).select("id"),
+    {
+      registro: "avaria",
+      contexto: "excluirAvaria",
+    },
+  );
+  if (erro) return { error: erro };
   if (vistoriaId) revalidatePath(`/vistorias/${vistoriaId}`);
 }
 
@@ -252,10 +310,15 @@ export async function salvarLegendaFoto(
   if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
   if (!fotoId) return;
   const supabase = await createClient();
-  await supabase
-    .from("vistoria_foto")
-    .update({ legenda: legenda.trim() || null })
-    .eq("id", fotoId);
+  const erro = erroDeEscrita(
+    await supabase
+      .from("vistoria_foto")
+      .update({ legenda: legenda.trim() || null })
+      .eq("id", fotoId)
+      .select("id"),
+    { registro: "legenda", contexto: "salvarLegendaFoto", acao: "salvar" },
+  );
+  if (erro) return { error: erro };
   if (vistoriaId) revalidatePath(`/vistorias/${vistoriaId}`);
 }
 

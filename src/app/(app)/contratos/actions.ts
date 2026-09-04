@@ -9,7 +9,12 @@ import {
   podeOperar,
   podeExcluirCritico,
 } from "@/lib/auth";
-import { falha, primeiroErro, type ActionResult } from "@/lib/acoes";
+import {
+  erroDeEscrita,
+  falha,
+  primeiroErro,
+  type ActionResult,
+} from "@/lib/acoes";
 import { contratoSchema, itemLocadoSchema } from "@/lib/locacao";
 
 
@@ -102,7 +107,14 @@ export async function excluirItemLocado(formData: FormData) {
   const contratoId = (formData.get("contrato_id") as string | null)?.trim();
   if (!id) return;
   const supabase = await createClient();
-  await supabase.from("item_locado").delete().eq("id", id);
+  const erro = erroDeEscrita(
+    await supabase.from("item_locado").delete().eq("id", id).select("id"),
+    {
+      registro: "item do contrato",
+      contexto: "excluirItemLocado",
+    },
+  );
+  if (erro) return { error: erro };
   if (contratoId) revalidatePath(`/contratos/${contratoId}`);
 }
 
@@ -181,11 +193,30 @@ export async function registrarDevolucao(
   if (error) return { error: "Não foi possível registrar a devolução." };
 
   // Se zerou o saldo, marca como devolvido.
+  //
+  // A devolução já foi gravada acima, então falhar AQUI não invalida o que
+  // aconteceu — mas deixa o item eternamente "em uso" com saldo zero, e é o
+  // custo estimado dele que continua correndo. O usuário precisa saber.
   if (jaDevolvido + parsed.data.quantidade >= Number(item.quantidade)) {
-    await supabase
-      .from("item_locado")
-      .update({ status: "devolvido", data_devolucao: parsed.data.data })
-      .eq("id", parsed.data.item_locado_id);
+    const erroStatus = erroDeEscrita(
+      await supabase
+        .from("item_locado")
+        .update({ status: "devolvido", data_devolucao: parsed.data.data })
+        .eq("id", parsed.data.item_locado_id)
+        .select("id"),
+      {
+        registro: "item do contrato",
+        contexto: "registrarDevolucao/status",
+        acao: "salvar",
+      },
+    );
+    if (erroStatus) {
+      return {
+        error:
+          "A devolução foi registrada, mas o item não ficou marcado como " +
+          "devolvido — ele continua acumulando custo. Avise um administrador.",
+      };
+    }
   }
 
   revalidatePath(`/contratos/${parsed.data.contrato_id}`);
@@ -225,10 +256,16 @@ export async function criarRelatorioRetirada(formData: FormData) {
       .single();
     vistoriaId = vistoria?.id ?? null;
     if (vistoriaId) {
-      await supabase
+      // Sem esta amarração, o contrato continua "sem vistoria de retirada" e o
+      // próximo clique cria OUTRA vistoria — uma por clique, todas vazias. A
+      // action redireciona, então não há retorno para o usuário: resta o log.
+      const { error: erroAmarrar } = await supabase
         .from("contrato_locacao")
         .update({ vistoria_retirada_id: vistoriaId })
         .eq("id", contratoId);
+      if (erroAmarrar) {
+        console.error("abrirVistoriaRetirada/amarrar", erroAmarrar);
+      }
     }
   }
 
@@ -244,10 +281,22 @@ export async function salvarAnexoContrato(contratoId: string, path: string) {
   if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
   if (!contratoId || !path) return;
   const supabase = await createClient();
-  await supabase
-    .from("contrato_locacao")
-    .update({ anexo_path: path })
-    .eq("id", contratoId);
+  const erro = erroDeEscrita(
+    await supabase
+      .from("contrato_locacao")
+      .update({ anexo_path: path })
+      .eq("id", contratoId)
+      .select("id"),
+    {
+      registro: "anexo do contrato",
+      contexto: "salvarAnexoContrato",
+      acao: "salvar",
+    },
+  );
+  // O arquivo JÁ subiu para o Storage neste ponto. Se o caminho não foi
+  // gravado no contrato, o anexo existe e ninguém o encontra — dizer isso é
+  // melhor que deixar o uploader anunciar sucesso.
+  if (erro) return { error: erro };
   revalidatePath(`/contratos/${contratoId}`);
 }
 
@@ -261,10 +310,15 @@ export async function removerAnexoContrato(formData: FormData) {
   if (!contratoId) return;
   const supabase = await createClient();
   if (path) await supabase.storage.from("contratos").remove([path]);
-  await supabase
-    .from("contrato_locacao")
-    .update({ anexo_path: null })
-    .eq("id", contratoId);
+  const erro = erroDeEscrita(
+    await supabase
+      .from("contrato_locacao")
+      .update({ anexo_path: null })
+      .eq("id", contratoId)
+      .select("id"),
+    { registro: "anexo do contrato", contexto: "removerAnexoContrato" },
+  );
+  if (erro) return { error: erro };
   revalidatePath(`/contratos/${contratoId}`);
 }
 
@@ -306,6 +360,13 @@ export async function removerContratoDoc(formData: FormData) {
   if (!id) return;
   const supabase = await createClient();
   if (path) await supabase.storage.from("contratos").remove([path]);
-  await supabase.from("contrato_anexo").delete().eq("id", id);
+  const erro = erroDeEscrita(
+    await supabase.from("contrato_anexo").delete().eq("id", id).select("id"),
+    {
+      registro: "documento",
+      contexto: "removerContratoDoc",
+    },
+  );
+  if (erro) return { error: erro };
   if (contratoId) revalidatePath(`/contratos/${contratoId}`);
 }
