@@ -60,7 +60,13 @@ export async function GET(
   const orgNome = (org as { nome: string } | null)?.nome ?? "Sistenge";
   const tpl = resolverTemplate("comprovante_treinamento", tplRow);
 
-  const concluidoEm = formatarData(conclusao.concluidoEm.slice(0, 10));
+  // SEM `.slice(0, 10)`: `concluido_em` é `timestamptz` gravado em UTC, e cortar
+  // os dez primeiros caracteres entrega a data UTC do instante para o ramo
+  // "data-só" de `formatarData`. Das 21h à meia-noite em Brasília isso é o dia
+  // seguinte — no campo "Concluído em", no `localData` da assinatura e dentro do
+  // texto da declaração. `formatarData` já converte o timestamp completo pelo
+  // fuso de São Paulo; é o slice que a desvia.
+  const concluidoEm = formatarData(conclusao.concluidoEm);
   const variaveis = {
     empresa_nome: orgNome,
     pessoa: perfil.nome,

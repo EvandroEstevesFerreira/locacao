@@ -98,7 +98,14 @@ export async function concluirTrilha(raw: unknown): Promise<ResultadoQuestionari
       acertos: correcao.acertos,
       total_perguntas: correcao.total,
       numero_registro: numero,
-      concluido_em: new Date().toISOString(),
+      // `concluido_em` NÃO entra no payload, e isso é deliberado: a coluna tem
+      // `default now()` (migration 0063) e só é escrita na primeira conclusão
+      // desta versão. Como `assinatura` e `assinado_ip` também ficam de fora,
+      // refazer o questionário da mesma versão preserva o documento assinado —
+      // se `concluido_em` fosse reescrito aqui, a declaração já assinada
+      // ("respondi corretamente ... em {{concluido_em}}") passaria a exibir a
+      // data da última visita, sem nova assinatura. A tentativa fica registrada
+      // pelo trigger `trg_treinamento_updated_at`, em `updated_at`.
     },
     // Refazer a mesma versão atualiza a linha. Sem isto, dois cliques no botão
     // estourariam erro de chave única na cara de quem acabou de acertar tudo.
