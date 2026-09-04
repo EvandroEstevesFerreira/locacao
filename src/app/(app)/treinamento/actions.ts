@@ -7,8 +7,14 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil } from "@/lib/auth";
 import { falha, primeiroErro, type ActionResult } from "@/lib/acoes";
 import { hojeISOSaoPaulo } from "@/lib/locacao";
-import { respostasSchema, corrigir, aprovado } from "@/lib/treinamento";
+import {
+  respostasSchema,
+  corrigir,
+  aprovado,
+  trilhasDoUsuario,
+} from "@/lib/treinamento";
 import { trilhaPorChave } from "@/lib/treinamento/index";
+import type { Papel } from "@/lib/permissoes";
 
 /**
  * O que a tela recebe de volta.
@@ -25,6 +31,25 @@ export type ResultadoQuestionario =
       erro: string;
       erradas?: { perguntaId: string; porque: string; aula: string }[];
     };
+
+/**
+ * A pessoa tem direito a esta trilha?
+ *
+ * Mesma regra da página (`trilhasDoUsuario`), aplicada nas duas actions. Não é
+ * função exportada de propósito: um módulo `"use server"` só pode exportar
+ * server actions, e isto é cálculo, não fronteira de rede.
+ */
+function temDireito(
+  perfil: { papel?: Papel; modulos?: string[] | null },
+  chave: string,
+): boolean {
+  const minhas = trilhasDoUsuario(
+    perfil.papel,
+    perfil.modulos,
+    perfil.papel === "master",
+  );
+  return minhas.some((t) => t.chave === chave);
+}
 
 /**
  * Corrige o questionário e registra a conclusão.
@@ -44,6 +69,19 @@ export async function concluirTrilha(raw: unknown): Promise<ResultadoQuestionari
 
   const trilha = trilhaPorChave(parsed.data.trilha);
   if (!trilha) return { ok: false, erro: "Trilha não encontrada." };
+
+  // Direito à trilha, ANTES de qualquer escrita. A página também checa e dá
+  // `notFound()`, mas página não é fronteira: sem esta guarda, quem não tem o
+  // módulo da trilha chama a action direto, gasta um número TRE e leva o PDF
+  // oficial — enquanto o painel NÃO mostraria a conclusão, porque
+  // `resumirPendencias` só olha as trilhas a que a pessoa tem direito. Registro
+  // órfão, numerado e com comprovante de uma trilha que ela nunca pôde abrir.
+  if (!temDireito(perfil, trilha.chave)) {
+    return {
+      ok: false,
+      erro: "Esta trilha não está disponível para o seu acesso.",
+    };
+  }
 
   const correcao = corrigir(trilha, parsed.data.respostas);
   if (!aprovado(correcao)) {
@@ -142,6 +180,12 @@ export async function assinarComprovante(formData: FormData): Promise<ActionResu
 
   const trilha = trilhaPorChave(trilhaChave);
   if (!trilha) return falha("Trilha não encontrada.");
+
+  // Mesma guarda de `concluirTrilha`, antes da escrita: assinar o comprovante de
+  // uma trilha a que a pessoa não tem direito é o mesmo problema por outra porta.
+  if (!temDireito(perfil, trilha.chave)) {
+    return falha("Esta trilha não está disponível para o seu acesso.");
+  }
 
   const supabase = await createClient();
   const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
