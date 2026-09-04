@@ -27,6 +27,7 @@ export const PREFIXO_REGISTRO = {
   checklist_limpeza: "LIM",
   ocorrencia_imovel: "OCO",
   termo_equipamento: "TRM",
+  treinamento_conclusao: "TRE",
 } as const;
 
 export type TipoRegistro = keyof typeof PREFIXO_REGISTRO;
@@ -46,6 +47,7 @@ export const ROTULO_REGISTRO: Record<TipoRegistro, string> = {
   checklist_limpeza: "Folha de limpeza",
   ocorrencia_imovel: "Ocorrência",
   termo_equipamento: "Termo de responsabilidade",
+  treinamento_conclusao: "Comprovante de treinamento",
 };
 
 /** `CTR-2026-0007` → `{ tipo: "CTR", ano: 2026, sequencial: 7 }`. */
