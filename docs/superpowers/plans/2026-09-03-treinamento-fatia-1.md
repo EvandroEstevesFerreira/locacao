@@ -2533,14 +2533,29 @@ export default async function AjudaPage({
 }
 ```
 
-- [ ] **Step 2: Typecheck, lint, build e commit**
+- [ ] **Step 2: Declarar a exceção de rota, junto com a pasta**
+
+`/ajuda` não é módulo liberável — esconder o manual de alguém não protege nada e
+atrapalha tudo. Mas a varredura de `src/lib/modulos.test.ts` exige que toda rota
+de primeiro nível seja modulável ou declarada em `SEM_MODULO` **com a razão**, e
+ela quebra assim que a pasta existe. Acrescente, junto de `treinamento` (que
+entrou na Task 5):
+
+```ts
+    ajuda: "manual do sistema; esconder de alguém não protege nada e atrapalha tudo",
+```
+
+Run: `npx vitest run src/lib/modulos.test.ts`
+Expected: PASS. A mesma varredura exige que toda exceção declarada **exista no disco** — é por isso que esta linha entra só agora, e não junto com a de `treinamento`.
+
+- [ ] **Step 3: Typecheck, lint, build e commit**
 
 Run: `npm run typecheck` → sem erro.
 Run: `npm run lint` → sem erro.
 Run: `npm run build` → compila, com `/ajuda` na listagem.
 
 ```bash
-git add "src/app/(app)/ajuda"
+git add "src/app/(app)/ajuda" src/lib/modulos.test.ts
 git commit -m "feat(ajuda): o manual, lendo as mesmas aulas do treinamento
 
 Segunda leitura da MESMA fonte: a trilha percorre na ordem em que se aprende, o
@@ -2862,21 +2877,14 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
 - Consumes: nada novo.
 - Produces: versão `0.51.0` nos três pontos, em sincronia.
 
-- [ ] **Step 1: Acrescentar as exceções na varredura de rotas**
+> **As exceções da varredura de rotas já foram feitas.** `treinamento` entrou na
+> Task 5 e `ajuda` na Task 8, cada uma junto da tarefa que cria a pasta — a
+> varredura quebra assim que o diretório existe, e deixar isso para o fim
+> manteria o branch vermelho por sete tarefas. Confirme com
+> `npx vitest run src/lib/modulos.test.ts` antes de seguir; se reprovar, é
+> achado real.
 
-Em `src/lib/modulos.test.ts`, no objeto `SEM_MODULO`, com a razão — a varredura exige que toda rota de primeiro nível seja modulável ou declarada com justificativa:
-
-```ts
-    treinamento: "trilhas e comprovante do próprio usuário; trancar o treinamento e esconder a chave seria o contrário do que ele existe para fazer",
-    ajuda: "manual do sistema; esconder de alguém não protege nada e atrapalha tudo",
-```
-
-- [ ] **Step 2: Rodar a varredura de rotas**
-
-Run: `npx vitest run src/lib/modulos.test.ts`
-Expected: PASS. A varredura também exige que toda exceção declarada **exista no disco** — se reprovar por isso, o nome da pasta não bate.
-
-- [ ] **Step 3: Acrescentar os itens de navegação**
+- [ ] **Step 1: Acrescentar os itens de navegação**
 
 Em `src/lib/nav.ts`, acrescente os dois itens. Leia o arquivo antes: cada `NavItem` tem `label`, `href`, `icon`, um `grupo?: GrupoNav` opcional, e alguns têm `apenasMaster`.
 
@@ -2884,7 +2892,7 @@ Os dois **não** levam `grupo` — como Perfil e Novidades, ficam fora dos quatr
 
 Se a estrutura de `nav.ts` não permitir item sem grupo, **pare e reporte** em vez de inventar um grupo novo.
 
-- [ ] **Step 4: Bumpar `src/lib/changelog.ts`**
+- [ ] **Step 2: Bumpar `src/lib/changelog.ts`**
 
 `APP_VERSION` passa a `"0.51.0"`, e o `Release` novo entra no **topo** do array. MINOR: funcionalidade nova sem quebrar o que existe. Texto voltado ao usuário final, sem jargão:
 
@@ -2905,25 +2913,25 @@ Se a estrutura de `nav.ts` não permitir item sem grupo, **pare e reporte** em v
   },
 ```
 
-- [ ] **Step 5: Replicar em `CHANGELOG.md`**
+- [ ] **Step 3: Replicar em `CHANGELOG.md`**
 
 Acrescente `## [0.51.0] — 2026-09-03` acima da seção `## [0.50.0]`, no formato Keep a Changelog, com as subseções Adicionado e uma nota curta sobre as duas decisões de desenho: o conteúdo mora no código, versionado; e manual e trilha leem a mesma fonte em duas ordens. Registre também que a migration **0063** está no repositório e precisa ser aplicada antes do deploy.
 
-- [ ] **Step 6: Bumpar `package.json`**
+- [ ] **Step 4: Bumpar `package.json`**
 
 Campo `version` passa a `"0.51.0"`, igual a `APP_VERSION`.
 
-- [ ] **Step 7: Ritual — typecheck**
+- [ ] **Step 5: Ritual — typecheck**
 
 Run: `npm run typecheck`
 Expected: sem erro.
 
-- [ ] **Step 8: Ritual — lint**
+- [ ] **Step 6: Ritual — lint**
 
 Run: `npm run lint`
 Expected: sem erro.
 
-- [ ] **Step 9: Ritual — testes, com a conferência de contagem**
+- [ ] **Step 7: Ritual — testes, com a conferência de contagem**
 
 Run: `npm test`
 Expected: PASS.
@@ -2931,12 +2939,12 @@ Expected: PASS.
 Depois: `find src -name "*.test.ts" -o -name "*.test.tsx" | wc -l`
 Expected: o número igual ao "Test Files" do relatório. Se o disco tiver mais, rode `npm test` de novo antes de concluir qualquer coisa — já houve corrida em que o Vitest reportou 27 arquivos EM VERDE com 28 no disco.
 
-- [ ] **Step 10: Ritual — build**
+- [ ] **Step 8: Ritual — build**
 
 Run: `npm run build`
 Expected: `✓ Compiled successfully`, com `/treinamento`, `/treinamento/[trilha]`, `/treinamento/pendentes`, `/ajuda` e `/api/treinamento/[trilha]/comprovante` na listagem de rotas.
 
-- [ ] **Step 11: Revisar o diff e commitar**
+- [ ] **Step 9: Revisar o diff e commitar**
 
 Run: `git status --short` e `git diff main --stat`
 Expected: só os arquivos previstos por este plano.
