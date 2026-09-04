@@ -54,11 +54,12 @@ export function trilhasDoUsuario(
   papel: Papel | undefined,
   modulos: string[] | null | undefined,
   isMaster: boolean,
+  trilhas: Trilha[] = TRILHAS,
 ): Trilha[] {
   // Sessão sem papel não é "acesso total": é sessão inválida.
   if (!papel) return [];
 
-  return TRILHAS.filter((t) => {
+  return trilhas.filter((t) => {
     if (t.papeis.length > 0 && !t.papeis.includes(papel)) return false;
     if (t.modulo === null) return true;
     return moduloLiberado(modulos, isMaster, t.modulo);

@@ -87,6 +87,40 @@ describe("trilhasDoUsuario", () => {
   });
 });
 
+describe("trilhasDoUsuario — o ramo de módulo", () => {
+  const comModulo = trilha({ chave: "com-modulo", modulo: "frota" });
+
+  it("trilha de módulo aparece para quem tem o módulo liberado", () => {
+    const r = trilhasDoUsuario("operador", ["frota"], false, [comModulo]);
+    expect(r.map((t) => t.chave)).toEqual(["com-modulo"]);
+  });
+
+  it("trilha de módulo NÃO aparece para quem não tem o módulo", () => {
+    // É o caso que o curto-circuito de `modulo === null` escondia: sem este
+    // teste, uma inversão de argumentos em `moduloLiberado` passaria em verde.
+    const r = trilhasDoUsuario("operador", ["estoque"], false, [comModulo]);
+    expect(r).toEqual([]);
+  });
+
+  it("master vê trilha de módulo mesmo com a lista vazia", () => {
+    const r = trilhasDoUsuario("master", [], true, [comModulo]);
+    expect(r.map((t) => t.chave)).toEqual(["com-modulo"]);
+  });
+
+  it("modulos nulo é acesso total, e não ausência de acesso", () => {
+    // Retrocompatibilidade de quem nunca teve módulos definidos — a regra é de
+    // `moduloLiberado`, e este teste prova que ela está sendo consultada.
+    const r = trilhasDoUsuario("operador", null, false, [comModulo]);
+    expect(r.map((t) => t.chave)).toEqual(["com-modulo"]);
+  });
+
+  it("papel fora da lista de papéis da trilha não a recebe", () => {
+    const soGestor = trilha({ chave: "so-gestor", papeis: ["gestor"] });
+    expect(trilhasDoUsuario("operador", null, false, [soGestor])).toEqual([]);
+    expect(trilhasDoUsuario("gestor", null, false, [soGestor]).length).toBe(1);
+  });
+});
+
 describe("situacaoDaTrilha e versaoConcluida", () => {
   const t = trilha({ chave: "teste", versao: 2 });
 
@@ -194,9 +228,14 @@ describe("corrigir e aprovado", () => {
 });
 
 describe("resumirPendencias", () => {
+  // Nomes escolhidos para que a ordem por pendência e a ordem alfabética
+  // DISCORDEM: "Ana Paula" vem antes de "Zulmira" no alfabeto, mas é
+  // "Zulmira" quem tem pendência. Um comparador que ordenasse só por nome
+  // passaria pelos testes se os nomes concordassem com a pendência — é o que
+  // a fixture anterior fazia sem querer.
   const usuarios = [
-    { perfilId: "u1", nome: "Fulano de Tal", papel: "operador" as const, modulos: [] as string[], isMaster: false },
-    { perfilId: "u2", nome: "Ciclana", papel: "administrador" as const, modulos: null, isMaster: false },
+    { perfilId: "u1", nome: "Ana Paula", papel: "operador" as const, modulos: [] as string[], isMaster: false },
+    { perfilId: "u2", nome: "Zulmira", papel: "administrador" as const, modulos: null, isMaster: false },
   ];
 
   it("conta concluídas e lista as pendentes por pessoa", () => {
@@ -213,9 +252,21 @@ describe("resumirPendencias", () => {
 
   it("quem tem mais pendência vem primeiro", () => {
     // O painel existe para cobrar; quem está em dia no topo esconderia o que
-    // interessa.
+    // interessa. Zulmira (pendente) vem antes de Ana Paula (em dia), na
+    // contramão do alfabeto — só passa se o critério for mesmo a pendência.
     const r = resumirPendencias(usuarios, [{ ...conclusao(), perfilId: "u1" }]);
     expect(r[0].perfilId).toBe("u2");
+  });
+
+  it("com a mesma pendência, desempata por nome", () => {
+    const dois = [
+      { perfilId: "b", nome: "Zulmira", papel: "operador" as const, modulos: null, isMaster: false },
+      { perfilId: "a", nome: "Ana Paula", papel: "operador" as const, modulos: null, isMaster: false },
+    ];
+    expect(resumirPendencias(dois, []).map((l) => l.nome)).toEqual([
+      "Ana Paula",
+      "Zulmira",
+    ]);
   });
 
   it("lista vazia devolve lista vazia", () => {
