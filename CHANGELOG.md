@@ -7,6 +7,64 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.55.0] — 2026-09-04
+
+Onda de conteúdo do grupo **Obra**: trilhas de Obras e de Avanço. E, pela
+segunda versão seguida, escrever o treinamento expôs telas que ofereciam o que
+não entregavam — desta vez duas que **devolviam a pessoa ao ponto de partida**.
+Nenhuma migration.
+
+- **O lápis da lista de obras.** `/obras/[id]` redireciona para `/obras` quem
+  não é master ou administrador, mas o botão de editar era oferecido a todos os
+  perfis. Gestor e operador clicavam e voltavam para a mesma lista, sem uma
+  palavra de explicação.
+- **A grade de avanço.** `salvarAvancos` exige `podeEditarCadastros`, e a tela
+  mostrava os campos a qualquer um com o módulo. A pessoa digitava o avanço de
+  todas as obras e descobria no botão que não podia salvar. Agora a tela tem
+  duas formas: com campos para quem lança, e somente leitura para quem
+  acompanha — que é o que um gestor precisa fazer ali.
+
+### Corrigido
+
+- **Conteúdo publicado errado na 0.53.0.** A aula `achar-obra`, da trilha
+  Primeiros passos — a única que todo perfil faz —, mandava clicar no código da
+  obra (o código não é link; o link era um lápis na coluna de ações) e prometia
+  "as seções de contratos, orçamento e avanço" numa tela chamada "Editar obra"
+  que não tem seção de contratos. Pior: o passo era **impossível** para gestor
+  e operador, que são a maioria de quem faz a trilha.
+
+  A trilha foi para a **versão 2** e a aula reescrita. O bump é o mecanismo
+  funcionando como projetado: quem concluiu a v1 vê "atualização pendente" e
+  relê apenas a aula que mudou — há teste sobre o conteúdo real provando que
+  `aulasQueMudaram` devolve exatamente `achar-obra`.
+- Na lista de obras, o botão de editar passou a respeitar
+  `podeEditarCadastros`, como o botão de excluir ao lado dele já fazia.
+
+### Adicionado
+
+- Trilha **Obras** (módulo `obras`): a lista e o que ela mostra a cada perfil;
+  o cadastro e o período, que é o denominador de três indicadores; orçado
+  contra realizado com o veredito em uma frase; a leitura dos cinco
+  indicadores de avanço; e o fechamento mensal como fotografia da competência.
+- Trilha **Avanço** (módulo `avanco`): a semana que começa na segunda e fecha
+  no domingo, o percentual acumulado, a linha em branco que é descartada em vez
+  de virar zero, o desvio calculado enquanto se digita, e os dois indicadores
+  da ficha da obra que dependem exclusivamente deste lançamento.
+
+### Alterado
+
+- A tela de Avanço das obras é somente leitura para gestor e operador, com o
+  percentual da semana em texto e um aviso de quem lança.
+
+### Testes
+
+- Teste novo sobre o conteúdo real: quem concluiu a v1 de Primeiros passos relê
+  exatamente uma aula. É o que prova que uma correção de conteúdo chega a quem
+  já tinha concluído.
+- A fixture de `resumirPendencias` passou a derivar a versão da própria trilha,
+  em vez de um `1` escrito à mão. O literal fazia o teste quebrar a cada bump
+  de conteúdo, apontando para o lugar errado — foi o que aconteceu aqui.
+
 ## [0.54.0] — 2026-09-04
 
 Onda de conteúdo do grupo **Equipamento**: quatro trilhas de treinamento

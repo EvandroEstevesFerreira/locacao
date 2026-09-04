@@ -99,17 +99,25 @@ export default async function ObrasPage({
                         <Badge variant={s.variant}>{s.label}</Badge>
                       </TableCell>
                       <TableCell>
+                        {/* O lápis também é gated: `/obras/[id]` redireciona
+                            para cá quem não é master ou administrador, então
+                            oferecê-lo a gestor e operador era um botão que
+                            devolvia a pessoa para a mesma lista, sem uma
+                            palavra de explicação. Ausência honesta é melhor
+                            que um caminho que volta ao ponto de partida. */}
                         <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            aria-label="Editar"
-                            render={<Link href={`/obras/${obra.id}`} />}
-                          >
-                            <Pencil />
-                          </Button>
                           {podeEditar ? (
-                            <ConfirmDelete action={excluirObra} id={obra.id} />
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                aria-label="Editar"
+                                render={<Link href={`/obras/${obra.id}`} />}
+                              >
+                                <Pencil />
+                              </Button>
+                              <ConfirmDelete action={excluirObra} id={obra.id} />
+                            </>
                           ) : null}
                         </div>
                       </TableCell>

@@ -2,6 +2,8 @@
 
 import type { Trilha } from "./tipos";
 import { PRIMEIROS_PASSOS } from "./primeiros-passos";
+import { OBRAS } from "./obras";
+import { AVANCO } from "./avanco";
 import { CATALOGO } from "./catalogo";
 import { FROTA } from "./frota";
 import { TERMOS } from "./termos";
@@ -15,7 +17,11 @@ export type { Passo, Aula, Pergunta, Trilha } from "./tipos";
  * Primeiros passos vem primeiro de propósito: é a única que todo papel faz, e
  * as outras supõem que a pessoa já sabe achar uma obra e ler uma lista.
  *
- * Depois dela vem o grupo Equipamento, e a ordem dentro do grupo também não é
+ * Depois dela vem o grupo Obra, porque a obra é o centro do sistema: quase toda
+ * lista das outras telas se filtra por ela, e o avanço é o contraponto físico
+ * de tudo o que o orçamento mede em dinheiro.
+ *
+ * Por fim o grupo Equipamento, e a ordem dentro do grupo também não é
  * alfabética: o catálogo vem antes de Frota e de Estoque porque as duas telas
  * mostram consequências de uma escolha feita no catálogo — o controle por peça
  * ou por quantidade —, e quem não entendeu essa escolha procura na tela errada.
@@ -24,6 +30,8 @@ export type { Passo, Aula, Pergunta, Trilha } from "./tipos";
  */
 export const TRILHAS: Trilha[] = [
   PRIMEIROS_PASSOS,
+  OBRAS,
+  AVANCO,
   CATALOGO,
   FROTA,
   TERMOS,

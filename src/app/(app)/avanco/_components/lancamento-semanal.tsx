@@ -27,11 +27,21 @@ export function LancamentoSemanal({
   obras,
   semana,
   hojeISO,
+  podeLancar,
 }: {
   obras: ObraAvanco[];
   /** Segunda-feira da semana, já canonizada no servidor. */
   semana: string;
   hojeISO: string;
+  /**
+   * `podeEditarCadastros` — a mesma permissão que `salvarAvancos` exige.
+   *
+   * Sem isto, gestor e operador viam a grade inteira de campos, digitavam o
+   * avanço de todas as obras e só descobriam no botão que não podiam salvar.
+   * Com `false` a tela continua valendo: ela é a única visão semanal do avanço
+   * de todas as obras, e ler é o que um gestor precisa fazer aqui.
+   */
+  podeLancar: boolean;
 }) {
   const router = useRouter();
   const [erroServidor, setErroServidor] = useState<string | null>(null);
@@ -122,24 +132,32 @@ export function LancamentoSemanal({
                 Anterior: {o.semanaAnterior === null ? "—" : `${o.semanaAnterior}%`}
               </p>
 
-              <Input
-                type="number"
-                min={0}
-                max={100}
-                step="0.01"
-                inputMode="decimal"
-                placeholder="%"
-                aria-label={`Avanço de ${o.codigo}`}
-                disabled={pendente}
-                {...register(`linhas.${i}.percentual`)}
-              />
+              {podeLancar ? (
+                <>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step="0.01"
+                    inputMode="decimal"
+                    placeholder="%"
+                    aria-label={`Avanço de ${o.codigo}`}
+                    disabled={pendente}
+                    {...register(`linhas.${i}.percentual`)}
+                  />
 
-              <Input
-                placeholder="Observação (opcional)"
-                aria-label={`Observação de ${o.codigo}`}
-                disabled={pendente}
-                {...register(`linhas.${i}.observacoes`)}
-              />
+                  <Input
+                    placeholder="Observação (opcional)"
+                    aria-label={`Observação de ${o.codigo}`}
+                    disabled={pendente}
+                    {...register(`linhas.${i}.observacoes`)}
+                  />
+                </>
+              ) : (
+                <p className="text-sm font-medium tabular-nums">
+                  {o.semanaAtual === null ? "—" : `${o.semanaAtual}%`}
+                </p>
+              )}
             </div>
           );
         })}
@@ -147,12 +165,19 @@ export function LancamentoSemanal({
 
       <FormError>{erroServidor}</FormError>
 
-      <div className="flex justify-end">
-        <Button type="submit" disabled={pendente}>
-          {pendente ? <Loader2 className="size-4 animate-spin" /> : null}
-          {pendente ? "Salvando…" : "Salvar avanços"}
-        </Button>
-      </div>
+      {podeLancar ? (
+        <div className="flex justify-end">
+          <Button type="submit" disabled={pendente}>
+            {pendente ? <Loader2 className="size-4 animate-spin" /> : null}
+            {pendente ? "Salvando…" : "Salvar avanços"}
+          </Button>
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground">
+          Somente master e administrador lançam o avanço. Esta tela mostra o que
+          já foi lançado na semana.
+        </p>
+      )}
     </form>
   );
 }

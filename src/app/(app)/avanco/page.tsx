@@ -1,5 +1,6 @@
 import { TrendingUp } from "lucide-react";
 
+import { getCurrentPerfil, podeEditarCadastros } from "@/lib/auth";
 import { hojeISOSaoPaulo, formatarData } from "@/lib/locacao";
 import { segundaDaSemana } from "@/lib/avanco";
 import { listarObrasComAvanco } from "@/lib/data/avanco";
@@ -13,7 +14,10 @@ export default async function AvancoPage() {
   // meia-noite em Brasília a semana calculada seria a seguinte.
   const hojeISO = hojeISOSaoPaulo();
   const semana = segundaDaSemana(hojeISO);
-  const obras = await listarObrasComAvanco(semana);
+  const [obras, perfil] = await Promise.all([
+    listarObrasComAvanco(semana),
+    getCurrentPerfil(),
+  ]);
 
   const pendentes = obras.filter((o) => o.semanaAtual === null).length;
 
@@ -43,7 +47,12 @@ export default async function AvancoPage() {
       ) : (
         <Card>
           <CardContent className="pt-6">
-            <LancamentoSemanal obras={obras} semana={semana} hojeISO={hojeISO} />
+            <LancamentoSemanal
+              obras={obras}
+              semana={semana}
+              hojeISO={hojeISO}
+              podeLancar={podeEditarCadastros(perfil?.papel)}
+            />
           </CardContent>
         </Card>
       )}
