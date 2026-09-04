@@ -7,6 +7,31 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.51.0] — 2026-09-03
+
+### Adicionado
+
+- **Funcionários no menu principal.** O cadastro vive em `/termos/funcionarios`
+  para herdar a liberação por usuário do módulo Termos, mas não tinha entrada
+  própria: quem via "Sem registro de posse" numa peça não adivinhava que a
+  pessoa se cadastra dentro de Termos.
+- **Coluna e filtro de categoria em Itens.** O catálogo passou de 5 para 32
+  itens com a importação do parque de TI; a categoria deixou de ser detalhe e
+  virou o primeiro corte. Inclui a opção "Sem categoria", que é o estado dos 5
+  itens antigos.
+
+### Melhorado
+
+- Botão **Editar** no topo da peça, ancorado no formulário que já existia no fim
+  da página, depois da linha do tempo.
+- Na tela do item, o identificador de cada peça virou link para `/frota/[id]`.
+  Antes a única ação disponível ali era excluir.
+
+### Corrigido
+
+- A descrição de Itens dizia "catálogo de equipamentos e materiais que a
+  organização aluga" — falso desde que o patrimônio próprio entrou.
+
 ## [0.50.0] — 2026-09-02
 
 Fatia 1 da custódia da peça. O achado que ordenou a fatia: a peça não podia

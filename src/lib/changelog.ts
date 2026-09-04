@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.50.0";
+export const APP_VERSION = "0.51.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,18 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.51.0",
+    data: "2026-09-03",
+    titulo: "Achar as coisas no catálogo que cresceu",
+    mudancas: [
+      { tipo: "novo", texto: "Funcionários ganhou entrada própria no menu. O cadastro existia, mas estava escondido dentro de Termos — quem via “Sem registro de posse” numa peça não tinha como adivinhar onde cadastrar a pessoa." },
+      { tipo: "novo", texto: "A lista de Itens ganhou coluna e filtro de categoria. Com 32 itens misturando andaime, ar-condicionado e notebook, a categoria virou o primeiro corte de quem procura." },
+      { tipo: "melhoria", texto: "A peça agora tem botão Editar no topo. O formulário sempre existiu, mas ficava depois da linha do tempo: quem olhava o começo da tela concluía que peça não se edita." },
+      { tipo: "melhoria", texto: "Na tela do item, cada peça virou link. Antes só dava para excluí-la; agora abre a peça, com posse, histórico e cadastro." },
+      { tipo: "correcao", texto: "Itens dizia ser o “catálogo do que a organização aluga”, o que deixou de ser verdade quando o patrimônio próprio entrou." },
+    ],
+  },
   {
     versao: "0.50.0",
     data: "2026-09-02",
