@@ -132,4 +132,23 @@ describe("varredura de rotas contra módulos", () => {
       `Módulo aponta para rota que não existe: ${semPasta.join(", ")}`,
     ).toEqual([]);
   });
+
+  // A verificação da PASTA não bastava, e o furo durou da 0.39.0 à 0.56.0:
+  // `src/app/(app)/recebimentos/` existia com `[id]/page.tsx` dentro, então a
+  // pasta estava lá, o módulo estava declarado, o item aparecia no menu — e
+  // clicar nele dava 404, porque não havia `page.tsx` na raiz da rota.
+  //
+  // Pasta é o que o desenvolvedor cria; `page.tsx` é o que o usuário abre. A
+  // trava tem de ser sobre o segundo.
+  it("todo módulo tem page.tsx na RAIZ da rota — pasta não é página", () => {
+    const semPagina = MODULOS.filter((m) => {
+      const pasta = m.href.replace(/^\//, "");
+      return !fs.existsSync(path.join(dirRotas, pasta, "page.tsx"));
+    }).map((m) => `${m.chave} → ${m.href}`);
+    expect(
+      semPagina,
+      "Módulo no menu apontando para rota sem página: o usuário clica e " +
+        `recebe 404.\n  ${semPagina.join("\n  ")}`,
+    ).toEqual([]);
+  });
 });

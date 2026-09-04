@@ -424,6 +424,10 @@ describe("o conteúdo real do grupo Equipamento", () => {
       "frota",
       "termos",
       "estoque",
+      "fornecedores",
+      "contratos",
+      "recebimentos",
+      "vistorias",
     ]);
   });
 
@@ -436,6 +440,10 @@ describe("o conteúdo real do grupo Equipamento", () => {
       frota: "frota",
       termos: "termos",
       estoque: "estoque",
+      fornecedores: "fornecedores",
+      contratos: "contratos",
+      recebimentos: "recebimentos",
+      vistorias: "vistorias",
     });
   });
 
