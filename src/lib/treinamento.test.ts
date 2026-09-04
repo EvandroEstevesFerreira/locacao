@@ -239,10 +239,14 @@ describe("resumirPendencias", () => {
     { perfilId: "u2", nome: "Zulmira", papel: "administrador" as const, modulos: null, isMaster: false },
   ];
 
+  // A versão vem da TRILHA, não de um literal: `resumirPendencias` trabalha
+  // sobre `TRILHAS` de verdade, e conclusão numa versão antiga conta como
+  // pendente — que é o comportamento correto. Com `versao: 1` escrito à mão,
+  // este teste quebrava a cada bump de conteúdo, apontando para o lugar errado.
+  const emDia = () => conclusao({ versao: PRIMEIROS_PASSOS.versao });
+
   it("conta concluídas e lista as pendentes por pessoa", () => {
-    const r = resumirPendencias(usuarios, [
-      { ...conclusao(), perfilId: "u1" },
-    ]);
+    const r = resumirPendencias(usuarios, [{ ...emDia(), perfilId: "u1" }]);
     const u1 = r.find((l) => l.perfilId === "u1")!;
     const u2 = r.find((l) => l.perfilId === "u2")!;
     expect(u1.concluidas).toBe(1);
@@ -255,7 +259,7 @@ describe("resumirPendencias", () => {
     // O painel existe para cobrar; quem está em dia no topo esconderia o que
     // interessa. Zulmira (pendente) vem antes de Ana Paula (em dia), na
     // contramão do alfabeto — só passa se o critério for mesmo a pendência.
-    const r = resumirPendencias(usuarios, [{ ...conclusao(), perfilId: "u1" }]);
+    const r = resumirPendencias(usuarios, [{ ...emDia(), perfilId: "u1" }]);
     expect(r[0].perfilId).toBe("u2");
   });
 
@@ -411,9 +415,11 @@ describe("o conteúdo real de primeiros passos", () => {
 // A guarda vale mais do que a soma dos casos: é o que faz a próxima onda de
 // conteúdo declarar o módulo de propósito, em vez de esquecer.
 describe("o conteúdo real do grupo Equipamento", () => {
-  it("as cinco trilhas existem, na ordem de estudo", () => {
+  it("as trilhas existem, na ordem de estudo", () => {
     expect(TRILHAS.map((t) => t.chave)).toEqual([
       "primeiros-passos",
+      "obras",
+      "avanco",
       "catalogo",
       "frota",
       "termos",
@@ -424,6 +430,8 @@ describe("o conteúdo real do grupo Equipamento", () => {
   it("cada trilha declara o módulo que ensina", () => {
     expect(Object.fromEntries(TRILHAS.map((t) => [t.chave, t.modulo]))).toEqual({
       "primeiros-passos": null,
+      obras: "obras",
+      avanco: "avanco",
       catalogo: "itens",
       frota: "frota",
       termos: "termos",
@@ -437,9 +445,9 @@ describe("o conteúdo real do grupo Equipamento", () => {
     ).toEqual(["primeiros-passos", "frota"]);
   });
 
-  it("quem não tem módulo nenhum do grupo recebe só primeiros passos", () => {
+  it("quem não tem módulo nenhum com trilha recebe só primeiros passos", () => {
     expect(
-      trilhasDoUsuario("operador", ["obras"], false).map((t) => t.chave),
+      trilhasDoUsuario("operador", ["imoveis"], false).map((t) => t.chave),
     ).toEqual(["primeiros-passos"]);
   });
 
@@ -454,6 +462,16 @@ describe("o conteúdo real do grupo Equipamento", () => {
       );
       expect(aprovado(corrigir(t, respostas)), `trilha ${t.chave}`).toBe(true);
     }
+  });
+
+  it("quem concluiu a v1 de primeiros passos relê só a aula que mudou", () => {
+    // A 0.55.0 corrigiu `achar-obra`, que dizia para clicar no código da obra
+    // (não é link) e descrevia seções que a tela não tem. O bump para a v2 é o
+    // que faz a correção CHEGAR a quem já tinha concluído — sem ele, a pessoa
+    // continuaria com a conclusão em dia e a lição errada na cabeça.
+    expect(
+      aulasQueMudaram(PRIMEIROS_PASSOS, 1).map((a) => a.id),
+    ).toEqual(["achar-obra"]);
   });
 
   it("o gabarito não fica todo na mesma posição", () => {

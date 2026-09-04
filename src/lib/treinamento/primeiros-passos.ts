@@ -3,6 +3,17 @@
 // A aula `entrar` fala de uma tela que quem está lendo já passou: ela existe
 // para o MANUAL (alguém consultando por outra pessoa, ou lendo antes de repassar
 // a senha a um novo funcionário), não porque quem está trancado fora vá lê-la.
+//
+// VERSÃO 2 — a aula `achar-obra` estava ERRADA quando foi publicada, na 0.53.0.
+// Ela mandava clicar no código da obra (o código não é link; o link é um lápis
+// na coluna de ações) e prometia "as seções de contratos, orçamento e avanço"
+// numa tela que se chama "Editar obra" e não tem seção de contratos. Pior: a
+// tela redireciona para a lista quem não é master ou administrador, então o
+// passo era impossível para gestor e operador — que são a maioria de quem faz
+// esta trilha.
+//
+// O bump é o mecanismo funcionando como projetado: quem concluiu a v1 vê
+// "atualização pendente" e relê apenas a aula que mudou.
 
 import type { Trilha } from "./tipos";
 
@@ -13,7 +24,7 @@ export const PRIMEIROS_PASSOS: Trilha = {
     "Entrar, entender o menu, achar uma obra e saber o que fazer quando falta acesso.",
   modulo: null,
   papeis: [],
-  versao: 1,
+  versao: 2,
   aulas: [
     {
       id: "entrar",
@@ -97,29 +108,32 @@ export const PRIMEIROS_PASSOS: Trilha = {
     },
     {
       id: "achar-obra",
-      titulo: "Achar uma obra e ler a tela dela",
+      titulo: "Achar uma obra, e onde ver o que pendura nela",
       resumo: "A obra é o centro do Loca — quase tudo pendura nela.",
-      rotas: ["/obras", "/obras/[id]"],
-      desdeVersao: 1,
+      rotas: ["/obras"],
+      desdeVersao: 2,
       passos: [
         {
           onde: "/obras",
-          acao: "Abra Obras e digite parte do código ou do nome na busca.",
+          acao: "Abra Obras e digite parte do código, do nome ou do responsável na busca.",
           esperado:
-            "A lista filtra enquanto você digita, sem precisar apertar nada.",
+            "A lista filtra enquanto você digita, sem precisar apertar nada. As colunas são código, nome, responsável e status.",
         },
         {
           onde: "/obras",
-          acao: "Clique no código da obra.",
+          acao: "Clique no título de uma coluna para reordenar.",
           esperado:
-            "Abre a tela da obra, com o período, o status e as seções de contratos, orçamento e avanço.",
+            "A lista reordena por aquela coluna, e clicar de novo inverte. Ordenar por status agrupa as obras ativas.",
         },
         {
-          onde: "/obras/[id]",
-          acao: "Repare no período da obra — data de início e fim previsto.",
+          onde: "Menu",
+          acao: "Para ver o que está numa obra, use as telas que penduram nela.",
           esperado:
-            "Se estiverem em branco, os indicadores de prazo e de orçamento dessa obra não têm como ser calculados. Vale avisar quem cadastra.",
+            "Frota filtrada por obra mostra o equipamento que está lá; Estoque filtrado por local mostra o material; Avanço mostra o percentual da semana. A obra é o filtro, e ele existe em quase toda lista.",
         },
+      ],
+      atencao: [
+        "Abrir a ficha da obra — período, orçamento, fechamento mensal — é de master e administrador. Nos outros perfis a lista não oferece o botão, porque a tela devolveria você para cá.",
       ],
     },
     {
