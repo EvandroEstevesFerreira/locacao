@@ -47,17 +47,46 @@ function modulosOuNull(marcados: string[]): string[] | null {
   return validos.length > 0 ? validos : null;
 }
 
+/**
+ * Reescreve os vínculos obra↔usuário do perfil.
+ *
+ * Recebe o client NORMAL, e não o admin: `obra_usuario` é tabela da aplicação,
+ * e o isolamento por organização depende da RLS (ver AGENTS.md). O fluxo de
+ * edição já usava o client normal — "master tem policy de gestão" —, então era
+ * só a criação que furava a regra, escrevendo com service role.
+ *
+ * Devolve a mensagem quando algo falha. Antes as duas escritas descartavam o
+ * erro, e o resultado era um usuário sem acesso a obra nenhuma sem ninguém
+ * saber: nem quem criou, nem quem não conseguia ver a obra.
+ *
+ * `delete` de zero linhas é LEGÍTIMO aqui (perfil que não tinha vínculo), por
+ * isso este caso não usa `erroDeEscrita` — o que importa é o erro, não a
+ * contagem de linhas.
+ */
 async function sincronizarObras(
-  client: ReturnType<typeof createAdminClient>,
+  client: Awaited<ReturnType<typeof createClient>>,
   perfilId: string,
   obras: string[],
-) {
-  await client.from("obra_usuario").delete().eq("perfil_id", perfilId);
-  if (obras.length > 0) {
-    await client
-      .from("obra_usuario")
-      .insert(obras.map((obra_id) => ({ obra_id, perfil_id: perfilId })));
+): Promise<string | null> {
+  const { error: erroApagar } = await client
+    .from("obra_usuario")
+    .delete()
+    .eq("perfil_id", perfilId);
+  if (erroApagar) {
+    console.error("sincronizarObras/apagar", erroApagar);
+    return "Não foi possível atualizar o acesso por obra. Tente de novo pela edição do usuário.";
   }
+
+  if (obras.length === 0) return null;
+
+  const { error: erroInserir } = await client
+    .from("obra_usuario")
+    .insert(obras.map((obra_id) => ({ obra_id, perfil_id: perfilId })));
+  if (erroInserir) {
+    console.error("sincronizarObras/inserir", erroInserir);
+    return "O usuário foi salvo, mas o acesso por obra não foi vinculado. Abra a edição dele e salve as obras de novo.";
+  }
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -98,7 +127,11 @@ export async function criarUsuario(raw: unknown): Promise<ActionResult> {
 
   const uid = criado.user.id;
   // O trigger handle_new_user já criou o perfil; ajustamos org/papel/nome/ativo.
-  await admin
+  //
+  // Client ADMIN aqui é justificado, e é a exceção: o perfil acabou de nascer
+  // com `org_id` NULO, então nenhuma policy escopada por organização o
+  // alcança. É bootstrap de linha que ainda não pertence a org nenhuma.
+  const { data: perfilAjustado, error: erroPerfil } = await admin
     .from("perfil")
     .update({
       org_id: master.org_id,
@@ -108,9 +141,36 @@ export async function criarUsuario(raw: unknown): Promise<ActionResult> {
       modulos: modulosOuNull(parsed.data.modulos),
       senha_temporaria: true, // força troca no primeiro acesso
     })
-    .eq("id", uid);
+    .eq("id", uid)
+    .select("id");
 
-  await sincronizarObras(admin, uid, parsed.data.obras);
+  // Falhar aqui deixava o pior estado possível, em silêncio: a conta existe no
+  // acesso e o perfil dela não tem organização, papel nem módulos — a pessoa
+  // entra e não vê nada, e recriar responde "já existe um usuário com este
+  // e-mail". Desfazemos a criação para que o master possa tentar de novo.
+  if (erroPerfil || !perfilAjustado?.length) {
+    console.error("criarUsuario/perfil", erroPerfil ?? "update atingiu 0 linhas");
+    try {
+      await admin.auth.admin.deleteUser(uid);
+    } catch (e) {
+      console.error("criarUsuario/rollback", e);
+      return falha(
+        "O usuário foi criado no acesso, mas o perfil não pôde ser " +
+          "configurado e a reversão também falhou. Avise o suporte antes de " +
+          "tentar de novo.",
+      );
+    }
+    return falha(
+      "Não foi possível configurar o perfil do usuário. Tente novamente.",
+    );
+  }
+
+  // `obra_usuario` é tabela da aplicação: client NORMAL, com a RLS valendo.
+  const avisoObras = await sincronizarObras(
+    await createClient(),
+    uid,
+    parsed.data.obras,
+  );
 
   // E-mail de boas-vindas com os dados de acesso (best-effort).
   if (emailConfigurado()) {
@@ -133,7 +193,8 @@ export async function criarUsuario(raw: unknown): Promise<ActionResult> {
   }
 
   revalidatePath("/usuarios");
-  return { ok: true, id: uid };
+  // A conta existe e funciona; o que pode ter faltado é o vínculo de obra.
+  return { ok: true, id: uid, aviso: avisoObras ?? undefined };
 }
 
 // ---------------------------------------------------------------------------
@@ -198,10 +259,22 @@ export async function salvarUsuario(raw: unknown): Promise<ActionResult> {
         password: novaSenha,
       });
       // Nova senha definida pelo master é temporária: força troca no próximo acesso.
-      await admin
+      //
+      // Se este carimbo não for gravado, a senha que o master escolheu — e
+      // conhece — vira a senha definitiva da pessoa, sem que o sistema peça a
+      // troca. É a falha silenciosa mais cara desta ação.
+      const { error: erroTemp } = await admin
         .from("perfil")
         .update({ senha_temporaria: true })
         .eq("id", parsed.data.id);
+      if (erroTemp) {
+        console.error("salvarUsuario/senhaTemporaria", erroTemp);
+        return falha(
+          "A senha foi redefinida, mas o sistema não conseguiu marcar a troca " +
+            "obrigatória no próximo acesso. Avise a pessoa para trocar a senha " +
+            "no Perfil assim que entrar.",
+        );
+      }
     } catch {
       return falha(
         "Perfil salvo, mas a senha não pôde ser redefinida (falta SUPABASE_SERVICE_ROLE_KEY).",
@@ -231,15 +304,16 @@ export async function salvarUsuario(raw: unknown): Promise<ActionResult> {
     }
   }
 
-  // Sincroniza acesso por obra (usa client normal; master tem policy de gestão).
-  const obras = parsed.data.obras;
-  await supabase.from("obra_usuario").delete().eq("perfil_id", parsed.data.id);
-  if (obras.length > 0) {
-    await supabase
-      .from("obra_usuario")
-      .insert(obras.map((obra_id) => ({ obra_id, perfil_id: parsed.data.id })));
-  }
+  // Sincroniza acesso por obra (client normal; master tem policy de gestão).
+  const avisoObras = await sincronizarObras(
+    supabase,
+    parsed.data.id,
+    parsed.data.obras,
+  );
 
   revalidatePath("/usuarios");
-  return { ok: true, id: parsed.data.id };
+  // O usuário foi salvo: devolver `ok: false` por causa do vínculo faria a
+  // pessoa achar que nada foi gravado e salvar de novo. `aviso` é exatamente
+  // para "deu certo, com ressalva que precisa ser lida".
+  return { ok: true, id: parsed.data.id, aviso: avisoObras ?? undefined };
 }

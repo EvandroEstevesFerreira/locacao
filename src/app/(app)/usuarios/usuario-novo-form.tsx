@@ -59,6 +59,10 @@ export function UsuarioNovoForm({
       toast.success("Usuário criado.", {
         description: "Um e-mail com os dados de acesso foi enviado.",
       });
+      // `aviso` é "deu certo, com ressalva": a conta existe, mas algo
+      // acessório falhou. Toast de alerta e mais tempo na tela, porque exige
+      // uma ação de quem está lendo.
+      if (r.aviso) toast.warning(r.aviso, { duration: 10000 });
       router.replace("/usuarios");
       router.refresh();
     });
