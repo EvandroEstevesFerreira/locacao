@@ -30,7 +30,9 @@ export type NavIconName =
   | "wallet"
   | "bar-chart-3"
   | "sparkles"
-  | "settings";
+  | "settings"
+  | "graduation-cap"
+  | "book-open";
 
 export type NavItem = {
   label: string;
@@ -79,6 +81,8 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { label: "Relatórios", href: "/relatorios", icon: "bar-chart-3", modulo: "relatorios", grupo: "Financeiro" },
 
   { label: "Novidades", href: "/novidades", icon: "sparkles", separadorAntes: true },
+  { label: "Treinamento", href: "/treinamento", icon: "graduation-cap" },
+  { label: "Ajuda", href: "/ajuda", icon: "book-open" },
   { label: "Configurações", href: "/configuracoes", icon: "settings", apenasMaster: true },
 ] as const;
 

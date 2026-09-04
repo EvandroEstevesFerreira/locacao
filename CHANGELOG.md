@@ -7,6 +7,97 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.53.0] — 2026-09-04
+
+Fatia 1 do módulo de treinamento. Duas decisões de desenho sustentam o
+módulo: o conteúdo das trilhas mora no código-fonte, versionado junto do
+resto do sistema, não numa tabela editável; e o manual (`/ajuda`) e a trilha
+(`/treinamento/[trilha]`) leem a mesma fonte de conteúdo, só em ordens
+diferentes — uma por aula, em sequência; a outra por tela, sob demanda.
+
+A migration `0063_treinamento_conclusao.sql` já está aplicada em produção: a
+tabela do registro, a regra de aprovação no próprio banco
+(`acertos = total_perguntas`), a chave única por versão de conteúdo, escrita
+restrita à própria pessoa e nenhuma policy de exclusão.
+
+### Adicionado
+
+- Tela de Treinamento (`/treinamento`), com trilhas que ensinam o sistema
+  passo a passo — cada passo diz o que fazer e o que deve acontecer.
+- Trilha **Primeiros passos**, com 6 aulas: entrar, trocar a senha, entender
+  por que o menu varia por usuário, achar uma obra, filtrar uma lista e
+  pedir o acesso que falta.
+- Questionário de 4 perguntas ao final da trilha, corrigido no servidor.
+  Errar não tem custo: o sistema explica a resposta certa, aponta a aula e
+  deixa tentar de novo. É preciso acertar todas para concluir.
+- Comprovante em PDF (`FRM-TR-001`), assinado na tela, com número de
+  registro, pela rota `/api/treinamento/[trilha]/comprovante`.
+- Tela de Ajuda (`/ajuda`), com o mesmo conteúdo do treinamento organizado
+  por tela, para consulta pontual.
+- Cálculo de pendência: quando uma trilha muda, quem já concluiu a versão
+  anterior vê só as aulas que mudaram desde então.
+- Painel `/treinamento/pendentes`, para quem administra o sistema acompanhar
+  quem treinou e quem falta. Treinamento pendente não bloqueia nenhum
+  acesso — o painel serve para cobrar, não para trancar.
+- Itens de navegação **Treinamento** e **Ajuda**, junto de Novidades e
+  Configurações — fora dos grupos de área de trabalho.
+
+## [0.52.0] — 2026-09-04
+
+Fase 1b da spec do recebimento de equipamento. **Sem migration** — todas as
+colunas necessárias entraram na 0049.
+
+### Adicionado
+
+- **Fechamento do recebimento.** Numera pelo contador gapless da 0048, congela o
+  registro, carimba `data_retirada` nos `item_locado` do contrato, gera o
+  romaneio e avisa o fornecedor.
+- **Romaneio de recebimento em PDF**, dos primitivos de `pdf-form`. Identificação,
+  tabela de itens com patrimônio e condição, seção de ressalvas e assinaturas do
+  conferente e do entregador.
+- **E-mail ao fornecedor** com o romaneio anexo, usando o template
+  `recebimentoFornecedor` e a trava de modo de teste da v0.38.0.
+- **Rota `/api/recebimentos/[id]/pdf`** — o romaneio a qualquer momento depois do
+  fechamento. Rascunho responde 409: ele não tem número, e documento sem número
+  circulando é o que a numeração existe para impedir.
+
+### Decisões
+
+- **A ordem do fechamento é deliberada:** valida → numera → fecha → carimba →
+  avisa. Do aviso para trás nada é desfeito. Se o Resend cair, o recebimento
+  CONTINUA FECHADO com `aviso_enviado_em` nulo e a tela mostra "fornecedor não
+  avisado". Uma entrega física que já aconteceu não deixa de ter acontecido
+  porque um serviço de e-mail está fora do ar — e desfazer devolveria um número
+  já gasto, abrindo o buraco que o contador existe para evitar.
+- **`ActionResult` ganhou `aviso`** para o caso "deu certo, mas com ressalva".
+  Devolver `ok: false` quando o fechamento aconteceu seria mentira.
+- **A confirmação é validada no servidor**, não só no cliente: confirmação só no
+  navegador é decoração, qualquer requisição forjada passa por cima.
+- **`.eq("status", "rascunho")` no UPDATE de fechamento** é a trava contra o
+  duplo clique — dois fechamentos simultâneos gastariam dois números.
+
+### Corrigido
+
+- **O rodapé de todo PDF dizia "Recursos Humanos".** Estava fixo no primitivo
+  `Documento`, herdado dos seis documentos do alojamento. O romaneio vai para um
+  fornecedor de equipamento. Virou prop, com o padrão anterior preservado.
+
+  Só apareceu ao **renderizar e ler o PDF** — typecheck, lint, contagem de
+  páginas e os cinco testes do romaneio passavam todos. É a terceira vez que a
+  regra "olhar o PDF, não só contar páginas" paga o próprio custo.
+
+### Verificação
+
+- 597 testes. Cinco novos para o romaneio: soma das larguras de coluna, caso
+  simples, com ressalvas, trinta itens em várias páginas, e todos os opcionais
+  vazios.
+- PDF renderizado e **lido** duas vezes — antes e depois da correção do rodapé.
+
+### Ainda não feito
+
+- Reabrir um recebimento fechado (só master) e reenviar o aviso quando o e-mail
+  falha. Os dois estão previstos na spec e não entraram nesta fatia.
+
 ## [0.50.0] — 2026-09-02
 
 Fatia 1 da custódia da peça. O achado que ordenou a fatia: a peça não podia
