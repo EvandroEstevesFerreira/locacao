@@ -12,6 +12,9 @@ import { FORNECEDORES } from "./fornecedores";
 import { CONTRATOS } from "./contratos";
 import { RECEBIMENTOS } from "./recebimentos";
 import { VISTORIAS } from "./vistorias";
+import { IMOVEIS } from "./imoveis";
+import { FINANCEIRO } from "./financeiro";
+import { RELATORIOS } from "./relatorios";
 
 export type { Passo, Aula, Pergunta, Trilha } from "./tipos";
 
@@ -44,6 +47,9 @@ export const TRILHAS: Trilha[] = [
   CONTRATOS,
   RECEBIMENTOS,
   VISTORIAS,
+  IMOVEIS,
+  FINANCEIRO,
+  RELATORIOS,
 ];
 
 export function trilhaPorChave(chave: string): Trilha | undefined {
