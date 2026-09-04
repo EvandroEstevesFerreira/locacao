@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.57.0";
+export const APP_VERSION = "0.57.1";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,20 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.57.1",
+    data: "2026-09-04",
+    titulo: "Fim das falhas silenciosas",
+    mudancas: [
+      { tipo: "correcao", texto: "Trinta e sete gravações no banco podiam falhar sem dizer nada — a tela anunciava sucesso e nada havia mudado. Agora todas explicam o que aconteceu. As mais visíveis: excluir fornecedor, excluir item de contrato, excluir reparo, conta de consumo, ocupante, foto e avaria." },
+      { tipo: "correcao", texto: "Ao salvar um fornecedor ou um usuário, se o vínculo com as obras falhasse, o cadastro era salvo e as obras sumiam em silêncio. Agora aparece um aviso dizendo exatamente isso, e o que fazer." },
+      { tipo: "correcao", texto: "Ao enviar uma foto ou um anexo, o arquivo podia subir e não ficar registrado — ficava perdido no servidor, sem aparecer em tela nenhuma. Agora o envio avisa quando isso acontece." },
+      { tipo: "correcao", texto: "Ao redefinir a senha de alguém, se o sistema não conseguisse marcar a troca obrigatória, a senha escolhida pelo master virava a senha definitiva da pessoa sem ninguém perceber. Agora isso é informado." },
+      { tipo: "correcao", texto: "Ao cadastrar um contrato de imóvel como vigente, se o encerramento do contrato anterior falhasse, o imóvel passava a contar DOIS custos mensais em todos os relatórios. Agora nada é salvo e o erro aparece." },
+      { tipo: "correcao", texto: "Ao gerar as contas recorrentes, uma falha levava você de volta ao Financeiro como se tivesse dado certo. Agora a tela diz que nada foi gerado." },
+      { tipo: "seguranca", texto: "A criação de usuário passou a gravar o acesso por obra respeitando as regras de isolamento entre organizações, como a edição já fazia. E se o perfil não puder ser configurado, a conta criada é desfeita — antes ficava uma conta órfã que entrava no sistema sem ver nada e não podia ser recriada." },
+    ],
+  },
   {
     versao: "0.57.0",
     data: "2026-09-04",

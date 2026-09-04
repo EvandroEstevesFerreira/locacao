@@ -7,6 +7,79 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.57.1] — 2026-09-04
+
+Varredura de **falhas silenciosas**: escrita no banco cujo erro era descartado,
+e `UPDATE`/`DELETE` que atinge zero linhas sem erro. Nenhuma migration.
+
+A classe já tinha aparecido três vezes em versões diferentes — `excluirItem` na
+0.54.0, `moverPeca` na 0.50.0, `equip_unidade_update` na 0.49.0 —, sempre em
+ação secundária, sempre com a tela anunciando sucesso. Esta versão varre as 157
+gravações do sistema: **37 descartavam o resultado. Agora são zero.**
+
+### `erroDeEscrita`, em `src/lib/acoes.ts`
+
+As duas lições passaram a viver num lugar só, com teste próprio:
+
+- **Capturar o erro não basta.** `UPDATE`/`DELETE` de zero linhas NÃO é erro
+  para o PostgREST: uma policy de RLS que filtra a linha devolve `error: null`
+  com nada alterado. Por isso o julgador exige o `.select("id")` no call site e
+  trata "nenhuma linha" como falha.
+- **Olhar só o erro também não.** Violação de chave estrangeira (`23503`) tem
+  significado oposto conforme a ação: ao excluir, o registro **já foi usado**;
+  ao salvar, é a **referência que não existe**. Dizer a errada manda a pessoa
+  procurar o problema no lugar errado.
+
+Onde zero linhas é legítimo — sincronização N:N, restaurar template padrão — o
+que se checa é o erro, e isso está escrito em cada um desses pontos.
+
+### Corrigido
+
+- **Exclusões** (fornecedor, item de contrato, documento, contrato de imóvel,
+  conta de consumo, reparo, ocorrência, vistoria, ocupante, foto, avaria,
+  documento da biblioteca): o diálogo de confirmação passou a mostrar o motivo
+  e a permanecer aberto. Antes fechava como se tivesse excluído.
+- **Vínculo com obras** (fornecedor e usuário): o `delete` limpava e o `insert`
+  falhava, deixando o cadastro sem obra nenhuma — anunciado como "atualizado".
+  Agora devolve `aviso`: o cadastro foi salvo, e a ressalva aparece em toast.
+- **Anexos e fotos**: o arquivo subia ao Storage e a linha no banco podia
+  falhar, deixando arquivo órfão que nenhuma tela mostra. Uploader de contrato,
+  de vistoria e de imóvel agora avisam.
+- **Redefinição de senha**: se o carimbo `senha_temporaria` falhasse, a senha
+  escolhida pelo master virava a definitiva da pessoa, sem troca obrigatória.
+- **Contrato de imóvel vigente**: falhar ao encerrar a vigência do anterior
+  deixava DOIS contratos vigentes, e o imóvel somava dois custos mensais na
+  lista, no relatório e no fluxo de caixa. Agora nada é salvo.
+- **Cobrança de avaria**: sem marcar a avaria como cobrada, o botão continuava
+  disponível e o segundo clique criava uma segunda conta a pagar.
+- **Contas recorrentes**: a falha redirecionava para o Financeiro como se
+  tivesse gerado. Agora volta com aviso na própria tela.
+- **Devolução de item locado**: o item podia ficar com saldo zero e status "em
+  uso", acumulando custo estimado para sempre.
+
+### Segurança
+
+- `sincronizarObras` usava `createAdminClient()` — **service role sobre
+  `obra_usuario`, que é tabela da aplicação**. O AGENTS.md proíbe isso porque o
+  isolamento por organização depende da RLS. O fluxo de edição já usava o
+  client normal; era só a criação que furava a regra. Agora os dois usam o
+  client normal, e a falha é reportada em vez de engolida.
+- O `update` do perfil na criação de usuário **continua** com client admin, e
+  agora está escrito por quê: o perfil nasce com `org_id` nulo pelo trigger, e
+  nenhuma policy escopada por organização o alcança. É bootstrap, não bypass.
+- Se esse update falhar, a conta recém-criada é **desfeita**. Antes ficava uma
+  conta órfã — entra no sistema, não vê nada, e recriar responde "já existe um
+  usuário com este e-mail".
+
+### Onde a mensagem ainda não chega ao usuário
+
+Três ações são `<form action={…}>` simples, e o React exige retorno `void`
+nesse caminho: alternar "pago" da conta de consumo, mudar o status de uma
+avaria e restaurar um template padrão. Nelas a causa vai para o log e o valor
+volta ao anterior na revalidação — feedback fraco, mas não silêncio. Surfacear
+exigiria transformar cada linha num componente cliente, o que não cabia nesta
+correção.
+
 ## [0.57.0] — 2026-09-04
 
 Última onda de conteúdo: **Imóveis, Financeiro e Relatórios**. Com ela, os 13
