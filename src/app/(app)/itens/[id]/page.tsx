@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeEditarCadastros } from "@/lib/auth";
@@ -85,7 +86,15 @@ export default async function EditarItemPage({
                     className="flex items-center justify-between gap-3 px-3 py-2 text-sm"
                   >
                     <div>
-                      <span className="font-medium">{u.identificador}</span>
+                      {/* Da lista de peças só dava para EXCLUIR. Abrir a peça é
+                          o caminho para ver posse, linha do tempo e editar o
+                          cadastro — tudo já existe em /frota/[id]. */}
+                      <Link
+                        href={`/frota/${u.id}`}
+                        className="font-medium hover:underline"
+                      >
+                        {u.identificador}
+                      </Link>
                       {u.observacoes ? (
                         <span className="text-muted-foreground">
                           {" "}

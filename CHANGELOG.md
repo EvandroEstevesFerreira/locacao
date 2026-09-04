@@ -7,6 +7,37 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.58.0] — 2026-09-05
+
+Importação do parque de TI e a navegação que o catálogo maior exigiu. Escrita
+como 0.51.0 e renumerada no rebase: a `main` andou até a 0.57.2 enquanto o PR
+esperava.
+
+### Adicionado
+
+- **Importador do inventário de TI** (`scripts/db/importar-inventario-ti.mjs`).
+  Dois níveis, como o resto do sistema: o MODELO vira `item_catalogo` e cada
+  MÁQUINA vira `equipamento_unidade`. Prévia por padrão, grava só com
+  `--aplicar`, e é idempotente — rodar de novo não duplica.
+- **Funcionários no menu principal.** O cadastro vive em `/termos/funcionarios`
+  para herdar a liberação do módulo Termos, mas não tinha entrada própria: quem
+  via "Sem registro de posse" numa peça não adivinhava onde cadastrar a pessoa.
+- **Coluna e filtro de categoria em Itens.** O catálogo passou de 5 para 33
+  itens; a categoria deixou de ser detalhe e virou o primeiro corte. Inclui
+  "Sem categoria", que é o estado dos itens antigos.
+
+### Melhorado
+
+- Botão **Editar** no topo da peça, ancorado no formulário que já existia no fim
+  da página, depois da linha do tempo.
+- Na tela do item, o identificador de cada peça virou link para `/frota/[id]`.
+  Antes a única ação ali era excluir.
+
+### Corrigido
+
+- A descrição de Itens dizia "catálogo de equipamentos e materiais que a
+  organização aluga" — falso desde que o patrimônio próprio entrou.
+
 ## [0.57.2] — 2026-09-05
 
 Fecha o que a 0.57.1 deixou declarado em aberto, e transforma em teste a regra

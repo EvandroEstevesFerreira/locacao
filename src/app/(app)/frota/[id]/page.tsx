@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { FileSignature } from "lucide-react";
+import { FileSignature, Pencil } from "lucide-react";
 
 import { getCurrentPerfil, podeOperar, podeEditarCadastros } from "@/lib/auth";
 import {
@@ -67,6 +67,15 @@ export default async function PecaDetalhePage({
               <Button variant="outline" render={<Link href="/termos/novo" />}>
                 <FileSignature className="size-4" />
                 Entregar a funcionário
+              </Button>
+            ) : null}
+            {/* O formulário de cadastro fica no fim da página, depois da
+                linha do tempo. Sem esta âncora quem chega ao topo conclui que a
+                peça não é editável — foi o relato do Evandro em 03/09/2026. */}
+            {podeEditar ? (
+              <Button variant="outline" render={<Link href="#cadastro" />}>
+                <Pencil className="size-4" />
+                Editar
               </Button>
             ) : null}
             <Button variant="outline" render={<Link href="/frota" />}>
@@ -152,7 +161,7 @@ export default async function PecaDetalhePage({
       ) : null}
 
       {podeEditar ? (
-        <Card>
+        <Card id="cadastro" className="scroll-mt-6">
           <CardHeader>
             <CardTitle>Cadastro da peça</CardTitle>
           </CardHeader>
