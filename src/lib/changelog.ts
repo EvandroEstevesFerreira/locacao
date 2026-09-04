@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.54.0";
+export const APP_VERSION = "0.55.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,18 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.55.0",
+    data: "2026-09-04",
+    titulo: "Treinamento do grupo Obra, e duas telas que voltavam ao ponto de partida",
+    mudancas: [
+      { tipo: "novo", texto: "Trilha nova de Obras: a lista, o cadastro, o orçamento contra o realizado, os indicadores e o fechamento mensal — inclusive como ler um indicador que aparece em branco, que quase sempre é dado faltando e a tela diz qual." },
+      { tipo: "novo", texto: "Trilha nova de Avanço: o campo pede o percentual ACUMULADO da obra, não o da semana. Quem digita 5 achando que informou “avançamos 5 pontos” joga a obra de 60% para 5% — e o erro só aparece na reunião de diretoria." },
+      { tipo: "correcao", texto: "A aula “achar uma obra”, da trilha Primeiros passos, estava errada: mandava clicar no código da obra (que não é link) e prometia seções que a tela não tem. Quem já concluiu a trilha vai ver que há uma atualização pendente e vai reler só essa aula." },
+      { tipo: "correcao", texto: "Na lista de obras, o botão de editar não aparece mais para quem não pode abrir a ficha da obra. Antes ele levava gestor e operador de volta para a mesma lista, sem nenhuma explicação." },
+      { tipo: "melhoria", texto: "A tela de Avanço das obras agora funciona para gestor e operador: mostra o percentual lançado na semana, sem os campos de digitação. Antes ela oferecia a grade inteira e só recusava no botão de salvar." },
+    ],
+  },
   {
     versao: "0.54.0",
     data: "2026-09-04",
