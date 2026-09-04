@@ -85,6 +85,7 @@ describe("varredura de rotas contra módulos", () => {
     "trocar-senha": "onboarding obrigatório, precede qualquer permissão",
     usuarios: "gestão de acesso, restrita por papel (master) e não por módulo",
     configuracoes: "idem — restrita a master pelo `apenasMaster` do nav",
+    treinamento: "trilhas e comprovante do próprio usuário; trancar o treinamento e esconder a chave seria o contrário do que ele existe para fazer",
   };
 
   const dirRotas = path.join(process.cwd(), "src/app/(app)");
