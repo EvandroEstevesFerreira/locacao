@@ -2,6 +2,8 @@ import { describe, it, expect, vi } from "vitest";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { contarPaginas } from "@/lib/pdf-form";
 import { ComprovanteTreinamento } from "./frm-tr-001";
+import { PRIMEIROS_PASSOS } from "@/lib/treinamento/primeiros-passos";
+import { DEFAULT_TEMPLATES, corpoParaParagrafos, renderTemplate } from "@/lib/templates";
 
 // `renderToBuffer` é CPU-bound e, na suíte completa, disputa com os demais
 // arquivos de PDF. Ver a nota em pdf-form.test.tsx.
@@ -75,5 +77,43 @@ describe("FRM-TR-001", () => {
       />,
     );
     expect(contarPaginas(buffer)).toBeGreaterThanOrEqual(1);
+  });
+
+  it("o comprovante da trilha REAL, com a declaracao real, cabe em 1 pagina", async () => {
+    // O fixture sintetico deste arquivo tem 2 aulas e 2 paragrafos. A trilha
+    // real tem 6 aulas com resumos de tamanho de verdade e a declaracao tem 6
+    // paragrafos — se o comprovante nao couber numa folha, e aqui que aparece,
+    // e no CI, nao numa medicao manual que se apaga depois.
+    const tpl = DEFAULT_TEMPLATES.comprovante_treinamento;
+    const variaveis = {
+      empresa_nome: "Sistenge Engenharia",
+      pessoa: "Fulano de Tal",
+      trilha: PRIMEIROS_PASSOS.titulo,
+      versao: String(PRIMEIROS_PASSOS.versao),
+      concluido_em: "03/09/2026",
+    };
+    const texto = renderTemplate(tpl.corpo, variaveis);
+
+    // Nenhuma chave sobra sem substituir: `{{chave}}` impresso é o defeito que
+    // passa em silencio num documento assinado.
+    expect(texto).not.toMatch(/\{\{/);
+
+    const buffer = await renderToBuffer(
+      <ComprovanteTreinamento
+        orgNome="Sistenge Engenharia"
+        numero="TRE-2026-0001"
+        campos={CAMPOS}
+        aulas={PRIMEIROS_PASSOS.aulas.map((a) => ({
+          titulo: a.titulo,
+          resumo: a.resumo,
+        }))}
+        paragrafos={corpoParaParagrafos(texto)}
+        localData="03/09/2026."
+        assinantes={[{ papel: "Quem concluiu", nome: "Fulano de Tal", imagem: PNG }]}
+        versao={tpl.versao}
+        publicadoEm={tpl.publicadoEm}
+      />,
+    );
+    expect(contarPaginas(buffer)).toBe(1);
   });
 });
