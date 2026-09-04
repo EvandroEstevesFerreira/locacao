@@ -12,6 +12,7 @@ import {
   SITUACAO_TRILHA_INFO,
   type Conclusao,
 } from "./treinamento";
+import { MODULO_CHAVES, type ModuloKey } from "./modulos";
 import { TRILHAS } from "./treinamento/index";
 import { PRIMEIROS_PASSOS } from "./treinamento/primeiros-passos";
 import type { Trilha } from "./treinamento/tipos";
@@ -428,7 +429,42 @@ describe("o conteúdo real do grupo Equipamento", () => {
       "contratos",
       "recebimentos",
       "vistorias",
+      "imoveis",
+      "financeiro",
+      "relatorios",
     ]);
+  });
+
+  // A TRAVA QUE FECHA O CONJUNTO.
+  //
+  // Com as 13 trilhas de módulo escritas, o que resta a proteger não é o que
+  // existe — é o que vier depois. Módulo novo entra em `MODULOS`, ganha item
+  // de menu e tela, e sai sem treinamento nenhum: ninguém percebe, porque a
+  // tela funciona. Esta varredura lê `MODULO_CHAVES` em vez de uma lista
+  // escrita à mão, então o módulo novo entra na checagem por EXISTIR.
+  //
+  // É a mesma forma da varredura de rotas de `modulos.test.ts`, e pelo mesmo
+  // motivo: lista escrita à mão envelhece em silêncio.
+  it("todo módulo do sistema tem uma trilha que o ensina", () => {
+    const comTrilha = new Set(
+      TRILHAS.map((t) => t.modulo).filter((m): m is ModuloKey => m !== null),
+    );
+    const semTrilha = MODULO_CHAVES.filter((m) => !comTrilha.has(m));
+    expect(
+      semTrilha,
+      "Módulo sem trilha de treinamento: a tela existe, está no menu e " +
+        "ninguém aprende a usá-la.\n  " +
+        semTrilha.join("\n  "),
+    ).toEqual([]);
+  });
+
+  it("nenhuma trilha aponta para um módulo que não existe", () => {
+    const orfas = TRILHAS.filter(
+      (t) => t.modulo !== null && !MODULO_CHAVES.includes(t.modulo),
+    ).map((t) => `${t.chave} → ${t.modulo}`);
+    expect(orfas, `Trilha de módulo inexistente: ${orfas.join(", ")}`).toEqual(
+      [],
+    );
   });
 
   it("cada trilha declara o módulo que ensina", () => {
@@ -444,6 +480,9 @@ describe("o conteúdo real do grupo Equipamento", () => {
       contratos: "contratos",
       recebimentos: "recebimentos",
       vistorias: "vistorias",
+      imoveis: "imoveis",
+      financeiro: "financeiro",
+      relatorios: "relatorios",
     });
   });
 
@@ -453,10 +492,14 @@ describe("o conteúdo real do grupo Equipamento", () => {
     ).toEqual(["primeiros-passos", "frota"]);
   });
 
-  it("quem não tem módulo nenhum com trilha recebe só primeiros passos", () => {
-    expect(
-      trilhasDoUsuario("operador", ["imoveis"], false).map((t) => t.chave),
-    ).toEqual(["primeiros-passos"]);
+  // Antes esta fixture usava `["imoveis"]` como "módulo sem trilha". Deixou de
+  // servir quando Imóveis ganhou a sua — e é bom que tenha deixado: com as 13
+  // trilhas escritas, NÃO EXISTE mais módulo sem trilha, e a trava acima
+  // garante que continue assim. O caso que sobra é o usuário sem módulo algum.
+  it("quem não tem módulo algum recebe só primeiros passos", () => {
+    expect(trilhasDoUsuario("operador", [], false).map((t) => t.chave)).toEqual([
+      "primeiros-passos",
+    ]);
   });
 
   it("o master recebe todas, mesmo com a lista de módulos vazia", () => {
