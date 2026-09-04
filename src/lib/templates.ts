@@ -9,6 +9,7 @@ export type TipoDocumento =
   | "contrato_equipamento"
   | "termo_responsabilidade"
   | "termo_equipamento"
+  | "comprovante_treinamento"
   | "medida_disciplinar"
   | "termo_chaves"
   | "kit_alojamento"
@@ -99,6 +100,25 @@ export const DOCUMENTOS: DocumentoInfo[] = [
       { chave: "obra", descricao: "Obra vinculada" },
       { chave: "data_entrega", descricao: "Data da entrega" },
       { chave: "previsao_devolucao", descricao: "Previsão de devolução" },
+    ],
+  },
+  {
+    tipo: "comprovante_treinamento",
+    label: "Comprovante de treinamento (FRM-TR-001)",
+    descricao: "Gerado na trilha concluída, depois de assinado.",
+    eyebrow: "FRM-TR-001 · Comprovante de treinamento",
+    // Treinamento não é ModuloKey — não é módulo liberável, de propósito.
+    // Declarado em `relatorios` para aparecer em Configurações › Templates;
+    // alargar ModuloKey só por isso quebraria a varredura de rotas.
+    modulo: "relatorios",
+    categoria: "formulario",
+    preenchimento: "com_dados",
+    variaveis: [
+      { chave: "empresa_nome", descricao: "Nome da empresa" },
+      { chave: "pessoa", descricao: "Nome de quem concluiu" },
+      { chave: "trilha", descricao: "Título da trilha" },
+      { chave: "versao", descricao: "Versão do conteúdo concluída" },
+      { chave: "concluido_em", descricao: "Data da conclusão" },
     ],
   },
   {
@@ -261,6 +281,19 @@ export const DEFAULT_TEMPLATES: Record<
     ].join("\n\n"),
     versao: "1.0",
     publicadoEm: "2026-09-02",
+  },
+  comprovante_treinamento: {
+    titulo: "COMPROVANTE DE TREINAMENTO NO SISTEMA",
+    corpo: [
+      "Declaro que percorri integralmente a trilha de treinamento {{trilha}} do sistema Loca, na versão {{versao}} do conteúdo, e que respondi corretamente a todas as perguntas de verificação em {{concluido_em}}.",
+      "Declaro estar ciente de que:",
+      "— O treinamento descreve a versão do sistema vigente na data acima. Quando uma tela muda de forma relevante, a trilha correspondente é atualizada e o sistema me apresenta novamente as partes que mudaram.",
+      "— Os registros que eu criar no sistema ficam associados ao meu usuário, e as telas que geram documento assinado — termo de responsabilidade por equipamento, entre outras — produzem prova em meu nome.",
+      "— O acesso de cada usuário é liberado módulo por módulo, e usar o acesso de outra pessoa apaga o rastro de quem fez o quê.",
+      "— Dúvidas sobre qualquer tela podem ser consultadas a qualquer momento na Ajuda do próprio sistema, que traz o mesmo conteúdo desta trilha indexado por tela.",
+    ].join("\n\n"),
+    versao: "1.0",
+    publicadoEm: "2026-09-03",
   },
   termo_responsabilidade: {
     titulo: "TERMO DE COMPROMISSO DE ALOJAMENTO",
