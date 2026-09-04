@@ -86,6 +86,9 @@ export function FornecedorForm({
         return;
       }
       toast.success(fornecedor ? "Fornecedor atualizado." : "Fornecedor cadastrado.");
+      // "Deu certo, com ressalva": o cadastro foi salvo e algo acessório
+      // falhou — quase sempre o vínculo com obras.
+      if (r.aviso) toast.warning(r.aviso, { duration: 10000 });
       router.replace("/fornecedores");
       router.refresh();
     });

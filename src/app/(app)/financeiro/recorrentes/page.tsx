@@ -51,7 +51,15 @@ type ContratoImv = {
   imovel: { apelido: string; obra: { codigo: string } | null } | null;
 };
 
-export default async function RecorrentesPage() {
+export default async function RecorrentesPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
+  // `?erro=1` vem do redirecionamento de `gerarRecorrentes`: a action
+  // redireciona, então não pode devolver `ActionResult`, e sem esta leitura o
+  // usuário voltava para cá sem saber que nada tinha sido gerado.
+  const falhou = (await searchParams).erro === "1";
   const perfil = await getCurrentPerfil();
   if (!podeGerenciarFinanceiro(perfil?.papel)) redirect("/financeiro");
 
@@ -102,6 +110,16 @@ export default async function RecorrentesPage() {
           </Button>
         }
       />
+
+      {falhou ? (
+        <div
+          role="alert"
+          className="rounded-md border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+        >
+          Nada foi gerado: o lançamento das contas falhou. Tente de novo — se
+          persistir, avise quem cuida do sistema.
+        </div>
+      ) : null}
 
       <Card>
         <CardHeader className="pb-2">

@@ -28,6 +28,8 @@ export function FotoUploader({
     if (!files || files.length === 0) return;
     setEnviando(true);
     const supabase = createClient();
+    const falhas: string[] = [];
+    let enviadas = 0;
     try {
       for (const file of Array.from(files)) {
         const uid = crypto.randomUUID();
@@ -39,9 +41,22 @@ export function FotoUploader({
           toast.error("Falha ao enviar foto", { description: file.name });
           continue;
         }
-        await registrarFoto(vistoriaId, path);
+        // O arquivo já está no Storage; o que pode falhar é a linha no banco.
+        // Anunciar "Fotos enviadas" nesse caso esconde uma foto que a vistoria
+        // não tem — e é a prova do estado do equipamento que fica faltando.
+        const r = await registrarFoto(vistoriaId, path);
+        if (r?.error) {
+          falhas.push(file.name);
+          continue;
+        }
+        enviadas += 1;
       }
-      toast.success("Fotos enviadas.");
+      if (falhas.length > 0) {
+        toast.error("Não foi possível registrar " + falhas.length + " foto(s).", {
+          description: falhas.join(", "),
+        });
+      }
+      if (enviadas > 0) toast.success("Fotos enviadas.");
       startTransition(() => router.refresh());
     } finally {
       setEnviando(false);

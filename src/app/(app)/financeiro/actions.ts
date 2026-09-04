@@ -175,7 +175,17 @@ export async function gerarRecorrentes(formData: FormData) {
     }));
 
   if (novos.length > 0) {
-    await supabase.from("lancamento_financeiro").insert(novos);
+    // Descartar este erro fazia a tela redirecionar para o financeiro sem ter
+    // gerado nada — e sem nada dizendo isso. Como a action redireciona, ela
+    // não pode devolver `ActionResult`; o que dá para fazer é NÃO redirecionar
+    // como se tivesse dado certo, e deixar a causa no log.
+    const { error: erroGerar } = await supabase
+      .from("lancamento_financeiro")
+      .insert(novos);
+    if (erroGerar) {
+      console.error("gerarRecorrentes", erroGerar);
+      redirect("/financeiro/recorrentes?erro=1");
+    }
   }
   revalidatePath("/financeiro");
   revalidatePath("/financeiro/recorrentes");

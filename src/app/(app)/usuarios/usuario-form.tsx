@@ -72,6 +72,7 @@ export function UsuarioForm({
         return;
       }
       toast.success("Usuário atualizado.");
+      if (r.aviso) toast.warning(r.aviso, { duration: 10000 });
       router.replace("/usuarios");
       router.refresh();
     });

@@ -57,10 +57,15 @@ export async function restaurarTemplate(formData: FormData) {
   const tipo = String(formData.get("tipo") ?? "");
   if (!TIPOS.includes(tipo)) return;
   const supabase = await createClient();
-  await supabase
+  // Zero linhas é LEGÍTIMO: a organização pode nunca ter customizado este
+  // documento, e restaurar o padrão nesse caso é no-op. O que não pode é o
+  // erro sumir — sem log, um template que insiste em voltar customizado não
+  // tem por onde ser investigado.
+  const { error: erroRestaurar } = await supabase
     .from("documento_template")
     .delete()
     .eq("org_id", perfil.org_id)
     .eq("tipo", tipo as TipoDocumento);
+  if (erroRestaurar) console.error("restaurarPadrao", erroRestaurar);
   revalidatePath(`/configuracoes/templates/${tipo}`);
 }

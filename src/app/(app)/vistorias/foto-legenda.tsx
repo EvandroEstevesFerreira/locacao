@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import { salvarLegendaFoto } from "./actions";
 
 /** Campo de legenda por foto; salva ao sair do campo (onBlur). */
@@ -20,7 +21,13 @@ export function FotoLegenda({
   function salvar() {
     if (valor === defaultValue) return;
     startTransition(async () => {
-      await salvarLegendaFoto(fotoId, vistoriaId, valor);
+      const r = await salvarLegendaFoto(fotoId, vistoriaId, valor);
+      // Sem esta checagem o campo se marcava como salvo mesmo quando a legenda
+      // não foi gravada — e a pessoa só descobria recarregando a página.
+      if (r?.error) {
+        toast.error(r.error);
+        return;
+      }
       setSalvo(true);
     });
   }
