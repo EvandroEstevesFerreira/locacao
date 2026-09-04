@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.55.0";
+export const APP_VERSION = "0.56.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,20 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.56.0",
+    data: "2026-09-04",
+    titulo: "A tela de Recebimentos que faltava, e o treinamento da locação",
+    mudancas: [
+      { tipo: "correcao", texto: "O item “Recebimentos” do menu não abria nada: a tela nunca existiu, e quem clicava recebia erro de página não encontrada. Isso estava assim desde a versão 0.39.0." },
+      { tipo: "novo", texto: "Nova tela de Recebimentos, com a lista de toda a organização: registro, data, obra, fornecedor, conferente, itens e situação. Com filtro por situação, ela responde a pergunta que nenhuma tela respondia — quais conferências ficaram em rascunho." },
+      { tipo: "novo", texto: "Quatro trilhas novas de treinamento: Fornecedores, Contratos de locação, Recebimento e conferência, e Vistorias." },
+      { tipo: "novo", texto: "A trilha de contratos ensina as duas escolhas que mexem no dinheiro: a cadência de cobrança e o pró-rata. Sem pró-rata, um item que ficou 8 dias num contrato semanal custa duas semanas — e é assim que a maioria das locadoras cobra." },
+      { tipo: "novo", texto: "A trilha de recebimento insiste nos dois campos que decidem o custo: a data é a da ENTREGA, não a do lançamento, e é ela que vira a data de retirada no contrato. Fechar o recebimento é irreversível e faz quatro coisas de uma vez." },
+      { tipo: "novo", texto: "A trilha de vistorias explica por que a vistoria de entrada é a que ninguém faz e a que mais falta depois: sem ela, qualquer avaria encontrada na devolução parece nova." },
+      { tipo: "novo", texto: "A trilha de fornecedores cobre o CNPJ no formato novo, com letras, e por que o e-mail do contato não é agenda: é para lá que o romaneio do recebimento é enviado." },
+    ],
+  },
   {
     versao: "0.55.0",
     data: "2026-09-04",

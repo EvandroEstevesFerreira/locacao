@@ -7,6 +7,71 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.56.0] — 2026-09-04
+
+Onda de conteúdo da **cadeia da locação**: Fornecedores, Contratos,
+Recebimentos e Vistorias. Nenhuma migration.
+
+E o achado desta onda é o maior de todos: **o item “Recebimentos” do menu
+apontava para uma rota sem página, e caía em 404 desde a 0.39.0.**
+
+### A rota fantasma
+
+`src/app/(app)/recebimentos/` existia — com `[id]/page.tsx` dentro — mas nunca
+teve `page.tsx` na raiz. Consequência: o módulo estava declarado em `MODULOS`,
+o item aparecia no menu para quem tinha o módulo liberado, e clicar nele dava
+página não encontrada. A conferência era alcançável só de dentro do contrato.
+
+A varredura de rotas que existe desde a 0.32.0 não pegou, e o motivo é
+instrutivo: ela verificava se a **pasta** existia. Pasta é o que o
+desenvolvedor cria; `page.tsx` é o que o usuário abre. A trava nova é sobre o
+segundo, e falha se qualquer módulo do menu perder a página da raiz.
+
+### Adicionado
+
+- **Tela de Recebimentos** (`/recebimentos`): lista da organização, do mais
+  recente para o mais antigo, com busca por registro, nota ou conferente e
+  filtros de obra e situação. O cabeçalho conta quantos rascunhos há na página.
+
+  O que ela responde e nenhuma outra respondia: **quais conferências ficaram em
+  rascunho**. Rascunho não numerou, não avisou o fornecedor e não carimbou a
+  retirada nos itens do contrato — então o custo daquele equipamento está
+  ausente do contrato e do orçamento, e a obra parece mais barata do que é.
+- `listarRecebimentosDaOrganizacao` em `src/lib/data/recebimentos.ts`, com
+  `createClient()` — o recorte por obra continua na RLS (migration 0049, via
+  `obra_do_contrato`), e não é redecidido na leitura.
+- Trilha **Fornecedores**: o CNPJ alfanumérico, o aviso de CNPJ duplicado que
+  deixa a decisão com quem cadastra, e o e-mail do contato como destinatário do
+  romaneio — não como agenda.
+- Trilha **Contratos de locação**: cadência e pró-rata, o valor por período (e
+  o erro de digitar o valor mensal num contrato semanal), a data de retirada
+  como marco do custo, e a devolução parcial que congela a cobrança da parcela.
+- Trilha **Recebimento e conferência**: a data da entrega contra a data do
+  lançamento, avaria contra divergência, e os quatro efeitos irreversíveis do
+  fechamento.
+- Trilha **Vistorias**: os dois momentos de vistoriar, a foto que só vale
+  quando está na vistoria, e a cobrança de avaria que exige permissão
+  financeira.
+
+### Testes
+
+- Guarda nova em `src/lib/modulos.test.ts`: todo módulo do menu precisa de
+  `page.tsx` na **raiz** da rota. Provada por inversão — removendo a página
+  nova, o teste falha e nomeia o módulo.
+
+### Varredura de permissões
+
+Comparei o `pode*` exigido por cada server action com o `pode*` que a tela usa
+para decidir o que mostrar, em todas as rotas. **Não há um quarto caso** da
+classe "tela oferece o que a ação recusa" — os três corrigidos na 0.54.0 e na
+0.55.0 eram o conjunto.
+
+Uma divergência benigna fica registrada: o botão de excluir lançamento
+financeiro aparece para administrador e a ação é só do master. Ela responde com
+"Somente o Master pode excluir lançamentos" dentro do próprio diálogo, que
+permanece aberto — mensagem imediata e correta, no lugar certo. Ensina a regra
+em vez de esconder o caminho, e por isso ficou como está.
+
 ## [0.55.0] — 2026-09-04
 
 Onda de conteúdo do grupo **Obra**: trilhas de Obras e de Avanço. E, pela
