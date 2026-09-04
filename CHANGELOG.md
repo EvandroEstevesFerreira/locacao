@@ -7,6 +7,74 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.54.0] — 2026-09-04
+
+Onda de conteúdo do grupo **Equipamento**: quatro trilhas de treinamento
+(Catálogo, Frota, Termo de responsabilidade e Estoque), cada uma restrita a
+quem tem o módulo liberado. A máquina do treinamento não mudou — só o
+conteúdo entrou. Nenhuma migration.
+
+Escrever o treinamento expôs duas telas que prometiam o que não entregavam, e
+as duas foram fechadas nesta versão. Treinar sobre um furo é pior que o furo:
+a aula precisaria ensinar o caminho que não existe.
+
+- **Estoque sem estorno.** A tela dizia, por escrito, que "o lançamento não
+  pode ser editado nem apagado depois — correção é estorno". Mas não havia
+  botão nenhum: `estornarMovimento` estava escrita, testada pela action e
+  inalcançável pela interface. Quem digitasse 100 no lugar de 10 não tinha
+  caminho de volta.
+- **Exclusão de item em silêncio.** `excluirItem` fazia `delete` e descartava o
+  erro. Item já usado em peça, contrato ou movimento é recusado pela chave
+  estrangeira — e a janela de confirmação fechava como se tivesse excluído,
+  com o item ainda na lista e nenhuma palavra de explicação.
+
+### Adicionado
+
+- Trilha **Catálogo de itens** (módulo `itens`): a diferença entre tipo e peça,
+  a escolha de controle que decide em que tela o item aparece, o cadastro das
+  unidades e a diferença entre inativar e excluir.
+- Trilha **Frota** (módulo `frota`): achar a peça pelos quatro filtros, ler
+  "com quem está" e "há quanto tempo", movimentar entre obra, almoxarifado e
+  fornecedor, a matriz de situações e os campos de TI (IMEI, linha, service
+  tag, memória).
+- Trilha **Termo de responsabilidade** (módulo `termos`): cadastro de quem
+  assina, o passo a passo em três etapas, o que a assinatura muda, a devolução
+  em partes e o encerramento com pendência registrada.
+- Trilha **Estoque** (módulo `estoque`): os cinco tipos de movimento, a
+  correção por estorno e a leitura dos indicadores na ordem certa.
+- **Estorno de movimento de estoque** na tela: botão na lista de últimos
+  movimentos, com motivo obrigatório. Grava o movimento contrário apontando
+  para o original; as duas linhas ficam riscadas e visíveis no razão.
+
+### Corrigido
+
+- Excluir item do catálogo já usado agora devolve o motivo dentro da janela de
+  confirmação e sugere deixar o item inativo. O `.select("id")` transforma
+  "não apagou nada" em erro: DELETE de zero linhas não é erro para o
+  PostgREST, então uma policy que filtra a linha devolvia `error: null` com
+  nada apagado.
+
+### Alterado
+
+- O formulário de lançar movimento de estoque só aparece para quem tem
+  permissão de lançar (operador, administrador ou master), como já era o
+  padrão do bloco Movimentar da peça. Antes o gestor preenchia seis campos
+  para receber "sem permissão" no fim.
+
+### Testes
+
+- A varredura de integridade do conteúdo passou a cobrir cinco trilhas: ids
+  únicos, quatro alternativas, `correta` inteira e no intervalo, pergunta
+  apontando para aula existente e toda aula declarando ao menos uma rota.
+- Fechado o débito registrado na 0.53.0: o ramo de módulo de
+  `trilhasDoUsuario` agora é exercitado pelo **conteúdo de produção**, e não
+  só por trilha sintética. Enquanto a única trilha real tinha `modulo: null`,
+  nenhuma trilha de produção passava por esse ramo — a regra estava testada, o
+  conteúdo não.
+- Guarda nova: o gabarito não pode ficar todo na mesma posição. Questionário
+  com a resposta certa sempre na mesma letra é passável sem ler nada, e o
+  comprovante sai assinado igual.
+
 ## [0.53.0] — 2026-09-04
 
 Fatia 1 do módulo de treinamento. Duas decisões de desenho sustentam o

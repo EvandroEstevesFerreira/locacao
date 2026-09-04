@@ -12,6 +12,7 @@ import {
   SITUACAO_TRILHA_INFO,
   type Conclusao,
 } from "./treinamento";
+import { TRILHAS } from "./treinamento/index";
 import { PRIMEIROS_PASSOS } from "./treinamento/primeiros-passos";
 import type { Trilha } from "./treinamento/tipos";
 
@@ -393,5 +394,75 @@ describe("o conteúdo real de primeiros passos", () => {
       PRIMEIROS_PASSOS.perguntas.map((p) => [p.id, p.correta]),
     );
     expect(aprovado(corrigir(PRIMEIROS_PASSOS, respostas))).toBe(true);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// O RAMO DE MÓDULO SOBRE O CONTEÚDO DE PRODUÇÃO
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Os testes de `trilhasDoUsuario` acima usam trilha sintética, e isso deixava
+// um buraco: enquanto a única trilha real era `primeiros-passos`, com
+// `modulo: null`, NENHUMA trilha de produção passava pelo ramo de módulo. A
+// regra estava testada; o conteúdo, não. Uma trilha nascer sem `modulo` a
+// entregaria a todo mundo — inclusive a quem não tem a tela — e nenhum teste
+// notaria.
+//
+// A guarda vale mais do que a soma dos casos: é o que faz a próxima onda de
+// conteúdo declarar o módulo de propósito, em vez de esquecer.
+describe("o conteúdo real do grupo Equipamento", () => {
+  it("as cinco trilhas existem, na ordem de estudo", () => {
+    expect(TRILHAS.map((t) => t.chave)).toEqual([
+      "primeiros-passos",
+      "catalogo",
+      "frota",
+      "termos",
+      "estoque",
+    ]);
+  });
+
+  it("cada trilha declara o módulo que ensina", () => {
+    expect(Object.fromEntries(TRILHAS.map((t) => [t.chave, t.modulo]))).toEqual({
+      "primeiros-passos": null,
+      catalogo: "itens",
+      frota: "frota",
+      termos: "termos",
+      estoque: "estoque",
+    });
+  });
+
+  it("quem só tem o módulo Frota recebe primeiros passos e frota, e mais nada", () => {
+    expect(
+      trilhasDoUsuario("operador", ["frota"], false).map((t) => t.chave),
+    ).toEqual(["primeiros-passos", "frota"]);
+  });
+
+  it("quem não tem módulo nenhum do grupo recebe só primeiros passos", () => {
+    expect(
+      trilhasDoUsuario("operador", ["obras"], false).map((t) => t.chave),
+    ).toEqual(["primeiros-passos"]);
+  });
+
+  it("o master recebe todas, mesmo com a lista de módulos vazia", () => {
+    expect(trilhasDoUsuario("master", [], true)).toHaveLength(TRILHAS.length);
+  });
+
+  it("acertar todas as perguntas aprova, em toda trilha real", () => {
+    for (const t of TRILHAS) {
+      const respostas = Object.fromEntries(
+        t.perguntas.map((p) => [p.id, p.correta]),
+      );
+      expect(aprovado(corrigir(t, respostas)), `trilha ${t.chave}`).toBe(true);
+    }
+  });
+
+  it("o gabarito não fica todo na mesma posição", () => {
+    // Questionário com a resposta certa sempre na mesma letra é passável sem
+    // ler nada: a pessoa marca a segunda opção quatro vezes e leva o
+    // comprovante assinado de um treinamento que não fez.
+    for (const t of TRILHAS) {
+      const posicoes = new Set(t.perguntas.map((p) => p.correta));
+      expect(posicoes.size, `trilha ${t.chave}`).toBeGreaterThan(1);
+    }
   });
 });
