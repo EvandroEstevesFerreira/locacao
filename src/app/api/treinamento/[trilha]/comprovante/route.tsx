@@ -47,6 +47,17 @@ export async function GET(
     return NextResponse.json({ error: "Conclusão não encontrada." }, { status: 404 });
   }
 
+  // Sem assinatura não há comprovante. O documento é uma declaração em primeira
+  // pessoa ("declaro que percorri...") com linha de assinatura: servi-lo antes
+  // de a pessoa assinar produz um papel oficial que ninguém assinou. A tela já
+  // só oferece o botão depois da assinatura; a rota passa a dizer o mesmo.
+  if (!conclusao.assinatura) {
+    return NextResponse.json(
+      { error: "O comprovante precisa ser assinado antes de ser emitido." },
+      { status: 404 },
+    );
+  }
+
   const supabase = await createClient();
   const [{ data: org }, { data: tplRow }] = await Promise.all([
     supabase.from("organizacao").select("nome").eq("id", perfil.org_id).maybeSingle(),

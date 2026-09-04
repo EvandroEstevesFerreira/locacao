@@ -296,6 +296,57 @@ describe("manualPorRota", () => {
     const rotas = manualPorRota().map((r) => r.rota);
     expect(rotas).toEqual([...rotas].sort());
   });
+
+  it("junta na mesma rota as aulas de trilhas DIFERENTES", () => {
+    // Com uma trilha só no catálogo, o agrupamento entre trilhas nunca é
+    // exercitado: uma implementação que sobrescrevesse a entrada em vez de
+    // acumular passaria em verde. Duas trilhas sintéticas declarando `/obras`
+    // é o que discrimina.
+    const a = trilha({
+      chave: "t-a",
+      aulas: [
+        {
+          id: "aa",
+          titulo: "Aula A",
+          resumo: "R.",
+          rotas: ["/obras", "/so-da-a"],
+          desdeVersao: 1,
+          passos: [{ onde: "/obras", acao: "Faça.", esperado: "Acontece." }],
+        },
+      ],
+    });
+    const b = trilha({
+      chave: "t-b",
+      aulas: [
+        {
+          id: "bb",
+          titulo: "Aula B",
+          resumo: "R.",
+          rotas: ["/obras"],
+          desdeVersao: 1,
+          passos: [{ onde: "/obras", acao: "Faça.", esperado: "Acontece." }],
+        },
+      ],
+    });
+
+    const idx = manualPorRota([a, b]);
+
+    // Duas rotas distintas, `/obras` aparecendo UMA vez só.
+    expect(idx.map((r) => r.rota)).toEqual(["/obras", "/so-da-a"]);
+
+    const obras = idx.find((r) => r.rota === "/obras");
+    expect(obras?.aulas.map((x) => [x.trilha, x.aula.id])).toEqual([
+      ["t-a", "aa"],
+      ["t-b", "bb"],
+    ]);
+
+    // E a rota exclusiva da primeira trilha não recebeu carona da segunda.
+    expect(idx.find((r) => r.rota === "/so-da-a")?.aulas).toHaveLength(1);
+  });
+
+  it("sem trilha nenhuma, o índice é vazio", () => {
+    expect(manualPorRota([])).toEqual([]);
+  });
 });
 
 describe("respostasSchema", () => {

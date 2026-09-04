@@ -84,6 +84,11 @@ describe("integridade do conteúdo de treinamento", () => {
       it("toda pergunta tem quatro alternativas e `correta` no intervalo", () => {
         for (const p of t.perguntas) {
           expect(p.alternativas.length, `pergunta ${p.id}`).toBe(4);
+          // Inteiro, e não só dentro do intervalo: `correta: 1.5` passa pelas
+          // duas comparações abaixo e nunca casa com a resposta escolhida, que
+          // o `respostasSchema` exige inteira. A trilha ficaria IMPOSSÍVEL de
+          // concluir e a pessoa só veria "não confere" para sempre.
+          expect(Number.isInteger(p.correta), `pergunta ${p.id}`).toBe(true);
           expect(p.correta, `pergunta ${p.id}`).toBeGreaterThanOrEqual(0);
           expect(p.correta, `pergunta ${p.id}`).toBeLessThan(p.alternativas.length);
           for (const alt of p.alternativas) {

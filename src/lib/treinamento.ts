@@ -202,14 +202,19 @@ export function resumirPendencias(
  * É a segunda leitura da mesma fonte. A trilha percorre na ordem em que se
  * aprende; o manual indexa por tela, para quem já sabe e travou. Nada é escrito
  * duas vezes, e nenhum dos dois desatualiza sem o outro.
+ *
+ * `trilhas` tem default `TRILHAS` para `/ajuda` seguir chamando sem argumento.
+ * O parâmetro existe para o teste poder provar o agrupamento de aulas de
+ * trilhas DIFERENTES na mesma rota — com uma única trilha no catálogo, esse
+ * ramo nunca é exercitado e uma perda de agrupamento passaria em verde.
  */
-export function manualPorRota(): {
+export function manualPorRota(trilhas: Trilha[] = TRILHAS): {
   rota: string;
   aulas: { trilha: string; aula: Aula }[];
 }[] {
   const mapa = new Map<string, { trilha: string; aula: Aula }[]>();
 
-  for (const t of TRILHAS) {
+  for (const t of trilhas) {
     for (const a of t.aulas) {
       for (const r of a.rotas) {
         const atual = mapa.get(r) ?? [];

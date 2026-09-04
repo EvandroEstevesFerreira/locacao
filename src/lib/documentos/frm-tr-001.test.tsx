@@ -19,6 +19,19 @@ const CAMPOS = [
   { label: "Concluido em", valor: "03/09/2026" },
 ];
 
+// Os SEIS campos que a rota monta, com os rotulos dela byte por byte
+// (src/app/api/treinamento/[trilha]/comprovante/route.tsx). Com
+// `CampoGrid colunas={2}`, seis campos sao TRES linhas de grade, nao duas — o
+// `CAMPOS` de quatro entradas acima media uma folha que a rota nunca emite.
+const CAMPOS_DA_ROTA = [
+  { label: "Pessoa", valor: "Fulano de Tal" },
+  { label: "Papel no sistema", valor: "Operador" },
+  { label: "Trilha", valor: "Primeiros passos no Loca" },
+  { label: "Versão do conteúdo", valor: "1" },
+  { label: "Concluído em", valor: "03/09/2026" },
+  { label: "Comprovante", valor: "TRE-2026-0001" },
+];
+
 const AULAS = [
   { titulo: "Entrar no Loca", resumo: "Onde e o endereco e o que fazer quando a senha nao passa." },
   { titulo: "O menu", resumo: "Por que o seu menu e diferente do menu do colega." },
@@ -80,10 +93,11 @@ describe("FRM-TR-001", () => {
   });
 
   it("o comprovante da trilha REAL, com a declaracao real, cabe em 1 pagina", async () => {
-    // O fixture sintetico deste arquivo tem 2 aulas e 2 paragrafos. A trilha
-    // real tem 6 aulas com resumos de tamanho de verdade e a declaracao tem 6
-    // paragrafos — se o comprovante nao couber numa folha, e aqui que aparece,
-    // e no CI, nao numa medicao manual que se apaga depois.
+    // O fixture sintetico deste arquivo tem 2 aulas, 2 paragrafos e 4 campos. A
+    // trilha real tem 6 aulas com resumos de tamanho de verdade, a declaracao
+    // tem 6 paragrafos e a rota monta 6 campos — se o comprovante nao couber
+    // numa folha, e aqui que aparece, e no CI, nao numa medicao manual que se
+    // apaga depois.
     const tpl = DEFAULT_TEMPLATES.comprovante_treinamento;
     const variaveis = {
       empresa_nome: "Sistenge Engenharia",
@@ -102,7 +116,7 @@ describe("FRM-TR-001", () => {
       <ComprovanteTreinamento
         orgNome="Sistenge Engenharia"
         numero="TRE-2026-0001"
-        campos={CAMPOS}
+        campos={CAMPOS_DA_ROTA}
         aulas={PRIMEIROS_PASSOS.aulas.map((a) => ({
           titulo: a.titulo,
           resumo: a.resumo,
