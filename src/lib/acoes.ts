@@ -10,7 +10,19 @@
  * lugar só.
  */
 export type ActionResult =
-  | { ok: true; id?: string }
+  | {
+      ok: true;
+      id?: string;
+      /**
+       * Deu certo, mas com ressalva que o usuário precisa ler.
+       *
+       * Existe para o caso em que a operação principal é IRREVERSÍVEL e um
+       * passo acessório falhou — fechar um recebimento numera o registro e não
+       * pode ser desfeito, mas o e-mail ao fornecedor pode não ter saído.
+       * Devolver `ok: false` ali seria mentira: o fechamento aconteceu.
+       */
+      aviso?: string;
+    }
   | { ok: false; erro: string };
 
 /** Atalho para o caso de erro, que é o mais repetido. */
