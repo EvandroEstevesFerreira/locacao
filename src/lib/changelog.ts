@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.50.0";
+export const APP_VERSION = "0.52.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,18 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.52.0",
+    data: "2026-09-04",
+    titulo: "Fechamento do recebimento e aviso ao fornecedor",
+    mudancas: [
+      { tipo: "novo", texto: "O recebimento agora fecha: ganha número (REC-2026-0014), deixa de ser editável e carimba a data de retirada nos itens do contrato." },
+      { tipo: "novo", texto: "Ao fechar, o fornecedor recebe um e-mail com o romaneio em PDF — itens, patrimônio, quantidades e as ressalvas de avaria ou divergência." },
+      { tipo: "novo", texto: "O romaneio fica disponível para baixar a qualquer momento depois do fechamento." },
+      { tipo: "melhoria", texto: "A confirmação de fechamento diz exatamente o que vai acontecer e para qual e-mail — e exige marcar que está ciente de que não dá para voltar atrás." },
+      { tipo: "melhoria", texto: "Se o e-mail falhar, o recebimento continua fechado e a tela avisa que o fornecedor não foi comunicado, em vez de fingir que deu tudo certo." },
+    ],
+  },
   {
     versao: "0.50.0",
     data: "2026-09-02",

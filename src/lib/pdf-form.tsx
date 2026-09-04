@@ -305,11 +305,21 @@ export function Documento({
   versao,
   publicadoEm,
   orientacao = "portrait",
+  rodape,
   children,
 }: {
   codigo: string;
   titulo: string;
   subtitulo?: string;
+  /**
+   * Assinatura de rodapé, em todas as folhas.
+   *
+   * Virou prop quando o primeiro documento NÃO-RH apareceu: o romaneio de
+   * recebimento vai para um fornecedor de equipamento, e o padrão herdado dizia
+   * "Recursos Humanos" no pé de página. Só se descobre olhando o PDF gerado —
+   * typecheck, lint e contagem de páginas passam todos.
+   */
+  rodape?: string;
   /**
    * Versão e data de publicação do TEXTO, no cabeçalho de toda folha.
    *
@@ -346,7 +356,7 @@ export function Documento({
         {subtitulo ? <Text style={f.subtitulo}>{subtitulo}</Text> : null}
         {children}
         <Text style={f.rodapeEmpresa} fixed>
-          Sistenge Construções e Comércio Ltda — Recursos Humanos
+          {rodape ?? "Sistenge Construções e Comércio Ltda — Recursos Humanos"}
         </Text>
         <Text
           style={f.rodapePagina}

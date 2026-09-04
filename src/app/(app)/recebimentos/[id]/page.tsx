@@ -8,7 +8,7 @@
 
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, PackageCheck } from "lucide-react";
+import { ArrowLeft, PackageCheck, Download } from "lucide-react";
 import { getCurrentPerfil, podeOperar } from "@/lib/auth";
 import {
   buscarRecebimento,
@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/card";
 import { RecebimentoCabecalhoForm } from "../recebimento-forms";
 import { RecebimentoItens } from "../recebimento-itens";
+import { FecharRecebimento } from "../fechar-recebimento";
 
 export const metadata = { title: "Recebimento — Loca" };
 
@@ -112,16 +113,6 @@ export default async function RecebimentoPage({
         </CardContent>
       </Card>
 
-      {/* O aviso do que o fechamento ainda NÃO faz. Sem ele, quem lê "ao
-          fechar, o fornecedor é avisado" na tela anterior esperaria o e-mail
-          agora — e concluiria que falhou. */}
-      {rec.status === "rascunho" ? (
-        <p className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
-          O fechamento — que atribui o número e avisa o fornecedor — ainda não
-          está disponível. Por enquanto o recebimento é registro interno: nada
-          sai do sistema.
-        </p>
-      ) : null}
 
       <Card>
         <CardHeader>
@@ -187,6 +178,35 @@ export default async function RecebimentoPage({
                 ? " Fornecedor avisado."
                 : " Fornecedor ainda não avisado."}
             </span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="ml-auto"
+              render={
+                <Link href={`/api/recebimentos/${rec.id}/pdf`} target="_blank" />
+              }
+            >
+              <Download className="size-3.5" aria-hidden />
+              Romaneio
+            </Button>
+          </CardContent>
+        </Card>
+      ) : podeEditar ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Fechar o recebimento</CardTitle>
+            <CardDescription>
+              Numera o registro, carimba a retirada no contrato e avisa o
+              fornecedor com o romaneio em PDF.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <FecharRecebimento
+              recebimentoId={rec.id}
+              totalItens={rec.itens.length}
+              comRessalva={comProblema.length}
+              emailFornecedor={rec.fornecedor?.contato_email ?? null}
+            />
           </CardContent>
         </Card>
       ) : null}

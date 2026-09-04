@@ -1,10 +1,12 @@
 "use server";
 
-// Recebimento de equipamento — fase 1a: o rascunho.
+// Recebimento de equipamento — rascunho e fechamento.
 //
-// O fechamento, o romaneio em PDF e o e-mail ao fornecedor vêm na 1b. Até lá o
-// recebimento é registro interno: nada sai do sistema, e é por isso que esta
-// fase pode ir a produção sozinha sem risco de comunicar terceiro por engano.
+// O rascunho é registro interno: nada sai do sistema. O FECHAMENTO é o passo
+// irreversível — atribui o número, carimba a retirada nos itens do contrato,
+// gera o romaneio e avisa o fornecedor por e-mail. É a primeira vez que o Loca
+// comunica um terceiro a partir de uma ação de usuário, e é por isso que o
+// caminho tem confirmação explícita e não pode ser desfeito por quem opera.
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -16,6 +18,17 @@ import {
   recebimentoItemSchema,
 } from "@/lib/recebimento";
 import { falha, primeiroErro, type ActionResult } from "@/lib/acoes";
+import { fecharRecebimentoSchema } from "@/lib/recebimento";
+import { formatarData, hojeISOSaoPaulo } from "@/lib/locacao";
+import { emailConfigurado, enviarEmail } from "@/lib/email";
+import { recebimentoFornecedor } from "@/lib/emails/templates";
+import {
+  montarContexto,
+  SELECT_ORGANIZACAO_EMAIL,
+  type LinhaOrganizacaoEmail,
+} from "@/lib/emails/contexto";
+import { buscarRecebimento } from "@/lib/data/recebimentos";
+import { gerarRomaneioPdf } from "@/lib/documentos/romaneio-render";
 
 /** Revalida as duas telas que mostram recebimentos. */
 function revalidar(contratoId: string, recebimentoId?: string) {
@@ -253,4 +266,191 @@ export async function excluirRecebimento(
   }
 
   if (contratoId) revalidar(contratoId);
+}
+
+/**
+ * Fecha o recebimento: numera, carimba a retirada, gera o romaneio e avisa.
+ *
+ * A ORDEM IMPORTA e é deliberada:
+ *
+ *   1. valida  — recebimento sem item não vira documento
+ *   2. numera  — `proximo_numero`, o contador gapless da migration 0048
+ *   3. fecha   — o status vira 'fechado' e o registro deixa de ser editável
+ *   4. carimba — `data_retirada` nos `item_locado` que ainda não a têm
+ *   5. avisa   — PDF + e-mail ao fornecedor
+ *
+ * Do passo 5 para trás nada é desfeito. Se o Resend cair, o recebimento
+ * CONTINUA FECHADO com `aviso_enviado_em` nulo, e a tela mostra "fornecedor não
+ * avisado" com botão de reenviar. Uma entrega física que já aconteceu não deixa
+ * de ter acontecido porque um serviço de e-mail está fora do ar — e desfazer o
+ * fechamento devolveria um número já gasto, abrindo o buraco que o contador
+ * existe para evitar.
+ */
+export async function fecharRecebimento(raw: unknown): Promise<ActionResult> {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) {
+    return falha("Você não tem permissão para fechar recebimentos.");
+  }
+
+  const parsed = fecharRecebimentoSchema.safeParse(raw);
+  if (!parsed.success) return falha(primeiroErro(parsed.error.issues));
+  const { id } = parsed.data;
+
+  const rec = await buscarRecebimento(id);
+  if (!rec || !rec.contrato) return falha("Recebimento não encontrado.");
+  if (rec.status !== "rascunho") {
+    return falha("Este recebimento já foi fechado.");
+  }
+  // Documento sem item não é documento. O fornecedor receberia um romaneio
+  // vazio e um número gasto à toa.
+  if (rec.itens.length === 0) {
+    return falha("Lance ao menos um item antes de fechar o recebimento.");
+  }
+
+  const supabase = await createClient();
+
+  // O ano vem de São Paulo, como manda o AGENTS.md: às 23h de 31 de dezembro o
+  // servidor em UTC já virou o ano e o primeiro recebimento de janeiro sairia
+  // numerado no ano errado.
+  const ano = Number(hojeISOSaoPaulo().slice(0, 4));
+  const { data: numero, error: erroNumero } = await supabase.rpc("proximo_numero", {
+    p_org: perfil.org_id,
+    p_tipo: "recebimento",
+    p_ano: ano,
+  });
+  if (erroNumero || !numero) {
+    console.error("fecharRecebimento.numero", erroNumero);
+    return falha("Não foi possível gerar o número do recebimento.");
+  }
+
+  // `.eq("status", "rascunho")` no UPDATE é a trava contra o duplo clique: dois
+  // fechamentos simultâneos gastariam dois números para o mesmo recebimento.
+  const { data: fechados, error: erroFechar } = await supabase
+    .from("recebimento")
+    .update({
+      numero_registro: numero,
+      status: "fechado",
+      fechado_em: new Date().toISOString(),
+      fechado_por: perfil.id,
+    })
+    .eq("id", id)
+    .eq("status", "rascunho")
+    .select("id");
+  if (erroFechar) {
+    console.error("fecharRecebimento.update", erroFechar);
+    return falha("Não foi possível fechar o recebimento.");
+  }
+  if (!fechados || fechados.length === 0) {
+    return falha("Este recebimento já foi fechado por outra pessoa.");
+  }
+
+  // Carimba a retirada nos itens do contrato que ainda não a tinham. É o que
+  // liga o recebimento ao cálculo de custo: sem `data_retirada`, o item locado
+  // não entra na conta de locação.
+  const locados = rec.itens
+    .map((i) => i.item_locado_id)
+    .filter((v): v is string => Boolean(v));
+  if (locados.length > 0) {
+    const { error: erroRetirada } = await supabase
+      .from("item_locado")
+      .update({ data_retirada: rec.recebido_em })
+      .in("id", locados)
+      .is("data_retirada", null);
+    // Não aborta: o fechamento já aconteceu e o número já foi gasto. Falha aqui
+    // é dado incompleto, não documento inválido.
+    if (erroRetirada) console.error("fecharRecebimento.retirada", erroRetirada);
+  }
+
+  revalidar(rec.contrato.id, id);
+
+  // ── A partir daqui, nada derruba o fechamento ────────────────────────────
+  const destino = rec.fornecedor?.contato_email?.trim();
+  if (!destino) {
+    return {
+      ok: true,
+      id,
+      aviso:
+        "Recebimento " +
+        numero +
+        " fechado. O fornecedor não tem e-mail cadastrado, então não foi avisado.",
+    };
+  }
+  if (!emailConfigurado()) {
+    return {
+      ok: true,
+      id,
+      aviso: "Recebimento " + numero + " fechado. O envio de e-mail não está configurado.",
+    };
+  }
+
+  try {
+    const { data: org } = await supabase
+      .from("organizacao")
+      .select(SELECT_ORGANIZACAO_EMAIL)
+      .eq("id", perfil.org_id)
+      .maybeSingle();
+
+    const obra = rec.contrato.obra;
+    const obraRotulo = obra ? obra.codigo + " — " + obra.nome : "Obra";
+    const arquivo = "Romaneio-" + numero + ".pdf";
+
+    const pdf = await gerarRomaneioPdf({
+      numero,
+      orgNome: (org as LinhaOrganizacaoEmail | null)?.nome ?? "Sistenge",
+      fornecedor: rec.fornecedor?.nome ?? "Fornecedor",
+      obra: obraRotulo,
+      contratoNumero: rec.contrato.numero,
+      contratoRegistro: rec.contrato.numero_registro,
+      recebidoEm: formatarData(rec.recebido_em),
+      conferente: rec.conferente,
+      notaFornecedor: rec.nota_fornecedor,
+      observacoes: rec.observacoes,
+      itens: rec.itens.map((i) => ({
+        descricao: i.item_descricao,
+        patrimonio: i.unidade_identificador,
+        quantidade: i.quantidade,
+        condicao: i.condicao,
+        observacoes: i.observacoes,
+      })),
+      localData: formatarData(rec.recebido_em) + ".",
+    });
+
+    const email = recebimentoFornecedor(
+      {
+        numero,
+        fornecedor: rec.fornecedor?.nome ?? "Fornecedor",
+        obra: obraRotulo,
+        data: formatarData(rec.recebido_em),
+        contrato: rec.contrato.numero_registro ?? rec.contrato.numero,
+        anexo: arquivo,
+        observacoes: rec.observacoes ?? undefined,
+        itens: rec.itens.map((i) => ({
+          descricao: i.item_descricao,
+          quantidade: String(i.quantidade),
+          patrimonio: i.unidade_identificador ?? undefined,
+        })),
+      },
+      montarContexto((org as LinhaOrganizacaoEmail | null) ?? null),
+    );
+
+    await enviarEmail([destino], email, [{ filename: arquivo, content: pdf }]);
+
+    await supabase
+      .from("recebimento")
+      .update({ aviso_enviado_em: new Date().toISOString() })
+      .eq("id", id);
+
+    revalidar(rec.contrato.id, id);
+    return { ok: true, id, aviso: "Recebimento " + numero + " fechado e fornecedor avisado." };
+  } catch (e) {
+    console.error("fecharRecebimento.email", e);
+    return {
+      ok: true,
+      id,
+      aviso:
+        "Recebimento " +
+        numero +
+        " fechado, mas o aviso ao fornecedor falhou. Use o botão de reenviar.",
+    };
+  }
 }
