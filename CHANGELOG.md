@@ -7,6 +7,39 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.51.0] — 2026-09-03
+
+Fatia 1 do módulo de treinamento. Duas decisões de desenho sustentam o
+módulo: o conteúdo das trilhas mora no código-fonte, versionado junto do
+resto do sistema, não numa tabela editável; e o manual (`/ajuda`) e a trilha
+(`/treinamento/[trilha]`) leem a mesma fonte de conteúdo, só em ordens
+diferentes — uma por aula, em sequência; a outra por tela, sob demanda.
+
+A migration 0063 (tabela `treinamento_conclusao`) já está no repositório e
+precisa ser aplicada em produção antes do deploy desta versão.
+
+### Adicionado
+
+- Tela de Treinamento (`/treinamento`), com trilhas que ensinam o sistema
+  passo a passo — cada passo diz o que fazer e o que deve acontecer.
+- Trilha **Primeiros passos**, com 6 aulas: entrar, trocar a senha, entender
+  por que o menu varia por usuário, achar uma obra, filtrar uma lista e
+  pedir o acesso que falta.
+- Questionário de 4 perguntas ao final da trilha, corrigido no servidor.
+  Errar não tem custo: o sistema explica a resposta certa, aponta a aula e
+  deixa tentar de novo. É preciso acertar todas para concluir.
+- Comprovante em PDF (`FRM-TR-001`), assinado na tela, com número de
+  registro, pela rota `/api/treinamento/[trilha]/comprovante`.
+- Tela de Ajuda (`/ajuda`), com o mesmo conteúdo do treinamento organizado
+  por tela, para consulta pontual.
+- Cálculo de pendência: quando uma trilha muda, quem já concluiu a versão
+  anterior vê só as aulas que mudaram desde então.
+- Painel `/treinamento/pendentes`, para quem administra o sistema acompanhar
+  quem treinou e quem falta. Treinamento pendente não bloqueia nenhum
+  acesso — o painel serve para cobrar, não para trancar.
+- Itens de navegação **Treinamento** e **Ajuda**, junto de Novidades e
+  Configurações — fora dos grupos de área de trabalho.
+
 ## [0.50.0] — 2026-09-02
 
 Fatia 1 da custódia da peça. O achado que ordenou a fatia: a peça não podia

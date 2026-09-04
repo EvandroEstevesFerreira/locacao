@@ -9,12 +9,14 @@
 
 import {
   BarChart3,
+  BookOpen,
   Boxes,
   Building2,
   ClipboardCheck,
   ClipboardList,
   FileSignature,
   FileText,
+  GraduationCap,
   HardHat,
   LayoutDashboard,
   Package,
@@ -45,6 +47,8 @@ const ICONES: Record<NavIconName, LucideIcon> = {
   "bar-chart-3": BarChart3,
   sparkles: Sparkles,
   settings: Settings,
+  "graduation-cap": GraduationCap,
+  "book-open": BookOpen,
 };
 
 export function NavIcon({

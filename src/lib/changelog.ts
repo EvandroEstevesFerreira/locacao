@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.50.0";
+export const APP_VERSION = "0.51.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,20 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.51.0",
+    data: "2026-09-03",
+    titulo: "Treinamento e ajuda dentro do sistema",
+    mudancas: [
+      { tipo: "novo", texto: "Nova tela de Treinamento, com trilhas que ensinam o sistema passo a passo. Cada passo diz o que fazer e o que tem de acontecer — não é só um passeio pelas telas." },
+      { tipo: "novo", texto: "A primeira trilha, Primeiros passos, está pronta: entrar, trocar a senha, entender por que o seu menu é diferente do menu do colega, achar uma obra, filtrar qualquer lista e pedir o acesso que falta." },
+      { tipo: "novo", texto: "No fim de cada trilha há um questionário curto. É preciso acertar todas as perguntas — errar não tem custo: o sistema explica por que a resposta é aquela, aponta a aula e você tenta de novo." },
+      { tipo: "novo", texto: "Quem concluiu recebe um comprovante em PDF, assinado na tela, com número de registro." },
+      { tipo: "novo", texto: "Nova tela de Ajuda: o mesmo conteúdo do treinamento, organizado por tela, para quem já sabe e travou em algo específico." },
+      { tipo: "novo", texto: "Quando uma tela muda e a trilha é atualizada, quem já tinha concluído vê exatamente quais aulas mudaram, e relê só essas." },
+      { tipo: "novo", texto: "Para quem administra o sistema: painel de quem treinou e quem falta. Treinamento pendente não bloqueia o acesso a nada — o painel existe para cobrar, não para trancar." },
+    ],
+  },
   {
     versao: "0.50.0",
     data: "2026-09-02",
