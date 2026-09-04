@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.56.0";
+export const APP_VERSION = "0.57.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,18 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.57.0",
+    data: "2026-09-04",
+    titulo: "Treinamento completo: os 13 módulos do sistema",
+    mudancas: [
+      { tipo: "novo", texto: "As três últimas trilhas: Imóveis e alojamentos, Financeiro e Relatórios. Com elas, TODOS os 13 módulos do Loca têm treinamento — 14 trilhas no total, contando Primeiros passos." },
+      { tipo: "novo", texto: "A trilha do financeiro ensina o campo que decide se uma conta aparece no orçamento da obra: sem contrato vinculado, o dinheiro sai, o relatório mostra, e o orçamento da obra não sabe." },
+      { tipo: "novo", texto: "A trilha de imóveis explica que o total mensal é uma soma — aluguel + condomínio + IPTU, e o seguro fiança só quando for mensal — e por que renovação é contrato novo, não edição do antigo." },
+      { tipo: "novo", texto: "A trilha de relatórios ensina o que fazer quando o número parece errado: o relatório mostra o que existe, e as três causas mais comuns são lançamento sem contrato, devolução com data errada e recebimento em rascunho." },
+      { tipo: "melhoria", texto: "O manual em Ajuda cresceu junto: as aulas das três trilhas novas entram indexadas por tela, como as demais." },
+    ],
+  },
   {
     versao: "0.56.0",
     data: "2026-09-04",

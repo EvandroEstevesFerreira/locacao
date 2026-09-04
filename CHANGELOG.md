@@ -7,6 +7,45 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.57.0] — 2026-09-04
+
+Última onda de conteúdo: **Imóveis, Financeiro e Relatórios**. Com ela, os 13
+módulos do Loca têm trilha — 14 no total, contando Primeiros passos, com 65
+aulas e 61 perguntas. Nenhuma migration.
+
+### Adicionado
+
+- Trilha **Imóveis e alojamentos**: a lista com o custo mensal do filtro, o
+  contrato (e o total mensal que é uma soma, com o seguro fiança somado só
+  quando for mensal), consumo e reparos, ocupantes e entregas de chave e kit, e
+  por que encerrar não é excluir — o botão de excluir apaga o imóvel **e todos
+  os contratos dele**.
+- Trilha **Financeiro**: o vínculo com o contrato como a coisa que decide se a
+  despesa entra no realizado da obra; competência contra vencimento; a baixa
+  com multa e juros **sugeridos** pela praxe (2% e 1% ao mês) e editáveis; o
+  rateio por item; e o fluxo de caixa, onde "Projetado" vem de contrato e não
+  de lançamento.
+- Trilha **Relatórios**: os doze relatórios e quais ignoram o período (itens em
+  aberto e ociosidade são retratos de agora); por que esta é a única tela com
+  botão de aplicar; e uma aula inteira sobre o que um número estranho está
+  dizendo — quase sempre lançamento faltando, não erro de cálculo.
+
+### Testes
+
+- **A trava que fecha o conjunto:** todo módulo de `MODULO_CHAVES` precisa ter
+  uma trilha que o ensine, e nenhuma trilha pode apontar para módulo
+  inexistente. A varredura lê as chaves de módulo em vez de uma lista escrita à
+  mão, então módulo novo entra na checagem por existir — a mesma forma da
+  varredura de rotas, e pelo mesmo motivo: lista escrita à mão envelhece em
+  silêncio. Provada por inversão, com um módulo fictício.
+- A guarda de gabarito criada na 0.54.0 **pegou o meu próprio conteúdo**: as
+  quatro respostas certas da trilha de Imóveis caíram todas na segunda posição.
+  Corrigido. Era exatamente o caso para que ela foi escrita — questionário com
+  o gabarito sempre na mesma letra é passável sem ler nada.
+- A fixture "módulo sem trilha" deixou de existir por mérito: com as 13
+  trilhas escritas, não há mais módulo sem trilha, e o caso que sobra é o
+  usuário sem módulo algum.
+
 ## [0.56.0] — 2026-09-04
 
 Onda de conteúdo da **cadeia da locação**: Fornecedores, Contratos,
