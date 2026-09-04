@@ -59,7 +59,37 @@ export async function excluirItem(formData: FormData) {
   const id = (formData.get("id") as string | null)?.trim();
   if (!id) return;
   const supabase = await createClient();
-  await supabase.from("item_catalogo").delete().eq("id", id);
+
+  // O erro do DELETE tem de voltar para a tela, e o `.select("id")` é o que
+  // transforma "não apagou nada" em erro: DELETE de ZERO linhas não é erro para
+  // o PostgREST, então uma policy que filtra a linha devolve `error: null` com
+  // nada apagado. Sem as duas coisas, o diálogo fechava como se tivesse
+  // excluído e o item continuava na lista, sem uma palavra de explicação.
+  //
+  // `item_catalogo` não tem `soft_delete` de propósito — é catálogo, não
+  // documento —, então item já usado é recusado pela chave estrangeira, e o
+  // caminho certo para ele é ficar inativo.
+  const { data, error } = await supabase
+    .from("item_catalogo")
+    .delete()
+    .eq("id", id)
+    .select("id");
+
+  if (error) {
+    console.error("excluirItem", error);
+    if (error.code === "23503") {
+      return {
+        error:
+          "Este item já foi usado: há peça, contrato ou movimento apontando para ele. " +
+          "Abra o item e desmarque “Item ativo” para tirá-lo das próximas escolhas sem apagar o histórico.",
+      };
+    }
+    return { error: "Não foi possível excluir o item. Tente novamente." };
+  }
+  if (!data?.length) {
+    return { error: "O item não foi excluído. Confira se você tem permissão para isso." };
+  }
+
   revalidatePath("/itens");
 }
 

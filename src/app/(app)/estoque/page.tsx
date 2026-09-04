@@ -6,6 +6,7 @@ import {
   itensDeEstoque,
 } from "@/lib/data/estoque";
 import { listarObrasParaFiltro } from "@/lib/data/obras";
+import { getCurrentPerfil, podeOperar } from "@/lib/auth";
 import {
   curvaABC,
   resumirEstoque,
@@ -29,6 +30,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { MovimentoForm } from "./_components/movimento-form";
+import { MovimentoEstornar } from "./_components/movimento-estornar";
 
 export const metadata = { title: "Estoque — Loca" };
 
@@ -91,12 +93,18 @@ export default async function EstoquePage({
 
   const filtros = { obra: um(sp.obra), q: um(sp.q) };
 
-  const [linhas, movimentos, itens, obras] = await Promise.all([
+  const [linhas, movimentos, itens, obras, perfil] = await Promise.all([
     saldosDeEstoque(filtros),
     movimentosDeEstoque({ ...filtros, limite: 50 }),
     itensDeEstoque(),
     listarObrasParaFiltro(),
+    getCurrentPerfil(),
   ]);
+
+  // Lançar e estornar são a mesma permissão (`podeOperar`), e é a mesma que as
+  // duas actions exigem. Mostrar o formulário a quem não pode lançar é um
+  // beco: a pessoa preenche seis campos e leva "sem permissão" no fim.
+  const podeLancar = podeOperar(perfil?.papel);
 
   const resumo = resumirEstoque(linhas);
   const abc = curvaABC(linhas);
@@ -279,19 +287,21 @@ export default async function EstoquePage({
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Lançar movimento</CardTitle>
-              <CardDescription>
-                Entrada, saída, ajuste de inventário ou baixa. O lançamento não pode
-                ser editado nem apagado depois — correção é estorno, e as duas linhas
-                ficam visíveis no razão.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <MovimentoForm itens={itens} obras={obras} />
-            </CardContent>
-          </Card>
+          {podeLancar ? (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Lançar movimento</CardTitle>
+                <CardDescription>
+                  Entrada, saída, ajuste de inventário ou baixa. O lançamento não
+                  pode ser editado nem apagado depois — correção é estorno, pelo
+                  botão na lista abaixo, e as duas linhas ficam visíveis no razão.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <MovimentoForm itens={itens} obras={obras} />
+              </CardContent>
+            </Card>
+          ) : null}
 
           <Card>
             <CardHeader className="pb-2">
@@ -313,6 +323,11 @@ export default async function EstoquePage({
                         <th className="py-2 text-right font-medium">Qtd.</th>
                         <th className="py-2 text-left font-medium">Local</th>
                         <th className="py-2 text-left font-medium">Documento</th>
+                        {podeLancar ? (
+                          <th className="w-12 py-2 text-right font-medium">
+                            <span className="sr-only">Ações</span>
+                          </th>
+                        ) : null}
                       </tr>
                     </thead>
                     <tbody>
@@ -344,6 +359,26 @@ export default async function EstoquePage({
                           <td className="py-2 text-muted-foreground">
                             {m.documento ?? "—"}
                           </td>
+                          {podeLancar ? (
+                            <td className="py-2 text-right">
+                              {/* Nem a ponta já estornada, nem o próprio
+                                  estorno: estornar um estorno é confundir o
+                                  razão em vez de corrigi-lo, e o índice
+                                  parcial do banco recusaria de todo modo.
+
+                                  O `estornado` é calculado sobre os 50
+                                  movimentos lidos, então um estorno antigo
+                                  pode não ser visto aqui — quem garante de
+                                  verdade é o índice, e a action devolve
+                                  "já foi estornado". */}
+                              {m.estornado || m.estornaId ? null : (
+                                <MovimentoEstornar
+                                  movimentoId={m.id}
+                                  descricao={m.itemDescricao}
+                                />
+                              )}
+                            </td>
+                          ) : null}
                         </tr>
                       ))}
                     </tbody>
