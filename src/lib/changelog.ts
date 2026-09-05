@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.57.1";
+export const APP_VERSION = "0.57.2";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,15 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.57.2",
+    data: "2026-09-05",
+    titulo: "As duas últimas telas mudas, e a trava contra o vazamento",
+    mudancas: [
+      { tipo: "correcao", texto: "Marcar uma conta de consumo como paga e mudar o status de uma avaria eram as duas últimas ações que podiam falhar sem dizer nada — o valor simplesmente voltava ao anterior. Agora explicam o que houve." },
+      { tipo: "seguranca", texto: "Nova verificação automática impede que qualquer parte do sistema volte a acessar dados ignorando a separação entre organizações. A regra existia escrita e foi violada mesmo assim, por anos, sem ninguém notar." },
+    ],
+  },
   {
     versao: "0.57.1",
     data: "2026-09-04",
