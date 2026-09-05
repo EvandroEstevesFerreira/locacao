@@ -7,6 +7,39 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.62.0] — 2026-09-05
+
+Subprojeto 2c, que fecha a fase 2. Equipamento em conserto deixa de sumir.
+
+### Adicionado
+
+- **`reparo_equipamento`** (migration 0068), com prefixo **RPE** — REP já é de
+  `reparo_imovel`, e dois tipos no mesmo prefixo tornariam o número ambíguo.
+- **A ordem nasce numerada, sem rascunho.** É ela que autoriza a peça a sair da
+  obra, e um rascunho de autorização não autoriza nada.
+- **A situação da peça segue a ordem por TRIGGER**, não por código de action.
+  A peça em conserto tem de aparecer como "manutenção" em toda tela que a
+  mostra; na action, bastaria um caminho novo de escrita esquecer a linha para a
+  peça ficar "disponível" com a máquina na oficina — e alguém a entregaria a um
+  funcionário que iria procurá-la e não achar.
+- **`aberto` e `em_execucao` são estados separados**, porque é entre os dois que
+  a peça deixa a obra. A ordem pode ser emitida hoje e a máquina sair na quinta.
+- **Três assinaturas no PDF**: autorizou, transportou, recebeu na oficina. É o
+  único documento do sistema que viaja com a máquina.
+- **`avaria_id` é nulável**: manutenção preventiva não vem de dano nenhum, e
+  exigir uma avaria obrigaria a inventar um problema para registrar a revisão.
+- **A responsabilidade é importada de `avaria.ts`**, não recriada. Quando o
+  reparo vem de um dano, "quem paga" é uma pergunta só, e dois vocabulários
+  produziriam relatórios que não batem.
+- Bloco de Manutenção na peça, com o gasto acumulado em conserto.
+- Aula de ordens de reparo na trilha de Frota, que sobe para a versão 2.
+
+### Corrigido
+
+- **Colisão de nomes de schema**: `reparoSchema` passou a existir em `imoveis.ts`
+  e em `reparo.ts`. A trava criada na 0.60.0 pegou sozinha e nomeou o conserto —
+  as duas amostras agora são qualificadas por módulo.
+
 ## [0.61.0] — 2026-09-05
 
 Subprojeto 2b. A avaria deixa de ser uma linha de texto e vira apuração com

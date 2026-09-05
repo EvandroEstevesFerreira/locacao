@@ -20,6 +20,7 @@ import { PecaLinhaDoTempo } from "./_components/peca-linha-do-tempo";
 import { PecaMover } from "./_components/peca-mover";
 import { PecaEditar } from "./_components/peca-editar";
 import { PecaSituacao } from "./_components/peca-situacao";
+import { PecaReparos } from "./_components/peca-reparos";
 
 export const metadata = { title: "Peça — Loca" };
 
@@ -124,6 +125,10 @@ export default async function PecaDetalhePage({
           ) : null}
         </CardContent>
       </Card>
+
+      {/* Manutenção vem logo depois da custódia: as duas contam a vida da
+          peça — com quem ela esteve e quantas vezes quebrou. */}
+      <PecaReparos unidadeId={peca.id} podeEditar={podeEditar} />
 
       <Card>
         <CardHeader>

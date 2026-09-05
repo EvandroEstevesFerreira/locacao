@@ -26,6 +26,7 @@ export type NavIconName =
   | "building-2"
   | "clipboard-check"
   | "shield-alert"
+  | "wrench"
   | "clipboard-list"
   | "package-open"
   | "file-signature"
@@ -71,6 +72,9 @@ export const NAV_ITEMS: readonly NavItem[] = [
 
   { label: "Itens", href: "/itens", icon: "package", modulo: "itens", grupo: "Equipamento" },
   { label: "Frota", href: "/frota", icon: "boxes", modulo: "frota", grupo: "Equipamento" },
+  // Reparos vive sob /frota porque o assunto é a PEÇA — e porque um reparo
+  // pode existir sem avaria nenhuma: revisão de rotina não é dano.
+  { label: "Reparos", href: "/frota/reparos", icon: "wrench", modulo: "frota", grupo: "Equipamento" },
   { label: "Estoque", href: "/estoque", icon: "warehouse", modulo: "estoque", grupo: "Equipamento" },
   { label: "Contratos", href: "/contratos", icon: "file-text", modulo: "contratos", grupo: "Equipamento" },
   { label: "Recebimentos", href: "/recebimentos", icon: "clipboard-list", modulo: "recebimentos", grupo: "Equipamento" },
