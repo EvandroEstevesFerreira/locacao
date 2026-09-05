@@ -182,12 +182,7 @@ export async function atualizarStatusAvaria(formData: FormData) {
   const vistoriaId = (formData.get("vistoria_id") as string | null)?.trim();
   if (!id || !["aberta", "cobrada", "resolvida"].includes(status ?? "")) return;
   const supabase = await createClient();
-  // `<form action={…}>` simples: o React exige retorno `void` ali, então a
-  // mensagem NÃO sobe para a tela por este caminho. O que o usuário vê é o
-  // valor voltando ao anterior quando a página revalida — feedback fraco, mas
-  // não silêncio: o `erroDeEscrita` deixa a causa no log do servidor.
-  // Surfacear exigiria transformar a linha num componente cliente.
-  erroDeEscrita(
+  const erro = erroDeEscrita(
     await supabase.from("avaria").update({ status }).eq("id", id).select("id"),
     {
       registro: "avaria",
@@ -195,6 +190,7 @@ export async function atualizarStatusAvaria(formData: FormData) {
       acao: "salvar",
     },
   );
+  if (erro) return { error: erro };
   if (vistoriaId) revalidatePath(`/vistorias/${vistoriaId}`);
 }
 

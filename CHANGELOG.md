@@ -7,6 +7,52 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.57.2] — 2026-09-05
+
+Fecha o que a 0.57.1 deixou declarado em aberto, e transforma em teste a regra
+que a 0.57.1 encontrou violada. Nenhuma migration.
+
+### A trava do client admin
+
+`src/lib/admin-client.test.ts` varre o código atrás de `createAdminClient()`
+tocando tabela da aplicação. A regra está no AGENTS.md desde sempre — e foi
+violada mesmo assim: `sincronizarObras` escrevia em `obra_usuario` com service
+role, e só apareceu numa varredura manual. **Regra escrita não impede nada.**
+
+Três decisões de desenho da varredura, cada uma por um motivo:
+
+- **Segue a variável, não o texto.** Acha o que foi atribuído de
+  `createAdminClient()` e procura `.from(` nela, atravessando quebras de linha
+  — que é exatamente como o caso real estava escrito (`await admin` numa linha,
+  `.from("obra_usuario")` na seguinte). Um grep simples nunca o teria achado, e
+  não achou: foi preciso ler o arquivo.
+- **A exceção é por arquivo E por tabela.** Fosse só por arquivo,
+  `usuarios/actions.ts` viraria zona franca — e é justamente ali que o bug
+  vivia. Hoje ele libera `perfil` (bootstrap de linha com `org_id` nulo, que
+  nenhuma policy alcança) e mais nada.
+- **Permissão que ninguém exerce é removida.** Um teste cobra que toda tabela
+  liberada continue sendo tocada. Exceção esquecida na lista é a porta aberta
+  para o dia em que alguém voltar a passar por ela.
+
+Provada por inversão contra o bug REAL: reintroduzindo
+`admin.from("obra_usuario")` no arquivo onde ele existia, a varredura falha e
+nomeia arquivo, variável e tabela.
+
+### Corrigido
+
+- Alternar "pago" de uma conta de consumo e mudar o status de uma avaria eram
+  as duas últimas ações sem canal de retorno. Novo componente
+  `FormComErro` intercepta o submit, lê o resultado do server action e mostra o
+  erro — o `<form action={…}>` nativo do React descarta o retorno, e era por
+  isso que as duas ficavam mudas.
+
+### Não coberto, de propósito
+
+`restaurarTemplate` continua sem mensagem na tela: ele é um `formAction` dentro
+de um formulário que já usa `useActionState`, e convertê-lo mexeria no editor
+de templates inteiro. Zero linhas ali é caso legítimo (a organização nunca
+customizou o documento) e a causa vai para o log.
+
 ## [0.57.1] — 2026-09-04
 
 Varredura de **falhas silenciosas**: escrita no banco cujo erro era descartado,

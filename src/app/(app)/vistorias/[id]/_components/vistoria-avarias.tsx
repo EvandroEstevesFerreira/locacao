@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/card";
 import { NativeSelect } from "@/components/ui/native-select";
 import { ConfirmDelete } from "@/components/confirm-delete";
+import { FormComErro } from "@/components/shared/form-com-erro";
 import { AddAvariaForm } from "../../add-avaria-form";
 import {
   atualizarStatusAvaria,
@@ -82,7 +83,10 @@ export async function VistoriaAvarias({
                 ) : null}
                 {podeEditar ? (
                   <div className="flex items-center gap-2">
-                    <form action={atualizarStatusAvaria} className="flex gap-1">
+                    <FormComErro
+                      action={atualizarStatusAvaria}
+                      className="flex gap-1"
+                    >
                       <input type="hidden" name="id" value={a.id} />
                       <input type="hidden" name="vistoria_id" value={vistoriaId} />
                       <NativeSelect
@@ -97,7 +101,7 @@ export async function VistoriaAvarias({
                       <Button type="submit" size="sm" variant="outline">
                         Salvar
                       </Button>
-                    </form>
+                    </FormComErro>
                     <ConfirmDelete
                       action={excluirAvaria}
                       id={a.id}

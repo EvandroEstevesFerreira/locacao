@@ -436,12 +436,7 @@ export async function alternarPagoConsumo(formData: FormData) {
   const novo = formData.get("novo_status") === "pago";
   if (!id) return;
   const supabase = await createClient();
-  // `<form action={…}>` simples: o React exige retorno `void` ali, então a
-  // mensagem NÃO sobe para a tela por este caminho. O que o usuário vê é o
-  // valor voltando ao anterior quando a página revalida — feedback fraco, mas
-  // não silêncio: o `erroDeEscrita` deixa a causa no log do servidor.
-  // Surfacear exigiria transformar a linha num componente cliente.
-  erroDeEscrita(
+  const erro = erroDeEscrita(
     await supabase
       .from("conta_consumo")
       .update({ pago: novo })
@@ -453,6 +448,7 @@ export async function alternarPagoConsumo(formData: FormData) {
       acao: "salvar",
     },
   );
+  if (erro) return { error: erro };
   if (imovelId) revalidatePath(`/imoveis/${imovelId}`);
 }
 
