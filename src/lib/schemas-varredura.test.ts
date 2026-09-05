@@ -17,6 +17,7 @@ import * as locacao from "./locacao";
 import * as obra from "./obra";
 import * as orcamento from "./orcamento";
 import * as permissoes from "./permissoes";
+import * as devolucao from "./devolucao";
 import * as recebimento from "./recebimento";
 import * as termo from "./termo";
 import * as treinamento from "./treinamento";
@@ -61,6 +62,7 @@ const MODULOS: Record<string, Record<string, unknown>> = {
   obra,
   orcamento,
   permissoes,
+  devolucao,
   recebimento,
   termo,
   treinamento,
@@ -189,6 +191,16 @@ const AMOSTRAS: Record<string, unknown> = {
     condicao: "ok",
   },
   fecharRecebimentoSchema: { id: UUID, ciente: true },
+  devolucaoSchema: { contrato_id: UUID, devolvido_em: "2026-09-05" },
+  // Qualificada por módulo: `termo.ts` também exporta `devolucaoItemSchema`,
+  // com outra forma. Ver a nota sobre chaves qualificadas acima de AMOSTRAS.
+  "devolucao.devolucaoItemSchema": {
+    devolucao_id: UUID,
+    item_locado_id: UUID,
+    quantidade: "2",
+    condicao: "ok",
+  },
+  fecharDevolucaoSchema: { id: UUID, ciente: true },
   lancamentoSchema: {
     obra_id: UUID,
     descricao: "Aluguel",
@@ -205,7 +217,7 @@ const AMOSTRAS: Record<string, unknown> = {
     quantidade: "1",
     estado_entrega: "bom",
   },
-  devolucaoItemSchema: {
+  "termo.devolucaoItemSchema": {
     item_id: UUID,
     data_devolucao: "2026-09-02",
     estado_devolucao: "bom",
@@ -214,6 +226,19 @@ const AMOSTRAS: Record<string, unknown> = {
   cancelamentoSchema: { motivo: "Emitido para o funcionário errado." },
   respostasSchema: { trilha: "primeiros-passos", respostas: {} },
 };
+
+/**
+ * A amostra de um schema, preferindo a chave QUALIFICADA `modulo.nome`.
+ *
+ * A chave crua continua valendo — são dezenas, e requalificar todas não
+ * acrescentaria nada. A qualificada existe para os nomes que colidem, e o caso
+ * "nenhum nome de schema colide sem amostra qualificada" obriga a usá-la
+ * exatamente onde ela é necessária.
+ */
+function amostraDe(modulo: string, nome: string): unknown {
+  const qualificada = AMOSTRAS[`${modulo}.${nome}`];
+  return qualificada !== undefined ? qualificada : AMOSTRAS[nome];
+}
 
 /** Todo ZodObject exportado pelos módulos de domínio, com nome de origem. */
 function encontrarSchemas(): { nome: string; modulo: string; schema: z.ZodType }[] {
@@ -239,10 +264,41 @@ describe("varredura de schemas", () => {
     expect(SCHEMAS.length).toBeGreaterThan(10);
   });
 
+  it("nenhum nome de schema colide sem amostra qualificada", () => {
+    // O DEFEITO QUE ESTE CASO GUARDA.
+    //
+    // `AMOSTRAS` é um literal de objeto. Quando dois módulos exportam schemas
+    // de mesmo nome — `devolucao.ts` e `termo.ts` ambos têm
+    // `devolucaoItemSchema`, com formas diferentes —, a segunda chave
+    // SOBRESCREVE a primeira, sem aviso do TypeScript nem do runtime. O schema
+    // perdedor passa a ser verificado contra a amostra do outro, falha por
+    // campo faltando, e a mensagem não diz nada sobre colisão.
+    //
+    // Aconteceu ao acrescentar `devolucao.ts`. A saída foi "expected string,
+    // received undefined" em três campos — que parece schema quebrado, e não
+    // amostra trocada.
+    const porNome = new Map<string, string[]>();
+    for (const s of SCHEMAS) {
+      porNome.set(s.nome, [...(porNome.get(s.nome) ?? []), s.modulo]);
+    }
+    const colididos: string[] = [];
+    for (const [nome, modulos] of porNome) {
+      if (modulos.length < 2) continue;
+      const semQualificar = modulos.filter((m) => !(`${m}.${nome}` in AMOSTRAS));
+      if (semQualificar.length > 0) {
+        colididos.push(
+          `${nome} exportado por ${modulos.join(", ")} — qualifique a amostra ` +
+            `de ${semQualificar.map((m) => `"${m}.${nome}"`).join(" e ")}`,
+        );
+      }
+    }
+    expect(colididos, colididos.join(" | ")).toEqual([]);
+  });
+
   it("todo schema exportado tem amostra na varredura", () => {
-    const semAmostra = SCHEMAS.filter((s) => !(s.nome in AMOSTRAS)).map(
-      (s) => `${s.modulo}.${s.nome}`,
-    );
+    const semAmostra = SCHEMAS.filter(
+      (s) => amostraDe(s.modulo, s.nome) === undefined,
+    ).map((s) => `${s.modulo}.${s.nome}`);
     expect(
       semAmostra,
       `Schemas sem amostra em AMOSTRAS. Acrescente o caso MÍNIMO (só os campos ` +
@@ -252,7 +308,7 @@ describe("varredura de schemas", () => {
   });
 
   for (const { nome, modulo, schema } of SCHEMAS) {
-    const amostra = AMOSTRAS[nome];
+    const amostra = amostraDe(modulo, nome);
     if (amostra === undefined) continue;
 
     it(`${modulo}.${nome} aceita o próprio output`, () => {

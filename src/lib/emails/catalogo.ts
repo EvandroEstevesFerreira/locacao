@@ -79,6 +79,13 @@ export const CATALOGO: ItemCatalogo[] = [
     render: (ctx) => t.recebimentoFornecedor(ex.RECEBIMENTO, ctx),
   },
   {
+    id: "devolucao",
+    titulo: "Devolução de equipamento",
+    gatilho: "Fechamento da devolução — vai para o fornecedor",
+    aguardandoGatilho: true,
+    render: (ctx) => t.devolucaoFornecedor(ex.DEVOLUCAO, ctx),
+  },
+  {
     id: "documento",
     titulo: "Documento gerado",
     gatilho: "Envio de contrato ou termo ao fornecedor / proprietário",

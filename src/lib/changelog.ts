@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.59.0";
+export const APP_VERSION = "0.60.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,20 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.60.0",
+    data: "2026-09-05",
+    titulo: "A devolução virou documento",
+    mudancas: [
+      { tipo: "novo", texto: "Devolver equipamento agora gera um documento único, com número e termo em PDF, enviado ao fornecedor. Antes cada item devolvido virava um registro solto: devolver cinco andaimes no mesmo caminhão produzia cinco lançamentos e nenhum comprovante — quem entregava não tinha o que assinar." },
+      { tipo: "novo", texto: "O rascunho da devolução não mexe no saldo. Ele só se move no fechamento, junto com a numeração e o aviso ao fornecedor — tudo de uma vez ou nada." },
+      { tipo: "novo", texto: "Cada item mostra o saldo em aberto na hora de lançar: contratado, já devolvido e quanto falta. Se a quantidade passar do saldo, o fechamento é recusado inteiro e diz qual item não coube — devolução gravada pela metade seria pior." },
+      { tipo: "novo", texto: "Três condições na volta: conforme, com avaria e não devolvido. Avaria e falta exigem descrição, e saem em seção própria do termo — é sobre esse texto que a cobrança de reposição é discutida." },
+      { tipo: "novo", texto: "A tela Devoluções mostra as que ficaram em rascunho e as que foram fechadas sem o fornecedor ser avisado. Enquanto uma devolução não fecha, o contrato segue cobrando diária de equipamento que já está no pátio do fornecedor." },
+      { tipo: "novo", texto: "Trilha de treinamento da devolução, com as armadilhas: a data é a da saída da obra, e reabrir uma devolução devolve os itens ao saldo." },
+      { tipo: "melhoria", texto: "O relatório fotográfico nasce junto com o rascunho, para que as fotos entrem antes do fechamento. Foto que chega depois não prova nada sobre o estado em que o equipamento foi entregue." },
+    ],
+  },
   {
     versao: "0.59.0",
     data: "2026-09-05",

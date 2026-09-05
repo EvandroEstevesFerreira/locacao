@@ -7,6 +7,54 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.60.0] — 2026-09-05
+
+A ponta oposta do recebimento. Subprojeto 2a da spec
+`docs/superpowers/specs/2026-09-05-devolucao-avaria-reparo-design.md`.
+
+### Adicionado
+
+- **A devolução virou documento.** `devolucao` + `devolucao_item`, com número
+  DEV, termo em PDF e aviso ao fornecedor. Antes cada item devolvido era uma
+  `movimentacao` solta: cinco andaimes no mesmo caminhão produziam cinco
+  registros e nenhum comprovante.
+- **Fechamento atômico no banco** (`fechar_devolucao`, migration 0065). Conferir
+  saldo, lançar o razão, marcar os itens devolvidos e numerar são quatro
+  escritas dependentes; encadeadas na action, cada emenda seria uma janela para
+  documento fechado com saldo não baixado — e é sobre o saldo que corre o custo
+  de locação.
+- **Conferência de saldo no fechamento, com recusa inteira.** A mensagem nomeia
+  o item e as quantidades. Gravar só o que cabe produziria devolução parcial que
+  ninguém pediu, num documento que já sairia com a lista completa.
+- **Condições próprias da volta**: conforme, com avaria e não devolvido. O
+  conjunto é diferente do recebimento de propósito — lá existe "divergência",
+  que na devolução não faz sentido.
+- **Ressalvas em seção própria** do termo e do e-mail, não numa célula da
+  tabela.
+- Tela `/devolucoes`, com filtro de rascunho e marca de "fornecedor não
+  avisado".
+- Reenviar o aviso e reabrir a devolução (só Master). Reabrir DESFAZ a baixa de
+  saldo — sem isso, a próxima devolução do mesmo item seria recusada por saldo
+  insuficiente sem explicação.
+- Trilha de treinamento da devolução.
+- `src/lib/documentos/inspecionar.tsx` — lê o TEXTO de um documento antes de ele
+  virar PDF. Os testes de documento contavam páginas, e foi assim que o rodapé
+  "Recursos Humanos" chegou a um fornecedor e que onze termos saíram com as
+  listas fundidas (0.58.1).
+
+### Alterado
+
+- `movimentacao` perde o gatilho de numeração e ganha `devolucao_id` nulável. O
+  prefixo DEV passa ao documento, que é quem precisa dele;
+  `movimentacao.numero_registro` não era exibido em tela nenhuma. Os números já
+  emitidos ficam, e o contador novo é semeado a partir deles.
+- `movimentacao` continua sendo o razão de saldo. Nenhuma leitura de saldo,
+  custo ou fluxo de caixa foi tocada.
+- A varredura de schemas passou a aceitar amostras qualificadas por módulo e a
+  acusar colisão de nomes. `AMOSTRAS` é um literal de objeto: dois módulos com
+  schemas de mesmo nome faziam o segundo sobrescrever o primeiro em silêncio, e
+  o schema perdedor era verificado contra a amostra do outro.
+
 ## [0.59.0] — 2026-09-05
 
 Fecha as duas pendências registradas na 0.52.0.
