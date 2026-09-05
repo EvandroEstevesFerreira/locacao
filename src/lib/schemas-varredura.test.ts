@@ -4,6 +4,7 @@ import { z } from "zod";
 import * as alojamento from "./alojamento";
 import * as avaria from "./avaria";
 import * as avanco from "./avanco";
+import * as catalogo from "./catalogo";
 import * as config from "./config";
 import * as custodia from "./custodia";
 import * as custoItem from "./custo-item";
@@ -51,6 +52,7 @@ const MODULOS: Record<string, Record<string, unknown>> = {
   alojamento,
   avaria,
   avanco,
+  catalogo,
   config,
   custodia,
   custoItem,
@@ -130,7 +132,8 @@ const AMOSTRAS: Record<string, unknown> = {
   rateioSchema: { lancamento_id: UUID },
   fechamentoSchema: { obra_id: UUID, competencia: "2026-09" },
   unidadeSchema: { item_id: UUID, identificador: "PAT-0431" },
-  categoriaSchema: { nome: "Concretagem" },
+  // Qualificadas por módulo: `catalogo.ts` também exporta `categoriaSchema`.
+  "frota.categoriaSchema": { nome: "Concretagem" },
   moverPecaSchema: {
     unidade_id: UUID,
     tipo: "almoxarifado",
@@ -162,7 +165,7 @@ const AMOSTRAS: Record<string, unknown> = {
     valor_unitario_periodo: "100",
     data_retirada: "2026-08-01",
   },
-  itemSchema: { tipo: "equipamento", descricao: "Betoneira 400L", ativo: true },
+  itemSchema: { natureza: "equipamento", descricao: "Betoneira 400L", ativo: true },
   configRelatorioSchema: {
     ativo: false,
     tipo: "custo_por_obra",
@@ -208,6 +211,14 @@ const AMOSTRAS: Record<string, unknown> = {
   },
   fecharDevolucaoSchema: { id: UUID, ciente: true },
   laudoAvariaSchema: { id: UUID, data: "2026-09-05", responsabilidade: "indefinida" },
+  "catalogo.categoriaSchema": { nome: "Concretagem" },
+  tipoEquipamentoSchema: {
+    categoria_id: UUID,
+    nome: "NOTEBOOK",
+    natureza_padrao: "equipamento",
+    ativo: true,
+  },
+  unidadeMedidaSchema: { simbolo: "un", nome: "unidade", ativo: true },
   "reparo.reparoSchema": {
     unidade_id: UUID,
     status: "aberto",

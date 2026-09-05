@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeEditarCadastros } from "@/lib/auth";
-import { TIPO_ITEM, type TipoItem } from "@/lib/itens";
+import { NATUREZA_ITEM, type NaturezaItem } from "@/lib/itens";
 import { PageHeader } from "@/components/shared/page-header";
 import {
   Card,
@@ -12,6 +12,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ItemForm } from "../item-form";
+import {
+  listarTiposParaSelecao,
+  listarUnidades,
+} from "@/lib/data/catalogo";
 import { listarObrasParaFiltro } from "@/lib/data/obras";
 import { AddUnidadeForm } from "../add-unidade-form";
 import { excluirUnidade } from "../actions";
@@ -32,12 +36,20 @@ export default async function EditarItemPage({
   const supabase = await createClient();
   const { data: item } = await supabase
     .from("item_catalogo")
-    .select("id, tipo, descricao, unidade, controle, ativo")
+    .select("id, natureza, tipo_id, descricao, unidade, controle, ativo")
     .eq("id", id)
     .single();
 
   if (!item) notFound();
-  const tipo = item.tipo as TipoItem;
+  const tipo = item.natureza as NaturezaItem;
+
+  // `unidadesMedida` e não `unidades`: nesta tela "unidade" já significa PEÇA
+  // de patrimônio, e a palavra carrega os dois sentidos no domínio inteiro
+  // (`equipamento_unidade` é peça; `unidade_medida` é metro e quilo).
+  const [tipos, unidadesMedida] = await Promise.all([
+    listarTiposParaSelecao(),
+    listarUnidades(),
+  ]);
 
   const { data: unidades } =
     tipo === "equipamento"
@@ -59,7 +71,7 @@ export default async function EditarItemPage({
 
       <Card>
         <CardContent className="pt-6">
-          <ItemForm item={item} />
+          <ItemForm item={item} tipos={tipos} unidades={unidadesMedida} />
         </CardContent>
       </Card>
 
@@ -68,7 +80,7 @@ export default async function EditarItemPage({
           <CardHeader>
             <CardTitle className="text-base">Unidades</CardTitle>
             <CardDescription>
-              {TIPO_ITEM.equipamento.descricao} Cadastre cada unidade física.
+              {NATUREZA_ITEM.equipamento.descricao} Cadastre cada unidade física.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

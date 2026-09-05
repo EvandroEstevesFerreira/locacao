@@ -1,5 +1,13 @@
 import { redirect } from "next/navigation";
-import { Users, Building, FileText, History, ListChecks } from "lucide-react";
+import {
+  Users,
+  Building,
+  FileText,
+  History,
+  ListChecks,
+  FolderTree,
+  Ruler,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeConfigurarSistema } from "@/lib/auth";
 import { PageHeader } from "@/components/shared/page-header";
@@ -90,6 +98,27 @@ export default async function ConfiguracoesPage() {
               icon={History}
               titulo="Auditoria"
               descricao="Histórico de quem criou, alterou ou excluiu registros."
+            />
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* Catálogo — os cadastros que decidem como o item é classificado. */}
+      <section className="space-y-3">
+        <SecaoTitulo>Catálogo</SecaoTitulo>
+        <Card>
+          <CardContent className="divide-y p-0">
+            <ConfigRow
+              href="/configuracoes/catalogo"
+              icon={FolderTree}
+              titulo="Categorias e tipos"
+              descricao="A família de cada item — NOTEBOOK, ANDAIME, BETONEIRA — dentro de cada categoria. É ela que impede o mesmo modelo de ser cadastrado duas vezes com a grafia diferente."
+            />
+            <ConfigRow
+              href="/configuracoes/unidades"
+              icon={Ruler}
+              titulo="Unidades de medida"
+              descricao="A lista que o cadastro de item oferece. Campo livre de unidade sempre acaba com “un”, “UN”, “unid” e “unidade” na mesma tabela."
             />
           </CardContent>
         </Card>

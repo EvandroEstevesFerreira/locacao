@@ -100,7 +100,7 @@ describe("ItemForm", () => {
     expect(salvarItem).toHaveBeenCalledTimes(1);
     expect(salvarItem.mock.calls[0][0]).toMatchObject({
       id: null,
-      tipo: "equipamento",
+      natureza: "equipamento",
       descricao: "Betoneira 400L",
       ativo: true,
     });
@@ -123,11 +123,14 @@ describe("ItemForm", () => {
     salvarItem.mockClear();
     await montarESalvar({
       id: UUID,
-      tipo: "equipamento",
+      natureza: "equipamento",
       descricao: "Betoneira 300L",
       unidade: null,
-      // Campo da 0.40.0 (migration 0049): o tipo `Item` o exige.
-      controle: "quantidade",
+      // `controle` saiu do formulário na 0.65.0: virou consequência da natureza
+      // (migration 0069, `controleDaNatureza`). Antes existia um dropdown ao
+      // lado do de natureza e os dois podiam se contradizer — o padrão de
+      // fábrica era "Equipamento" com "Por quantidade".
+      tipo_id: null,
       ativo: true,
     });
 

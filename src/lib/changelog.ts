@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.64.0";
+export const APP_VERSION = "0.65.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,18 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.65.0",
+    data: "2026-09-05",
+    titulo: "O catálogo ganha categoria, tipo e modelo",
+    mudancas: [
+      { tipo: "novo", texto: "Configurações ganhou o cadastro de Categorias e tipos. O tipo é a família — NOTEBOOK, ANDAIME, BETONEIRA — e é ele que impede o mesmo modelo de entrar duas vezes com a grafia diferente. Com a família digitada dentro da descrição, o sistema já teve “Dell Latitude 3490” e “Dell Latitute 3490” como dois cadastros, com seis máquinas divididas entre eles." },
+      { tipo: "novo", texto: "As unidades de medida viraram lista cadastrável. O campo era livre, e campo livre de unidade sempre acaba com “un”, “UN”, “unid” e “unidade” convivendo na mesma tabela." },
+      { tipo: "correcao", texto: "O cadastro de item tinha dois campos que diziam a mesma coisa e podiam se contradizer: o padrão de fábrica era “Equipamento” — cuja ajuda diz “controlado por unidade” — com “Controle no recebimento: Por quantidade”. O dropdown de controle saiu; agora a tela mostra a consequência da natureza em vez de perguntar duas vezes." },
+      { tipo: "melhoria", texto: "O campo “Tipo” do item passou a se chamar “Natureza”, porque Tipo agora é a família. Dois campos “Tipo” na mesma tela seria um desastre." },
+      { tipo: "melhoria", texto: "A descrição do item fica só com o modelo — “Dell Latitude 3490”, e não “Notebook Dell Latitude 3490”." },
+    ],
+  },
   {
     versao: "0.64.0",
     data: "2026-09-05",

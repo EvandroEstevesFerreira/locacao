@@ -2,13 +2,13 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 import { termoOr } from "@/lib/lista";
-import type { TipoItem } from "@/lib/itens";
+import type { NaturezaItem } from "@/lib/itens";
 import type { ListaParams, Pagina } from "./lista-params";
 
 /** Uma linha do catálogo de itens, com a contagem de unidades já resolvida. */
 export type ItemListItem = {
   id: string;
-  tipo: TipoItem;
+  natureza: NaturezaItem;
   descricao: string;
   unidade: string | null;
   ativo: boolean;
@@ -26,7 +26,7 @@ export async function listarItens(
   let query = supabase
     .from("item_catalogo")
     .select(
-      "id, tipo, descricao, unidade, ativo, categoria_id, " +
+      "id, natureza, tipo_id, descricao, unidade, ativo, categoria_id, " +
         "categoria:categoria_id(nome), equipamento_unidade(count)",
       { count: "exact" },
     );
