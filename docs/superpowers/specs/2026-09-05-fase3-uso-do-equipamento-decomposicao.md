@@ -66,10 +66,23 @@ ter, porque o relatório em cima dela mente com aparência de dado.
 
 ### Sobre o apontamento (3a)
 
-1. **A Sistenge tem contrato de locação por hora trabalhada, ou todos são por
-   período de calendário?** Se todos são por calendário, o apontamento não tem
-   efeito no custo e vira só insumo de manutenção — o que muda o tamanho da
-   entrega.
+1. ~~A Sistenge tem contrato de locação por hora trabalhada, ou todos são por
+   período de calendário?~~ **RESPONDIDA em 2026-09-05: todos por calendário.**
+
+   Isso encolhe a 3a e muda o que ela é. O apontamento **não afeta o custo de
+   locação** — a diária corre pelo calendário, trabalhando a máquina ou não.
+   Ele deixa de ser dado financeiro e passa a servir a duas coisas só:
+
+   - **manutenção preventiva por uso** (troca de óleo a cada 250 h);
+   - **ociosidade real** — a betoneira que está na obra há 40 dias e trabalhou
+     6. Nenhum relatório atual enxerga isso, porque o de ociosidade mede
+     calendário.
+
+   Consequência de desenho: sem efeito no custo, o apontamento **não precisa ser
+   diário nem exato**. Um lançamento semanal de horímetro (leitura anterior,
+   leitura atual) entrega as duas coisas acima com uma fração do atrito — e
+   atrito é o que decide se a tela é preenchida. O desenho diário só se
+   justificaria se a diária dependesse dele.
 2. **Quais equipamentos têm horímetro?** Gerador e compressor costumam ter;
    betoneira e vibrador quase nunca. Se forem poucos, o apontamento é uma tela
    pequena para uma lista curta, não um módulo.
@@ -88,14 +101,20 @@ ter, porque o relatório em cima dela mente com aparência de dado.
 
 ## Recomendação
 
-**Não construir nem 3a nem 3b sem as respostas.** As duas são telas de
+**Não construir nem 3a nem 3b sem as respostas restantes.** As duas são telas de
 lançamento diário: elas só valem pelo que acumulam, e uma tela de lançamento que
 não encaixa na rotina de quem lança fica vazia — deixando um relatório que soma
 zero e parece dizer que a máquina não trabalhou.
 
-Se for para escolher uma, **3a antes de 3b**: o apontamento vale por si (custo e
-manutenção preventiva), enquanto a alocação por frente só vale se houver frente
-definida, e a definição vem de fora do Loca.
+Se for para escolher uma, **3a antes de 3b**: o apontamento vale por si
+(manutenção preventiva e ociosidade real), enquanto a alocação por frente só
+vale se houver frente definida, e a definição vem de fora do Loca.
+
+Com a resposta de que tudo é por calendário, a 3a fica pequena o bastante para
+caber numa fatia só: uma leitura de horímetro por peça e por semana, o cálculo
+de horas no período, e as duas leituras que ela destrava. As perguntas 2 e 3
+(quais equipamentos têm horímetro, e quem lança) continuam necessárias — elas
+decidem se a lista é de cinco peças ou de cinquenta.
 
 ## O que a fase 2 já entregou para o ciclo de uso
 
