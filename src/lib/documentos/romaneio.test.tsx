@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { contarPaginas, somaLarguras } from "@/lib/pdf-form";
 import { Romaneio, type DadosRomaneio } from "./romaneio";
+import { textoDe, contemTexto } from "./inspecionar";
 
 /**
  * O romaneio é o primeiro documento do Loca que sai da empresa por uma ação de
@@ -38,6 +39,39 @@ const base: DadosRomaneio = {
   ],
   localData: "20/08/2026.",
 };
+
+describe("Romaneio — o que está escrito", () => {
+  // Estes casos existem porque o resto deste arquivo CONTA PÁGINAS, e contar
+  // página foi o que deixou o rodapé "Recursos Humanos" chegar à caixa de
+  // entrada de um fornecedor. Ver o cabeçalho de `inspecionar.tsx`.
+
+  it("o rodapé é o de locações, não o de Recursos Humanos", () => {
+    const doc = <Romaneio dados={base} />;
+    expect(contemTexto(doc, "controle de locações")).toBe(true);
+    expect(contemTexto(doc, "Recursos Humanos")).toBe(false);
+  });
+
+  it("o título diz recebimento, e o número do registro aparece", () => {
+    const doc = <Romaneio dados={base} />;
+    expect(contemTexto(doc, "Romaneio de recebimento de equipamento")).toBe(true);
+    expect(contemTexto(doc, "REC-2026-0014")).toBe(true);
+  });
+
+  it("as condições saem em português, não como chave de banco", () => {
+    const doc = (
+      <Romaneio
+        dados={{
+          ...base,
+          itens: [
+            { ...base.itens[0], condicao: "divergencia", observacoes: "Vieram 4 de 6." },
+          ],
+        }}
+      />
+    );
+    expect(contemTexto(doc, "Divergência")).toBe(true);
+    expect(textoDe(doc)).not.toMatch(/divergencia/);
+  });
+});
 
 describe("Romaneio", () => {
   it("as colunas somam 100% da largura", () => {

@@ -18,7 +18,7 @@ import type {
   DadosSenhaRedefinida,
   DadosVencimentosCentral,
   DadosVencimentosObra,
-} from "./templates";
+  DadosDevolucao,} from "./templates";
 
 export const CONTEXTO: Contexto = {
   remetente: {
@@ -157,6 +157,25 @@ export const RECEBIMENTO: DadosRecebimento = {
   observacoes:
     "Uma betoneira chegou com a proteção da coroa amassada. Registrado em vistoria de entrada.",
   anexo: "romaneio-REC-2026-0014.pdf",
+};
+
+export const DEVOLUCAO: DadosDevolucao = {
+  numero: "DEV-2026-0009",
+  fornecedor: "Móveis & Equipamentos Rocha",
+  obra: "Residencial Alto da Serra — Torre B",
+  contrato: "LOC-2026-0187",
+  data: "05/09/2026",
+  itens: [
+    { descricao: "Betoneira 400L", quantidade: "2", patrimonio: "BT-4412 / BT-4413", condicao: "Conforme" },
+    { descricao: "Andaime fachadeiro — módulo 2,00 x 1,20 m", quantidade: "44", condicao: "Conforme" },
+    { descricao: "Vibrador de imersão 1,5 cv", quantidade: "1", patrimonio: "VI-0087", condicao: "Com avaria" },
+  ],
+  ressalvas: [
+    "Vibrador de imersão 1,5 cv (VI-0087) — Com avaria: mangote rompido a 40 cm do cabeçote.",
+    "Andaime fachadeiro — 4 módulos não devolvidos, extraviados na frente 3.",
+  ],
+  observacoes: "Retirada acompanhada pelo encarregado da obra.",
+  anexo: "termo-devolucao-DEV-2026-0009.pdf",
 };
 
 export const DOCUMENTO_TERCEIRO: DadosDocumento = {

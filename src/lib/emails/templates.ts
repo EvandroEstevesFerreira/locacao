@@ -378,6 +378,98 @@ export function recebimentoFornecedor(
 }
 
 // ---------------------------------------------------------------------------
+// 6b — Devolução de equipamento, enviada ao fornecedor
+// ---------------------------------------------------------------------------
+
+export type ItemDevolvido = {
+  descricao: string;
+  quantidade: string;
+  patrimonio?: string;
+  /** Rótulo já em português: "Conforme", "Com avaria", "Não devolvido". */
+  condicao?: string;
+};
+
+export type DadosDevolucao = {
+  /** Número do registro, ex.: DEV-2026-0009. */
+  numero: string;
+  fornecedor: string;
+  obra: string;
+  data: string;
+  contrato?: string;
+  itens: ItemDevolvido[];
+  anexo?: string;
+  observacoes?: string;
+  /**
+   * Itens que voltaram com avaria ou não voltaram. Vêm separados do resto de
+   * propósito: é sobre eles que o fornecedor vai cobrar reposição, e enterrá-los
+   * numa coluna da tabela geral é como a ressalva passa despercebida até virar
+   * discussão de fatura.
+   */
+  ressalvas?: string[];
+};
+
+export function devolucaoFornecedor(
+  d: DadosDevolucao,
+  ctx: Contexto,
+): EmailPronto {
+  const corpo =
+    L.p(
+      `Informamos a devolução do equipamento abaixo, retirado da obra <strong>${esc(d.obra)}</strong>. ` +
+        `O termo <strong>${esc(d.numero)}</strong> registra a conferência feita na entrega.`,
+    ) +
+    L.dados([
+      ["Registro", esc(d.numero)],
+      ["Fornecedor", esc(d.fornecedor)],
+      ["Obra", esc(d.obra)],
+      ...(d.contrato ? ([["Contrato", esc(d.contrato)]] as [string, string][]) : []),
+      ["Data da devolução", esc(d.data)],
+    ]) +
+    L.secao("Itens devolvidos") +
+    L.tabela(
+      [
+        { label: "Item" },
+        { label: "Patrimônio / série" },
+        { label: "Qtd.", tipo: "numero" },
+        { label: "Condição" },
+      ],
+      linhasSimples(
+        d.itens.map((i) => [
+          esc(i.descricao),
+          esc(i.patrimonio ?? "—"),
+          esc(i.quantidade),
+          esc(i.condicao ?? "Conforme"),
+        ]),
+      ),
+    ) +
+    (d.ressalvas && d.ressalvas.length > 0
+      ? L.secao("Ressalvas") +
+        L.aviso(d.ressalvas.map((r) => esc(r)).join("<br />"), "atencao")
+      : "") +
+    (d.observacoes ? L.nota(esc(d.observacoes)) : "") +
+    (d.anexo
+      ? L.nota(`Termo de devolução em PDF anexo: <strong>${esc(d.anexo)}</strong>.`)
+      : "") +
+    L.nota(
+      "Divergência na conferência? Responda este e-mail citando o número do registro.",
+    );
+
+  return pronto(
+    `Devolução ${d.numero} — ${d.obra}`,
+    L.pagina(
+      {
+        titulo: "Devolução de equipamento",
+        subtitulo: `${d.numero} · ${d.obra}`,
+        metricas: [
+          { valor: String(d.itens.length), rotulo: d.itens.length === 1 ? "item" : "itens" },
+        ],
+      },
+      corpo,
+      ctx,
+    ),
+  );
+}
+
+// ---------------------------------------------------------------------------
 // 7 — Documento gerado, enviado ao fornecedor ou proprietário
 // ---------------------------------------------------------------------------
 

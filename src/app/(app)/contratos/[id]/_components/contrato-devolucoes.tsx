@@ -58,7 +58,8 @@ export async function ContratoDevolucoes({
       <CardHeader>
         <CardTitle className="text-base">Histórico de devoluções</CardTitle>
         <CardDescription>
-          Cada devolução gera um relatório fotográfico.
+          Toda baixa de saldo já lançada, inclusive as anteriores aos documentos
+          de devolução. Para emitir um termo, use a seção Devoluções acima.
         </CardDescription>
       </CardHeader>
       <CardContent>

@@ -26,6 +26,7 @@ export type NavIconName =
   | "building-2"
   | "clipboard-check"
   | "clipboard-list"
+  | "package-open"
   | "file-signature"
   | "users"
   | "wallet"
@@ -72,6 +73,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { label: "Estoque", href: "/estoque", icon: "warehouse", modulo: "estoque", grupo: "Equipamento" },
   { label: "Contratos", href: "/contratos", icon: "file-text", modulo: "contratos", grupo: "Equipamento" },
   { label: "Recebimentos", href: "/recebimentos", icon: "clipboard-list", modulo: "recebimentos", grupo: "Equipamento" },
+  { label: "Devoluções", href: "/devolucoes", icon: "package-open", modulo: "devolucoes", grupo: "Equipamento" },
   { label: "Vistorias", href: "/vistorias", icon: "clipboard-check", modulo: "vistorias", grupo: "Equipamento" },
   { label: "Termos", href: "/termos", icon: "file-signature", modulo: "termos", grupo: "Equipamento" },
   // O cadastro vive sob /termos para herdar a liberação por usuário do módulo,

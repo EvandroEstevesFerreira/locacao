@@ -11,6 +11,7 @@ import { ESTOQUE } from "./estoque";
 import { FORNECEDORES } from "./fornecedores";
 import { CONTRATOS } from "./contratos";
 import { RECEBIMENTOS } from "./recebimentos";
+import { DEVOLUCOES } from "./devolucoes";
 import { VISTORIAS } from "./vistorias";
 import { IMOVEIS } from "./imoveis";
 import { FINANCEIRO } from "./financeiro";
@@ -46,6 +47,7 @@ export const TRILHAS: Trilha[] = [
   FORNECEDORES,
   CONTRATOS,
   RECEBIMENTOS,
+  DEVOLUCOES,
   VISTORIAS,
   IMOVEIS,
   FINANCEIRO,
