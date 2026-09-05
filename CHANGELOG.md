@@ -7,6 +7,40 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.63.0] — 2026-09-05
+
+Fase 4 sobre o dado que a fase 2 criou. Em `src/lib/relatorios-equipamento.ts`,
+não em `relatorios.ts` — aquele já passava de novecentas linhas.
+
+### Adicionado
+
+- **Conferência pendente.** O relatório que mais vale dinheiro dos três:
+  recebimentos e devoluções em rascunho, e fechados sem aviso, ordenados por
+  dias parados. Uma coluna diz o EFEITO de cada pendência, não só o nome dela —
+  sem isso o relatório é uma lista de tarefas administrativas; com ela, é a
+  conta que está correndo.
+- **Equipamento em conserto.** Peças fora da obra, com dias fora e atraso sobre
+  o prazo prometido. Não aceita recorte por obra, e é deliberado: a peça é da
+  organização e circula, então filtrar por obra esconderia justamente o conserto
+  da máquina que aquela obra vai receber.
+- **Custo de manutenção por peça**, com total, número de ordens e média por
+  ordem. Só ordens CONCLUÍDAS — valor de ordem aberta é estimativa, e somar
+  estimativa com realizado produz um total que não bate nem com o financeiro nem
+  com a nota da oficina.
+
+### Segurança
+
+- **Trava contra tipo de relatório sem despacho.** `gerarRelatorio` é uma escada
+  de `if` que termina num `return` SEM condição: acrescentar um tipo e esquecer
+  o `if` não quebra typecheck nem lint — o usuário escolhe "Custo de manutenção"
+  e recebe as linhas de caução de imóvel, sob o título certo. A varredura
+  percorre `TIPOS_RELATORIO` (a mesma fonte do seletor) e acusa dois tipos que
+  devolvam o mesmo título. Provada contra o defeito real antes de ser aceita.
+- A varredura também confere que `grafico.labelKey`, `grafico.valorKey` e
+  `agruparPor` apontam para colunas que existem. Fora delas, nada estoura: o
+  gráfico sai com todas as barras em zero, e o agrupamento junta tudo num
+  subtotal de rótulo vazio.
+
 ## [0.62.0] — 2026-09-05
 
 Subprojeto 2c, que fecha a fase 2. Equipamento em conserto deixa de sumir.

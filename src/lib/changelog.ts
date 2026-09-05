@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.62.0";
+export const APP_VERSION = "0.63.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,17 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.63.0",
+    data: "2026-09-05",
+    titulo: "Três relatórios sobre o ciclo do equipamento",
+    mudancas: [
+      { tipo: "novo", texto: "Relatório de conferência pendente: recebimentos e devoluções que ficaram em rascunho, ordenados por quantos dias estão parados. Cada linha diz o que está acontecendo enquanto isso — devolução em rascunho é diária correndo sobre equipamento que já voltou; recebimento em rascunho é custo ausente do contrato, com a obra parecendo mais barata do que é." },
+      { tipo: "novo", texto: "Relatório de equipamento em conserto: quais peças estão fora da obra, em qual oficina, há quantos dias e quantos dias além do prazo prometido." },
+      { tipo: "novo", texto: "Relatório de custo de manutenção por peça, com total, número de ordens e média por ordem. Uma peça com uma ordem de três mil e outra com dez de trezentos somam igual e são problemas diferentes — a média separa as duas." },
+      { tipo: "seguranca", texto: "O gerador de relatórios ganhou uma trava contra tipo esquecido. A escada de decisão terminava sem condição, então um relatório novo mal ligado devolvia silenciosamente as linhas de outro, sob o título certo — um relatório plausível e errado." },
+    ],
+  },
   {
     versao: "0.62.0",
     data: "2026-09-05",

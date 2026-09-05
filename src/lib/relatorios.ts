@@ -16,6 +16,13 @@ import {
   type Cadencia,
 } from "@/lib/locacao";
 import { hojeISOSaoPaulo, hojeSaoPaulo } from "./locacao";
+// Os três do ciclo físico do equipamento moram em arquivo próprio: este já
+// passava de novecentas linhas antes deles.
+import {
+  conferenciaPendente,
+  equipamentoFora,
+  manutencaoCusto,
+} from "./relatorios-equipamento";
 
 export type TipoRelatorio =
   | "itens_abertos"
@@ -24,6 +31,9 @@ export type TipoRelatorio =
   | "ociosidade"
   | "custo_por_fornecedor"
   | "avarias"
+  | "conferencia_pendente"
+  | "equipamento_fora"
+  | "manutencao_custo"
   | "imoveis_custo"
   | "imoveis_contratos_vencer"
   | "imoveis_sem_contrato"
@@ -72,6 +82,27 @@ export const TIPOS_RELATORIO: {
     valor: "avarias",
     label: "Avarias",
     descricao: "Avarias registradas em vistorias, com custo estimado e situação.",
+    usaPeriodo: true,
+  },
+  {
+    valor: "conferencia_pendente",
+    label: "Conferência pendente",
+    descricao:
+      "Recebimentos e devoluções que ficaram em rascunho, e os fechados sem aviso ao fornecedor. Devolução em rascunho é diária continuando a correr sobre equipamento que já voltou.",
+    usaPeriodo: false,
+  },
+  {
+    valor: "equipamento_fora",
+    label: "Equipamento em conserto",
+    descricao:
+      "Peças fora da obra em ordem de reparo, com dias fora e prazo prometido.",
+    usaPeriodo: false,
+  },
+  {
+    valor: "manutencao_custo",
+    label: "Custo de manutenção",
+    descricao:
+      "Quanto cada peça já consumiu em conserto, e quantas vezes. É o número que decide entre consertar de novo e substituir.",
     usaPeriodo: true,
   },
   {
@@ -665,6 +696,10 @@ export async function gerarRelatorio(
     return custoPorFornecedor(supabase, filtros);
   if (tipo === "ociosidade") return ociosidade(supabase, filtros);
   if (tipo === "avarias") return avarias(supabase, filtros);
+  if (tipo === "conferencia_pendente")
+    return conferenciaPendente(supabase, filtros);
+  if (tipo === "equipamento_fora") return equipamentoFora(supabase, filtros);
+  if (tipo === "manutencao_custo") return manutencaoCusto(supabase, filtros);
   if (tipo === "imoveis_custo") return imoveisCusto(supabase, filtros);
   if (tipo === "imoveis_contratos_vencer")
     return imoveisContratosVencer(supabase, filtros);
