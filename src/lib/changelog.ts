@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.58.0";
+export const APP_VERSION = "0.58.1";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,15 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.58.1",
+    data: "2026-09-05",
+    titulo: "Listas fundidas em onze documentos",
+    mudancas: [
+      { tipo: "correcao", texto: "Nos documentos com duas listas — como o termo de equipamento, que tem \"Comprometo-me a\" e \"Estou ciente de que\" — os dois títulos saíam colados e os itens vinham numa lista só, numerada de ponta a ponta. Agora cada título tem a sua lista, com a numeração recomeçando." },
+      { tipo: "correcao", texto: "Item de lista escrito em CAIXA ALTA era confundido com título de seção e sumia da lista." },
+    ],
+  },
   {
     versao: "0.58.0",
     data: "2026-09-05",
