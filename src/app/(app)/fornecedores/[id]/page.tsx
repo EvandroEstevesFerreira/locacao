@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { FornecedorForm } from "../fornecedor-form";
 import { listarObrasParaFiltro } from "@/lib/data/obras";
+import { obrasComContratoDoFornecedor } from "@/lib/data/fornecedores";
 
 export const metadata = { title: "Editar fornecedor — Loca" };
 
@@ -18,7 +19,7 @@ export default async function EditarFornecedorPage({
 
   const { id } = await params;
   const supabase = await createClient();
-  const [{ data: fornecedor }, obras, { data: vinculos }] =
+  const [{ data: fornecedor }, obras, { data: vinculos }, obrasComContrato] =
     await Promise.all([
       supabase
         .from("fornecedor")
@@ -29,6 +30,7 @@ export default async function EditarFornecedorPage({
         .single(),
       listarObrasParaFiltro(),
       supabase.from("fornecedor_obra").select("obra_id").eq("fornecedor_id", id),
+      obrasComContratoDoFornecedor(id),
     ]);
 
   if (!fornecedor) notFound();
@@ -42,6 +44,7 @@ export default async function EditarFornecedorPage({
             fornecedor={fornecedor}
             obras={obras}
             obrasDoFornecedor={(vinculos ?? []).map((v) => v.obra_id)}
+            obrasComContrato={obrasComContrato}
           />
         </CardContent>
       </Card>

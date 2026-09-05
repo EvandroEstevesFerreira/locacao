@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.63.0";
+export const APP_VERSION = "0.64.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,18 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.64.0",
+    data: "2026-09-05",
+    titulo: "O fornecedor sem e-mail deixa de ser invisível",
+    mudancas: [
+      { tipo: "correcao", texto: "36 dos 37 fornecedores estavam sem e-mail — e é por ele que saem o romaneio de recebimento e o termo de devolução. O documento era gerado, o registro fechava, e o fornecedor nunca ficava sabendo. Nada na tela dizia isso." },
+      { tipo: "novo", texto: "A lista de Fornecedores mostra quantos estão sem e-mail, e marca cada linha em que ele falta. A coluna “Contato”, que estava vazia em 36 das 37 linhas, deu lugar ao e-mail." },
+      { tipo: "novo", texto: "No cadastro, o e-mail subiu para o topo e sozinho, com aviso enquanto está em branco: sem ele, o fornecedor não recebe nada e segue cobrando o que já voltou." },
+      { tipo: "melhoria", texto: "As obras onde o fornecedor atua agora vêm dos contratos, além das vinculadas à mão. O contrato é a fonte — vincular a uma obra nova é criar o contrato." },
+      { tipo: "melhoria", texto: "O painel de caixas de seleção de obras saiu do corpo do formulário e virou uma seção recolhida. Ele crescia em linha reta com o número de obras: com trinta, era um muro, e só 8 vínculos existiam entre 37 fornecedores." },
+    ],
+  },
   {
     versao: "0.63.0",
     data: "2026-09-05",

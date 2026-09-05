@@ -1,7 +1,10 @@
 import Link from "next/link";
-import { Truck, Plus, Pencil } from "lucide-react";
+import { Truck, Plus, Pencil, MailWarning} from "lucide-react";
 import { getCurrentPerfil, podeEditarCadastros } from "@/lib/auth";
-import { listarFornecedores } from "@/lib/data/fornecedores";
+import {
+  listarFornecedores,
+  contarFornecedoresSemEmail,
+} from "@/lib/data/fornecedores";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -42,9 +45,13 @@ export default async function FornecedoresPage({
   const perfil = await getCurrentPerfil();
   const podeEditar = podeEditarCadastros(perfil?.papel);
 
-  const [{ itens: fornecedores, total }, obrasData] = await Promise.all([
+  const [{ itens: fornecedores, total }, obrasData, semEmail] = await Promise.all([
     listarFornecedores({ q, sort, ascending, from, to, obraId: obra }),
     listarObrasParaFiltro(),
+    // Conta a organização inteira, não a página: o número serve para dizer o
+    // tamanho do buraco, e um "3 sem e-mail" que muda ao virar a página não
+    // diria nada.
+    contarFornecedoresSemEmail(),
   ]);
   const tem = fornecedores.length > 0;
   const filtrando = Boolean(q || obra);
@@ -53,7 +60,11 @@ export default async function FornecedoresPage({
     <div className="mx-auto max-w-5xl space-y-6">
       <PageHeader
         titulo="Fornecedores"
-        descricao={`Locadoras e fornecedores de quem a organização aluga. · ${contagem(total, "fornecedor", "fornecedores")} no filtro`}
+        descricao={`Locadoras e fornecedores de quem a organização aluga. · ${contagem(total, "fornecedor", "fornecedores")} no filtro${
+          semEmail > 0
+            ? ` · ${semEmail} sem e-mail — não recebem romaneio nem termo`
+            : ""
+        }`}
         acoes={
           podeEditar ? (
             <Button render={<Link href="/fornecedores/novo" />}>
@@ -77,7 +88,7 @@ export default async function FornecedoresPage({
                     <SortHeader column="nome" label="Nome" />
                   </TableHead>
                   <TableHead><SortHeader column="cnpj" label="CNPJ" /></TableHead>
-                  <TableHead>Contato</TableHead>
+                  <TableHead>E-mail</TableHead>
                   <TableHead>Obras</TableHead>
                   <TableHead><SortHeader column="ativo" label="Status" /></TableHead>
                   <TableHead className={cn("w-24 text-right", colunaFixaFim)}>
@@ -96,9 +107,32 @@ export default async function FornecedoresPage({
                       <TableCell className="text-muted-foreground">
                         {f.cnpj ?? "—"}
                       </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {f.contato_nome ?? "—"}
-                        {f.contato_telefone ? ` · ${f.contato_telefone}` : ""}
+                      {/* A coluna "Contato" mostrava o nome de quem atende,
+                          e estava vazia em 36 das 37 linhas. O e-mail ocupa o
+                          lugar dela porque é o campo que decide se o romaneio e
+                          o termo de devolução chegam — e a ausência dele
+                          precisa DOER na lista, não ficar como um travessão
+                          igual a qualquer outro campo em branco. */}
+                      <TableCell>
+                        {f.contato_email ? (
+                          <span className="text-muted-foreground">
+                            {f.contato_email}
+                          </span>
+                        ) : (
+                          <span
+                            className="inline-flex items-center gap-1 text-warning-strong"
+                            title="Sem e-mail, este fornecedor não recebe romaneio nem termo de devolução."
+                          >
+                            <MailWarning className="size-3.5" aria-hidden />
+                            sem e-mail
+                          </span>
+                        )}
+                        {f.contato_nome ? (
+                          <span className="block text-xs text-muted-foreground">
+                            {f.contato_nome}
+                            {f.contato_telefone ? ` · ${f.contato_telefone}` : ""}
+                          </span>
+                        ) : null}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {codigos.length ? codigos.join(", ") : "—"}
