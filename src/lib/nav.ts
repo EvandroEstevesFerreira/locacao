@@ -27,6 +27,7 @@ export type NavIconName =
   | "clipboard-check"
   | "clipboard-list"
   | "file-signature"
+  | "users"
   | "wallet"
   | "bar-chart-3"
   | "sparkles"
@@ -73,6 +74,10 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { label: "Recebimentos", href: "/recebimentos", icon: "clipboard-list", modulo: "recebimentos", grupo: "Equipamento" },
   { label: "Vistorias", href: "/vistorias", icon: "clipboard-check", modulo: "vistorias", grupo: "Equipamento" },
   { label: "Termos", href: "/termos", icon: "file-signature", modulo: "termos", grupo: "Equipamento" },
+  // O cadastro vive sob /termos para herdar a liberação por usuário do módulo,
+  // mas precisa de entrada própria no menu: quem acabou de ver "Sem registro de
+  // posse" numa peça não adivinha que a pessoa se cadastra dentro de Termos.
+  { label: "Funcionários", href: "/termos/funcionarios", icon: "users", modulo: "termos", grupo: "Equipamento" },
   { label: "Fornecedores", href: "/fornecedores", icon: "truck", modulo: "fornecedores", grupo: "Equipamento" },
 
   { label: "Imóveis", href: "/imoveis", icon: "building-2", modulo: "imoveis", grupo: "Imóveis" },
