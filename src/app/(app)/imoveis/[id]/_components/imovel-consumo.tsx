@@ -23,6 +23,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ConfirmDelete } from "@/components/confirm-delete";
+import { FormComErro } from "@/components/shared/form-com-erro";
 import { ContaConsumoForm } from "../../conta-consumo-form";
 import { alternarPagoConsumo, excluirContaConsumo } from "../../actions";
 
@@ -127,7 +128,7 @@ export async function ImovelConsumo({
                     {podeEditar ? (
                       <TableCell>
                         <div className="flex items-center justify-end gap-1">
-                          <form action={alternarPagoConsumo}>
+                          <FormComErro action={alternarPagoConsumo}>
                             <input type="hidden" name="id" value={c.id} />
                             <input
                               type="hidden"
@@ -147,7 +148,7 @@ export async function ImovelConsumo({
                             >
                               {c.pago ? <Undo2 /> : <Check />}
                             </Button>
-                          </form>
+                          </FormComErro>
                           <ConfirmDelete
                             action={excluirContaConsumo}
                             id={c.id}
