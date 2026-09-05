@@ -7,6 +7,39 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.64.0] — 2026-09-05
+
+O levantamento por trás desta versão: dos 37 fornecedores, **37 tinham CNPJ e 1
+tinha e-mail**. Contato, telefone e observações estavam vazios em 36. E o e-mail
+é o campo que faz a fase 2 funcionar — sem ele o romaneio e o termo de devolução
+não saem, o registro fecha, e ninguém é avisado de nada.
+
+### Corrigido
+
+- **O sistema era mudo sobre o e-mail ausente.** Agora dói em três lugares: o
+  contador no cabeçalho da lista (conta a organização inteira, não a página), a
+  marca em cada linha, e o aviso no formulário enquanto o campo está em branco.
+- A coluna **Contato** da listagem deu lugar ao **e-mail**. Ela mostrava o nome
+  de quem atende e estava vazia em 36 das 37 linhas — largura ocupada sem
+  informar. Nome e telefone continuam, em segunda linha, quando existem.
+
+### Alterado
+
+- **As obras do fornecedor passam a incluir as que vêm de CONTRATO.** O sistema
+  já sabia onde ele atua; manter uma segunda lista à mão é como as duas
+  divergem.
+
+  É união, e não substituição, por um motivo medido: os dois conjuntos hoje são
+  **disjuntos** — 8 vínculos manuais, nenhum com contrato correspondente, porque
+  o cadastro de contratos ainda está no começo (2 no sistema inteiro). Derivar
+  só do contrato apagaria a informação que existe. A união deixa o contrato
+  assumir sozinho à medida que forem cadastrados.
+- **O painel de caixas de obras saiu do corpo do formulário** e virou seção
+  recolhida, junto com observações. Ele crescia em linha reta com o número de
+  obras.
+- O e-mail subiu para o topo e sozinho; contato e telefone viraram opcionais
+  explícitos, numa fileira de dois.
+
 ## [0.63.0] — 2026-09-05
 
 Fase 4 sobre o dado que a fase 2 criou. Em `src/lib/relatorios-equipamento.ts`,
