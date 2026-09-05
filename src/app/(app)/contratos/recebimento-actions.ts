@@ -11,7 +11,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentPerfil, podeOperar } from "@/lib/auth";
+import { getCurrentPerfil, podeOperar, podeExcluirCritico } from "@/lib/auth";
 import { ehDataISO } from "@/lib/locacao";
 import {
   recebimentoSchema,
@@ -268,6 +268,106 @@ export async function excluirRecebimento(
   if (contratoId) revalidar(contratoId);
 }
 
+
+/**
+ * Monta o romaneio e avisa o fornecedor. Usado no fechamento e no reenvio.
+ *
+ * Extraído porque o reenvio precisa do MESMO envio: duplicar sessenta linhas de
+ * montagem de PDF e de e-mail garantiria que as duas cópias divergissem, e a
+ * divergência apareceria como dois romaneios diferentes do mesmo recebimento na
+ * caixa do fornecedor.
+ *
+ * NÃO lança: devolve o que aconteceu. Quem chama decide o que fazer — no
+ * fechamento, a falha não pode derrubar o registro; no reenvio, ela é o próprio
+ * resultado.
+ */
+async function avisarFornecedor(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  orgId: string,
+  rec: NonNullable<Awaited<ReturnType<typeof buscarRecebimento>>>,
+  numero: string,
+): Promise<{ enviado: boolean; motivo?: string }> {
+  const destino = rec.fornecedor?.contato_email?.trim();
+  if (!destino) return { enviado: false, motivo: "O fornecedor não tem e-mail cadastrado." };
+  if (!emailConfigurado()) {
+    return { enviado: false, motivo: "O envio de e-mail não está configurado." };
+  }
+  if (!rec.contrato) return { enviado: false, motivo: "Contrato não encontrado." };
+
+  try {
+    const { data: org } = await supabase
+      .from("organizacao")
+      .select(SELECT_ORGANIZACAO_EMAIL)
+      .eq("id", orgId)
+      .maybeSingle();
+
+    const obra = rec.contrato.obra;
+    const obraRotulo = obra ? obra.codigo + " — " + obra.nome : "Obra";
+    const arquivo = "Romaneio-" + numero + ".pdf";
+
+    const pdf = await gerarRomaneioPdf({
+      numero,
+      orgNome: (org as LinhaOrganizacaoEmail | null)?.nome ?? "Sistenge",
+      fornecedor: rec.fornecedor?.nome ?? "Fornecedor",
+      obra: obraRotulo,
+      contratoNumero: rec.contrato.numero,
+      contratoRegistro: rec.contrato.numero_registro,
+      recebidoEm: formatarData(rec.recebido_em),
+      conferente: rec.conferente,
+      notaFornecedor: rec.nota_fornecedor,
+      observacoes: rec.observacoes,
+      itens: rec.itens.map((i) => ({
+        descricao: i.item_descricao,
+        patrimonio: i.unidade_identificador,
+        quantidade: i.quantidade,
+        condicao: i.condicao,
+        observacoes: i.observacoes,
+      })),
+      localData: formatarData(rec.recebido_em) + ".",
+    });
+
+    const email = recebimentoFornecedor(
+      {
+        numero,
+        fornecedor: rec.fornecedor?.nome ?? "Fornecedor",
+        obra: obraRotulo,
+        data: formatarData(rec.recebido_em),
+        contrato: rec.contrato.numero_registro ?? rec.contrato.numero,
+        anexo: arquivo,
+        observacoes: rec.observacoes ?? undefined,
+        itens: rec.itens.map((i) => ({
+          descricao: i.item_descricao,
+          quantidade: String(i.quantidade),
+          patrimonio: i.unidade_identificador ?? undefined,
+        })),
+      },
+      montarContexto((org as LinhaOrganizacaoEmail | null) ?? null),
+    );
+
+    await enviarEmail([destino], email, [{ filename: arquivo, content: pdf }]);
+
+    // O e-mail JÁ saiu neste ponto. Se o carimbo não for gravado, a tela vai
+    // dizer "fornecedor ainda não avisado" para sempre — e alguém vai reenviar
+    // um romaneio que o fornecedor já recebeu.
+    const { error: erroCarimbo } = await supabase
+      .from("recebimento")
+      .update({ aviso_enviado_em: new Date().toISOString() })
+      .eq("id", rec.id);
+    if (erroCarimbo) {
+      console.error("avisarFornecedor/carimbo", erroCarimbo);
+      return {
+        enviado: true,
+        motivo:
+          "E-mail enviado, mas o registro do aviso não foi gravado — a tela ainda vai mostrar o fornecedor como não avisado.",
+      };
+    }
+    return { enviado: true };
+  } catch (e) {
+    console.error("avisarFornecedor", e);
+    return { enviado: false, motivo: "O envio do e-mail falhou." };
+  }
+}
+
 /**
  * Fecha o recebimento: numera, carimba a retirada, gera o romaneio e avisa.
  *
@@ -364,105 +464,139 @@ export async function fecharRecebimento(raw: unknown): Promise<ActionResult> {
   revalidar(rec.contrato.id, id);
 
   // ── A partir daqui, nada derruba o fechamento ────────────────────────────
-  const destino = rec.fornecedor?.contato_email?.trim();
-  if (!destino) {
-    return {
-      ok: true,
-      id,
-      aviso:
-        "Recebimento " +
+  const aviso = await avisarFornecedor(supabase, perfil.org_id, rec, numero);
+  revalidar(rec.contrato.id, id);
+
+  return {
+    ok: true,
+    id,
+    aviso: aviso.enviado
+      ? aviso.motivo
+        ? "Recebimento " + numero + " fechado. " + aviso.motivo
+        : "Recebimento " + numero + " fechado e fornecedor avisado."
+      : "Recebimento " +
         numero +
-        " fechado. O fornecedor não tem e-mail cadastrado, então não foi avisado.",
-    };
+        " fechado, mas o fornecedor não foi avisado: " +
+        (aviso.motivo ?? "falha no envio.") +
+        " Use o botão de reenviar.",
+  };
+}
+
+/**
+ * Reenvia o aviso de um recebimento fechado.
+ *
+ * Existe porque o fechamento é IRREVERSÍVEL e o envio não: se o Resend cair, o
+ * recebimento fica fechado com `aviso_enviado_em` nulo, e sem este caminho a
+ * única saída seria mandar o romaneio por fora do sistema — perdendo o registro
+ * de que o fornecedor foi avisado.
+ *
+ * Reenviar um aviso JÁ ENVIADO é permitido de propósito: o e-mail pode ter ido
+ * para a caixa errada, ou o fornecedor pode ter apagado. O carimbo é atualizado
+ * para a data do último envio.
+ */
+export async function reenviarAvisoRecebimento(raw: unknown): Promise<ActionResult> {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) {
+    return falha("Você não tem permissão para reenviar o aviso.");
   }
-  if (!emailConfigurado()) {
-    return {
-      ok: true,
-      id,
-      aviso: "Recebimento " + numero + " fechado. O envio de e-mail não está configurado.",
-    };
+
+  const id = String((raw as { id?: string })?.id ?? "").trim();
+  if (!id) return falha("Recebimento não informado.");
+
+  const rec = await buscarRecebimento(id);
+  if (!rec || !rec.contrato) return falha("Recebimento não encontrado.");
+  if (rec.status !== "fechado" || !rec.numero_registro) {
+    return falha("Só recebimento fechado tem romaneio para enviar.");
   }
 
-  try {
-    const { data: org } = await supabase
-      .from("organizacao")
-      .select(SELECT_ORGANIZACAO_EMAIL)
-      .eq("id", perfil.org_id)
-      .maybeSingle();
+  const supabase = await createClient();
+  const aviso = await avisarFornecedor(supabase, perfil.org_id, rec, rec.numero_registro);
+  revalidar(rec.contrato.id, id);
 
-    const obra = rec.contrato.obra;
-    const obraRotulo = obra ? obra.codigo + " — " + obra.nome : "Obra";
-    const arquivo = "Romaneio-" + numero + ".pdf";
+  if (!aviso.enviado) return falha(aviso.motivo ?? "Não foi possível enviar o aviso.");
+  return {
+    ok: true,
+    id,
+    aviso: aviso.motivo ?? "Aviso reenviado para " + (rec.fornecedor?.contato_email ?? "o fornecedor") + ".",
+  };
+}
 
-    const pdf = await gerarRomaneioPdf({
-      numero,
-      orgNome: (org as LinhaOrganizacaoEmail | null)?.nome ?? "Sistenge",
-      fornecedor: rec.fornecedor?.nome ?? "Fornecedor",
-      obra: obraRotulo,
-      contratoNumero: rec.contrato.numero,
-      contratoRegistro: rec.contrato.numero_registro,
-      recebidoEm: formatarData(rec.recebido_em),
-      conferente: rec.conferente,
-      notaFornecedor: rec.nota_fornecedor,
-      observacoes: rec.observacoes,
-      itens: rec.itens.map((i) => ({
-        descricao: i.item_descricao,
-        patrimonio: i.unidade_identificador,
-        quantidade: i.quantidade,
-        condicao: i.condicao,
-        observacoes: i.observacoes,
-      })),
-      localData: formatarData(rec.recebido_em) + ".",
-    });
-
-    const email = recebimentoFornecedor(
-      {
-        numero,
-        fornecedor: rec.fornecedor?.nome ?? "Fornecedor",
-        obra: obraRotulo,
-        data: formatarData(rec.recebido_em),
-        contrato: rec.contrato.numero_registro ?? rec.contrato.numero,
-        anexo: arquivo,
-        observacoes: rec.observacoes ?? undefined,
-        itens: rec.itens.map((i) => ({
-          descricao: i.item_descricao,
-          quantidade: String(i.quantidade),
-          patrimonio: i.unidade_identificador ?? undefined,
-        })),
-      },
-      montarContexto((org as LinhaOrganizacaoEmail | null) ?? null),
-    );
-
-    await enviarEmail([destino], email, [{ filename: arquivo, content: pdf }]);
-
-    // O e-mail JÁ saiu neste ponto. Se o carimbo não for gravado, a tela vai
-    // dizer "fornecedor ainda não avisado" para sempre — e alguém vai reenviar
-    // um romaneio que o fornecedor já recebeu.
-    const { error: erroCarimbo } = await supabase
-      .from("recebimento")
-      .update({ aviso_enviado_em: new Date().toISOString() })
-      .eq("id", id);
-    if (erroCarimbo) console.error("fecharRecebimento/carimbo", erroCarimbo);
-
-    revalidar(rec.contrato.id, id);
-    return {
-      ok: true,
-      id,
-      aviso: erroCarimbo
-        ? "Recebimento " +
-          numero +
-          " fechado e e-mail enviado, mas o registro do aviso não foi gravado — a tela ainda vai mostrar o fornecedor como não avisado."
-        : "Recebimento " + numero + " fechado e fornecedor avisado.",
-    };
-  } catch (e) {
-    console.error("fecharRecebimento.email", e);
-    return {
-      ok: true,
-      id,
-      aviso:
-        "Recebimento " +
-        numero +
-        " fechado, mas o aviso ao fornecedor falhou. Use o botão de reenviar.",
-    };
+/**
+ * Reabre um recebimento fechado. Só master.
+ *
+ * O fechamento é irreversível na operação normal — mas um recebimento fechado
+ * por engano às 7h da manhã não pode travar a obra o dia inteiro. Este é o
+ * escape, e ele é estreito de propósito.
+ *
+ * O QUE NÃO É DESFEITO, e por quê:
+ *
+ * - `numero_registro` FICA. Devolvê-lo à fila abriria o buraco que o contador
+ *   gapless da migration 0048 existe para evitar, e o número pode já estar num
+ *   romaneio impresso na mão do fornecedor. Ao fechar de novo, o mesmo número é
+ *   mantido.
+ * - `aviso_enviado_em` FICA. O e-mail saiu; fingir que não saiu levaria alguém
+ *   a reenviar um romaneio que o fornecedor já tem.
+ * - `data_retirada` nos itens FICA. O equipamento chegou à obra — isso é um
+ *   fato físico, e não muda porque o registro voltou a ser editável.
+ *
+ * O que se ganha ao reabrir é poder CORRIGIR os itens e o cabeçalho. É só isso,
+ * e é o suficiente.
+ */
+export async function reabrirRecebimento(raw: unknown): Promise<ActionResult> {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id) return falha("Sessão inválida. Entre novamente.");
+  // `podeExcluirCritico` é o master. Reabrir é da mesma família de excluir
+  // documento emitido: desfaz algo que já saiu da empresa.
+  if (!podeExcluirCritico(perfil.papel)) {
+    return falha("Apenas o Master pode reabrir um recebimento fechado.");
   }
+
+  const id = String((raw as { id?: string })?.id ?? "").trim();
+  const motivo = String((raw as { motivo?: string })?.motivo ?? "").trim();
+  if (!id) return falha("Recebimento não informado.");
+  // Reabrir sem motivo é o tipo de ação que ninguém consegue explicar seis
+  // meses depois. O motivo entra nas observações e fica na auditoria.
+  if (motivo.length < 10) {
+    return falha("Descreva o motivo da reabertura com pelo menos 10 caracteres.");
+  }
+
+  const rec = await buscarRecebimento(id);
+  if (!rec || !rec.contrato) return falha("Recebimento não encontrado.");
+  if (rec.status !== "fechado") return falha("Este recebimento não está fechado.");
+
+  const supabase = await createClient();
+  const carimbo = hojeISOSaoPaulo();
+  const historico =
+    (rec.observacoes ? rec.observacoes + "\n\n" : "") +
+    "[" + carimbo + "] Reaberto por " + (perfil.nome ?? perfil.email ?? "master") + ": " + motivo;
+
+  const { data, error } = await supabase
+    .from("recebimento")
+    .update({
+      status: "rascunho",
+      fechado_em: null,
+      fechado_por: null,
+      observacoes: historico,
+    })
+    .eq("id", id)
+    // Corrida: dois cliques não reabrem duas vezes, e o histórico não duplica.
+    .eq("status", "fechado")
+    .select("id");
+  if (error) {
+    console.error("reabrirRecebimento", error);
+    return falha("Não foi possível reabrir o recebimento.");
+  }
+  if (!data || data.length === 0) {
+    return falha("Este recebimento já foi reaberto por outra pessoa.");
+  }
+
+  revalidar(rec.contrato.id, id);
+  return {
+    ok: true,
+    id,
+    aviso:
+      "Recebimento " +
+      (rec.numero_registro ?? "") +
+      " reaberto. O número e o aviso ao fornecedor foram mantidos.",
+  };
 }

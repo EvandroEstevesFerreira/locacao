@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.58.1";
+export const APP_VERSION = "0.59.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,15 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.59.0",
+    data: "2026-09-05",
+    titulo: "Reenviar o aviso e reabrir o recebimento",
+    mudancas: [
+      { tipo: "novo", texto: "Se o e-mail ao fornecedor falhar no fechamento, agora há um botão para reenviar. Antes o recebimento ficava fechado com o fornecedor sem saber, e a única saída era mandar o romaneio por fora do sistema." },
+      { tipo: "novo", texto: "O Master pode reabrir um recebimento fechado por engano, informando o motivo. O número e o aviso já enviado são mantidos — o que se ganha é poder corrigir os itens." },
+    ],
+  },
   {
     versao: "0.58.1",
     data: "2026-09-05",

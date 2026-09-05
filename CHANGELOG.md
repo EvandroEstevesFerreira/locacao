@@ -7,6 +7,40 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.59.0] — 2026-09-05
+
+Fecha as duas pendências registradas na 0.52.0.
+
+### Adicionado
+
+- **Reenviar o aviso ao fornecedor.** O fechamento é irreversível e o envio não:
+  se o Resend cair, o recebimento fica fechado com `aviso_enviado_em` nulo. Sem
+  este caminho, a única saída era mandar o romaneio por fora do sistema —
+  perdendo o registro de que o fornecedor foi avisado. Reenviar um aviso já
+  enviado é permitido de propósito: pode ter ido para a caixa errada.
+- **Reabrir um recebimento fechado**, só Master e com motivo obrigatório de ao
+  menos 10 caracteres, que entra nas observações e na auditoria.
+
+### O que reabrir NÃO desfaz, e por quê
+
+- `numero_registro` **fica**. Devolvê-lo à fila abriria o buraco que o contador
+  gapless da 0048 existe para evitar — e o número pode já estar num romaneio
+  impresso na mão do fornecedor. Ao fechar de novo, é o mesmo número.
+- `aviso_enviado_em` **fica**. O e-mail saiu; fingir que não levaria alguém a
+  reenviar um romaneio que o fornecedor já tem.
+- `data_retirada` nos itens **fica**. O equipamento chegou à obra — é um fato
+  físico, e não muda porque o registro voltou a ser editável.
+
+O que se ganha ao reabrir é poder corrigir os itens e o cabeçalho. É só isso, e
+é o suficiente.
+
+### Interno
+
+- O envio do romaneio virou `avisarFornecedor`, usado pelo fechamento e pelo
+  reenvio. Duplicar as sessenta linhas de montagem de PDF e e-mail garantiria
+  que as duas cópias divergissem — e a divergência apareceria como dois
+  romaneios diferentes do mesmo recebimento na caixa do fornecedor.
+
 ## [0.58.1] — 2026-09-05
 
 ### Corrigido
