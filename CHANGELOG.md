@@ -7,6 +7,32 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.58.1] — 2026-09-05
+
+### Corrigido
+
+- **Listas fundidas em onze documentos.** `Bloco` guardava `texto[]` e `itens[]`
+  em baldes separados e não conseguia representar "parágrafo, lista, parágrafo,
+  lista": todos os textos saíam primeiro, todas as listas depois, numa numeração
+  corrida.
+
+  No FRM-EQ-001 isso imprimia "Comprometo-me a:" e "Estou ciente de que:"
+  colados, seguidos de uma lista única de 11 itens — de modo que "o desgaste
+  natural é responsabilidade da empresa", que é uma CIÊNCIA, aparecia sob os
+  COMPROMISSOS, num documento que declara ser parte do contrato de trabalho.
+
+  Onze textos de template têm a mesma estrutura: a política de alojamento, a
+  medida disciplinar, os termos de chaves e kit.
+
+  `Bloco` passou a guardar partes NA ORDEM, e um parágrafo fecha a lista aberta.
+
+- **Item de lista em caixa alta era engolido como título.**
+  `ehSubtitulo("— PROIBIDO FUMAR")` devolvia `true` e o item sumia da lista. O
+  prefixo `— ` agora vence: quem o escreveu quis um item.
+
+Achado ao gerar exemplos do termo e LER o PDF. Typecheck, lint e os testes
+passavam todos.
+
 ## [0.58.0] — 2026-09-05
 
 Importação do parque de TI e a navegação que o catálogo maior exigiu. Escrita
