@@ -9,7 +9,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, PackageCheck, Download } from "lucide-react";
-import { getCurrentPerfil, podeOperar } from "@/lib/auth";
+import { getCurrentPerfil, podeOperar, podeExcluirCritico } from "@/lib/auth";
 import {
   buscarRecebimento,
   listarItensDoContrato,
@@ -37,6 +37,7 @@ import {
 import { RecebimentoCabecalhoForm } from "../recebimento-forms";
 import { RecebimentoItens } from "../recebimento-itens";
 import { FecharRecebimento } from "../fechar-recebimento";
+import { RecebimentoFechado } from "../recebimento-fechado";
 
 export const metadata = { title: "Recebimento — Loca" };
 
@@ -189,6 +190,16 @@ export default async function RecebimentoPage({
               <Download className="size-3.5" aria-hidden />
               Romaneio
             </Button>
+          </CardContent>
+          <CardContent className="pt-0">
+            <RecebimentoFechado
+              recebimentoId={rec.id}
+              numero={rec.numero_registro}
+              avisoEnviadoEm={rec.aviso_enviado_em}
+              emailFornecedor={rec.fornecedor?.contato_email ?? null}
+              podeOperar={podeOperar(perfil?.papel)}
+              podeReabrir={podeExcluirCritico(perfil?.papel)}
+            />
           </CardContent>
         </Card>
       ) : podeEditar ? (
