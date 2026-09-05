@@ -4,6 +4,8 @@
 // precisa dele — e vem de `contarAvarias`, uma consulta agregada separada, para o
 // resumo não esperar a lista inteira.
 
+import Link from "next/link";
+import { FileText } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { formatarBRL } from "@/lib/locacao";
 import { STATUS_AVARIA, type StatusAvaria } from "@/lib/vistoria";
@@ -38,7 +40,7 @@ export async function VistoriaAvarias({
   const supabase = await createClient();
   const { data: avarias } = await supabase
     .from("avaria")
-    .select("id, descricao, custo_estimado, status, lancamento_id")
+    .select("id, numero_registro, descricao, custo_estimado, status, lancamento_id, responsabilidade, laudo")
     .eq("vistoria_id", vistoriaId)
     .order("created_at");
 
@@ -65,8 +67,27 @@ export async function VistoriaAvarias({
                   <span className="text-muted-foreground">
                     {" "}
                     · {formatarBRL(Number(a.custo_estimado))}
+                    {a.numero_registro ? ` · ${a.numero_registro}` : ""}
                   </span>
+                  {/* Sem esta linha, a avaria parece resolvida assim que é
+                      registrada. "A apurar" é o estado real da maioria delas, e
+                      é o que leva alguém a abrir o laudo. */}
+                  {a.responsabilidade === "indefinida" || !a.laudo ? (
+                    <p className="text-xs text-muted-foreground">
+                      {a.responsabilidade === "indefinida"
+                        ? "Responsabilidade a apurar."
+                        : "Sem laudo escrito."}
+                    </p>
+                  ) : null}
                 </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  render={<Link href={`/vistorias/avarias/${a.id}`} />}
+                >
+                  <FileText className="size-3.5" aria-hidden />
+                  Laudo
+                </Button>
                 <Badge variant={STATUS_AVARIA[a.status as StatusAvaria].variant}>
                   {STATUS_AVARIA[a.status as StatusAvaria].label}
                 </Badge>

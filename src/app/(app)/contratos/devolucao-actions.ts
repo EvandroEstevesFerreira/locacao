@@ -446,11 +446,24 @@ export async function fecharDevolucao(raw: unknown): Promise<ActionResult> {
   // A função devolve `{ok, motivo}` para erro de NEGÓCIO (saldo estourado, já
   // fechada, sem itens) e só lança para erro de verdade. O motivo é escrito
   // para ser lido pelo usuário — ele nomeia o item e a quantidade que não cabe.
-  const r = resultado as { ok?: boolean; numero?: string; motivo?: string } | null;
+  const r = resultado as {
+    ok?: boolean;
+    numero?: string;
+    motivo?: string;
+    avarias?: number;
+  } | null;
   if (!r?.ok || !r.numero) {
     return falha(r?.motivo ?? "Não foi possível fechar a devolução.");
   }
   const numero = r.numero;
+  // Quantas avarias o fechamento abriu, a partir dos itens ressalvados. Dizer
+  // isso no toast é o que transforma a ressalva de texto no termo em trabalho
+  // que alguém vai ter de apurar — e leva a pessoa à tela de Avarias.
+  const abertas = Number(r.avarias ?? 0);
+  const sufixoAvarias =
+    abertas > 0
+      ? " " + abertas + (abertas === 1 ? " avaria foi aberta para apuração." : " avarias foram abertas para apuração.")
+      : "";
 
   // Relido DEPOIS do fechamento, de propósito: é este objeto que vira o PDF, e
   // ele precisa do número, que não existia antes da chamada acima.
@@ -476,15 +489,16 @@ export async function fecharDevolucao(raw: unknown): Promise<ActionResult> {
   return {
     ok: true,
     id,
-    aviso: aviso.enviado
-      ? aviso.motivo
-        ? "Devolução " + numero + " fechada. " + aviso.motivo
-        : "Devolução " + numero + " fechada e fornecedor avisado."
-      : "Devolução " +
-        numero +
-        " fechada, mas o fornecedor não foi avisado: " +
-        (aviso.motivo ?? "falha no envio.") +
-        " Use o botão de reenviar.",
+    aviso:
+      (aviso.enviado
+        ? aviso.motivo
+          ? "Devolução " + numero + " fechada. " + aviso.motivo
+          : "Devolução " + numero + " fechada e fornecedor avisado."
+        : "Devolução " +
+          numero +
+          " fechada, mas o fornecedor não foi avisado: " +
+          (aviso.motivo ?? "falha no envio.") +
+          " Use o botão de reenviar.") + sufixoAvarias,
   };
 }
 
@@ -612,6 +626,31 @@ export async function reabrirDevolucao(raw: unknown): Promise<ActionResult> {
     };
   }
 
+  // ── Desfaz as avarias que ESTA devolução abriu ───────────────────────────
+  // Sem isto, reabrir e fechar de novo duplicaria as avarias: o fechamento
+  // insere uma por item ressalvado, e as da primeira vez continuariam lá.
+  //
+  // Só as INTOCADAS. Uma avaria que já virou lançamento financeiro ou que
+  // alguém já apurou não é minha para apagar — apagá-la deixaria a conta a
+  // pagar órfã, apontando para um laudo que não existe mais.
+  const { data: apagadas, error: erroAvaria } = await supabase
+    .from("avaria")
+    .delete()
+    .eq("devolucao_id", id)
+    .eq("status", "aberta")
+    .eq("responsabilidade", "indefinida")
+    .is("lancamento_id", null)
+    .select("id");
+  if (erroAvaria) console.error("reabrirDevolucao.avarias", erroAvaria);
+
+  // As que sobreviveram ao filtro acima: já apuradas ou já cobradas. Quem
+  // reabre precisa saber que elas continuam de pé e que fechar de novo vai
+  // criar OUTRAS ao lado delas.
+  const { count: sobraram } = await supabase
+    .from("avaria")
+    .select("id", { count: "exact", head: true })
+    .eq("devolucao_id", id);
+
   // Os itens voltam a 'em_aberto' — que é o nome do estado no enum
   // `status_item_locado`, cujos ÚNICOS valores são 'em_aberto' e 'devolvido'.
   // Só os desta devolução, e só os que estavam
@@ -634,6 +673,14 @@ export async function reabrirDevolucao(raw: unknown): Promise<ActionResult> {
     aviso:
       "Devolução " +
       (dev.numero_registro ?? "") +
-      " reaberta e saldo restaurado. Ao fechar de novo, um número NOVO será emitido.",
+      " reaberta e saldo restaurado." +
+      (apagadas && apagadas.length > 0
+        ? " " + apagadas.length + (apagadas.length === 1 ? " avaria aberta foi desfeita." : " avarias abertas foram desfeitas.")
+        : "") +
+      (sobraram && sobraram > 0
+        ? " ATENÇÃO: " + sobraram + (sobraram === 1 ? " avaria já apurada ou cobrada continua de pé" : " avarias já apuradas ou cobradas continuam de pé") +
+          " — fechar de novo vai criar outras ao lado dela."
+        : "") +
+      " Ao fechar de novo, um número NOVO será emitido.",
   };
 }

@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.60.0";
+export const APP_VERSION = "0.61.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,20 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.61.0",
+    data: "2026-09-05",
+    titulo: "Laudo de avaria: de quem é a conta",
+    mudancas: [
+      { tipo: "novo", texto: "Avarias ganhou tela própria, no menu. Antes o dano só era encontrado por quem abrisse a vistoria certa — um prejuízo de dois mil reais podia ficar meses sem desfecho sem aparecer em lugar nenhum. Agora a lista mostra quanto está em aberto e quantas avarias ninguém apurou." },
+      { tipo: "novo", texto: "Cada avaria tem laudo em PDF: o dano, a apuração, a peça, a responsabilidade e o custo. Ele sai mesmo com a apuração em branco — é o formulário que vai a campo para ser preenchido à mão." },
+      { tipo: "novo", texto: "A avaria agora diz de quem é a responsabilidade: a apurar, do fornecedor, da obra ou de funcionário. Toda avaria nasce como “a apurar”, porque o laudo existe para apurar e não para confirmar um palpite." },
+      { tipo: "novo", texto: "Fechar uma devolução com item marcado “com avaria” abre a avaria automaticamente, numerada e ligada à devolução. A ressalva deixa de ser só um parágrafo no termo e vira trabalho que alguém precisa apurar." },
+      { tipo: "novo", texto: "A avaria passou a registrar a data em que o dano foi constatado, qual peça e em qual devolução. A data é o que separa dano anterior à locação de dano ocorrido nela — a primeira coisa que o fornecedor contesta." },
+      { tipo: "seguranca", texto: "Depois que a avaria vira lançamento financeiro, o laudo não pode mais ser reescrito. Ele é o texto que sustentou a cobrança, e é o que alguém vai ler se ela for contestada." },
+      { tipo: "correcao", texto: "A situação da avaria aparecia com cores diferentes na vistoria e na nova lista, porque havia dois cadastros do mesmo rótulo no código. Agora é um só." },
+    ],
+  },
   {
     versao: "0.60.0",
     data: "2026-09-05",

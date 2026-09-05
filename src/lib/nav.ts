@@ -25,6 +25,7 @@ export type NavIconName =
   | "file-text"
   | "building-2"
   | "clipboard-check"
+  | "shield-alert"
   | "clipboard-list"
   | "package-open"
   | "file-signature"
@@ -75,6 +76,10 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { label: "Recebimentos", href: "/recebimentos", icon: "clipboard-list", modulo: "recebimentos", grupo: "Equipamento" },
   { label: "Devoluções", href: "/devolucoes", icon: "package-open", modulo: "devolucoes", grupo: "Equipamento" },
   { label: "Vistorias", href: "/vistorias", icon: "clipboard-check", modulo: "vistorias", grupo: "Equipamento" },
+  // Avarias vive sob /vistorias para herdar a liberação do módulo, mas precisa
+  // de entrada própria: quem quer saber quanto de dano está em aberto não
+  // adivinha que a resposta mora dentro de Vistorias.
+  { label: "Avarias", href: "/vistorias/avarias", icon: "shield-alert", modulo: "vistorias", grupo: "Equipamento" },
   { label: "Termos", href: "/termos", icon: "file-signature", modulo: "termos", grupo: "Equipamento" },
   // O cadastro vive sob /termos para herdar a liberação por usuário do módulo,
   // mas precisa de entrada própria no menu: quem acabou de ver "Sem registro de
