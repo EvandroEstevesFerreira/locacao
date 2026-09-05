@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Package, Plus, Pencil } from "lucide-react";
 import { getCurrentPerfil, podeEditarCadastros } from "@/lib/auth";
-import { TIPO_ITEM } from "@/lib/itens";
+import { NATUREZA_ITEM } from "@/lib/itens";
 import { listarItens } from "@/lib/data/itens";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
@@ -103,13 +103,13 @@ export default async function ItensPage({
                   </TableRow>
                 ) : null}
                 {itens.map((item) => {
-                  const t = TIPO_ITEM[item.tipo];
+                  const t = NATUREZA_ITEM[item.natureza];
                   const qtdUnidades = item.unidades;
                   return (
                     <TableRow key={item.id}>
                       <TableCell className="font-medium">
                         {item.descricao}
-                        {item.tipo === "equipamento" ? (
+                        {item.natureza === "equipamento" ? (
                           <span className="ml-2 text-xs text-muted-foreground">
                             {qtdUnidades} un.
                           </span>

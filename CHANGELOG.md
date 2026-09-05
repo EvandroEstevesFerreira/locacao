@@ -7,6 +7,51 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.65.0] — 2026-09-05
+
+Fase A da spec `2026-09-05-catalogo-quatro-niveis-design.md`. A hierarquia já
+existia — escrita como prosa dentro de um campo de texto.
+
+### Adicionado
+
+- **`tipo_equipamento`** (migration 0069), sob `categoria_equipamento`, com
+  `natureza_padrao`, `ativo` e `campos_ficha` (jsonb, para a fase B).
+  `item_catalogo.tipo_id` é nulável e permanentemente: um modelo pode existir
+  antes de alguém decidir seu tipo, e exigir travaria o cadastro rápido que a
+  obra faz com o caminhão parado no portão.
+- **`unidade_medida`**, semeada com as oito sugestões que viviam cravadas em
+  `src/lib/itens.ts`.
+- **Configurações › Catálogo** — árvore de categorias e tipos, e não duas listas
+  lado a lado: o tipo só existe DENTRO de uma categoria, e duas listas fariam a
+  pessoa escolher a categoria num seletor toda vez, deixando o erro de pôr
+  NOTEBOOK em Concretagem entrar por descuido.
+- **Configurações › Unidades de medida.**
+
+### Corrigido
+
+- **O formulário do item nascia se contradizendo.** O padrão de fábrica era
+  `Tipo = Equipamento` — cuja ajuda diz "controlado por unidade" — com
+  `Controle no recebimento = Por quantidade`. Dois campos diziam a mesma coisa
+  por caminhos diferentes e nada os mantinha de acordo.
+
+  `controle` passa a ser derivado da natureza por trigger. A coluna continua
+  existindo (dezenas de consultas a selecionam), mas deixa de ser escolhida à
+  mão, e a tela DIZ a consequência em vez de perguntar de novo.
+
+### Alterado
+
+- **`item_catalogo.tipo` renomeada para `natureza`.** No desenho novo, TIPO é a
+  família; manter o nome antigo poria dois campos "Tipo" na mesma tela.
+- `TIPO_ITEM` → `NATUREZA_ITEM`, `TipoItem` → `NaturezaItem`,
+  `TIPOS_ITEM` → `NATUREZAS_ITEM`.
+- A unidade de medida virou seletor de lista fechada.
+
+### Nota
+
+A trava de colisão de nomes de schema, criada na 0.60.0, **pegou sozinha a
+terceira ocorrência**: `categoriaSchema` passou a existir em `catalogo.ts` e em
+`frota.ts`.
+
 ## [0.64.0] — 2026-09-05
 
 O levantamento por trás desta versão: dos 37 fornecedores, **37 tinham CNPJ e 1
