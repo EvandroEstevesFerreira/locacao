@@ -55,3 +55,7 @@ supabase/.temp/
 
 # Galeria local de e-mails (gerada pelo teste, não versionada)
 /.artefatos/
+
+# Backups de dados de produção — contêm nomes de funcionários e vínculos
+# pessoa↔equipamento. Nunca vão para o repositório.
+/backups/
