@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Download, Camera, PackageOpen, Wallet } from "lucide-react";
+import { ArrowLeft, Download, Camera, PackageOpen, Wallet, Wrench } from "lucide-react";
 import { getCurrentPerfil, podeOperar } from "@/lib/auth";
 import { buscarAvaria, listarPecasDoContrato } from "@/lib/data/avarias";
 import { formatarBRL } from "@/lib/locacao";
@@ -138,6 +138,25 @@ export default async function AvariaPage({
               >
                 <PackageOpen className="size-3.5" aria-hidden />
                 Devolução {avaria.devolucao.numero_registro ?? ""}
+              </Button>
+            ) : null}
+            {/* A ponte da avaria para o conserto. A peça vai junto no link:
+                sem ela, quem chega em Reparos teria de procurar de novo a
+                mesma máquina que acabou de ver aqui. */}
+            {podeEditar ? (
+              <Button
+                variant="outline"
+                size="sm"
+                render={
+                  <Link
+                    href={`/frota/reparos/nova?avaria=${avaria.id}${
+                      avaria.unidade_id ? `&peca=${avaria.unidade_id}` : ""
+                    }`}
+                  />
+                }
+              >
+                <Wrench className="size-3.5" aria-hidden />
+                Abrir ordem de reparo
               </Button>
             ) : null}
             {avaria.lancamento_id ? (

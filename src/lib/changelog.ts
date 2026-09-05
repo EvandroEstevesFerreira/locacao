@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.61.0";
+export const APP_VERSION = "0.62.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,21 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.62.0",
+    data: "2026-09-05",
+    titulo: "Ordem de reparo: onde a máquina está enquanto conserta",
+    mudancas: [
+      { tipo: "novo", texto: "Equipamento que sai para conserto tem agora uma ordem de reparo, com número e PDF. Antes ele sumia: a peça ficava marcada como “em manutenção” — um estado sem prazo, sem custo e sem quem está com ela." },
+      { tipo: "novo", texto: "A ordem em PDF tem três assinaturas: quem autorizou, quem transportou e quem recebeu na oficina. Ela é o único documento do sistema que viaja junto com a máquina — e a assinatura de quem recebe é a única prova de onde a peça foi parar." },
+      { tipo: "novo", texto: "A tela Reparos mostra quantas peças estão fora da obra e quantas passaram do prazo prometido." },
+      { tipo: "novo", texto: "A peça ganhou bloco de Manutenção, com o histórico de ordens e quanto já se gastou consertando aquela máquina — o número que decide entre consertar de novo e substituir." },
+      { tipo: "novo", texto: "Do laudo de avaria sai um botão que abre a ordem de reparo já com a peça e a avaria vinculadas." },
+      { tipo: "melhoria", texto: "A peça passa a constar como “em manutenção” em todas as telas assim que a ordem entra em execução, e volta a ficar disponível ao ser concluída — sem ninguém precisar lembrar de mudar isso à mão." },
+      { tipo: "melhoria", texto: "Reparo não precisa vir de avaria: revisão de rotina é manutenção preventiva, e a ordem sai igual." },
+      { tipo: "novo", texto: "Aula de ordens de reparo na trilha de Frota." },
+    ],
+  },
   {
     versao: "0.61.0",
     data: "2026-09-05",

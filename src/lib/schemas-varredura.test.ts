@@ -20,6 +20,7 @@ import * as orcamento from "./orcamento";
 import * as permissoes from "./permissoes";
 import * as devolucao from "./devolucao";
 import * as recebimento from "./recebimento";
+import * as reparo from "./reparo";
 import * as termo from "./termo";
 import * as treinamento from "./treinamento";
 
@@ -66,6 +67,7 @@ const MODULOS: Record<string, Record<string, unknown>> = {
   permissoes,
   devolucao,
   recebimento,
+  reparo,
   termo,
   treinamento,
 };
@@ -101,7 +103,9 @@ const AMOSTRAS: Record<string, unknown> = {
     pago: false,
     lancar: false,
   },
-  reparoSchema: { imovel_id: UUID, data: "2026-08-01", descricao: "Troca de torneira" },
+  // Qualificadas por módulo: `reparo.ts` (equipamento) também exporta
+  // `reparoSchema`. Ver a nota sobre chaves qualificadas acima.
+  "imoveis.reparoSchema": { imovel_id: UUID, data: "2026-08-01", descricao: "Troca de torneira" },
   ocupanteSchema: { imovel_id: UUID, nome: "Fulano de Tal" },
   ocorrenciaSchema: { imovel_id: UUID, data: "2026-08-01", descricao: "Ocorrência" },
   medidaDisciplinarSchema: {
@@ -204,6 +208,13 @@ const AMOSTRAS: Record<string, unknown> = {
   },
   fecharDevolucaoSchema: { id: UUID, ciente: true },
   laudoAvariaSchema: { id: UUID, data: "2026-09-05", responsabilidade: "indefinida" },
+  "reparo.reparoSchema": {
+    unidade_id: UUID,
+    status: "aberto",
+    descricao: "Trocar o mangote",
+    aberto_em: "2026-09-05",
+    responsabilidade: "indefinida",
+  },
   lancamentoSchema: {
     obra_id: UUID,
     descricao: "Aluguel",

@@ -15,7 +15,10 @@ export const FROTA: Trilha = {
     "Achar uma peça, ler o histórico de custódia, movimentar entre obras e entender as situações.",
   modulo: "frota",
   papeis: [],
-  versao: 1,
+  // 2: a aula de ordens de reparo. Bumpar é o que faz `aulasNovasDesde` mostrar
+  // a aula a quem já concluiu a versão 1 — sem isso, quem fez a trilha antes de
+  // Reparos existir continuaria marcado como "concluída" sem nunca vê-la.
+  versao: 2,
   aulas: [
     {
       id: "frota-achar",
@@ -224,6 +227,58 @@ export const FROTA: Trilha = {
         "Os campos de TI ficam na PEÇA, não no item do catálogo: o mesmo modelo de notebook tem unidades com 8 e com 16 GB, e a verdade fica onde as duas divergem.",
         "IMEI 2 existe porque celular corporativo com dois chips é comum — e o segundo IMEI é o que a operadora pede no bloqueio por roubo. Preencher na hora do cadastro economiza a corrida no dia do sinistro.",
         "Memória é campo próprio para poder filtrar (“quais notebooks têm 8 GB para trocar este ano”). Processador, disco e sistema vão em Configuração, escrito como o TI já escreve.",
+      ],
+    },
+    {
+      id: "peca-reparo",
+      titulo: "Ordem de reparo: onde a máquina está enquanto conserta",
+      resumo:
+        "O documento que autoriza a peça a sair da obra — e o que impede que ela suma do sistema enquanto está fora.",
+      rotas: ["/frota/reparos", "/frota/reparos/nova", "/frota/[id]"],
+      desdeVersao: 2,
+      passos: [
+        {
+          onde: "/frota/reparos",
+          acao: "Abra Reparos no menu.",
+          esperado:
+            "As ordens da organização, com quantas peças estão fora da obra e quantas passaram do prazo prometido.",
+        },
+        {
+          onde: "/frota/[id]",
+          acao: "Na peça, vá ao bloco Manutenção e clique em Abrir ordem de reparo.",
+          esperado:
+            "A peça já vem escolhida. O bloco também mostra quanto essa máquina já consumiu em conserto — é o número que decide entre consertar de novo e substituir.",
+        },
+        {
+          onde: "/frota/reparos/nova",
+          acao: "Descreva o serviço, informe a oficina e salve.",
+          esperado:
+            "A ordem nasce NUMERADA. Não existe rascunho aqui, porque é ela que autoriza a peça a sair da obra — e um rascunho de autorização não autoriza nada.",
+        },
+        {
+          onde: "/frota/reparos/[id]",
+          acao: "Quando a máquina sair de fato, mude a situação para Em execução e informe a data de saída.",
+          esperado:
+            "A peça passa a constar como em manutenção em TODAS as telas — frota, estoque, seleção de peça num termo. Ela deixa de ser oferecida a quem procura equipamento disponível.",
+        },
+        {
+          onde: "/frota/reparos/[id]",
+          acao: "Clique em Ordem em PDF.",
+          esperado:
+            "O documento que vai JUNTO com a máquina, com três assinaturas: quem autorizou, quem transportou e quem recebeu na oficina.",
+        },
+        {
+          onde: "/frota/reparos/[id]",
+          acao: "Na volta, use Concluir ordem com a data e o valor final.",
+          esperado:
+            "A peça volta a ficar disponível automaticamente, e a ordem deixa de ser editável.",
+        },
+      ],
+      atencao: [
+        "A ordem só marca a peça como em manutenção quando passa a Em execução — não ao ser aberta. É de propósito: a ordem pode ser emitida hoje e a máquina sair na quinta, e marcá-la antes esconderia da obra um equipamento que ainda está lá.",
+        "A assinatura de quem recebe na oficina é a única prova de onde a peça foi parar. É a linha que resolve a conversa quando ela não volta.",
+        "Reparo não precisa vir de avaria: revisão de rotina é manutenção preventiva, e a ordem sai igual. O campo “Avaria de origem” fica em branco, e isso diz que o custo era previsto.",
+        "Ordem concluída não se exclui nem se edita — ela registra um custo pago e um serviço feito. Para desfazer, cancele: a peça volta e o rastro fica.",
       ],
     },
   ],
