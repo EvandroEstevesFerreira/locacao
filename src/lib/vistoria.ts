@@ -9,11 +9,8 @@ export const TIPO_VISTORIA: Record<
   devolucao: { label: "Devolução", variant: "secondary" },
 };
 
-export const STATUS_AVARIA: Record<
-  StatusAvaria,
-  { label: string; variant: "default" | "secondary" | "outline" }
-> = {
-  aberta: { label: "Aberta", variant: "default" },
-  cobrada: { label: "Cobrada", variant: "secondary" },
-  resolvida: { label: "Resolvida", variant: "outline" },
-};
+// Reexportado de `avaria.ts`, que é a fonte única. A cópia que morava aqui já
+// divergia da de lá em `aberta` — a mesma avaria saía com cor diferente na
+// vistoria e na lista de avarias. Os consumidores antigos continuam importando
+// `STATUS_AVARIA` daqui, sem mudança.
+export { STATUS_AVARIA_INFO as STATUS_AVARIA } from "./avaria";

@@ -22,11 +22,14 @@ export function FecharDevolucao({
   devolucaoId,
   totalItens,
   comRessalva,
+  comAvaria,
   emailFornecedor,
 }: {
   devolucaoId: string;
   totalItens: number;
   comRessalva: number;
+  /** Só os de condição "avaria" — os que viram registro de avaria ao fechar. */
+  comAvaria: number;
   /** Nulo quando o fornecedor não tem e-mail — muda o texto do aviso. */
   emailFornecedor: string | null;
 }) {
@@ -108,6 +111,15 @@ export function FecharDevolucao({
             {comRessalva} {comRessalva === 1 ? "item vai" : "itens vão"} com
             ressalva de avaria ou falta — é sobre essa ressalva que o fornecedor
             vai cobrar reposição, e ela aparece em seção própria do termo.
+          </li>
+        ) : null}
+        {comAvaria > 0 ? (
+          <li>
+            {/* A ressalva deixa de ser só texto no PDF: vira registro com
+                número, que aparece na tela de Avarias esperando apuração. */}
+            {comAvaria === 1 ? "Uma avaria será aberta" : `${comAvaria} avarias serão abertas`}{" "}
+            para apuração, com responsabilidade <strong>a apurar</strong>. Elas
+            aparecem em Avarias, para receber o laudo.
           </li>
         ) : null}
       </ul>

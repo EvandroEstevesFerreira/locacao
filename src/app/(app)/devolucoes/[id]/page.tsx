@@ -57,6 +57,9 @@ export default async function DevolucaoPage({
   const obra = dev.contrato.obra;
   const info = STATUS_DEVOLUCAO_INFO[dev.status as StatusDevolucao];
   const comRessalva = dev.itens.filter((i) => i.condicao !== "ok");
+  // Só 'avaria' vira registro de avaria ao fechar. 'faltante' não: item que não
+  // voltou não tem dano a periciar — é reposição a negociar.
+  const comAvaria = dev.itens.filter((i) => i.condicao === "avaria").length;
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -232,6 +235,7 @@ export default async function DevolucaoPage({
               devolucaoId={dev.id}
               totalItens={dev.itens.length}
               comRessalva={comRessalva.length}
+              comAvaria={comAvaria}
               emailFornecedor={dev.fornecedor?.contato_email ?? null}
             />
           </CardContent>

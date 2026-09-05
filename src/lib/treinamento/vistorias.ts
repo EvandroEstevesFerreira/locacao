@@ -15,7 +15,10 @@ export const VISTORIAS: Trilha = {
     "Registrar o estado do equipamento na retirada e na devolução, anexar fotos, apontar avarias e gerar a cobrança.",
   modulo: "vistorias",
   papeis: [],
-  versao: 1,
+  // 2: a aula do laudo de avaria. Bumpar é o que faz `aulasNovasDesde` mostrar
+  // a aula a quem já concluiu a versão 1 — sem isso, quem fez a trilha antes do
+  // laudo existir continuaria marcado como "concluída" sem nunca vê-la.
+  versao: 2,
   aulas: [
     {
       id: "vistoria-quando",
@@ -112,6 +115,51 @@ export const VISTORIAS: Trilha = {
       ],
     },
     {
+      id: "avaria-laudo",
+      titulo: "O laudo: quem responde pelo dano",
+      resumo:
+        "Registrar a avaria é o começo. O laudo é onde se apura de quem é a conta.",
+      rotas: ["/vistorias/avarias", "/vistorias/avarias/[id]"],
+      desdeVersao: 2,
+      passos: [
+        {
+          onde: "/vistorias/avarias",
+          acao: "Abra Avarias no menu.",
+          esperado:
+            "Todas as avarias da organização, com o custo em aberto somado no cabeçalho e quantas ainda estão sem responsabilidade definida.",
+        },
+        {
+          onde: "/vistorias/avarias",
+          acao: "Filtre a responsabilidade por “A apurar”.",
+          esperado:
+            "Aparecem os danos que ninguém apurou. É a razão de existir desta lista — antes dela, uma avaria de dois mil reais só era encontrada por quem abrisse a vistoria certa.",
+        },
+        {
+          onde: "/vistorias/avarias/[id]",
+          acao: "Abra uma avaria e confira a data em “Constatada em”.",
+          esperado:
+            "É a data em que o dano foi VISTO, não a de hoje. Ela separa dano anterior à locação de dano ocorrido nela, que é a primeira coisa que o fornecedor contesta.",
+        },
+        {
+          onde: "/vistorias/avarias/[id]",
+          acao: "Escreva a apuração e escolha a responsabilidade.",
+          esperado:
+            "Salva. O texto sai no laudo em PDF; em branco, o PDF sai com espaço para preencher à mão em campo.",
+        },
+        {
+          onde: "/vistorias/avarias/[id]",
+          acao: "Clique em Laudo, no topo.",
+          esperado:
+            "Abre o PDF com o dano, a apuração, a responsabilidade e o custo — mesmo que a apuração ainda esteja em branco.",
+        },
+      ],
+      atencao: [
+        "Toda avaria nasce com responsabilidade “A apurar”, inclusive as abertas automaticamente ao fechar uma devolução com item ressalvado. É o estado honesto: acabou de ser constatada.",
+        "Marcar “De funcionário” não autoriza desconto em salário. Desconto por dano depende de dolo, ou de culpa prevista em contrato (CLT art. 462, §1º) — não do que se marca no laudo. Descreva na apuração COMO se chegou à conclusão e quem participou.",
+        "Depois que a avaria vira lançamento financeiro, o laudo não é mais editável. Ele é o texto que sustentou a cobrança, e é o que alguém vai ler se ela for contestada.",
+      ],
+    },
+    {
       id: "vistoria-relatorio",
       titulo: "Observações, assinaturas e o relatório em PDF",
       resumo:
@@ -203,6 +251,21 @@ export const VISTORIAS: Trilha = {
       porque:
         "A vistoria só é documento aceito pelas duas partes quando as duas assinam, e a hora em que isso é possível é a hora da retirada — com a máquina à vista e o estado dela evidente. Assinatura pedida semanas depois é assinatura sobre a memória de alguém.",
       aula: "vistoria-relatorio",
+    },
+    {
+      id: "vis-laudo-responsabilidade",
+      enunciado:
+        "Um notebook volta com a tela trincada. Ninguém viu acontecer. O que marcar em Responsabilidade?",
+      alternativas: [
+        "De funcionário, porque alguém usou a máquina",
+        "Do fornecedor, porque o equipamento é dele",
+        "A apurar, e escrever no laudo o que já se sabe",
+        "Da obra, para não travar o fechamento",
+      ],
+      correta: 2,
+      porque:
+        "O laudo existe para APURAR, não para confirmar um palpite. Marcar um responsável no momento da constatação transforma suposição em registro oficial — e, no caso de funcionário, põe o nome de uma pessoa num documento sem apuração nenhuma por trás. “A apurar” é o estado honesto até que alguém verifique.",
+      aula: "avaria-laudo",
     },
   ],
 };

@@ -7,6 +7,48 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.61.0] — 2026-09-05
+
+Subprojeto 2b. A avaria deixa de ser uma linha de texto e vira apuração com
+documento.
+
+### Adicionado
+
+- **Laudo de avaria**, com PDF. `avaria` ganha `unidade_id`, `devolucao_id`,
+  `data`, `responsabilidade` e `laudo` (migration 0066).
+- **`responsabilidade` nasce `indefinida`**, e é o ponto do conjunto: o laudo é
+  emitido para APURAR. Um enum sem "a apurar" forçaria quem preenche a apontar
+  um culpado no momento da constatação — que é exatamente quando ainda não se
+  sabe, e o palpite viraria o registro oficial com nome de pessoa dentro.
+- **Fechar uma devolução abre as avarias dos itens ressalvados**, dentro da
+  MESMA transação (migration 0067). Fora dela, uma falha deixaria o termo já
+  entregue ao fornecedor com ressalvas impressas e o sistema sem nenhuma delas.
+  `faltante` não vira avaria: item que não voltou não tem dano a periciar.
+- **Tela `/vistorias/avarias`**, com o custo em aberto somado e o filtro "a
+  apurar". Mora sob `/vistorias` para herdar a liberação do módulo — separar as
+  permissões só produziria telas meio visíveis.
+- **Laudo e custo são formulários separados.** A apuração vem de quem foi a
+  campo; o custo chega depois, num orçamento do fornecedor, por outra pessoa.
+  Num formulário único, o segundo sobrescreveria o texto do primeiro.
+- Aula do laudo na trilha de Vistorias, que sobe para a versão 2 — sem o bump,
+  quem já concluiu continuaria marcado como "concluída" sem nunca ver a aula.
+
+### Segurança
+
+- **Avaria cobrada não aceita laudo novo**, com trava também contra corrida
+  (`.neq("status", "cobrada")` no update). O lançamento financeiro nasceu
+  apoiado naquele texto, e é ele que alguém vai ler se a cobrança for
+  contestada.
+- A peça informada no laudo tem de pertencer ao contrato da avaria. A tela já
+  oferece só as certas, mas a tela pode ser contornada.
+
+### Corrigido
+
+- **`STATUS_AVARIA` existia duas vezes**, em `vistoria.ts` e no novo
+  `avaria.ts`, e as duas já divergiam: `aberta` era `default` numa e `secondary`
+  na outra — a mesma avaria com cor diferente em duas telas. `vistoria.ts` passa
+  a reexportar de `avaria.ts`.
+
 ## [0.60.0] — 2026-09-05
 
 A ponta oposta do recebimento. Subprojeto 2a da spec
