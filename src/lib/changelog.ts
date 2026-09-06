@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.68.0";
+export const APP_VERSION = "0.69.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,19 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.69.0",
+    data: "2026-09-05",
+    titulo: "E-mail do funcionário, e a chave da ficha que era só a primeira letra",
+    mudancas: [
+      { tipo: "novo", texto: "O cadastro de funcionário agora tem e-mail. É por ele que a cópia do termo de responsabilidade vai sair." },
+      { tipo: "novo", texto: "Endereço deduzido do nome aparece marcado como “Por conferir”, e nenhum termo será enviado para um endereço nesse estado. Conferir é marcar a caixa — ou simplesmente digitar outro endereço." },
+      { tipo: "novo", texto: "A lista de funcionários ganhou edição: o lápis ao lado de cada pessoa abre o cadastro dela. Antes só dava para criar, nunca corrigir." },
+      { tipo: "correcao", texto: "Ao criar um campo de ficha, a chave gravada era só a PRIMEIRA LETRA do rótulo: “Memória RAM” virava “m”. Dois campos com a mesma inicial colidiam e o salvamento era recusado falando de uma chave que ninguém tinha digitado." },
+      { tipo: "correcao", texto: "As chaves já gravadas assim foram corrigidas — o tipo DESKTOP passou a ter “memoria_ram”, “processador” e “armazenamento”." },
+      { tipo: "melhoria", texto: "Dois funcionários não podem mais dividir o mesmo e-mail, e a mensagem de erro passou a dizer se a duplicidade é de CPF ou de e-mail." },
+    ],
+  },
   {
     versao: "0.68.0",
     data: "2026-09-05",

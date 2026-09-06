@@ -7,6 +7,71 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.69.0] — 2026-09-05
+
+Fase A do inventário de TI
+(`docs/superpowers/specs/2026-09-05-inventario-ti-design.md`). Duas correções
+que a importação das 127 máquinas precisa prontas.
+
+### Corrigido
+
+- **A chave da ficha era a primeira letra do rótulo.** O editor derivava a chave
+  enquanto `campo.chave === ""`. Na PRIMEIRA tecla a chave virava `"m"` e
+  deixava de ser vazia, então as letras seguintes não realimentavam mais.
+
+  Não é cosmético: acrescente "Modelo" a um tipo que já tem "Memória RAM" e as
+  duas chaves são `"m"` — o salvamento é recusado com *"Há dois campos com a
+  mesma chave"*, uma chave que ninguém digitou. A mensagem é verdadeira e
+  inútil.
+
+  A informação "este campo é novo" não pode sair do VALOR da chave; sai de onde
+  o campo nasceu. `CampoEmEdicao` carrega `gravado`.
+
+  **O teste que prova a correção digita o rótulo caractere a caractere.** Sem
+  isso ele passaria com o código defeituoso: um único `comRotulo(c, "Memória
+  RAM")` devolve a chave certa mesmo com a regra errada.
+
+- **Migration 0073** corrige o que já estava gravado — o tipo DESKTOP tinha
+  `m`, `p`, `a`. Casa em `(chave, rótulo)` e não no nome do tipo, aborta se
+  alguma peça tiver ficha preenchida sob chave de uma letra, e aborta de novo
+  se sobrar qualquer chave de uma letra desconhecida. `with ordinality`
+  preserva a ordem dos campos.
+
+### Adicionado
+
+- **`funcionario.email` e `funcionario.email_confirmado`** (migration 0074).
+
+  O e-mail fica no **funcionário**, não na peça. São 127 máquinas para cerca de
+  110 pessoas, e quando a máquina troca de mão o e-mail que está NELA é o do
+  detentor **anterior** — que é para onde a cópia do termo sairia.
+
+  `email_confirmado` existe porque o e-mail **vai ser adivinhado**: a fase B
+  deriva `nome.sobrenome@sistenge.com`, que é palpite e não fato. A coluna
+  sustenta a regra de que nenhum termo sai para endereço não confirmado.
+
+- **`emailDerivado`** devolve `null` em vez de chutar: nome de uma palavra só
+  (`Lourival`), vazio, ou com algarismo (`Monitor 0109947` é uma LINHA da
+  planilha, não uma pessoa).
+
+- **`confirmacaoDoEmail`** fecha um buraco que só aparece pensando no caminho
+  errado: sem ela, editar o **cargo** de alguém reenviaria o e-mail derivado
+  inalterado e ele viraria "conferido" sem ninguém ter olhado. Confirmar é
+  digitar **outro** endereço ou marcar a caixa.
+
+- **Edição de funcionário**, que não existia. `FuncionarioForm` só era usado
+  para criar, então a caixa de confirmação nunca renderizaria e a fase B
+  produziria ~110 endereços marcados "Por conferir" **sem nenhum caminho para
+  conferi-los**. Coluna, regra e selo apontando para um beco sem saída.
+
+### Alterado
+
+- A mensagem de `23505` distingue CPF de e-mail. Agora são dois índices únicos,
+  e dizer "CPF" para uma colisão de e-mail manda conferir o campo errado.
+
+### Não verificado
+
+Nenhuma tela autenticada foi aberta num navegador.
+
 ## [0.68.0] — 2026-09-05
 
 Fase 3b — **a última do módulo de equipamento**.
