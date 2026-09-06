@@ -18,7 +18,11 @@ import { toast } from "sonner";
 import {
   TIPOS_CAMPO,
   TIPO_CAMPO_INFO,
-  chaveDeRotulo,
+  campoNovo,
+  comRotulo,
+  paraEdicao,
+  paraGravar,
+  type CampoEmEdicao,
   type CampoFicha,
   type TipoCampo,
 } from "@/lib/catalogo";
@@ -40,27 +44,17 @@ export function FichaEditor({
   aoConcluir: () => void;
 }) {
   const router = useRouter();
-  const [campos, setCampos] = useState<CampoFicha[]>(iniciais);
+  const [campos, setCampos] = useState<CampoEmEdicao[]>(() => paraEdicao(iniciais));
   const [erro, setErro] = useState<string | null>(null);
   const [pendente, startTransition] = useTransition();
 
-  const sujo = JSON.stringify(campos) !== JSON.stringify(iniciais);
+  const sujo = JSON.stringify(paraGravar(campos)) !== JSON.stringify(iniciais);
 
   function acrescentar() {
-    setCampos((c) => [
-      ...c,
-      {
-        chave: "",
-        rotulo: "",
-        tipo: "texto",
-        unidade: null,
-        opcoes: [],
-        obrigatorio: false,
-      },
-    ]);
+    setCampos((c) => [...c, campoNovo()]);
   }
 
-  function alterar(i: number, mudanca: Partial<CampoFicha>) {
+  function alterar(i: number, mudanca: Partial<CampoEmEdicao>) {
     setCampos((c) => c.map((campo, n) => (n === i ? { ...campo, ...mudanca } : campo)));
   }
 
@@ -80,7 +74,7 @@ export function FichaEditor({
 
   function salvar() {
     startTransition(async () => {
-      const r = await salvarCamposDoTipo({ tipo_id: tipoId, campos });
+      const r = await salvarCamposDoTipo({ tipo_id: tipoId, campos: paraGravar(campos) });
       if (!r.ok) {
         setErro(r.erro);
         return;
@@ -169,18 +163,14 @@ function LinhaCampo({
   aoRemover,
   aoMover,
 }: {
-  campo: CampoFicha;
+  campo: CampoEmEdicao;
   indice: number;
   total: number;
   desabilitado: boolean;
-  aoAlterar: (m: Partial<CampoFicha>) => void;
+  aoAlterar: (m: Partial<CampoEmEdicao>) => void;
   aoRemover: () => void;
   aoMover: (passo: -1 | 1) => void;
 }) {
-  // A chave é derivada do rótulo só enquanto o campo é NOVO. Depois de gravada,
-  // mudá-la orfanaria os valores já preenchidos nas peças, em silêncio.
-  const novo = campo.chave === "";
-
   return (
     <div className="grid gap-3 rounded-md border p-3 sm:grid-cols-12">
       <div className="space-y-1.5 sm:col-span-4">
@@ -191,16 +181,11 @@ function LinhaCampo({
           maxLength={60}
           disabled={desabilitado}
           placeholder="Ex.: Memória"
-          onChange={(e) =>
-            aoAlterar({
-              rotulo: e.target.value,
-              ...(novo ? { chave: chaveDeRotulo(e.target.value) } : {}),
-            })
-          }
+          onChange={(e) => aoAlterar(comRotulo(campo, e.target.value))}
         />
         <p className="text-xs text-muted-foreground">
           chave: <code>{campo.chave || "—"}</code>
-          {!novo ? " (fixa)" : ""}
+          {campo.gravado ? " (fixa)" : ""}
         </p>
       </div>
 

@@ -4,6 +4,10 @@ import {
   validarFicha,
   campoFichaSchema,
   camposFichaSchema,
+  campoNovo,
+  comRotulo,
+  paraEdicao,
+  paraGravar,
   type CampoFicha,
 } from "./catalogo";
 
@@ -179,5 +183,66 @@ describe("validarFicha", () => {
       obs: "x".repeat(201),
     });
     expect(r.ok).toBe(false);
+  });
+});
+
+describe("comRotulo", () => {
+  it("a chave acompanha o rótulo inteiro, e não só a primeira tecla", () => {
+    // Digitar caractere a caractere é o que prova a correção. Com o defeito
+    // (`novo = campo.chave === ""`), a chave trava em "m" na primeira tecla.
+    let c = campoNovo();
+    for (const letra of "Memória RAM") c = comRotulo(c, c.rotulo + letra);
+
+    expect(c.rotulo).toBe("Memória RAM");
+    expect(c.chave).toBe("memoria_ram");
+  });
+
+  it("não trava a chave só porque ela deixou de estar vazia", () => {
+    // O teste anterior passaria por acaso se alguém reimplementasse o defeito
+    // de outro jeito. Este fixa a transição exata em que ele acontecia.
+    let c = campoNovo();
+    c = comRotulo(c, "M");
+    expect(c.chave).toBe("m");
+    c = comRotulo(c, "Me");
+    expect(c.chave).toBe("me");
+  });
+
+  it("campo já gravado mantém a chave quando o rótulo muda", () => {
+    // Mudar a chave de um campo gravado orfanaria os valores já preenchidos
+    // nas peças, em silêncio: `ficha->>'memoria_ram'` passaria a devolver nulo
+    // em toda peça antiga.
+    const c = comRotulo(
+      { ...campo({ chave: "memoria_ram", rotulo: "Memória RAM" }), gravado: true },
+      "Memória RAM total",
+    );
+
+    expect(c.rotulo).toBe("Memória RAM total");
+    expect(c.chave).toBe("memoria_ram");
+  });
+
+  it("rótulo só de acento e espaço não gera chave inválida", () => {
+    // `chaveDeRotulo(" — ")` devolve "", e "" é recusado por campoFichaSchema.
+    // O campo fica sem chave e o erro aparece ao salvar, que é onde deve.
+    const c = comRotulo(campoNovo(), " — ");
+    expect(c.chave).toBe("");
+  });
+});
+
+describe("paraEdicao / paraGravar", () => {
+  it("marca como gravado o que veio do banco", () => {
+    const [c] = paraEdicao([campo({ chave: "memoria", rotulo: "Memória" })]);
+    expect(c.gravado).toBe(true);
+  });
+
+  it("campo novo nasce não gravado", () => {
+    expect(campoNovo().gravado).toBe(false);
+  });
+
+  it("paraGravar tira o `gravado` antes de mandar ao banco", () => {
+    // `gravado` é estado de tela. Se vazar para o jsonb, vira uma chave a mais
+    // dentro de `campos_ficha` que ninguém declarou e que campoFichaSchema
+    // não conhece.
+    const saida = paraGravar([campoNovo(), ...paraEdicao([campo()])]);
+    for (const c of saida) expect(c).not.toHaveProperty("gravado");
   });
 });

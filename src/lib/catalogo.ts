@@ -192,6 +192,72 @@ export const salvarCamposSchema = z.object({
 export type SalvarCamposDados = z.output<typeof salvarCamposSchema>;
 
 /**
+ * Um campo da ficha ENQUANTO ESTÁ SENDO EDITADO na tela.
+ *
+ * `gravado` diz se o campo já existe no banco, e existe porque a chave só pode
+ * seguir o rótulo enquanto o campo é novo — depois de gravada, mudá-la orfana
+ * os valores já preenchidos nas peças, em silêncio.
+ *
+ * Essa informação NÃO pode ser inferida do valor da chave. Era exatamente isso
+ * que o editor fazia (`const novo = campo.chave === ""`), e por isso toda chave
+ * gerada pela tela ficou sendo a PRIMEIRA LETRA do rótulo: na primeira tecla a
+ * chave deixava de ser vazia e o campo passava a se comportar como gravado.
+ * O tipo DESKTOP em produção nasceu com as chaves `m`, `p` e `a`.
+ */
+export type CampoEmEdicao = CampoFicha & { gravado: boolean };
+
+/** Um campo em branco, pronto para receber o rótulo. */
+export function campoNovo(): CampoEmEdicao {
+  return {
+    chave: "",
+    rotulo: "",
+    tipo: "texto",
+    unidade: null,
+    opcoes: [],
+    obrigatorio: false,
+    gravado: false,
+  };
+}
+
+/** Os campos que vieram do banco, prontos para a tela. */
+export function paraEdicao(campos: CampoFicha[]): CampoEmEdicao[] {
+  return campos.map((c) => ({ ...c, gravado: true }));
+}
+
+/**
+ * O rótulo mudou. A chave acompanha **enquanto o campo for novo**.
+ *
+ * Não há caixa de digitação para a chave na tela: ela é derivada e exibida.
+ * Rótulo que não produz chave nenhuma (` — `) deixa a chave vazia de
+ * propósito — `campoFichaSchema` recusa, e o erro aparece ao salvar.
+ */
+export function comRotulo(campo: CampoEmEdicao, rotulo: string): CampoEmEdicao {
+  if (campo.gravado) return { ...campo, rotulo };
+  return { ...campo, rotulo, chave: chaveDeRotulo(rotulo) };
+}
+
+/**
+ * Tira o `gravado` antes de mandar ao banco.
+ *
+ * `gravado` é estado de tela. Dentro do jsonb ele seria uma chave que
+ * `campoFichaSchema` não declara e que ninguém saberia de onde veio.
+ */
+export function paraGravar(campos: CampoEmEdicao[]): CampoFicha[] {
+  // Campo a campo, e não `{ gravado, ...resto }`: assim está escrito aqui o que
+  // vai para o jsonb. Um campo novo de TELA não vaza por esquecimento, e um
+  // campo novo de `CampoFicha` não passa despercebido — o TypeScript acusa a
+  // propriedade que falta.
+  return campos.map((c) => ({
+    chave: c.chave,
+    rotulo: c.rotulo,
+    tipo: c.tipo,
+    unidade: c.unidade,
+    opcoes: c.opcoes,
+    obrigatorio: c.obrigatorio,
+  }));
+}
+
+/**
  * Valida a ficha de UMA peça contra os campos do tipo dela.
  *
  * Devolve o objeto pronto para gravar, com as chaves que o tipo conhece e nada
