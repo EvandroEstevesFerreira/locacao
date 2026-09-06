@@ -15,6 +15,7 @@ import {
 import type { PecaDetalhe } from "@/lib/data/custodia";
 import { ESTADOS, ESTADO_INFO } from "@/lib/frota";
 import { FormError } from "@/components/shared/form-error";
+import { FichaCampos, useFicha } from "./ficha-campos";
 import { aoInvalidar } from "@/lib/validacao-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,6 +39,10 @@ export function PecaEditar({ peca }: { peca: PecaDetalhe }) {
   const router = useRouter();
   const [erroServidor, setErroServidor] = useState<string | null>(null);
   const [pendente, startTransition] = useTransition();
+  // A ficha vive fora do react-hook-form: os campos mudam por configuração, e o
+  // RHF precisa conhecer a forma do formulário quando é criado. Ver o cabeçalho
+  // de `ficha-campos.tsx`.
+  const { ficha, definir } = useFicha(peca.ficha ?? {});
 
   const {
     register,
@@ -68,7 +73,7 @@ export function PecaEditar({ peca }: { peca: PecaDetalhe }) {
   function onSubmit(values: EditarPecaDados) {
     setErroServidor(null);
     startTransition(async () => {
-      const r = await editarPeca(values);
+      const r = await editarPeca({ ...values, ficha });
       if (!r.ok) {
         setErroServidor(r.erro);
         return;
@@ -286,6 +291,26 @@ export function PecaEditar({ peca }: { peca: PecaDetalhe }) {
               ) : null}
             </div>
           </div>
+        </div>
+      ) : null}
+
+      {/* Os campos que o TIPO deste item define. Vazio quando o item não tem
+          tipo, ou quando o tipo não pede nada além do patrimônio. */}
+      {peca.camposDoTipo.length > 0 ? (
+        <div className="space-y-4 rounded-lg border p-4">
+          <div>
+            <p className="text-sm font-medium">Ficha do tipo</p>
+            <p className="text-xs text-muted-foreground">
+              Definida em Configurações › Categorias e tipos. Muda para cada
+              família de equipamento.
+            </p>
+          </div>
+          <FichaCampos
+            campos={peca.camposDoTipo}
+            ficha={ficha}
+            definir={definir}
+            desabilitado={pendente}
+          />
         </div>
       ) : null}
 

@@ -9,7 +9,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Pencil, X, ChevronRight, ChevronDown } from "lucide-react";
+import { Plus, Pencil, X, ChevronRight, ChevronDown, ListChecks } from "lucide-react";
 import { toast } from "sonner";
 import { NATUREZAS_ITEM, NATUREZA_ITEM, type NaturezaItem } from "@/lib/itens";
 import type { CategoriaComTipos } from "@/lib/data/catalogo";
@@ -22,6 +22,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDelete } from "@/components/confirm-delete";
+import { FichaEditor } from "./ficha-editor";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -204,6 +205,7 @@ function LinhaTipo({
   podeEditar: boolean;
 }) {
   const [editando, setEditando] = useState(false);
+  const [ficha, setFicha] = useState(false);
 
   return (
     <div>
@@ -225,6 +227,22 @@ function LinhaTipo({
 
         {podeEditar ? (
           <>
+            {/* A ficha fica ao lado do lápis e não dentro dele: são coisas
+                diferentes — o lápis muda o NOME do tipo, a ficha muda o que as
+                PEÇAS dele vão pedir. */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setFicha((v) => !v)}
+            >
+              <ListChecks className="size-3.5" aria-hidden />
+              Ficha
+              {tipo.campos.length > 0 ? (
+                <span className="text-xs text-muted-foreground">
+                  ({tipo.campos.length})
+                </span>
+              ) : null}
+            </Button>
             <Button
               variant="ghost"
               size="icon-sm"
@@ -248,6 +266,17 @@ function LinhaTipo({
             categoriaId={categoriaId}
             tipo={tipo}
             aoConcluir={() => setEditando(false)}
+          />
+        </div>
+      ) : null}
+
+      {ficha ? (
+        <div className="border-t bg-muted/30 p-3">
+          <FichaEditor
+            tipoId={tipo.id}
+            tipoNome={tipo.nome}
+            campos={tipo.campos}
+            aoConcluir={() => setFicha(false)}
           />
         </div>
       ) : null}

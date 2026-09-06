@@ -2,6 +2,21 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 import type { NaturezaItem } from "@/lib/itens";
+import { camposFichaSchema, type CampoFicha } from "@/lib/catalogo";
+
+/**
+ * Lê `campos_ficha` com tolerância.
+ *
+ * A coluna é jsonb com um check que só garante ser array. Um campo gravado por
+ * SQL com forma errada não pode derrubar a tela de Configurações inteira — ele
+ * é descartado, e o log diz que existe.
+ */
+function lerCampos(bruto: unknown): CampoFicha[] {
+  const r = camposFichaSchema.safeParse(bruto ?? []);
+  if (r.success) return r.data;
+  console.error("lerCampos: campos_ficha com forma inválida", r.error.issues[0]);
+  return [];
+}
 
 // Leituras do catálogo: categorias, tipos e unidades de medida.
 //
@@ -18,6 +33,8 @@ export type CategoriaComTipos = {
     ativo: boolean;
     /** Quantos modelos do catálogo apontam para este tipo. */
     itens: number;
+    /** Os campos que as PEÇAS deste tipo pedem (migration 0070). */
+    campos: CampoFicha[];
   }[];
 };
 
@@ -36,7 +53,7 @@ export async function listarCategoriasComTipos(): Promise<CategoriaComTipos[]> {
       supabase.from("categoria_equipamento").select("id, nome").order("nome"),
       supabase
         .from("tipo_equipamento")
-        .select("id, nome, categoria_id, natureza_padrao, ativo, item_catalogo(count)")
+        .select("id, nome, categoria_id, natureza_padrao, ativo, campos_ficha, item_catalogo(count)")
         .order("nome"),
     ]);
 
@@ -55,6 +72,10 @@ export async function listarCategoriasComTipos(): Promise<CategoriaComTipos[]> {
       naturezaPadrao: t.natureza_padrao as NaturezaItem,
       ativo: t.ativo,
       itens: contagem?.[0]?.count ?? 0,
+      // Passa pelo schema em vez de confiar no jsonb: a coluna aceita qualquer
+      // array, e um campo gravado por SQL com forma errada derrubaria a tela em
+      // vez de ser ignorado.
+      campos: lerCampos(t.campos_ficha),
     });
     porCategoria.set(t.categoria_id, lista);
   }

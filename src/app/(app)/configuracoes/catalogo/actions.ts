@@ -16,6 +16,7 @@ import {
   categoriaSchema,
   tipoEquipamentoSchema,
   unidadeMedidaSchema,
+  salvarCamposSchema,
 } from "@/lib/catalogo";
 
 function revalidar() {
@@ -253,4 +254,64 @@ export async function excluirUnidade(
   }
 
   revalidar();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Os campos da ficha de um tipo
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Grava a lista inteira de campos, e não um campo por vez.
+ *
+ * A ordem faz parte da definição — e a ordem dos campos na ficha da peça é a
+ * ordem em que a pessoa preenche. Salvar campo a campo exigiria uma coluna de
+ * ordem e uma ação de reordenar; o array já carrega as duas coisas.
+ */
+export async function salvarCamposDoTipo(raw: unknown): Promise<ActionResult> {
+  const g = await guarda();
+  if (g.erro) return falha(g.erro);
+
+  const parsed = salvarCamposSchema.safeParse(raw);
+  if (!parsed.success) return falha(primeiroErro(parsed.error.issues));
+  const { tipo_id, campos } = parsed.data;
+
+  const supabase = await createClient();
+
+  // Quais chaves SUMIRAM em relação ao que estava gravado. Não impede o
+  // salvamento — tirar campo é uma decisão legítima —, mas quem tira precisa
+  // saber que as peças já preenchidas guardam aquele valor e ele deixa de
+  // aparecer em qualquer tela.
+  const { data: antes } = await supabase
+    .from("tipo_equipamento")
+    .select("campos_ficha")
+    .eq("id", tipo_id)
+    .maybeSingle();
+
+  const chavesAntes: string[] = Array.isArray(antes?.campos_ficha)
+    ? (antes.campos_ficha as { chave?: string }[])
+        .map((c) => c.chave)
+        .filter((c): c is string => Boolean(c))
+    : [];
+  const agora = new Set(campos.map((c) => c.chave));
+  const removidas = chavesAntes.filter((c) => !agora.has(c));
+
+  const { error } = await supabase
+    .from("tipo_equipamento")
+    .update({ campos_ficha: campos })
+    .eq("id", tipo_id);
+
+  if (error) {
+    console.error("salvarCamposDoTipo", error);
+    return falha("Não foi possível salvar os campos.");
+  }
+
+  revalidar();
+  return {
+    ok: true,
+    id: tipo_id,
+    aviso:
+      removidas.length > 0
+        ? `Campos salvos. ${removidas.length === 1 ? "O campo" : "Os campos"} ${removidas.join(", ")} ${removidas.length === 1 ? "saiu" : "saíram"} da ficha — o valor continua gravado nas peças, mas deixa de aparecer.`
+        : undefined,
+  };
 }
