@@ -5,7 +5,8 @@
 // seis vezes (ver o cabeçalho de `campos.ts`).
 
 import { z } from "zod";
-import { uuidOpcional } from "@/lib/campos";
+import { textoOpcional, uuidOpcional } from "@/lib/campos";
+import { ehDataISO } from "@/lib/locacao";
 import { NATUREZAS_ITEM } from "@/lib/itens";
 
 export const categoriaSchema = z.object({
@@ -69,3 +70,166 @@ export const unidadeMedidaSchema = z.object({
 
 export type UnidadeMedidaInput = z.input<typeof unidadeMedidaSchema>;
 export type UnidadeMedidaDados = z.output<typeof unidadeMedidaSchema>;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// A ficha do tipo — o construtor de campos
+// ═══════════════════════════════════════════════════════════════════════════
+
+export const TIPOS_CAMPO = ["texto", "numero", "data", "lista", "sim_nao"] as const;
+export type TipoCampo = (typeof TIPOS_CAMPO)[number];
+
+export const TIPO_CAMPO_INFO: Record<
+  TipoCampo,
+  { label: string; ajuda: string }
+> = {
+  texto: {
+    label: "Texto",
+    ajuda: "Qualquer coisa escrita. Não dá para somar nem comparar.",
+  },
+  numero: {
+    label: "Número",
+    ajuda: "Dá para filtrar por faixa: memória abaixo de 8, altura acima de 2.",
+  },
+  data: {
+    label: "Data",
+    ajuda: "Garantia, aquisição, última aferição.",
+  },
+  lista: {
+    label: "Lista de opções",
+    ajuda: "Escolha fechada. É o que impede SSD, ssd e S.S.D. na mesma coluna.",
+  },
+  sim_nao: {
+    label: "Sim ou não",
+    ajuda: "Tem bateria? Está sob garantia?",
+  },
+};
+
+/**
+ * A chave é o NOME DA COLUNA no jsonb — e por isso é normalizada.
+ *
+ * "Memória RAM" digitado pelo usuário vira `memoria_ram`. Sem isso, a chave
+ * carregaria acento e espaço, e toda consulta teria de escrever
+ * `ficha->>'Memória RAM'` — que é o tipo de coisa que se digita errado uma vez
+ * e o filtro devolve vazio para sempre, sem erro nenhum.
+ *
+ * A chave é derivada do rótulo na CRIAÇÃO e depois congelada: mudar a chave de
+ * um campo que já tem valores gravados órfãos-aria todos eles em silêncio.
+ */
+export function chaveDeRotulo(rotulo: string): string {
+  return rotulo
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 40);
+}
+
+export const campoFichaSchema = z
+  .object({
+    chave: z
+      .string()
+      .trim()
+      .min(1)
+      .max(40)
+      .regex(
+        /^[a-z][a-z0-9_]*$/,
+        "A chave só aceita letras minúsculas, números e _, começando por letra.",
+      ),
+    rotulo: z
+      .string()
+      .trim()
+      .min(1, "Informe o rótulo do campo.")
+      .max(60, "Use no máximo 60 caracteres."),
+    tipo: z.enum(TIPOS_CAMPO),
+    /** Só para `numero`: "GB", "m", "kg". Aparece ao lado do valor. */
+    unidade: textoOpcional(10),
+    /** Só para `lista`. */
+    opcoes: z.array(z.string().trim().min(1)).max(30).default([]),
+    obrigatorio: z.boolean().default(false),
+  })
+  // Lista sem opção é um seletor vazio: o campo aparece na ficha e não deixa
+  // escolher nada. O erro precisa vir aqui, e não na hora de preencher a peça.
+  .refine((c) => c.tipo !== "lista" || c.opcoes.length > 0, {
+    message: "Uma lista precisa de ao menos uma opção.",
+    path: ["opcoes"],
+  });
+
+export type CampoFicha = z.output<typeof campoFichaSchema>;
+
+/**
+ * Os campos de um tipo.
+ *
+ * A unicidade de `chave` é conferida AQUI e não no banco: `campos_ficha` é um
+ * jsonb, e duas chaves iguais fariam a segunda sobrescrever a primeira ao
+ * gravar a ficha da peça — o valor do primeiro campo sumiria sem erro.
+ */
+export const camposFichaSchema = z
+  .array(campoFichaSchema)
+  .max(30, "Trinta campos por tipo já é uma ficha que ninguém preenche.")
+  .refine(
+    (campos) => new Set(campos.map((c) => c.chave)).size === campos.length,
+    { message: "Há dois campos com a mesma chave." },
+  );
+
+export const salvarCamposSchema = z.object({
+  tipo_id: z.string().uuid(),
+  campos: camposFichaSchema,
+});
+
+export type SalvarCamposDados = z.output<typeof salvarCamposSchema>;
+
+/**
+ * Valida a ficha de UMA peça contra os campos do tipo dela.
+ *
+ * Devolve o objeto pronto para gravar, com as chaves que o tipo conhece e nada
+ * mais: campo removido do tipo deixa de ser gravado, e chave estranha vinda de
+ * requisição forjada é descartada em vez de virar coluna fantasma.
+ *
+ * NÃO lança para campo em branco não obrigatório — ele simplesmente não entra
+ * no objeto. Gravar `""` e `null` misturados faria `ficha->>'x' is null` ser
+ * verdadeiro para uns e falso para outros, com o mesmo significado na tela.
+ */
+export function validarFicha(
+  campos: CampoFicha[],
+  bruto: Record<string, unknown>,
+): { ok: true; ficha: Record<string, unknown> } | { ok: false; erro: string } {
+  const ficha: Record<string, unknown> = {};
+
+  for (const c of campos) {
+    const cru = bruto[c.chave];
+    const texto = typeof cru === "string" ? cru.trim() : cru == null ? "" : String(cru);
+
+    if (texto === "") {
+      if (c.obrigatorio) return { ok: false, erro: `Informe ${c.rotulo}.` };
+      continue;
+    }
+
+    if (c.tipo === "numero") {
+      const n = Number(texto.replace(",", "."));
+      if (!Number.isFinite(n)) {
+        return { ok: false, erro: `${c.rotulo} precisa ser um número.` };
+      }
+      ficha[c.chave] = n;
+    } else if (c.tipo === "sim_nao") {
+      ficha[c.chave] = texto === "true" || texto === "on" || texto === "sim";
+    } else if (c.tipo === "lista") {
+      if (!c.opcoes.includes(texto)) {
+        return { ok: false, erro: `${c.rotulo}: opção inválida.` };
+      }
+      ficha[c.chave] = texto;
+    } else if (c.tipo === "data") {
+      if (!ehDataISO(texto)) {
+        return { ok: false, erro: `${c.rotulo} precisa ser uma data válida.` };
+      }
+      ficha[c.chave] = texto;
+    } else {
+      if (texto.length > 200) {
+        return { ok: false, erro: `${c.rotulo}: use no máximo 200 caracteres.` };
+      }
+      ficha[c.chave] = texto;
+    }
+  }
+
+  return { ok: true, ficha };
+}

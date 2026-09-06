@@ -4,7 +4,13 @@ import { createClient } from "@/lib/supabase/server";
 import type { Posse, TipoDetentor } from "@/lib/custodia";
 import type { Situacao, Propriedade, Estado } from "@/lib/frota";
 
+import { camposFichaSchema, type CampoFicha } from "@/lib/catalogo";
+
 export type PecaDetalhe = {
+  /** Valores dos campos definidos pelo tipo do item (migration 0070). */
+  ficha: Record<string, unknown>;
+  /** A definição desses campos, para o formulário saber o que desenhar. */
+  camposDoTipo: CampoFicha[];
   id: string;
   identificador: string;
   numeroSerie: string | null;
@@ -37,8 +43,8 @@ export async function obterPeca(id: string): Promise<PecaDetalhe | null> {
     .select(
       "id, identificador, numero_serie, situacao, propriedade, estado, ano, observacoes, " +
         "obra_id, item_id, imei, imei_2, linha_telefonica, operadora, service_tag, " +
-        "memoria_gb, configuracao, " +
-        "item:item_id(descricao, categoria:categoria_id(nome, perfil_campos)), " +
+        "memoria_gb, configuracao, ficha, " +
+        "item:item_id(descricao, tipo:tipo_id(campos_ficha), categoria:categoria_id(nome, perfil_campos)), " +
         "obra:obra_id(codigo, nome)",
     )
     .eq("id", id)
@@ -55,11 +61,25 @@ export async function obterPeca(id: string): Promise<PecaDetalhe | null> {
   const b = data as unknown as Record<string, unknown>;
   const item = b.item as {
     descricao: string;
+    tipo: { campos_ficha: unknown } | null;
     categoria: { nome: string; perfil_campos: string } | null;
   } | null;
+
+  // A definição passa pelo schema em vez de ser confiada: a coluna é jsonb com
+  // um check que só garante ser array, e um campo gravado com forma errada
+  // derrubaria a tela da peça em vez de ser ignorado.
+  const definicao = camposFichaSchema.safeParse(item?.tipo?.campos_ficha ?? []);
+  if (!definicao.success) {
+    console.error("obterPeca: campos_ficha inválido", definicao.error.issues[0]);
+  }
   const obra = b.obra as { codigo: string; nome: string } | null;
 
   return {
+    // `?? {}` e não o valor cru: a coluna é `not null default '{}'`, mas uma
+    // linha antiga lida antes da 0070 chegaria como `undefined` — e o
+    // formulário faria `Object.keys(undefined)`.
+    ficha: (b.ficha as Record<string, unknown> | null) ?? {},
+    camposDoTipo: definicao.success ? definicao.data : [],
     id: b.id as string,
     identificador: b.identificador as string,
     numeroSerie: (b.numero_serie as string | null) ?? null,

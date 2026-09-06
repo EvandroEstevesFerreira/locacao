@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeOperar, podeEditarCadastros } from "@/lib/auth";
 import { falha, primeiroErro, type ActionResult } from "@/lib/acoes";
+import { camposFichaSchema, validarFicha } from "@/lib/catalogo";
 import { moverPecaSchema, editarPecaSchema } from "@/lib/custodia";
 import { abrirCustodia } from "@/lib/custodia-servidor";
 import {
@@ -110,6 +111,37 @@ export async function editarPeca(raw: unknown): Promise<ActionResult> {
   const d = parsed.data;
 
   const supabase = await createClient();
+
+  // ── A ficha, validada contra os campos DO TIPO ───────────────────────────
+  // O caminho é longo — peça › item › tipo — porque a ficha é definida no tipo
+  // e preenchida na peça. Sem esta leitura, a validação teria de confiar no que
+  // veio do formulário, e o formulário pode ser contornado.
+  const { data: dono } = await supabase
+    .from("equipamento_unidade")
+    .select("item:item_id(tipo:tipo_id(campos_ficha))")
+    .eq("id", d.id)
+    .maybeSingle();
+
+  const item = (Array.isArray(dono?.item) ? dono?.item[0] : dono?.item) as
+    | { tipo: { campos_ficha: unknown } | { campos_ficha: unknown }[] | null }
+    | null;
+  const tipo = (Array.isArray(item?.tipo) ? item?.tipo[0] : item?.tipo) as
+    | { campos_ficha: unknown }
+    | null;
+
+  const definicao = camposFichaSchema.safeParse(tipo?.campos_ficha ?? []);
+  // Definição com forma inválida (gravada por SQL) NÃO derruba o salvamento da
+  // peça: ela passa a valer como ficha vazia, e o resto do cadastro é salvo.
+  // Travar a edição do patrimônio por causa de um campo torto seria a troca
+  // errada.
+  if (!definicao.success) {
+    console.error("editarPeca: campos_ficha inválido", definicao.error.issues[0]);
+  }
+  const conferida = validarFicha(
+    definicao.success ? definicao.data : [],
+    d.ficha,
+  );
+  if (!conferida.ok) return falha(conferida.erro);
   const { error } = await supabase
     .from("equipamento_unidade")
     .update({
@@ -125,6 +157,7 @@ export async function editarPeca(raw: unknown): Promise<ActionResult> {
       service_tag: d.service_tag,
       memoria_gb: d.memoria_gb,
       configuracao: d.configuracao,
+      ficha: conferida.ficha,
     })
     .eq("id", d.id);
 

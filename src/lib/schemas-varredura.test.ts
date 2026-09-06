@@ -219,6 +219,10 @@ const AMOSTRAS: Record<string, unknown> = {
     ativo: true,
   },
   unidadeMedidaSchema: { simbolo: "un", nome: "unidade", ativo: true },
+  campoFichaSchema: { chave: "memoria", rotulo: "Memória", tipo: "numero" },
+  salvarCamposSchema: { tipo_id: UUID, campos: [] },
+  // Array, e não objeto: `camposFichaSchema` é a LISTA de campos de um tipo.
+  camposFichaSchema: [{ chave: "memoria", rotulo: "Memória", tipo: "numero" }],
   "reparo.reparoSchema": {
     unidade_id: UUID,
     status: "aberto",

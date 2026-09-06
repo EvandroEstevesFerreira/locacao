@@ -7,6 +7,56 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.66.0] — 2026-09-05
+
+Fase B do catálogo — o construtor de formulário. Fecha a spec
+`2026-09-05-catalogo-quatro-niveis-design.md`.
+
+### Adicionado
+
+- **`equipamento_unidade.ficha`** (jsonb, migration 0070), com índice GIN
+  `jsonb_path_ops` — metade do tamanho do padrão e mais rápido para `@>`, que é
+  o único operador que estas buscas usam.
+- **Construtor de campos por tipo.** Cinco formatos: texto, número (com
+  unidade), data, lista de opções e sim/não.
+- **A ficha aparece no cadastro da peça**, montada a partir do que o tipo define.
+
+### Por que jsonb e não colunas
+
+`memória` e `disco` **não existem num andaime**. Colunas em
+`equipamento_unidade` encheriam de nulo toda betoneira e escora do sistema, e
+cada tipo novo pediria uma migration. Filtrar continua funcionando — o Postgres
+indexa e consulta jsonb.
+
+### Segurança
+
+- **A ficha gravada é montada a partir dos campos DO TIPO**, não do payload.
+  Chave que o tipo não conhece é descartada; sem isso, uma requisição forjada
+  gravaria qualquer coisa no jsonb, e ela viraria uma coluna fantasma que
+  nenhuma tela mostra, nenhum campo edita e nenhuma consulta espera.
+- **Chave duplicada é recusada no schema.** Em jsonb, duas chaves iguais fariam
+  a segunda sobrescrever a primeira ao gravar — o valor do primeiro campo
+  sumiria sem erro.
+- **`sim_nao` vira booleano de verdade.** A string `"false"` é truthy em
+  JavaScript; guardá-la como texto faria toda consulta dar verdadeiro para os
+  dois valores.
+- Definição com forma inválida (gravada por SQL) **não derruba** a tela nem o
+  salvamento da peça: vale como ficha vazia e o erro vai para o log.
+
+### Detalhes de desenho
+
+- **A chave é derivada do rótulo e depois congelada.** "Memória RAM" vira
+  `memoria_ram`; sem a normalização, toda consulta teria de escrever
+  `ficha->>'Memória RAM'` — que se digita errado uma vez e o filtro devolve
+  vazio para sempre, sem erro. Mudar a chave depois orfanaria os valores já
+  gravados.
+- **Um teste garante que `chaveDeRotulo` e `campoFichaSchema` concordam.** São
+  duas regras separadas, e nada obrigava a que a chave gerada pelo sistema
+  passasse na validação do próprio sistema.
+- **A lista inteira é salva de uma vez**, porque a ordem faz parte da definição.
+  Por isso o botão só habilita quando há mudança, e a tela avisa quando há
+  mudança não salva.
+
 ## [0.65.0] — 2026-09-05
 
 Fase A da spec `2026-09-05-catalogo-quatro-niveis-design.md`. A hierarquia já

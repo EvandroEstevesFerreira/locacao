@@ -246,6 +246,15 @@ export const editarPecaSchema = z.object({
   service_tag: textoOpcional(60),
   memoria_gb: memoriaOpcional,
   configuracao: textoOpcional(200),
+  /**
+   * Os campos definidos pelo TIPO do item desta peça (migration 0070).
+   *
+   * Registro CRU aqui de propósito: a forma de cada campo depende do tipo, que
+   * só é conhecido no servidor. Quem valida é `validarFicha` na action, contra
+   * `tipo_equipamento.campos_ficha` — e ela DESCARTA chave que o tipo não
+   * conhece, para que requisição forjada não grave coluna fantasma no jsonb.
+   */
+  ficha: z.record(z.string(), z.unknown()).default({}),
 });
 
 export type EditarPecaInput = z.input<typeof editarPecaSchema>;

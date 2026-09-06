@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.65.0";
+export const APP_VERSION = "0.66.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,18 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.66.0",
+    data: "2026-09-05",
+    titulo: "Cada tipo define os campos das suas peças",
+    mudancas: [
+      { tipo: "novo", texto: "Em Configurações › Categorias e tipos, cada tipo ganhou o botão Ficha: ali você define quais campos as peças daquela família vão pedir. Um NOTEBOOK pede processador, memória e disco; um ANDAIME pede altura e carga máxima." },
+      { tipo: "novo", texto: "Cinco formatos de campo: texto, número (com unidade), data, lista de opções e sim/não. A lista fechada é o que impede “SSD”, “ssd” e “S.S.D.” de conviverem na mesma coluna." },
+      { tipo: "novo", texto: "O cadastro da peça passa a mostrar a ficha do tipo dela, com os campos na ordem definida em Configurações." },
+      { tipo: "melhoria", texto: "Tirar um campo da ficha avisa que os valores continuam gravados nas peças, mas deixam de aparecer — a mudança é permitida, e a consequência é dita." },
+      { tipo: "seguranca", texto: "A ficha gravada é montada a partir dos campos do tipo, não do que chega do formulário: campo que o tipo não conhece é descartado em vez de virar dado invisível que nenhuma tela mostra e nenhuma consulta espera." },
+    ],
+  },
   {
     versao: "0.65.0",
     data: "2026-09-05",
