@@ -21,15 +21,27 @@ entrar.
 
 Quatro abas. Contagens conferidas, não estimadas:
 
-| Aba | Linhas | Conteúdo |
+| Aba | Linhas | Entra? |
 |---|---|---|
-| `ATIVAS.` | 127 | 17 colunas: SO, processador, RAM, armazenamento, TAG, garantia |
-| `MÁQUINAS CONDENADAS` | 35 | descarte (26), furtada (1), vendida (1), diversas |
-| `DEVOLVIDAS` | 13 | alugadas devolvidas ao locador + 2 monitores quebrados |
-| `Planilha2` | 68 | rascunho de conferência de seriais — **não importa** |
+| `ATIVAS.` | 127 | **Sim** — 17 colunas: SO, processador, RAM, armazenamento, TAG, garantia |
+| `MÁQUINAS CONDENADAS` | 35 | Não |
+| `DEVOLVIDAS` | 13 | Não |
+| `Planilha2` | 68 | Não — rascunho de conferência de seriais |
 
-**175 máquinas** entram. `Planilha2` fica de fora: é área de trabalho de quem
-montou a planilha, não cadastro.
+**127 máquinas** entram: só a aba `ATIVAS.`, por decisão do Evandro em
+05/09/2026. O cadastro passa a refletir **o parque que existe hoje**, e não o
+histórico do que já saiu.
+
+O que isso custa, dito para não virar surpresa: o Loca não vai saber que a
+`D42LLG2` foi **furtada** nem que a `C2S9YR2` foi **vendida** — para ele elas
+simplesmente nunca existiram. Se um dia essas 48 máquinas precisarem entrar (por
+auditoria, seguro ou inventário patrimonial), o caminho é o mesmo script com as
+outras abas ligadas, e as chaves de idempotência garantem que as 127 já
+importadas não se dupliquem.
+
+Consequência imediata do recorte: **não há monitor nenhum na aba `ATIVAS.`** —
+os dois estavam em `DEVOLVIDAS`. O tipo MONITOR sai do desenho. Ficam três
+tipos: NOTEBOOK, DESKTOP, SERVIDOR.
 
 ### O que está sujo, e por quê importa
 
@@ -60,9 +72,8 @@ Levantado lendo a planilha inteira, não por amostragem:
 5. **Datas de garantia impossíveis.** `28/11/20217`, `46099` (serial do Excel
    não convertido), e o texto `Alugada` no lugar da data.
 
-6. **Códigos de obra que não batem com o Loca.** A planilha diz
-   `Obra - 605 - Fator Tawer`; a obra 605 cadastrada é **Unimed Maceió**. E
-   `Obra - 685 - ELEA` não existe no cadastro de obras.
+6. **Códigos de obra que não batem com o Loca.** Resolvido pelo Evandro em
+   05/09/2026, e o que sobrou está na seção "Departamento → obra".
 
 Nenhum desses itens é motivo para adiar a importação. Todos são motivo para a
 prévia existir.
@@ -75,12 +86,15 @@ Sete decisões, todas do Evandro, em 05/09/2026:
 |---|---|
 | 1 | O e-mail fica em **`funcionario.email`**, não na peça |
 | 2 | Derivar `nome.sobrenome@sistenge.com`, marcado como **não confirmado** |
-| 3 | Importar as **três** abas — 175 máquinas |
+| 3 | Importar **só a aba `ATIVAS.`** — 127 máquinas |
 | 4 | As alugadas **viram contrato de locação** (fase D, quando houver dados) |
 | 5 | Sequência **A → B → C**; D quando os dados do contrato existirem |
 | 6 | Departamentos administrativos → obra **Administração (800)**, cada um como **frente de serviço** |
 | 7 | Linha com coluna deslocada: **importa e vira pendência**, não é recusada |
 | 8 | Termo por e-mail: **PDF assinado primeiro**, link remoto como fase própria |
+| 9 | Obra **605 é Fator Towers** — é a mesma obra, pode unificar |
+| 10 | **ELEA (685)** não vira obra: suas máquinas vão para **659 — Unimed Contagem** |
+| 11 | Fornecedores das alugadas: **Voke** e **A2Works** |
 
 ### Por que o e-mail não fica na peça
 
@@ -221,7 +235,7 @@ forçar:
 
 ```
 Categoria TI  (já existe)
-  └─ Tipo NOTEBOOK / DESKTOP / SERVIDOR / MONITOR   ← define a ficha
+  └─ Tipo NOTEBOOK / DESKTOP / SERVIDOR             ← define a ficha
        └─ Item "Latitude 3410"                       ← o QUÊ (o modelo)
             └─ Peça 4L1KL22                          ← o QUAL (a máquina)
 ```
@@ -256,48 +270,80 @@ Ficha de NOTEBOOK, DESKTOP e SERVIDOR:
 | `tipo_disco` | Tipo de disco | lista (SSD, NVMe, Rígido) |
 | `garantia_ate` | Garantia até | data |
 
-MONITOR fica só com `nome_dispositivo`: os dois monitores da planilha não têm
-processador nem disco, e uma ficha com cinco campos vazios é ruído.
+Os três tipos usam a mesma ficha. Um servidor sem tela e um notebook pedem os
+mesmos seis dados; separar as fichas aqui seria três cópias que divergem na
+primeira vez que alguém acrescentar um campo.
 
 As **10 grafias** de sistema operacional (`Microsoft Windows 11 Pro` e
 `Microsoft Windows 11 Professional` são o mesmo SO) viram **6 opções** de lista.
 
 ### O mapa de situação
 
-| Aba | Valor na planilha | `situacao` | `ativo` |
+Só a aba `ATIVAS.`, então só quatro valores de `STATUS`:
+
+| `STATUS` | Linhas | `situacao` | `ativo` |
 |---|---|---|---|
-| ATIVAS | `Ativo` | `em_uso` | true |
-| ATIVAS | `Reserva`, `LIVRE`, `Não Possui` | `disponivel` | true |
-| CONDENADAS | `DESCARTE`, `vendido` | `baixada` | false |
-| CONDENADAS | `FURTADA` | `perdida` | false |
-| DEVOLVIDAS | qualquer | `disponivel` + `propriedade = locada` | false |
+| `Ativo` | 113 | `em_uso` | true |
+| `Reserva` | 10 | `disponivel` | true |
+| `LIVRE` | 2 | `disponivel` | true |
+| `Não Possui` | 2 | `disponivel` | true |
+
+`baixada` e `perdida` não são usados: as máquinas que os justificariam estão nas
+abas que ficaram de fora.
 
 ### As alugadas
 
-40 máquinas — 27 ativas (`NS-ALUGADA-xx`, `WS-ALUGADA-xx`) e as 13 devolvidas.
-Entram com `propriedade = 'locada'` e **sem contrato**, porque o contrato exige
-dados que a planilha não tem. Ver fase D.
+**27 máquinas** — `NS-ALUGADA-xx` e `WS-ALUGADA-xx`. Entram com
+`propriedade = 'locada'` e **sem contrato**, porque o contrato exige dados que a
+planilha não tem. Ver fase D.
 
-O script imprime a lista das 40 ao final, para que a pendência seja visível e
+O script imprime a lista das 27 ao final, para que a pendência seja visível e
 não descoberta meses depois.
 
 ### Departamento → obra, e departamento → frente
 
-Os departamentos administrativos (RH, Financeiro, Diretoria, Suprimentos,
-Engenharia, Orçamentos, Comercial, Projetos, Planejamento, SMS) caem todos na
-obra **Administração (800)**, e cada um vira uma **frente de serviço** dentro
-dela — o mecanismo da 0.68.0. É o que faz o custo descer de "Administração"
-para "RH".
+A coluna `DEPARTAMENTO` tem 24 valores distintos. O mapa completo, sem nenhum
+"etc.":
 
-Os departamentos de obra caem na obra pelo código: `608`, `659`, `691`, `680`.
+| Valor na planilha | Máquinas | Vai para |
+|---|---|---|
+| `608 - Dante` | 31 | obra **608** Racional Dante |
+| `Obra - 659 - Contagem` | 13 | obra **659** Unimed Contagem |
+| `Obra - 605 - Fator Tawer` | 12 | obra **605** *(ver nota abaixo)* |
+| `691 - GAROA` | 8 | obra **691** Racional Garoa |
+| `Obra - 680 - Equinix` | 5 | obra **680** Equinix SP4 |
+| `Obra - 685 - ELEA` | 2 | obra **659** Unimed Contagem — decisão do Evandro |
+| `ORÇAMENTOS` | 8 | obra **800** + frente *Orçamentos* |
+| `RH` | 6 | obra **800** + frente *RH* |
+| `DIRETORIA` | 5 | obra **800** + frente *Diretoria* |
+| `SUPRIMENTOS` | 4 | obra **800** + frente *Suprimentos* |
+| `FINANCEIRO` | 4 | obra **800** + frente *Financeiro* |
+| `ENGENHARIA` | 2 | obra **800** + frente *Engenharia* |
+| `PROJETOS` | 2 | obra **800** + frente *Projetos* |
+| `SMS` | 2 | obra **800** + frente *SMS* |
+| `COMERCIAL` | 1 | obra **800** + frente *Comercial* |
+| `PLANEJAMENTO` | 1 | obra **800** + frente *Planejamento* |
+| `DEPOSITO` | 1 | obra **800** + frente *Depósito* |
+| `Deposito - Nova Máquina` | 1 | obra **800** + frente *Depósito* |
+| `RESERVA` | 11 | **sem obra** — é estoque de reserva, não está em lugar nenhum |
+| `N/A` | 3 | **sem obra** |
+| *(vazio)* | 1 | **sem obra** |
+| `OBRA` | 2 | **pendência** — diz que é obra, não diz qual |
+| `PASELI` | 1 | **pendência** — não é departamento nem obra conhecida |
+| `ENTREGUE COM USUÁRIO COMUM` | 1 | **pendência** — é um estado, não um lugar |
 
-**Duas exceções que o script não resolve sozinho e por isso vira pendência:**
+**Sem obra** e **pendência** são coisas diferentes de propósito. `RESERVA` e
+`N/A` estão corretamente sem obra: a máquina está na prateleira. As quatro
+últimas linhas são valores que *deveriam* dizer um lugar e não dizem — elas
+entram no cadastro sem obra **e** aparecem na lista de pendências da prévia,
+para alguém decidir.
 
-- `605` — a planilha chama de "Fator Tawer", o Loca chama de "Unimed Maceió".
-  São 4 máquinas alugadas. O script **não** associa: nome divergente com código
-  igual é exatamente o caso em que adivinhar erra.
-- `685 — ELEA` — não existe no cadastro de obras. 2 máquinas. Ficam sem obra e
-  aparecem na pendência.
+**Nota sobre a obra 605.** O Evandro confirmou que a `605 - Fator Tawer` da
+planilha é a mesma obra `605` do Loca — as 12 máquinas são associadas
+diretamente. Sobra um detalhe que **não** é do escopo desta spec e fica
+registrado: no cadastro de obras, a 605 chama-se **"Unimed Maceió"**, e os dois
+contratos de locação ativos (SJUSTINO e CONEXAO) estão pendurados nela. Se o
+nome certo é "Fator Towers", quem renomeia é uma tela, não este importador.
 
 ### A prévia é obrigatória
 
@@ -312,10 +358,12 @@ sempre:
 
 - quantos tipos, itens, peças e funcionários seriam criados e quantos atualizados;
 - a lista das linhas com **coluna deslocada** e qual campo ficará vazio;
-- a lista das **40 alugadas sem contrato**;
+- a lista das **27 alugadas sem contrato**;
 - a lista dos **e-mails derivados**, com os que colidiram ou não puderam ser
   formados;
-- as máquinas **sem obra** (605, 685, e as sem departamento).
+- as **4 máquinas em pendência de lugar** (`OBRA`, `PASELI`,
+  `ENTREGUE COM USUÁRIO COMUM`) — distintas das 15 que estão corretamente sem
+  obra.
 
 ### Idempotência
 
@@ -406,17 +454,50 @@ item_locado.valor_unitario_periodo       NOT NULL
 item_locado.data_retirada                NOT NULL
 ```
 
-E `obra_id NOT NULL` tem uma consequência aritmética: as 27 alugadas ativas
-estão espalhadas por 12 departamentos, que caem em **7 obras**. Para prendê-las
-seriam **7 contratos**, cada um com número, fornecedor, data e valor mensal —
-todos inventados.
+E `obra_id NOT NULL` tem uma consequência aritmética. Com o remapeamento de
+ELEA para 659, as 27 alugadas caem assim:
+
+| Obra | Alugadas |
+|---|---|
+| Administração (800) | 8 |
+| Unimed Contagem (659) | 7 — inclui as 2 que vinham de ELEA |
+| 605 | 4 |
+| Racional Dante (608) | 4 |
+| Racional Garoa (691) | 3 |
+| Equinix SP4 (680) | 1 |
+
+**Seis contratos, no mínimo** — e o mínimo só vale se cada obra tiver um
+fornecedor só. Com dois fornecedores misturados numa obra, são mais.
 
 Esses valores alimentam o custo por obra, o custo por frente, os relatórios e o
 PDF que vai ao cliente. **Um número plausível e falso num relatório financeiro é
 pior que um campo vazio**, porque ninguém desconfia dele.
 
-O que falta, por fornecedor: nome/CNPJ, número do contrato, data de início,
-cadência e valor mensal por máquina.
+### Os fornecedores
+
+**Voke** e **A2Works**, informados pelo Evandro em 05/09/2026.
+
+Voke **já está cadastrada** no Loca: `Voke SA`, CNPJ 04.212.396/0001-91, contato
+`fatima.campelo@voke.tech`. A2Works ainda não existe e precisa de cadastro.
+
+### O que ainda falta, e por que não dá para adivinhar
+
+**Qual máquina é de qual fornecedor.** Procurei na planilha inteira — coluna,
+observação, texto livre — e **não há uma única menção** a Voke ou A2Works. O
+único padrão visível é a marca:
+
+| Marca | Alugadas |
+|---|---|
+| Dell — Latitude 3410/3411, Vostro 15 3510 | 21 |
+| Acer — TravelMate P214-55 | 4 |
+| Lenovo — ThinkBook, ThinkStation P360 | 2 |
+
+É tentador supor que um fornecedor entrega Dell e o outro Acer. A spec **não**
+supõe: uma máquina no contrato errado joga o custo na fatura errada do mês
+seguinte, e o relatório fecha certo com o número errado.
+
+Falta, por fornecedor: **quais TAGs**, **número do contrato**, **data de
+início**, **cadência** e **valor mensal por máquina**.
 
 Prender as peças ao contrato depois **não é retrabalho**: é um `insert` em
 `item_locado` apontando para o `equipamento_unidade` que a fase B já criou.
@@ -432,9 +513,9 @@ Prender as peças ao contrato depois **não é retrabalho**: é um `insert` em
 | Fase | Entrega | Pronto quando |
 |---|---|---|
 | **A** | `funcionario.email` + chave da ficha | Digitar "Memória RAM" na tela gera `memoria_ram`; o formulário de funcionário salva e-mail |
-| **B** | 175 máquinas no cadastro | A prévia roda limpa, o `--aplicar` grava, e a **segunda** execução cria 0 e atualiza 175 |
+| **B** | 127 máquinas no cadastro | A prévia roda limpa, o `--aplicar` grava, e a **segunda** execução cria 0 e atualiza 127 |
 | **C.1** | PDF do termo por e-mail | Termo emitido chega ao e-mail confirmado; REENVIAR funciona; e-mail não confirmado não recebe |
-| **D** | Contratos das 40 alugadas | Depende dos dados comerciais |
+| **D** | Contratos das 27 alugadas | Depende dos dados comerciais |
 
 Cada fase fecha com o ritual do `AGENTS.md` — `typecheck`, `lint`, `test`,
 `build` — e com versão bumpada nos três pontos.
@@ -446,11 +527,17 @@ Cada fase fecha com o ritual do `AGENTS.md` — `typecheck`, `lint`, `test`,
 Registrado para não virar surpresa:
 
 1. **A assinatura à distância** (C.2) precisa de desenho próprio de segurança.
-2. **Os contratos** (D) precisam de dados que não existem em lugar nenhum
-   consultável por mim.
-3. **A obra 605** — "Fator Tawer" na planilha, "Unimed Maceió" no Loca. Alguém
-   precisa dizer qual das duas está certa.
-4. **A obra 685 — ELEA** não existe no cadastro. Duas máquinas dependem dela.
-5. **Nenhuma tela autenticada foi aberta num navegador** em todo o módulo de
+2. **Quais TAGs são da Voke e quais são da A2Works** (D). Não está na planilha,
+   e a marca do equipamento não é resposta.
+3. **O nome da obra 605.** A planilha chama de "Fator Towers" e o Evandro
+   confirmou que é essa; o cadastro do Loca diz "Unimed Maceió", com dois
+   contratos de locação pendurados nela. A associação das 12 máquinas está
+   decidida; **renomear a obra não está**, e não é este importador que renomeia.
+4. **As 4 máquinas sem lugar** — `OBRA`, `PASELI` e
+   `ENTREGUE COM USUÁRIO COMUM`. Entram sem obra e ficam na lista de pendências.
+5. **As 48 máquinas de `CONDENADAS` e `DEVOLVIDAS`** ficaram fora por decisão.
+   O Loca não saberá que uma foi furtada e outra vendida. Se um dia precisarem
+   entrar, é o mesmo script com as outras abas ligadas.
+6. **Nenhuma tela autenticada foi aberta num navegador** em todo o módulo de
    equipamento. A fase A é a primeira que produz uma tela verificável em poucos
    cliques — e é por isso que ela vem antes.
