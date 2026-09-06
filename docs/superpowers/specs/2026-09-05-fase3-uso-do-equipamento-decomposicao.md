@@ -11,7 +11,7 @@
 |---|---|
 | Termo do operador | **Já existia.** `termo_equipamento` (TRM), entregue na 0.49.0 |
 | Apontamento de uso | **Entregue na 0.67.0** — ver abaixo |
-| Alocação por frente | **Bloqueada.** Só as perguntas 4 e 5 destravam |
+| Alocação por frente | **Entregue na 0.68.0** — ver abaixo |
 
 ### O termo do operador já está pronto
 
@@ -126,3 +126,53 @@ recebimento (REC) → termo ao operador (TRM) → devolução (DEV)
 
 E os relatórios da fase 4 já leem tudo isso: conferência pendente, equipamento
 em conserto e custo de manutenção.
+
+---
+
+## Fecho — 3b entregue na 0.68.0
+
+Este documento dizia que a 3b não podia ser construída sob suposição, porque a
+pergunta 5 — "a frente já existe em algum lugar?" — não tinha padrão seguro.
+
+**Estava errado por preguiça: a pergunta era verificável.** Bastava olhar o
+banco.
+
+| Onde | O que tem |
+|---|---|
+| `avanco_obra` | percentual da obra inteira por semana. Sem etapa |
+| `orcamento_locacao` / `orcamento_item` | itens locados. Sem frente |
+| `etapa_obra`, `frente_obra` | não existiam |
+
+A frente não vivia em lugar nenhum do Loca. O risco de duplicar um conceito
+existente — o defeito por trás das obras do fornecedor mantidas à mão, do
+`STATUS_AVARIA` em dois arquivos e da família escrita dentro da descrição — não
+existia aqui dentro.
+
+A pergunta 4 (frentes estáveis ou informais?) **continua sem resposta**, e o
+desenho foi feito para sobreviver às duas: cadastro por obra, criado na hora de
+usar.
+
+### O que ficou fora, e continua fora
+
+- **A frente pode duplicar algo que vive FORA do Loca** — no orçamento ou no
+  cronograma que a Sistenge usa noutro sistema. Isso está além do meu alcance
+  de verificação, e é a única parte da pergunta 5 que segue aberta. Se a frente
+  já existe lá, o desenho certo passa a ser importar de lá em vez de digitar
+  duas vezes.
+- **`leituraUltimaRevisao` continua zero** (ver 3a). A ordem de reparo não
+  registra a leitura do horímetro no momento do serviço, então o intervalo conta
+  desde o começo da vida da máquina — acusando revisão vencida cedo demais. É
+  uma fatia pequena: um campo na ordem de reparo, lido pelo cálculo.
+
+## O módulo de equipamento está completo
+
+| Fase | Entrega | Versão |
+|---|---|---|
+| 0 | Numeração de registros | 0.37.0 |
+| 1 | Recebimento, romaneio, aviso ao fornecedor | 0.39–0.59 |
+| 2a | Devolução como documento | 0.60.0 |
+| 2b | Laudo de avaria | 0.61.0 |
+| 2c | Ordem de reparo | 0.62.0 |
+| 4 | Relatórios do ciclo | 0.63.0 |
+| 3a | Apontamento de uso | 0.67.0 |
+| 3b | Frente de serviço | 0.68.0 |
