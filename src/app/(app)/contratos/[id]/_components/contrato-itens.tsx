@@ -1,3 +1,4 @@
+import { listarFrentesDoContrato } from "@/lib/data/frentes";
 // "Adicionar item" + tabela de itens locados. Duas seções num componente porque
 // compartilham a mesma leitura calculada e são visualmente contíguas.
 
@@ -38,9 +39,12 @@ export async function ContratoItens({
   podeEditar: boolean;
 }) {
   // Em paralelo: o catálogo não depende do cálculo dos itens.
-  const [linhas, catalogo] = await Promise.all([
+  const [linhas, catalogo, frentes] = await Promise.all([
     obterItensLocadosCalculados(contratoId, cadencia, prorata),
     podeEditar ? listarItensDoCatalogo() : Promise.resolve([]),
+    // Só quem pode editar precisa do seletor. Para leitor, seria uma consulta
+    // para desenhar nada.
+    podeEditar ? listarFrentesDoContrato(contratoId) : Promise.resolve([]),
   ]);
 
   return (
@@ -55,6 +59,7 @@ export async function ContratoItens({
           </CardHeader>
           <CardContent>
             <AddItemLocadoForm
+              frentes={frentes}
               contratoId={contratoId}
               itens={catalogo}
               cadencia={cadencia}

@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.67.0";
+export const APP_VERSION = "0.68.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,19 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.68.0",
+    data: "2026-09-05",
+    titulo: "Frente de serviço: em que a obra gastou",
+    mudancas: [
+      { tipo: "novo", texto: "Cada obra pode cadastrar suas frentes de serviço — fundação, estrutura, acabamento — e alocar os itens do contrato a elas. Até agora o custo do equipamento morria na obra: sabia-se que ela consumiu quarenta mil, não que trinta foram na fundação." },
+      { tipo: "novo", texto: "Relatório de custo por frente, com uma linha “(sem frente)” que mostra quanto do custo ainda não desceu — é ela que diz se vale confiar no resto do relatório." },
+      { tipo: "novo", texto: "O apontamento de horas também aceita frente: a peça pode estar alocada à fundação no contrato e, numa semana, ter trabalhado na estrutura." },
+      { tipo: "seguranca", texto: "O sistema recusa alocar um item a uma frente de outra obra. Sem isso, o relatório de custo somaria despesa de uma obra dentro de outra, em silêncio." },
+      { tipo: "melhoria", texto: "A frente é opcional: obra que ainda não organizou suas frentes continua funcionando exatamente como antes, e o campo nem aparece no cadastro do item." },
+      { tipo: "melhoria", texto: "“Fundação” pode existir em duas obras ao mesmo tempo sem conflito — são frentes diferentes, com equipe, prazo e custo próprios." },
+    ],
+  },
   {
     versao: "0.67.0",
     data: "2026-09-05",

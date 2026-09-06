@@ -19,7 +19,13 @@
 // um cliente (regra do AGENTS.md). Quem chama trata; `(app)/error.tsx` é a rede.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { hojeISOSaoPaulo } from "./locacao";
+import {
+  hojeISOSaoPaulo,
+  hojeSaoPaulo,
+  dataDeISO,
+  periodosEntre,
+  type Cadencia,
+} from "./locacao";
 import type { Relatorio, FiltrosRelatorio, Coluna } from "./relatorios";
 import {
   horasAteRevisao,
@@ -461,5 +467,115 @@ export async function usoEquipamento(
     colunas: COLUNAS_USO,
     linhas,
     grafico: { labelKey: "peca", valorKey: "horas" },
+  };
+}
+
+const COLUNAS_FRENTE: Coluna[] = [
+  { key: "obra", label: "Obra", tipo: "texto" },
+  { key: "frente", label: "Frente", tipo: "texto" },
+  { key: "itens", label: "Itens", tipo: "numero" },
+  { key: "em_aberto", label: "Em aberto", tipo: "numero" },
+  { key: "custo", label: "Custo estimado", tipo: "moeda" },
+];
+
+/**
+ * Custo do equipamento por frente de serviço.
+ *
+ * O QUE ELE RESPONDE E NENHUM OUTRO RESPONDIA: em QUÊ a obra gastou. Até a
+ * 0.68.0 o custo de locação morria na obra — sabia-se que a obra consumiu
+ * quarenta mil em equipamento, não que trinta foram na fundação.
+ *
+ * A linha "(sem frente)" é deliberada e não é sujeira: ela mostra quanto do
+ * custo ainda não desceu, e é ela que diz se vale confiar no resto do
+ * relatório. Escondê-la faria um rateio parcial parecer completo.
+ */
+export async function custoPorFrente(
+  supabase: DB,
+  filtros: FiltrosRelatorio,
+): Promise<Relatorio> {
+  const { data, error } = await supabase
+    .from("item_locado")
+    .select(
+      "quantidade, valor_unitario_periodo, data_retirada, data_devolucao, status, frente:frente_id(nome), contrato:contrato_id(obra_id, cadencia, cobranca_prorata, obra:obra_id(codigo, nome))",
+    )
+    .order("created_at");
+
+  if (error) throw error;
+
+  const hoje = hojeSaoPaulo();
+
+  type Acc = { obra: string; frente: string; itens: number; abertos: number; custo: number };
+  const grupos = new Map<string, Acc>();
+
+  for (const l of (data ?? []) as Bruta[]) {
+    const contrato = (Array.isArray(l.contrato) ? l.contrato[0] : l.contrato) as
+      | {
+          obra_id?: string;
+          cadencia: Cadencia;
+          cobranca_prorata: boolean;
+          obra: { codigo: string; nome: string } | { codigo: string; nome: string }[] | null;
+        }
+      | null;
+    if (filtros.obra_id && contrato?.obra_id !== filtros.obra_id) continue;
+
+    const obraEmbed = (Array.isArray(contrato?.obra) ? contrato?.obra[0] : contrato?.obra) as
+      | { codigo: string; nome: string }
+      | null;
+    const frenteEmbed = (Array.isArray(l.frente) ? l.frente[0] : l.frente) as
+      | { nome: string }
+      | null;
+
+    const obra = obraEmbed ? `${obraEmbed.codigo} — ${obraEmbed.nome}` : "—";
+    const frente = frenteEmbed?.nome ?? "(sem frente)";
+    const chave = obra + "\u0000" + frente;
+
+    // O custo é estimado da retirada até a devolução — ou até hoje, se o item
+    // ainda está fora. Mesma conta de `itens_abertos`, e é de propósito: dois
+    // relatórios que respondem "quanto custou" com números diferentes não
+    // servem a ninguém.
+    const retirada = l.data_retirada ? dataDeISO(String(l.data_retirada)) : null;
+    let custo = 0;
+    if (retirada && contrato) {
+      const fim = l.data_devolucao ? dataDeISO(String(l.data_devolucao)) : hoje;
+      const periodos = periodosEntre(
+        contrato.cadencia,
+        retirada,
+        fim,
+        contrato.cobranca_prorata,
+      );
+      custo = Number(l.quantidade) * Number(l.valor_unitario_periodo) * periodos;
+    }
+
+    const atual = grupos.get(chave) ?? {
+      obra,
+      frente,
+      itens: 0,
+      abertos: 0,
+      custo: 0,
+    };
+    atual.itens += 1;
+    if (l.status === "em_aberto") atual.abertos += 1;
+    atual.custo += custo;
+    grupos.set(chave, atual);
+  }
+
+  const linhas = [...grupos.values()]
+    .sort(
+      (a, b) => a.obra.localeCompare(b.obra) || b.custo - a.custo,
+    )
+    .map((g) => ({
+      obra: g.obra,
+      frente: g.frente,
+      itens: g.itens,
+      em_aberto: g.abertos,
+      custo: Math.round(g.custo * 100) / 100,
+    }));
+
+  return {
+    titulo: "Custo por frente de serviço",
+    agruparPor: "obra",
+    colunas: COLUNAS_FRENTE,
+    linhas,
+    grafico: { labelKey: "frente", valorKey: "custo" },
   };
 }

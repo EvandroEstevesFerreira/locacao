@@ -23,6 +23,7 @@ import {
   equipamentoFora,
   manutencaoCusto,
   usoEquipamento,
+  custoPorFrente,
 } from "./relatorios-equipamento";
 
 export type TipoRelatorio =
@@ -36,6 +37,7 @@ export type TipoRelatorio =
   | "equipamento_fora"
   | "manutencao_custo"
   | "uso_equipamento"
+  | "custo_por_frente"
   | "imoveis_custo"
   | "imoveis_contratos_vencer"
   | "imoveis_sem_contrato"
@@ -113,6 +115,13 @@ export const TIPOS_RELATORIO: {
     descricao:
       "Horas trabalhadas por peça com horímetro, e quanto falta para a revisão. É o único relatório que enxerga a máquina parada dentro da obra — o de ociosidade mede calendário.",
     usaPeriodo: true,
+  },
+  {
+    valor: "custo_por_frente",
+    label: "Custo por frente",
+    descricao:
+      "Em QUE a obra gastou. Até agora o custo do equipamento morria na obra: sabia-se que ela consumiu quarenta mil, não que trinta foram na fundação.",
+    usaPeriodo: false,
   },
   {
     valor: "imoveis_custo",
@@ -710,6 +719,7 @@ export async function gerarRelatorio(
   if (tipo === "equipamento_fora") return equipamentoFora(supabase, filtros);
   if (tipo === "manutencao_custo") return manutencaoCusto(supabase, filtros);
   if (tipo === "uso_equipamento") return usoEquipamento(supabase, filtros);
+  if (tipo === "custo_por_frente") return custoPorFrente(supabase, filtros);
   if (tipo === "imoveis_custo") return imoveisCusto(supabase, filtros);
   if (tipo === "imoveis_contratos_vencer")
     return imoveisContratosVencer(supabase, filtros);

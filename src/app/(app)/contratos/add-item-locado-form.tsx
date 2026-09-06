@@ -31,16 +31,20 @@ const VAZIO: ItemLocadoInput = {
   data_retirada: "",
   data_devolucao_prevista: "",
   identificacao: "",
+  frente_id: "",
 };
 
 export function AddItemLocadoForm({
   contratoId,
   itens,
+  frentes = [],
   cadencia,
   prorata = false,
 }: {
   contratoId: string;
   itens: { id: string; descricao: string; unidade: string | null }[];
+  /** Frentes ATIVAS da obra deste contrato (migration 0072). */
+  frentes?: { id: string; nome: string }[];
   /** Cadência do contrato — usada para estimar o custo antes de salvar. */
   cadencia?: Cadencia;
   prorata?: boolean;
@@ -190,6 +194,29 @@ export function AddItemLocadoForm({
             </p>
           ) : null}
         </div>
+
+        {/* A frente é o que FAZ O CUSTO DESCER: sem ela, o custo de locação
+            morre na obra — sabe-se que a obra gastou, não em quê.
+
+            Só aparece quando a obra tem frentes cadastradas. Um seletor vazio
+            em toda obra que ainda não organizou suas frentes seria um campo que
+            só serve para ser ignorado. */}
+        {frentes.length > 0 ? (
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label htmlFor="frente_id">
+              Frente de serviço{" "}
+              <span className="font-normal text-muted-foreground">(opcional)</span>
+            </Label>
+            <NativeSelect id="frente_id" disabled={pendente} {...register("frente_id")}>
+              <option value="">Sem frente — o custo fica na obra</option>
+              {frentes.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.nome}
+                </option>
+              ))}
+            </NativeSelect>
+          </div>
+        ) : null}
 
         <div className="space-y-1.5 sm:col-span-2">
           <Label htmlFor="identificacao">
