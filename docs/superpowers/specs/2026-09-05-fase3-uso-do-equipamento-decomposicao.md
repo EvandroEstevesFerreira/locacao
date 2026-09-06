@@ -9,9 +9,9 @@
 
 | Item previsto | Situação |
 |---|---|
-| Termo do operador | **Já existe.** `termo_equipamento` (TRM), entregue na 0.49.0 |
-| Apontamento de uso | Não existe. Precisa de decisão |
-| Alocação por frente | Não existe. Precisa de decisão |
+| Termo do operador | **Já existia.** `termo_equipamento` (TRM), entregue na 0.49.0 |
+| Apontamento de uso | **Entregue na 0.67.0** — ver abaixo |
+| Alocação por frente | **Bloqueada.** Só as perguntas 4 e 5 destravam |
 
 ### O termo do operador já está pronto
 
@@ -24,27 +24,34 @@ com um equipamento.
 **Nada a construir aqui.** Registrar isto evita reconstruir por engano o que a
 0.49.0 já entregou.
 
-## O que resta são dois problemas diferentes
+## 3a — entregue na 0.67.0
+
+Construída sob **duas suposições declaradas**, porque as duas perguntas que
+faltavam tinham padrão seguro:
+
+- **Quais peças têm horímetro** → marca-se no cadastro (`tem_horimetro`),
+  começando desmarcado. Funciona para cinco ou para cinquenta.
+- **Quem lança** → leitura semanal, o desenho de menor atrito, que absorve o
+  caso "o encarregado, de memória, uma vez por semana".
+
+Se qualquer das duas estiver errada, o conserto é pequeno: a marca é uma caixa
+de seleção, e a periodicidade não está codificada em lugar nenhum — nada impede
+lançamento diário.
+
+O que ficou: `apontamento_uso` (0071), o intervalo de revisão por tipo, a seção
+de Uso na peça e o relatório "Uso do equipamento".
+
+**Simplificação declarada que continua valendo:** `leituraUltimaRevisao` é zero,
+porque a ordem de reparo ainda não registra a leitura do horímetro no momento do
+serviço. O intervalo conta desde o começo da vida da máquina — o que acusa
+revisão vencida cedo demais, e não tarde demais. Fechar isso é uma fatia
+pequena: um campo na ordem de reparo, lido pelo cálculo.
+
+## O que resta é um problema só
 
 A spec original já suspeitava disso: "apontamento de horímetro e alocação por
-frente são problemas diferentes com públicos diferentes". São mesmo — e a
-diferença é quem preenche.
-
-### 3a — Apontamento de uso
-
-**Público:** o operador da máquina, ou o encarregado, todo dia.
-
-**O que responde:** quanto a máquina trabalhou. É o dado que sustenta três
-coisas que hoje o Loca não sabe fazer:
-
-- **Locação por hora trabalhada**, quando o contrato é assim em vez de por
-  diária. Hoje `cadencia` só conhece períodos de calendário.
-- **Manutenção preventiva por uso** — troca de óleo a cada 250 h, não a cada
-  três meses.
-- **Ociosidade real.** O relatório de ociosidade que existe hoje mede
-  equipamento parado por CALENDÁRIO (está locado e não foi devolvido). Uma
-  betoneira que está na obra há 40 dias e trabalhou 6 é ociosa de um jeito que
-  nenhum relatório atual enxerga.
+frente são problemas diferentes com públicos diferentes". Eram mesmo — e o
+primeiro está feito.
 
 ### 3b — Alocação por frente de serviço
 
@@ -64,57 +71,48 @@ Nenhuma delas tem default seguro. Errar qualquer uma produz uma tela que
 ninguém preenche — e tela de apontamento que ninguém preenche é pior do que não
 ter, porque o relatório em cima dela mente com aparência de dado.
 
-### Sobre o apontamento (3a)
+1. ~~Contrato por hora trabalhada ou por calendário?~~ **RESPONDIDA: por
+   calendário.** Ver a seção 3a acima.
+2. ~~Quais equipamentos têm horímetro?~~ **RESOLVIDA por desenho:** marca-se no
+   cadastro da peça, começando desmarcado.
+3. ~~Quem preencheria, e onde?~~ **RESOLVIDA por desenho:** leitura semanal, que
+   absorve tanto o operador no fim do turno quanto o encarregado no escritório.
 
-1. ~~A Sistenge tem contrato de locação por hora trabalhada, ou todos são por
-   período de calendário?~~ **RESPONDIDA em 2026-09-05: todos por calendário.**
-
-   Isso encolhe a 3a e muda o que ela é. O apontamento **não afeta o custo de
-   locação** — a diária corre pelo calendário, trabalhando a máquina ou não.
-   Ele deixa de ser dado financeiro e passa a servir a duas coisas só:
-
-   - **manutenção preventiva por uso** (troca de óleo a cada 250 h);
-   - **ociosidade real** — a betoneira que está na obra há 40 dias e trabalhou
-     6. Nenhum relatório atual enxerga isso, porque o de ociosidade mede
-     calendário.
-
-   Consequência de desenho: sem efeito no custo, o apontamento **não precisa ser
-   diário nem exato**. Um lançamento semanal de horímetro (leitura anterior,
-   leitura atual) entrega as duas coisas acima com uma fração do atrito — e
-   atrito é o que decide se a tela é preenchida. O desenho diário só se
-   justificaria se a diária dependesse dele.
-2. **Quais equipamentos têm horímetro?** Gerador e compressor costumam ter;
-   betoneira e vibrador quase nunca. Se forem poucos, o apontamento é uma tela
-   pequena para uma lista curta, não um módulo.
-3. **Quem preencheria, e onde?** No celular, na obra, no fim do turno? Se a
-   resposta for "o encarregado, no escritório, uma vez por semana, de memória",
-   o dado nasce ruim e o desenho tem de assumir isso — lançamento por período em
-   vez de por dia.
-
-### Sobre a frente (3b)
+### As duas que continuam abertas — e por que não têm padrão seguro
 
 4. **A obra da Sistenge se divide em frentes com nome estável?** Ou a divisão é
    informal e muda a cada mês?
+
+   Sem isso, o cadastro nasce e fica vazio. Frente informal não cabe numa lista
+   fechada, e lista fechada de coisa informal é preenchida errado ou não é
+   preenchida.
+
 5. **A frente já existe em algum lugar** — no orçamento, no cronograma, no
-   avanço — ou seria cadastro novo? Cadastro novo que duplica um conceito que já
-   vive noutro sistema é o que produz as duas listas que divergem.
+   avanço — ou seria cadastro novo?
+
+   Esta é a que mais me impede de escolher sozinho. Criar um cadastro de frentes
+   que duplica um conceito já existente noutro sistema é **exatamente** o defeito
+   que esta sessão inteira combateu: as obras do fornecedor mantidas à mão ao
+   lado dos contratos, o `STATUS_AVARIA` em dois arquivos, a família do
+   equipamento escrita dentro da descrição. Em todos, o custo foi o mesmo — duas
+   verdades que divergem.
+
+   Se a frente vive no orçamento, o desenho certo é LER de lá, não recriar. E eu
+   não sei se ela vive.
 
 ## Recomendação
 
-**Não construir nem 3a nem 3b sem as respostas restantes.** As duas são telas de
-lançamento diário: elas só valem pelo que acumulam, e uma tela de lançamento que
-não encaixa na rotina de quem lança fica vazia — deixando um relatório que soma
-zero e parece dizer que a máquina não trabalhou.
+**A 3a foi construída sob suposição declarada; a 3b não pode ser.**
 
-Se for para escolher uma, **3a antes de 3b**: o apontamento vale por si
-(manutenção preventiva e ociosidade real), enquanto a alocação por frente só
-vale se houver frente definida, e a definição vem de fora do Loca.
+A diferença entre as duas é onde a suposição erra. Em 3a, errar sobre "quais
+peças têm horímetro" custa uma caixa de seleção — a estrutura serve de qualquer
+jeito. Em 3b, errar sobre "onde a frente vive" custa um cadastro paralelo que
+diverge do original, e desfazer isso depois exige migrar dado que já foi
+digitado.
 
-Com a resposta de que tudo é por calendário, a 3a fica pequena o bastante para
-caber numa fatia só: uma leitura de horímetro por peça e por semana, o cálculo
-de horas no período, e as duas leituras que ela destrava. As perguntas 2 e 3
-(quais equipamentos têm horímetro, e quem lança) continuam necessárias — elas
-decidem se a lista é de cinco peças ou de cinquenta.
+Enquanto as perguntas 4 e 5 não têm resposta, o `apontamento_uso.obra_id` já
+guarda **onde a peça trabalhou** — um nível acima da frente. Para muita
+pergunta, obra basta.
 
 ## O que a fase 2 já entregou para o ciclo de uso
 
