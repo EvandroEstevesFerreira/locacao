@@ -7,6 +7,63 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.73.0] — 2026-09-06
+
+A tela de Itens, reformulada. Modelo escolhido pelo Evandro entre três:
+**agrupado por tipo**.
+
+### O diagnóstico, medido e não opinado
+
+Das seis colunas da tela anterior, **quatro repetiam a mesma palavra nas 27
+linhas**:
+
+| Coluna | Valores distintos |
+|---|---|
+| Tipo (`Equipamento`) | 1 |
+| Unidade (`un`) | 1 |
+| Status (`Ativo`) | 1 |
+| Categoria (`TI`) | 2 — e a segunda é o item de teste |
+
+Metade da largura não carregava informação. A tela não estava cheia: estava
+**vazia com aparência de cheia**.
+
+E a coluna rotulada "Tipo" mostrava a **natureza**. O tipo de verdade —
+`NOTEBOOK`, `DESKTOP`, `SERVIDOR`, o nível 2 do catálogo de quatro níveis —
+estava preenchido nos 27 itens e **não aparecia em lugar nenhum**: `tipo_id` era
+lido na consulta e descartado na montagem. Justamente a dimensão que varia
+(15 notebooks, 10 desktops, 2 servidores).
+
+O comentário em `src/lib/itens.ts` já dizia *"dois campos Tipo na mesma tela
+seria um desastre"*. A renomeação aconteceu na biblioteca e não chegou à tela.
+
+### Alterado
+
+- **A tela tem a forma do catálogo:** seções por tipo, cada uma com modelos,
+  peças, em uso e livres. `<details>` nativo — abre e fecha sem JavaScript.
+- **O que se repetia virou filtro** (tipo e categoria no topo); **o que varia
+  virou seção**.
+- **Cada modelo mostra quantas peças estão em uso**, não só quantas existem.
+  `17 un.` como texto cinza não distinguia 17 parados de 17 em campo.
+- **A paginação saiu.** Agrupar e paginar brigam: uma seção partida entre duas
+  páginas mostra o total do tipo com metade dos modelos embaixo, e quem lê não
+  sabe se o resto existe. No lugar, um teto de 500 com aviso na tela — e se um
+  dia isso apertar de verdade, o certo **não** é aumentar o número, é voltar a
+  paginar por seção.
+- **`listarItens` foi removida** por ter ficado sem chamador. Duas leituras do
+  mesmo catálogo é como as duas divergem.
+
+### Adicionado
+
+- **View `item_parque`** (migration 0078), com `security_invoker = on`. Contar
+  por situação não existe na API do PostgREST: ou se traz toda peça para a
+  aplicação e conta lá, ou o banco conta. O banco conta.
+- **Seção "Equipamento sem tipo"**, com a consequência dita: esses itens não
+  aparecem para quem filtra por tipo.
+
+### Não verificado
+
+A tela nova não foi aberta num navegador.
+
 ## [0.72.0] — 2026-09-06
 
 Fase C.2 — assinatura à distância. **A primeira rota pública deste sistema que

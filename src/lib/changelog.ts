@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.72.0";
+export const APP_VERSION = "0.73.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,19 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.73.0",
+    data: "2026-09-06",
+    titulo: "A tela de Itens ganhou a forma do catálogo",
+    mudancas: [
+      { tipo: "melhoria", texto: "Os itens agora aparecem agrupados por tipo — NOTEBOOK, DESKTOP, SERVIDOR —, cada seção com quantos modelos, quantas peças, quantas em uso e quantas livres. É a estrutura do catálogo, e não mais uma lista plana." },
+      { tipo: "melhoria", texto: "Saíram as colunas que repetiam a mesma palavra em toda linha (natureza, unidade e status) e entrou o que varia: o tipo do equipamento e o parque de cada modelo." },
+      { tipo: "novo", texto: "Filtro por tipo, ao lado do de categoria. E o cabeçalho da tela mostra o parque inteiro: modelos, peças, quantas em uso e quantas alugadas." },
+      { tipo: "novo", texto: "Cada modelo mostra quantas peças estão EM USO, e não só quantas existem — a diferença entre ter folga e não ter." },
+      { tipo: "correcao", texto: "A coluna chamada “Tipo” mostrava a natureza do item (Equipamento / Material / Consumível). O tipo de verdade estava cadastrado e não aparecia em lugar nenhum." },
+      { tipo: "melhoria", texto: "Equipamento sem tipo definido ganha uma seção própria, avisando que ele não aparece para quem filtra por tipo." },
+    ],
+  },
   {
     versao: "0.72.0",
     data: "2026-09-06",

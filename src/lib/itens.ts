@@ -88,3 +88,99 @@ export function controleDaNatureza(n: NaturezaItem): (typeof CONTROLES)[number] 
 
 export type ItemInput = z.input<typeof itemSchema>;
 export type ItemDados = z.output<typeof itemSchema>;
+
+// ---------------------------------------------------------------------------
+// O catálogo agrupado por tipo
+// ---------------------------------------------------------------------------
+
+/** Uma linha do catálogo com o parque dela já contado. */
+export type LinhaCatalogo = {
+  id: string;
+  descricao: string;
+  natureza: NaturezaItem;
+  ativo: boolean;
+  unidade: string | null;
+  categoriaNome: string | null;
+  tipoNome: string | null;
+  pecas: number;
+  emUso: number;
+  disponivel: number;
+  locadas: number;
+};
+
+export type GrupoCatalogo = {
+  /** Chave estável para `key` de React e para o `<details>` lembrar o estado. */
+  chave: string;
+  rotulo: string;
+  /** Por que este grupo existe. Só os grupos que são LACUNA têm nota. */
+  nota: string | null;
+  itens: LinhaCatalogo[];
+  modelos: number;
+  pecas: number;
+  emUso: number;
+  disponivel: number;
+  locadas: number;
+};
+
+/** O rótulo do grupo de um item, e a nota quando o grupo é uma lacuna. */
+function grupoDe(l: LinhaCatalogo): { rotulo: string; nota: string | null } {
+  if (l.tipoNome) return { rotulo: l.tipoNome, nota: null };
+
+  // Item que NÃO é equipamento legitimamente não tem tipo: um saco de cimento
+  // não é NOTEBOOK nem ANDAIME. Agrupá-lo pela natureza é o rótulo honesto.
+  if (l.natureza !== "equipamento") {
+    return { rotulo: NATUREZA_ITEM[l.natureza].label, nota: null };
+  }
+
+  // EQUIPAMENTO sem tipo é lacuna de cadastro, e uma com consequência: ele não
+  // aparece em nenhum filtro por tipo, então some das buscas de quem procura
+  // "todos os notebooks". Dizer isso é o que faz alguém consertar.
+  return {
+    rotulo: "Equipamento sem tipo",
+    nota: "Estes não aparecem quando alguém filtra por tipo. Defina o tipo no cadastro do item.",
+  };
+}
+
+/**
+ * Agrupa o catálogo por TIPO, com os totais de cada grupo.
+ *
+ * Ordem: grupos com mais peças primeiro — a pergunta que a tela responde é
+ * "onde está o meu parque", e a resposta começa pelo maior. Dentro do grupo,
+ * a ordem que veio do banco é preservada (o `order by` da consulta manda).
+ *
+ * O total de um grupo conta os itens QUE ESTÃO NA LISTA. Com filtro ativo isso
+ * é o certo: mostrar "96 peças" num grupo filtrado que exibe duas seria somar
+ * o que não está à vista.
+ */
+export function agruparPorTipo(linhas: LinhaCatalogo[]): GrupoCatalogo[] {
+  const grupos = new Map<string, GrupoCatalogo>();
+
+  for (const l of linhas) {
+    const { rotulo, nota } = grupoDe(l);
+    let g = grupos.get(rotulo);
+    if (!g) {
+      g = {
+        chave: rotulo.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+        rotulo,
+        nota,
+        itens: [],
+        modelos: 0,
+        pecas: 0,
+        emUso: 0,
+        disponivel: 0,
+        locadas: 0,
+      };
+      grupos.set(rotulo, g);
+    }
+    g.itens.push(l);
+    g.modelos += 1;
+    g.pecas += l.pecas;
+    g.emUso += l.emUso;
+    g.disponivel += l.disponivel;
+    g.locadas += l.locadas;
+  }
+
+  return [...grupos.values()].sort(
+    (a, b) => b.pecas - a.pecas || a.rotulo.localeCompare(b.rotulo, "pt-BR"),
+  );
+}
