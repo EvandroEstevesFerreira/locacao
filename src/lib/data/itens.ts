@@ -171,3 +171,71 @@ export async function listarTiposParaFiltro(): Promise<
   }
   return (data ?? []) as { id: string; nome: string }[];
 }
+
+/** Uma entrada do trilho de categorias. */
+export type CategoriaTrilho = {
+  /** `null` na linha "Sem categoria", que não é uma categoria cadastrada. */
+  id: string | null;
+  nome: string;
+  modelos: number;
+  pecas: number;
+  emUso: number;
+};
+
+/**
+ * Os totais de CADA categoria, inclusive das que o filtro atual esconde.
+ *
+ * É isso que faz o trilho servir de navegação: quem está em "Acesso e altura"
+ * precisa ver que TI tem 27 modelos para decidir ir até lá. Filtrar estes
+ * números pelo filtro corrente transformaria o trilho num espelho da lista.
+ *
+ * A linha "Sem categoria" vem de uma contagem à parte porque a view parte de
+ * `categoria_equipamento`: item sem categoria não pertence a linha nenhuma
+ * dela. Ele existe (o item de teste é um) e some da tela se ninguém contar.
+ */
+export async function listarTrilhoDeCategorias(): Promise<CategoriaTrilho[]> {
+  const supabase = await createClient();
+
+  const [{ data, error }, { count: semCategoria }] = await Promise.all([
+    supabase
+      .from("categoria_resumo")
+      .select("categoria_id, nome, modelos, pecas, em_uso")
+      .order("nome"),
+    supabase
+      .from("item_catalogo")
+      .select("id", { count: "exact", head: true })
+      .is("categoria_id", null),
+  ]);
+
+  if (error) {
+    console.error("listarTrilhoDeCategorias", error.message);
+    return [];
+  }
+
+  const linhas = ((data ?? []) as unknown as {
+    categoria_id: string;
+    nome: string;
+    modelos: number;
+    pecas: number;
+    em_uso: number;
+  }[]).map((c): CategoriaTrilho => ({
+    id: c.categoria_id,
+    nome: c.nome,
+    modelos: Number(c.modelos),
+    pecas: Number(c.pecas),
+    emUso: Number(c.em_uso),
+  }));
+
+  // Só aparece quando existe. Uma linha "Sem categoria — 0" seria um convite a
+  // clicar em nada.
+  if (semCategoria && semCategoria > 0) {
+    linhas.push({
+      id: null,
+      nome: "Sem categoria",
+      modelos: semCategoria,
+      pecas: 0,
+      emUso: 0,
+    });
+  }
+  return linhas;
+}

@@ -2,8 +2,13 @@ import Link from "next/link";
 import { Package, Plus, Pencil, TriangleAlert } from "lucide-react";
 import { getCurrentPerfil, podeEditarCadastros } from "@/lib/auth";
 import { agruparPorTipo, type LinhaCatalogo } from "@/lib/itens";
-import { listarCatalogo, listarTiposParaFiltro, TETO_CATALOGO } from "@/lib/data/itens";
-import { listarCategorias } from "@/lib/data/frota";
+import {
+  listarCatalogo,
+  listarTiposParaFiltro,
+  listarTrilhoDeCategorias,
+  TETO_CATALOGO,
+} from "@/lib/data/itens";
+import { TrilhoCategorias } from "./_components/trilho-categorias";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -49,9 +54,23 @@ export default async function ItensPage({
 
   const [{ linhas, total, truncado }, categorias, tipos] = await Promise.all([
     listarCatalogo({ q, categoria, tipo }),
-    listarCategorias(),
+    listarTrilhoDeCategorias(),
     listarTiposParaFiltro(),
   ]);
+
+  // O trilho é navegação: trocar de categoria NÃO pode perder a busca nem o
+  // filtro de tipo que a pessoa acabou de aplicar.
+  const linkDaCategoria = (c: string) => {
+    const p = new URLSearchParams();
+    if (q) p.set("q", q);
+    if (tipo) p.set("tipo", tipo);
+    if (c) p.set("categoria", c);
+    const s = p.toString();
+    return s ? `/itens?${s}` : "/itens";
+  };
+
+  const categoriaAtual = categorias.find((c) => (c.id ?? "sem") === categoria);
+  const totalDeModelos = categorias.reduce((n, c) => n + c.modelos, 0);
 
   const grupos = agruparPorTipo(linhas as LinhaCatalogo[]);
   const buscando = q.length > 0 || categoria.length > 0 || tipo.length > 0;
@@ -64,10 +83,37 @@ export default async function ItensPage({
     { pecas: 0, emUso: 0, locadas: 0 },
   );
 
+  // O catálogo inteiro está vazio — não há nem trilho a mostrar. Diferente de
+  // "o filtro não achou nada", que precisa do trilho para a pessoa sair de lá.
+  if (totalDeModelos === 0 && !buscando) {
+    return (
+      <div className="mx-auto max-w-5xl space-y-6">
+        <PageHeader
+          titulo="Itens"
+          descricao="Catálogo de equipamentos e materiais — próprios e locados."
+          acoes={
+            podeEditar ? (
+              <Button render={<Link href="/itens/novo" />}>
+                <Plus className="size-4" />
+                Novo item
+              </Button>
+            ) : null
+          }
+        />
+        <EmptyState
+          icon={<Package />}
+          titulo="Nenhum item cadastrado ainda"
+          descricao="O catálogo alimenta os contratos: cadastre os equipamentos e materiais que a organização aluga."
+          acao={podeEditar ? { label: "Novo item", href: "/itens/novo" } : undefined}
+        />
+      </div>
+    );
+  }
+
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6">
       <PageHeader
-        titulo="Itens"
+        titulo={categoriaAtual ? categoriaAtual.nome : "Itens"}
         descricao={
           total === 0
             ? "Catálogo de equipamentos e materiais — próprios e locados."
@@ -87,8 +133,18 @@ export default async function ItensPage({
         }
       />
 
-      {linhas.length > 0 || buscando ? (
-        <>
+      {/* Trilho à esquerda, lista à direita. O trilho fica FORA do bloco que
+          depende do filtro: quando o filtro não acha nada, é por ele que a
+          pessoa sai de onde está. */}
+      <div className="flex flex-col gap-6 lg:flex-row">
+        <TrilhoCategorias
+          categorias={categorias}
+          selecionada={categoria}
+          totalModelos={totalDeModelos}
+          href={linkDaCategoria}
+        />
+
+        <div className="min-w-0 flex-1 space-y-4">
           <ListFilters>
             <ListSearch
               placeholder="Buscar por descrição ou unidade…"
@@ -101,15 +157,6 @@ export default async function ItensPage({
               opcoes={[
                 ...tipos.map((t) => ({ value: t.id, label: t.nome })),
                 { value: "sem", label: "Sem tipo" },
-              ]}
-            />
-            <SelectFilter
-              param="categoria"
-              label="Categoria"
-              placeholder="Todas as categorias"
-              opcoes={[
-                ...categorias.map((c) => ({ value: c.id, label: c.nome })),
-                { value: "sem", label: "Sem categoria" },
               ]}
             />
           </ListFilters>
@@ -219,15 +266,8 @@ export default async function ItensPage({
               ))}
             </div>
           )}
-        </>
-      ) : (
-        <EmptyState
-          icon={<Package />}
-          titulo="Nenhum item cadastrado ainda"
-          descricao="O catálogo alimenta os contratos: cadastre os equipamentos e materiais que a organização aluga."
-          acao={podeEditar ? { label: "Novo item", href: "/itens/novo" } : undefined}
-        />
-      )}
+        </div>
+      </div>
     </div>
   );
 }

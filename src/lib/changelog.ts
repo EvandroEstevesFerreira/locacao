@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.73.0";
+export const APP_VERSION = "0.74.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,18 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.74.0",
+    data: "2026-09-06",
+    titulo: "Trilho de categorias na tela de Itens",
+    mudancas: [
+      { tipo: "novo", texto: "As categorias viraram um trilho fixo à esquerda da tela de Itens. Trocar de categoria é um clique, e cada uma mostra quantos modelos tem — inclusive as que você não está olhando." },
+      { tipo: "melhoria", texto: "O título da tela passa a ser o nome da categoria escolhida. Antes dizia sempre “Itens”, mesmo com um filtro ativo." },
+      { tipo: "melhoria", texto: "Trocar de categoria preserva a busca e o filtro de tipo que você acabou de aplicar." },
+      { tipo: "melhoria", texto: "Quando o filtro não encontra nada, o trilho continua na tela — é por ele que se sai de onde não tem nada." },
+      { tipo: "melhoria", texto: "No celular o trilho vira uma faixa que rola na horizontal, em vez de comer metade da largura." },
+    ],
+  },
   {
     versao: "0.73.0",
     data: "2026-09-06",

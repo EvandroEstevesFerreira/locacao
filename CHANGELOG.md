@@ -7,6 +7,45 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.74.0] — 2026-09-06
+
+Trilho de categorias na tela de Itens — **modelo C**, escolhido entre três.
+
+### Por que agora
+
+O agrupamento por tipo da 0.73.0 funciona com **3 tipos**. O catálogo inteiro
+tem 8 categorias e cerca de 30 tipos: trinta seções empilhadas numa página só.
+A categoria precisava virar navegação antes de PTA, andaime e ar-condicionado
+entrarem.
+
+### Adicionado
+
+- **View `categoria_resumo`** (migration 0079), com `security_invoker = on`.
+  Contar na aplicação obrigaria a trazer o catálogo inteiro a cada visita, só
+  para somar oito números.
+- **`TrilhoCategorias`** — server component, feito de links e não de estado: o
+  botão "voltar" funciona e a URL pode ser colada para alguém.
+
+### Decisões
+
+- **O trilho é navegação, não filtro**, e a diferença aparece nos números: cada
+  linha mostra o total *daquela* categoria mesmo quando outra está selecionada.
+  Quem está em "Acesso e altura" precisa ver que TI tem 27 modelos para decidir
+  ir até lá. Um trilho que espelhasse o filtro corrente só repetiria a lista.
+- **Categoria vazia mostra travessão, não zero.** `0` convida a clicar para ver
+  nada; o travessão diz que não há o que ver.
+- **A linha "Sem categoria" vem de uma contagem à parte**, porque a view parte de
+  `categoria_equipamento` e item sem categoria não pertence a linha nenhuma dela.
+  Ele existe — o item de teste é um — e sumiria da tela se ninguém contasse.
+- **O trilho fica fora do bloco que depende do filtro.** Quando a busca não acha
+  nada, é por ele que a pessoa sai de onde está.
+- **No celular vira faixa horizontal.** Uma coluna de 180 px num telefone de
+  360 px comeria metade da tela para mostrar o que não se está olhando.
+
+### Não verificado
+
+A tela não foi aberta num navegador.
+
 ## [0.73.0] — 2026-09-06
 
 A tela de Itens, reformulada. Modelo escolhido pelo Evandro entre três:
