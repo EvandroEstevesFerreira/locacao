@@ -45,7 +45,6 @@ async function api(caminho) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-const CINZA = "FFF1F5F9";
 const ESCURO = "FF0F172A";
 const VERMELHO = "FFBE3A31";
 
