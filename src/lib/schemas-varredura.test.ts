@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { z } from "zod";
 
 import * as alojamento from "./alojamento";
+import * as apontamento from "./apontamento";
 import * as avaria from "./avaria";
 import * as avanco from "./avanco";
 import * as catalogo from "./catalogo";
@@ -50,6 +51,7 @@ import * as treinamento from "./treinamento";
 
 const MODULOS: Record<string, Record<string, unknown>> = {
   alojamento,
+  apontamento,
   avaria,
   avanco,
   catalogo,
@@ -210,6 +212,7 @@ const AMOSTRAS: Record<string, unknown> = {
     condicao: "ok",
   },
   fecharDevolucaoSchema: { id: UUID, ciente: true },
+  apontamentoSchema: { unidade_id: UUID, data: "2026-09-05", leitura: "1234.5" },
   laudoAvariaSchema: { id: UUID, data: "2026-09-05", responsabilidade: "indefinida" },
   "catalogo.categoriaSchema": { nome: "Concretagem" },
   tipoEquipamentoSchema: {

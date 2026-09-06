@@ -5,7 +5,7 @@
 // seis vezes (ver o cabeçalho de `campos.ts`).
 
 import { z } from "zod";
-import { textoOpcional, uuidOpcional } from "@/lib/campos";
+import { numeroOpcional, textoOpcional, uuidOpcional } from "@/lib/campos";
 import { ehDataISO } from "@/lib/locacao";
 import { NATUREZAS_ITEM } from "@/lib/itens";
 
@@ -39,6 +39,18 @@ export const tipoEquipamentoSchema = z.object({
     .max(60, "Use no máximo 60 caracteres.")
     .transform((v) => v.toUpperCase()),
   natureza_padrao: z.enum(NATUREZAS_ITEM),
+  /**
+   * Intervalo de manutenção preventiva, em horas de horímetro.
+   *
+   * Vive no TIPO e não na peça: o intervalo é do fabricante e vale para toda a
+   * família — GERADOR revisa a cada 250 h, todos eles. Repetir por peça faria
+   * cada cadastro novo pedir um número que ninguém lembra, e metade ficaria
+   * zero.
+   *
+   * NULO = este tipo não tem manutenção por uso. É o caso de NOTEBOOK e da
+   * maioria: só faz sentido onde o fabricante publica o intervalo.
+   */
+  intervalo_manutencao_h: numeroOpcional,
   ativo: z.boolean(),
 });
 

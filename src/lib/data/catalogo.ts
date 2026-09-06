@@ -35,6 +35,8 @@ export type CategoriaComTipos = {
     itens: number;
     /** Os campos que as PEÇAS deste tipo pedem (migration 0070). */
     campos: CampoFicha[];
+    /** Horas entre revisões (migration 0071). Nulo = sem manutenção por uso. */
+    intervaloManutencaoH: number | null;
   }[];
 };
 
@@ -53,7 +55,7 @@ export async function listarCategoriasComTipos(): Promise<CategoriaComTipos[]> {
       supabase.from("categoria_equipamento").select("id, nome").order("nome"),
       supabase
         .from("tipo_equipamento")
-        .select("id, nome, categoria_id, natureza_padrao, ativo, campos_ficha, item_catalogo(count)")
+        .select("id, nome, categoria_id, natureza_padrao, ativo, campos_ficha, intervalo_manutencao_h, item_catalogo(count)")
         .order("nome"),
     ]);
 
@@ -76,6 +78,7 @@ export async function listarCategoriasComTipos(): Promise<CategoriaComTipos[]> {
       // array, e um campo gravado por SQL com forma errada derrubaria a tela em
       // vez de ser ignorado.
       campos: lerCampos(t.campos_ficha),
+      intervaloManutencaoH: t.intervalo_manutencao_h ?? null,
     });
     porCategoria.set(t.categoria_id, lista);
   }

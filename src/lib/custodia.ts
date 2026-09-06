@@ -247,6 +247,14 @@ export const editarPecaSchema = z.object({
   memoria_gb: memoriaOpcional,
   configuracao: textoOpcional(200),
   /**
+   * Peça com horímetro entra no apontamento de uso (migration 0071).
+   *
+   * Nasce FALSO: gerador e compressor costumam ter; betoneira e vibrador quase
+   * nunca. Ligado para todas, a tela de apontamento encheria de peças que não
+   * têm o que apontar, e a lista viraria ruído no primeiro dia.
+   */
+  tem_horimetro: z.boolean().default(false),
+  /**
    * Os campos definidos pelo TIPO do item desta peça (migration 0070).
    *
    * Registro CRU aqui de propósito: a forma de cada campo depende do tipo, que

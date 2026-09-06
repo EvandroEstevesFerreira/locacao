@@ -7,6 +7,77 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.67.0] — 2026-09-05
+
+Fase 3a, construída sob duas suposições declaradas: quais peças têm horímetro se
+marca no cadastro (começando desmarcado), e a leitura é semanal — o desenho de
+menor atrito, que absorve o caso "o encarregado, de memória, uma vez por
+semana".
+
+Depois da resposta **"todos os contratos são por calendário"**, o apontamento
+deixou de ser dado financeiro. A diária corre trabalhando a máquina ou não.
+Sobraram duas justificativas, e as duas valem: **manutenção preventiva por uso**
+e **ociosidade real**.
+
+### Adicionado
+
+- **`apontamento_uso`** (migration 0071). O que se grava é a LEITURA DO
+  MOSTRADOR, acumulada — não "horas trabalhadas". Quem lê o horímetro copia um
+  número; quem estima horas de memória inventa. E a leitura é auditável: dá para
+  conferir contra a máquina a qualquer momento.
+- **`equipamento_unidade.tem_horimetro`**, nascendo falso. Gerador e compressor
+  costumam ter; betoneira e vibrador quase nunca. Ligado para todas, a tela de
+  apontamento viraria ruído no primeiro dia.
+- **`tipo_equipamento.intervalo_manutencao_h`.** Vive no TIPO porque o intervalo
+  é do fabricante e vale para toda a família — repetir por peça faria cada
+  cadastro pedir um número que ninguém lembra, e metade ficaria zero.
+- **Relatório "Uso do equipamento"**, com horas no período, dias sem leitura e
+  situação da revisão.
+
+### O cálculo mora no banco
+
+`horas` é a diferença para a leitura anterior DA MESMA PEÇA, e "anterior"
+depende da DATA — não da ordem de digitação. Alguém lança a leitura de segunda
+depois de já ter lançado a de quarta, e a action teria de recalcular as duas.
+
+Dois gatilhos resolvem: um calcula, outro **recalcula o apontamento seguinte**
+quando um é inserido no meio ou excluído. Sem o segundo, lançar segunda depois
+de quarta deixaria quarta contando as horas de segunda também — o total do mês
+ficaria certo por acaso e a distribuição no tempo, errada.
+
+Verificado em produção numa transação revertida, com seis cenários:
+
+| Cenário | Resultado |
+|---|---|
+| Primeira leitura | horas = 0 |
+| Lançar dia 08 entre 01 e 15 | dia 15 recalculou 40 → 20 |
+| Excluir o dia 08 | dia 15 voltou a 40 |
+| Leitura menor sem marcar troca | recusada |
+| Horímetro trocado, marcado | horas = 0 |
+
+### Detalhes
+
+- **Horímetro trocado zera.** Sem a marca `reiniciado`, a leitura seguinte seria
+  menor que a anterior e o lançamento recusado para sempre. Marcado, o período
+  conta zero — a leitura de um horímetro novo não é hora trabalhada.
+- **`obra_id` é fotografada no lançamento**, não derivada depois: a peça circula,
+  e daqui a três meses a obra atual seria outra — o apontamento diria que a
+  máquina trabalhou onde ela nem estava.
+- **`unique (unidade_id, data)`.** Duas leituras da mesma peça no mesmo dia são
+  sempre erro de digitação, e a segunda substituiria a primeira sem que ninguém
+  soubesse qual valia.
+- **O aviso de revisão começa a 10% do intervalo**, não num número fixo: 25 h de
+  antecedência é muito para 50 e pouco para 500.
+- **`faltam` é negativo quando venceu.** "Passou 30 h" é o que faz alguém agir;
+  truncar em zero esconderia há quanto tempo.
+
+### Simplificação declarada
+
+`leituraUltimaRevisao` é **zero**: a ordem de reparo ainda não registra a leitura
+do horímetro no momento do serviço. Enquanto não registrar, o intervalo conta
+desde o começo da vida da máquina — o que **acusa revisão vencida cedo demais**,
+e não tarde demais. Errar para o lado do alarme é o lado certo de errar aqui.
+
 ## [0.66.0] — 2026-09-05
 
 Fase B do catálogo — o construtor de formulário. Fecha a spec

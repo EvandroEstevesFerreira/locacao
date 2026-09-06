@@ -20,7 +20,12 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { hojeISOSaoPaulo } from "./locacao";
-import type { Relatorio, FiltrosRelatorio } from "./relatorios";
+import type { Relatorio, FiltrosRelatorio, Coluna } from "./relatorios";
+import {
+  horasAteRevisao,
+  estadoRevisao,
+  ESTADO_REVISAO_INFO,
+} from "./apontamento";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type DB = SupabaseClient<any, any, any>;
@@ -332,5 +337,129 @@ export async function manutencaoCusto(
     ],
     linhas,
     grafico: { labelKey: "peca", valorKey: "total" },
+  };
+}
+
+const COLUNAS_USO: Coluna[] = [
+  { key: "peca", label: "Peça", tipo: "texto" },
+  { key: "equipamento", label: "Equipamento", tipo: "texto" },
+  { key: "leitura", label: "Horímetro", tipo: "numero" },
+  { key: "ultima_leitura", label: "Última leitura", tipo: "data" },
+  { key: "sem_leitura_ha", label: "Sem leitura há (dias)", tipo: "numero" },
+  { key: "horas", label: "Horas no período", tipo: "numero" },
+  { key: "intervalo", label: "Revisão a cada (h)", tipo: "numero" },
+  { key: "faltam", label: "Faltam (h)", tipo: "numero" },
+  { key: "revisao", label: "Situação", tipo: "texto" },
+];
+
+/**
+ * Uso e revisão das peças com horímetro.
+ *
+ * A OCIOSIDADE QUE ESTE RELATÓRIO MEDE É OUTRA. O relatório `ociosidade` que já
+ * existe mede CALENDÁRIO: o item está locado e não foi devolvido. Uma betoneira
+ * que está na obra há 40 dias e trabalhou 6 horas não aparece lá — para aquele
+ * relatório ela está em uso.
+ *
+ * Aqui a conta é por HORA TRABALHADA, e só existe para as peças marcadas com
+ * horímetro. É o único relatório do sistema que responde "esta máquina
+ * compensa?".
+ */
+export async function usoEquipamento(
+  supabase: DB,
+  filtros: FiltrosRelatorio,
+): Promise<Relatorio> {
+  const hoje = hojeISOSaoPaulo();
+
+  const { data: pecas, error } = await supabase
+    .from("equipamento_unidade")
+    .select(
+      "id, identificador, item:item_id(descricao, tipo:tipo_id(intervalo_manutencao_h))",
+    )
+    .eq("tem_horimetro", true)
+    .eq("ativo", true)
+    .order("identificador");
+
+  if (error) throw error;
+  if ((pecas ?? []).length === 0) {
+    return { titulo: "Uso do equipamento", colunas: COLUNAS_USO, linhas: [] };
+  }
+
+  const { data: aps, error: erroAps } = await supabase
+    .from("apontamento_uso")
+    .select("unidade_id, data, leitura, horas")
+    .in(
+      "unidade_id",
+      (pecas ?? []).map((p: Bruta) => p.id),
+    )
+    .order("data");
+
+  if (erroAps) throw erroAps;
+
+  type Acc = { primeira: string; ultima: string; leitura: number; horas: number };
+  const porPeca = new Map<string, Acc>();
+
+  for (const a of (aps ?? []) as Bruta[]) {
+    const quando = String(a.data);
+    // O período filtra as HORAS, não as peças: uma máquina sem apontamento no
+    // período continua na lista, com zero — e zero é justamente a resposta que
+    // este relatório existe para dar.
+    const dentro =
+      (!filtros.inicio || quando >= filtros.inicio) &&
+      (!filtros.fim || quando <= filtros.fim);
+
+    const chave = String(a.unidade_id);
+    const atual = porPeca.get(chave) ?? {
+      primeira: quando,
+      ultima: quando,
+      leitura: Number(a.leitura),
+      horas: 0,
+    };
+    if (quando < atual.primeira) atual.primeira = quando;
+    // A consulta vem ordenada por data crescente, então a última que passa
+    // aqui é a mais recente — e é dela que sai a leitura atual do horímetro.
+    if (quando >= atual.ultima) {
+      atual.ultima = quando;
+      atual.leitura = Number(a.leitura);
+    }
+    if (dentro) atual.horas += Number(a.horas);
+    porPeca.set(chave, atual);
+  }
+
+  const linhas = (pecas ?? []).map((p: Bruta) => {
+    const item = (Array.isArray(p.item) ? p.item[0] : p.item) as {
+      descricao?: string;
+      tipo:
+        | { intervalo_manutencao_h: number | null }
+        | { intervalo_manutencao_h: number | null }[]
+        | null;
+    } | null;
+    const tipo = (Array.isArray(item?.tipo) ? item?.tipo[0] : item?.tipo) as
+      | { intervalo_manutencao_h: number | null }
+      | null;
+    const acc = porPeca.get(String(p.id)) ?? null;
+    const intervalo = tipo?.intervalo_manutencao_h ?? null;
+    const faltam = horasAteRevisao(acc?.leitura ?? null, intervalo, 0);
+
+    return {
+      peca: p.identificador as string,
+      equipamento: item?.descricao ?? "—",
+      leitura: acc ? acc.leitura : null,
+      ultima_leitura: acc?.ultima ?? null,
+      // Dias desde a última leitura: uma peça com horímetro que ninguém lê há
+      // três semanas não está "em dia" — está sem informação, e a coluna
+      // separa as duas coisas.
+      sem_leitura_ha: acc ? diasEntre(acc.ultima, hoje) : 0,
+      horas: acc ? acc.horas : 0,
+      intervalo,
+      faltam,
+      revisao: ESTADO_REVISAO_INFO[estadoRevisao(faltam, intervalo)].label,
+    };
+  });
+
+  return {
+    titulo: "Uso do equipamento",
+    colunas: COLUNAS_USO,
+    linhas,
+    grafico: { labelKey: "peca", valorKey: "horas" },
   };
 }
