@@ -9,6 +9,7 @@ import {
   opcional,
   textoOpcional,
   dataOpcional,
+  emailOpcional,
   uuidOpcional,
 } from "@/lib/campos";
 // Estado de conservação é o MESMO conceito da peça de frota, e o mesmo enum
@@ -61,6 +62,13 @@ export const funcionarioSchema = z.object({
   cargo: textoOpcional(100),
   matricula: textoOpcional(40),
   telefone: textoOpcional(40),
+  // `emailOpcional` ja e idempotente e valida o formato. NAO escreva
+  // `z.string().email().optional()` aqui: `parse(parse(x))` quebraria, e
+  // `schemas-varredura.test.ts` cobra essa propriedade de todo schema.
+  //
+  // `email_confirmado` NAO entra no schema: nao vem do formulario como valor,
+  // e calculado pela action a partir de `confirmacaoDoEmail`.
+  email: emailOpcional(200),
   obra_id: uuidOpcional,
 });
 export type FuncionarioInput = z.infer<typeof funcionarioSchema>;

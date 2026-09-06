@@ -10,6 +10,8 @@ export type FuncionarioLinha = {
   cargo: string | null;
   matricula: string | null;
   telefone: string | null;
+  email: string | null;
+  email_confirmado: boolean;
   obra_id: string | null;
   obra_codigo: string | null;
   ativo: boolean;
@@ -80,7 +82,9 @@ export async function listarFuncionarios(
   const supabase = await createClient();
   let q = supabase
     .from("funcionario")
-    .select("id, nome, cpf, cargo, matricula, telefone, obra_id, ativo, obra:obra_id(codigo)")
+    .select(
+      "id, nome, cpf, cargo, matricula, telefone, email, email_confirmado, obra_id, ativo, obra:obra_id(codigo)",
+    )
     .order("nome");
   if (opts.apenasAtivos) q = q.eq("ativo", true);
   if (opts.busca) q = q.ilike("nome", `%${opts.busca}%`);
@@ -99,6 +103,8 @@ export async function listarFuncionarios(
       cargo: f.cargo,
       matricula: f.matricula,
       telefone: f.telefone,
+      email: f.email,
+      email_confirmado: f.email_confirmado,
       obra_id: f.obra_id,
       obra_codigo: Array.isArray(obra) ? (obra[0]?.codigo ?? null) : (obra?.codigo ?? null),
       ativo: f.ativo,

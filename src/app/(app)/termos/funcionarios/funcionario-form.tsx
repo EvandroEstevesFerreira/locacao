@@ -7,11 +7,31 @@ import { Input } from "@/components/ui/input";
 import { salvarFuncionario } from "../actions";
 import type { FuncionarioLinha } from "@/lib/data/termo";
 
+/**
+ * O que o formulário precisa saber do funcionário — e só isso.
+ *
+ * Estreitar aqui evita que a página finja trazer um `FuncionarioLinha` inteiro:
+ * ela lê o funcionário em edição sem `obra_codigo`, porque o formulário mostra
+ * um seletor de obras e não o código de uma.
+ */
+export type FuncionarioParaEditar = Pick<
+  FuncionarioLinha,
+  | "id"
+  | "nome"
+  | "cpf"
+  | "cargo"
+  | "matricula"
+  | "telefone"
+  | "email"
+  | "email_confirmado"
+  | "obra_id"
+>;
+
 export function FuncionarioForm({
   funcionario,
   obras,
 }: {
-  funcionario?: FuncionarioLinha;
+  funcionario?: FuncionarioParaEditar;
   obras: { id: string; codigo: string; nome: string }[];
 }) {
   const [estado, acao, pendente] = useActionState(salvarFuncionario, null);
@@ -44,6 +64,31 @@ export function FuncionarioForm({
         <span className="text-xs text-muted-foreground">Telefone</span>
         <Input name="telefone" defaultValue={funcionario?.telefone ?? ""} maxLength={40} />
       </label>
+      <label className="grid gap-1 sm:col-span-2">
+        <span className="text-xs text-muted-foreground">E-mail</span>
+        <Input
+          name="email"
+          type="email"
+          defaultValue={funcionario?.email ?? ""}
+          maxLength={200}
+          placeholder="nome.sobrenome@sistenge.com"
+        />
+      </label>
+
+      {/* A caixa só aparece quando há endereço por conferir. Mostrá-la sempre
+          treinaria a pessoa a marcar sem ler, que é o oposto do que ela serve.
+          Digitar um endereço diferente já confirma sozinho. */}
+      {funcionario?.email && !funcionario.email_confirmado ? (
+        <label className="flex items-start gap-2 rounded-md border border-dashed p-3 text-sm sm:col-span-2">
+          <input type="checkbox" name="confirmar_email" className="mt-0.5 size-4" />
+          <span>
+            Este endereço foi <strong>deduzido do nome</strong> e ainda não foi
+            conferido. Marque para confirmar que está correto — enquanto não
+            estiver, nenhum termo é enviado para ele.
+          </span>
+        </label>
+      ) : null}
+
       <label className="grid gap-1 sm:col-span-2">
         <span className="text-xs text-muted-foreground">Obra de lotação</span>
         <select

@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeOperar, podeEditarCadastros } from "@/lib/auth";
 import { falha, primeiroErro, type ActionResult } from "@/lib/acoes";
 import {
+  confirmacaoDoEmail,
   funcionarioSchema,
   termoSchema,
   termoItemSchema,
@@ -33,22 +34,52 @@ export async function salvarFuncionario(
 
   const id = String(formData.get("id") ?? "").trim();
   const supabase = await createClient();
+
+  // A confirmação depende do que JÁ ESTAVA gravado: salvar sem tocar num
+  // endereço derivado não pode transformá-lo em conferido.
+  let atual = { email: null as string | null, confirmado: false };
+  if (id) {
+    const { data: anterior } = await supabase
+      .from("funcionario")
+      .select("email, email_confirmado")
+      .eq("id", id)
+      .maybeSingle();
+    if (anterior) {
+      atual = { email: anterior.email, confirmado: anterior.email_confirmado };
+    }
+  }
+
+  const campos = {
+    ...parsed.data,
+    email_confirmado: confirmacaoDoEmail(atual, {
+      email: parsed.data.email,
+      marcouConfirmar: formData.get("confirmar_email") === "on",
+    }),
+  };
+
   const { data, error } = id
     ? await supabase
         .from("funcionario")
-        .update(parsed.data)
+        .update(campos)
         .eq("id", id)
         .select("id")
         .single()
     : await supabase
         .from("funcionario")
-        .insert({ org_id: perfil.org_id, ...parsed.data })
+        .insert({ org_id: perfil.org_id, ...campos })
         .select("id")
         .single();
 
   if (error) {
-    // 23505 = unique_violation. O único índice único é o do CPF.
-    if (error.code === "23505") return falha("Já existe funcionário com esse CPF.");
+    // 23505 = unique_violation. Agora são DOIS índices únicos, e dizer "CPF"
+    // para uma colisão de e-mail manda a pessoa conferir o campo errado.
+    if (error.code === "23505") {
+      return falha(
+        error.message.includes("idx_funcionario_email")
+          ? "Já existe funcionário com esse e-mail."
+          : "Já existe funcionário com esse CPF.",
+      );
+    }
     return falha("Não foi possível salvar o funcionário.");
   }
 
