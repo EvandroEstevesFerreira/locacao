@@ -424,18 +424,63 @@ Três regras herdadas de devolução e recebimento, e uma nova:
   qual é o endereço derivado e pede confirmação. O termo é emitido do mesmo
   jeito.
 
-### C.2 — Assinatura à distância (fase própria, não desenhada aqui)
+### C.2 — Assinatura à distância
 
-O link que a pessoa abre no celular e assina sem estar na frente de quem entrega
-resolve as obras e quem está em campo. Mas é subsistema novo, com decisões que
-esta spec não tem base para tomar:
+Decidido pelo Evandro em 06/09/2026, depois de um levantamento que mudou o peso
+da coisa: **este sistema não tem nenhuma rota pública que carregue dado.** O
+middleware libera `/login`, `/auth` e `/offline`, e todo o resto exige sessão. A
+assinatura remota é a primeira porta aberta do Loca.
 
-- rota pública sem sessão, e o que ela pode ler;
-- token com validade, uso único e revogação;
-- **o que passa a valer como prova** quando ninguém viu quem clicou — hoje o IP
-  e a imagem são colhidos com o operador presente.
+#### A prova: link + CPF
 
-Fica registrado como pendente, com desenho próprio. Não é escopo desta spec.
+A pergunta que decide tudo é *"como se sabe que foi ele quem assinou?"*. Hoje a
+resposta é **"o operador estava presente"**, e um link some com isso.
+
+A resposta escolhida: **o link vai ao e-mail corporativo conferido da pessoa, e
+ela digita o próprio CPF para destravar o documento.** Dois fatores fracos que
+juntos sustentam a afirmação — teve acesso à caixa dela E sabia o CPF.
+
+**Isto nasce inerte, e é preciso dizer:** dos 118 funcionários cadastrados,
+**nenhum tem CPF**. Enquanto os CPFs não entrarem, nenhum termo pode ser
+assinado à distância, e a tela tem de dizer isso em vez de gerar um link que
+nunca destrava.
+
+#### O resto do desenho
+
+| Decisão | Escolha |
+|---|---|
+| Token | uso único, **7 dias**, revogável |
+| O que a página pública lê | **só o termo daquele link** — sem lista, sem busca |
+| Convivência | **coexiste** com a assinatura na tela; não substitui |
+| Registro | IP e hora, como hoje |
+
+**O token não é gravado — só o `sha256` dele.** O token em claro existe no
+e-mail e em mais lugar nenhum: se o banco vazar, os links não vazam junto.
+
+**A leitura pública NÃO usa `createAdminClient()`.** A regra do `AGENTS.md`
+existe porque o isolamento por organização depende de RLS, e um handle admin
+genérico numa rota pública é a pior versão desse furo. Em vez disso, duas
+funções `security definer` com `search_path = ''` recebem o hash e devolvem
+**exclusivamente** o termo que aquele link destrava. O banco é quem impõe o
+escopo; a aplicação nunca ganha o handle.
+
+#### O link nasce de um rascunho
+
+O fluxo remoto inverte a ordem do presencial:
+
+```
+operador cria o rascunho e assina PELA EMPRESA
+        ↓  gera o link, que vai por e-mail
+funcionário abre, confirma o CPF, assina
+        ↓
+o termo é EMITIDO: número, peças movidas, via por e-mail
+```
+
+A assinatura da empresa é colhida na geração do link, e não depois: exigir que o
+operador volte para assinar depois faria o termo ficar meio-assinado por tempo
+indeterminado — e um documento nesse estado não é documento nem rascunho.
+
+Emitir continua sendo **um** ato, na função que já existe.
 
 ---
 
