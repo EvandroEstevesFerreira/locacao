@@ -7,6 +7,81 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.72.0] — 2026-09-06
+
+Fase C.2 — assinatura à distância. **A primeira rota pública deste sistema que
+carrega dado.**
+
+### O peso da coisa
+
+O middleware liberava `/login`, `/auth` e `/offline`. Nenhuma rota do Loca jamais
+devolveu dado a quem não entrou. Por isso o desenho aqui é mais apertado que o
+de qualquer outra parte.
+
+**A prova.** A pergunta que sustenta o termo é *"como se sabe que foi ele quem
+assinou?"*. No presencial a resposta é "o operador estava presente", e um link
+some com isso. A resposta escolhida: **o link vai ao e-mail corporativo
+conferido E a pessoa digita o próprio CPF**. Dois fatores fracos que juntos
+sustentam a afirmação.
+
+**Nasce inerte, e isso está dito no código:** dos 118 funcionários,
+**nenhum tem CPF cadastrado**. O sistema recusa gerar o link nesse caso, em vez
+de criar um que nunca destrava — link que a pessoa tenta, falha e passa a
+desconfiar do sistema em vez do cadastro.
+
+### Adicionado
+
+- **`termo_link`** (migration 0077), com validade, uso único e revogação.
+- **`/assinar/[token]`** — página pública, fora do grupo `(app)`: sem menu, sem
+  navegação, sem link para lugar nenhum.
+- **Bloco "Assinar à distância"** no rascunho, com os três impedimentos
+  nomeados: sem e-mail, e-mail por conferir, sem CPF.
+- **Template `conviteAssinatura`**, que **não leva o PDF anexo** — o documento
+  ainda não está assinado, e um anexo circulando antes da assinatura é o que a
+  numeração existe para impedir.
+
+### Segurança
+
+- **O token não é gravado — só o `sha256` dele.** O token em claro existe no
+  e-mail e em lugar nenhum mais: se o banco vazar, os links não vazam junto. O
+  preço é que ele não pode ser recuperado, e a tela diz isso.
+- **A leitura pública NÃO usa `createAdminClient()`.** A regra do `AGENTS.md`
+  existe porque o isolamento por organização depende de RLS, e um handle admin
+  genérico numa rota pública é a pior versão desse furo. Três funções
+  `security definer` com `search_path = ''` recebem o hash e devolvem
+  exclusivamente o termo que aquele link destrava; a aplicação nunca ganha o
+  handle.
+- **Link inexistente, vencido, usado e revogado devolvem o mesmo `null`.**
+  Distinguir "não existe" de "venceu" diria a um curioso que aquele hash já foi
+  um link bom.
+- **CPF errado NÃO queima o link.** Um dígito trocado não pode custar o
+  documento — a conferência é separada da assinatura por isso.
+- **O CPF não volta na resposta.** O nome vai, para a pessoa reconhecer o
+  documento como seu; devolver o CPF transformaria a conferência em cópia e
+  colagem.
+
+Verificado em produção numa transação revertida, sem resíduo:
+
+| Cenário | Resultado |
+|---|---|
+| Hash desconhecido | `null` |
+| Link bom | devolve o termo, sem vazar CPF |
+| CPF sem pontuação | aceito |
+| CPF errado | recusado, **link segue vivo** |
+| Assinar com IP malformado | assina; IP vira nulo |
+| Reusar o link | recusado, leitura vira `null` |
+
+### Corrigido
+
+- **`emitirTermo` não grava uma segunda assinatura** de quem já assinou à
+  distância. Sem isso o PDF mostraria duas linhas para a mesma pessoa, e quem
+  confere não saberia qual traço vale.
+
+### Não verificado
+
+Nenhuma tela autenticada foi aberta num navegador, **a página pública nunca foi
+aberta**, e nenhum e-mail foi disparado de verdade.
+
 ## [0.71.0] — 2026-09-06
 
 Fase C.1 do inventário de TI. O termo de responsabilidade chega a quem assinou.

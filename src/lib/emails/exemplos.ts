@@ -20,6 +20,7 @@ import type {
   DadosVencimentosObra,
   DadosDevolucao,
   DadosTermoFuncionario,
+  DadosConviteAssinatura,
 } from "./templates";
 
 export const CONTEXTO: Contexto = {
@@ -315,4 +316,20 @@ export const TERMO_FUNCIONARIO: DadosTermoFuncionario = {
   ],
   anexo: "FRM-EQ-001-TRM-2026-0007.pdf",
   observacoes: "Carregador entregue junto, sem patrimônio próprio.",
+};
+
+export const CONVITE_ASSINATURA: DadosConviteAssinatura = {
+  funcionario: "Marcio Oliveira",
+  obra: "608 — Racional Dante",
+  dataEntrega: "06/09/2026",
+  itens: [
+    {
+      descricao: "Dell Latitude 3410",
+      patrimonio: "4L1KL22",
+      quantidade: "1 un",
+      estado: "Novo",
+    },
+  ],
+  url: "https://loca-sistenge.vercel.app/assinar/exemplo-de-token",
+  validade: "7 dias",
 };

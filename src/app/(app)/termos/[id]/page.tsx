@@ -30,6 +30,8 @@ import {
 import { TermoDevolucao } from "./_components/termo-devolucao";
 import { TermoEmissao } from "./_components/termo-emissao";
 import { TermoViaEmail } from "./_components/termo-via-email";
+import { TermoLinkAssinatura } from "./_components/termo-link-assinatura";
+import { ultimoLinkDoTermo } from "@/lib/data/termo";
 import { TermoCancelar } from "./_components/termo-cancelar";
 import { TermoExcluir } from "./_components/termo-excluir";
 
@@ -71,6 +73,13 @@ export default async function TermoDetalhePage({
   const cancelado = termo.situacao === "cancelado";
   const encerrado = Boolean(termo.encerrado_em) || cancelado;
   const pendentes = termo.itens.filter((i) => !i.data_devolucao).length;
+
+  // A leitura do link só faz sentido em rascunho, e evitá-la nos outros casos
+  // poupa uma ida ao banco em toda visita a termo emitido.
+  const link = rascunho ? await ultimoLinkDoTermo(termo.id) : null;
+  const jaAssinouADistancia =
+    rascunho &&
+    termo.assinaturas.some((a) => a.momento === "entrega" && a.papel === "funcionario");
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6">
@@ -225,10 +234,34 @@ export default async function TermoDetalhePage({
       {podeEditar && rascunho ? (
         <Card>
           <CardHeader>
+            <CardTitle>Assinar à distância</CardTitle>
+            <CardDescription>
+              O funcionário confirma o CPF e assina pelo celular. Você emite o
+              termo depois, com a assinatura dele já registrada.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <TermoLinkAssinatura
+              termoId={termo.id}
+              email={termo.funcionario_email}
+              emailConfirmado={termo.funcionario_email_confirmado}
+              temCpf={Boolean(termo.funcionario_cpf)}
+              temItens={termo.itens.length > 0}
+              link={link}
+              jaAssinouADistancia={jaAssinouADistancia}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {podeEditar && rascunho ? (
+        <Card>
+          <CardHeader>
             <CardTitle>Emitir o termo</CardTitle>
           </CardHeader>
           <CardContent>
             <TermoEmissao
+              jaAssinou={jaAssinouADistancia}
               termoId={termo.id}
               funcionarioNome={termo.funcionario_nome}
               funcionarioCpf={termo.funcionario_cpf}

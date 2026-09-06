@@ -950,3 +950,87 @@ export function termoFuncionario(
     ),
   );
 }
+
+// ---------------------------------------------------------------------------
+// Assinatura à distância — o convite
+// ---------------------------------------------------------------------------
+
+export type DadosConviteAssinatura = {
+  funcionario: string;
+  obra?: string;
+  dataEntrega: string;
+  itens: ItemTermoEmail[];
+  url: string;
+  /** Ex.: "7 dias". */
+  validade: string;
+};
+
+/**
+ * O pedido de assinatura à distância.
+ *
+ * AO CONTRÁRIO de `termoFuncionario`, este e-mail PEDE uma ação — e por isso
+ * diz, logo no começo, que vai ser preciso o CPF. Quem abre o link no ônibus
+ * sem saber disso fecha a página e não volta.
+ *
+ * Não leva o PDF anexo de propósito: o documento ainda não está assinado, e um
+ * anexo circulando antes da assinatura é exatamente o que a numeração e a
+ * emissão existem para impedir. A via em PDF vai depois, pelo outro e-mail.
+ */
+export function conviteAssinatura(
+  d: DadosConviteAssinatura,
+  ctx: Contexto,
+): EmailPronto {
+  const corpo =
+    L.p(
+      `Você recebeu o equipamento abaixo e precisa confirmar o recebimento. ` +
+        `Abra o link, <strong>confirme o seu CPF</strong> e aceite o termo — leva menos de um minuto.`,
+    ) +
+    L.dados([
+      ["Funcionário", esc(d.funcionario)],
+      ...(d.obra ? ([["Obra", esc(d.obra)]] as [string, string][]) : []),
+      ["Data da entrega", esc(d.dataEntrega)],
+    ]) +
+    L.secao("Equipamento") +
+    L.tabela(
+      [
+        { label: "Item" },
+        { label: "Patrimônio" },
+        { label: "Qtd.", tipo: "numero" },
+        { label: "Estado" },
+      ],
+      linhasSimples(
+        d.itens.map((i) => [
+          esc(i.descricao),
+          esc(i.patrimonio ?? "—"),
+          esc(i.quantidade),
+          esc(i.estado),
+        ]),
+      ),
+    ) +
+    L.botao(d.url, "Conferir e assinar") +
+    // A validade e o uso único vão escritos porque mudam o comportamento de
+    // quem lê: guardar o e-mail "para depois" é o jeito de perder o link.
+    L.nota(
+      `O link vale por <strong>${esc(d.validade)}</strong> e serve <strong>uma vez só</strong>. ` +
+        "Se expirar, peça um novo ao setor que enviou este e-mail.",
+    ) +
+    L.aviso(
+      "Se você não recebeu este equipamento, não assine — responda este e-mail avisando.",
+      "atencao",
+    );
+
+  return pronto(
+    "Confirme o recebimento do seu equipamento",
+    L.pagina(
+      {
+        titulo: "Termo de responsabilidade",
+        subtitulo: `Assinatura de ${d.funcionario}`,
+        metricas: [
+          { valor: String(d.itens.length), rotulo: d.itens.length === 1 ? "item" : "itens" },
+        ],
+      },
+      corpo,
+      ctx,
+    ),
+  );
+}

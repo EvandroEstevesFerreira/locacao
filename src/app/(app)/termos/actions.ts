@@ -26,6 +26,160 @@ import { gerarTermoEquipamentoPdf } from "@/lib/documentos/frm-eq-001-render";
 import { formatarData } from "@/lib/locacao";
 import { formatarNumero } from "@/lib/registros";
 import { obterTermo } from "@/lib/data/termo";
+import { novoToken, hashDoToken } from "@/lib/assinatura-servidor";
+import { DIAS_DE_VALIDADE } from "@/lib/assinatura-link";
+import { conviteAssinatura } from "@/lib/emails/templates";
+import { appUrl } from "@/lib/emails/contexto";
+
+/**
+ * Gera um link de assinatura à distância e o manda ao funcionário.
+ *
+ * SÓ PARA RASCUNHO. Termo emitido já foi assinado; termo cancelado não vale.
+ *
+ * O token em claro existe no e-mail e em lugar nenhum mais — o banco guarda só
+ * o `sha256`. Isso significa que ele NÃO PODE SER RECUPERADO: perdeu o e-mail,
+ * gera outro. É o preço de o vazamento do banco não vazar os links junto, e é
+ * barato porque gerar outro custa um clique.
+ *
+ * As três recusas antes de gerar existem para não produzir um link que nunca
+ * destrava — que é pior que link nenhum, porque a pessoa tenta, falha e
+ * desconfia do sistema em vez do cadastro:
+ *
+ *   sem e-mail            não tem para onde ir
+ *   e-mail por conferir   o endereço foi DEDUZIDO do nome; pode ser de outra pessoa
+ *   sem CPF               não há com o que conferir quem assinou — hoje, os 118
+ */
+export async function enviarLinkDeAssinatura(raw: unknown): Promise<ActionResult> {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) {
+    return falha("Você não tem permissão para enviar o termo para assinatura.");
+  }
+  if (!emailConfigurado()) {
+    return falha("Envio de e-mail não configurado no sistema.");
+  }
+
+  const id = String((raw as { id?: string })?.id ?? "").trim();
+  if (!id) return falha("Termo não informado.");
+
+  const termo = await obterTermo(id);
+  if (!termo) return falha("Termo não encontrado.");
+  if (termo.emitido_em) return falha("Este termo já foi emitido.");
+  if (termo.cancelado_em) return falha("Este termo foi cancelado.");
+  if (termo.itens.length === 0) {
+    return falha("Um termo sem itens não tem o que assinar.");
+  }
+  if (!termo.funcionario_email) {
+    return falha(`${termo.funcionario_nome} não tem e-mail cadastrado.`);
+  }
+  if (!termo.funcionario_email_confirmado) {
+    return falha(
+      `O e-mail de ${termo.funcionario_nome} (${termo.funcionario_email}) foi deduzido do nome ` +
+        "e ainda não foi conferido. Confirme-o no cadastro do funcionário antes de enviar.",
+    );
+  }
+  if (!termo.funcionario_cpf) {
+    return falha(
+      `${termo.funcionario_nome} está sem CPF no cadastro. É o CPF que confirma, à distância, ` +
+        "que foi a pessoa certa quem assinou — sem ele o link nunca destrava.",
+    );
+  }
+
+  const supabase = await createClient();
+  const token = novoToken();
+  const expira = new Date(Date.now() + DIAS_DE_VALIDADE * 24 * 60 * 60 * 1000);
+
+  const { error: erroLink } = await supabase.from("termo_link").insert({
+    org_id: perfil.org_id,
+    termo_id: id,
+    token_hash: hashDoToken(token),
+    expira_em: expira.toISOString(),
+    criado_por: perfil.id,
+  });
+  if (erroLink) {
+    console.error("enviarLinkDeAssinatura/insert", erroLink);
+    return falha("Não foi possível gerar o link de assinatura.");
+  }
+
+  const { data: org } = await supabase
+    .from("organizacao")
+    .select("nome, razao_social, cnpj")
+    .eq("id", perfil.org_id)
+    .maybeSingle();
+
+  const email = conviteAssinatura(
+    {
+      funcionario: termo.funcionario_nome,
+      obra: [termo.obra_codigo, termo.obra_nome].filter(Boolean).join(" — ") || undefined,
+      dataEntrega: formatarData(termo.data_entrega),
+      itens: termo.itens.map((i) => ({
+        descricao: i.item_descricao,
+        patrimonio: i.patrimonio ?? undefined,
+        quantidade: `${i.quantidade}${i.unidade_medida ? ` ${i.unidade_medida}` : ""}`,
+        estado: estadoLabel(i.estado_entrega),
+      })),
+      url: `${appUrl()}/assinar/${token}`,
+      validade: `${DIAS_DE_VALIDADE} dias`,
+    },
+    montarContexto((org as LinhaOrganizacaoEmail | null) ?? null),
+  );
+
+  try {
+    await enviarEmail([termo.funcionario_email], email);
+  } catch (e) {
+    console.error("enviarLinkDeAssinatura/email", e);
+    // O link JÁ EXISTE no banco. Revogá-lo aqui seria o certo se o envio nunca
+    // tivesse saído — mas não dá para saber: o Resend pode ter aceitado e
+    // falhado depois. Deixar vivo e avisar é o que permite reenviar sem
+    // acumular links órfãos que ninguém sabe se valem.
+    return falha(
+      "O link foi gerado mas o e-mail não saiu. Tente enviar de novo — o link anterior continua valendo.",
+    );
+  }
+
+  revalidatePath(`/termos/${id}`);
+  return {
+    ok: true,
+    id,
+    aviso: `Link enviado para ${termo.funcionario_email}. Vale ${DIAS_DE_VALIDADE} dias e serve uma vez.`,
+  };
+}
+
+/**
+ * Revoga os links vivos de um termo.
+ *
+ * Existe para quando o link foi para o endereço errado. Sem ele, a única saída
+ * seria esperar os sete dias com um link válido circulando.
+ */
+export async function revogarLinksDoTermo(raw: unknown): Promise<ActionResult> {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) {
+    return falha("Você não tem permissão para revogar links.");
+  }
+  const id = String((raw as { id?: string })?.id ?? "").trim();
+  if (!id) return falha("Termo não informado.");
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("termo_link")
+    .update({ revogado_em: new Date().toISOString() })
+    .eq("termo_id", id)
+    .is("usado_em", null)
+    .is("revogado_em", null)
+    .select("id");
+
+  if (error) {
+    console.error("revogarLinksDoTermo", error);
+    return falha("Não foi possível revogar os links.");
+  }
+
+  revalidatePath(`/termos/${id}`);
+  const n = data?.length ?? 0;
+  return {
+    ok: true,
+    id,
+    aviso: n === 0 ? "Não havia link válido para revogar." : `${n === 1 ? "1 link revogado" : `${n} links revogados`}.`,
+  };
+}
 
 /**
  * Manda a via do funcionário: o PDF do termo JÁ ASSINADO, por e-mail.
@@ -495,10 +649,29 @@ export async function emitirTermo(
   if (!perfil?.org_id) return falha("Sessão inválida. Entre novamente.");
   if (!podeOperar(perfil.papel)) return falha("Você não tem permissão para emitir termos.");
 
-  const func = assinaturaSchema.safeParse(assinaturas.funcionario);
-  if (!func.success) return falha(primeiroErro(func.error.issues));
-
   const supabase = await createClient();
+
+  // ASSINATURA À DISTÂNCIA JÁ COLHIDA?
+  //
+  // `assinar_termo_por_link` grava a assinatura do funcionário sem emitir — a
+  // emissão move peças, numera e manda a via, e continua sendo trabalho de
+  // quem opera. Sem esta conferência, emitir gravaria uma SEGUNDA assinatura
+  // do mesmo funcionário no mesmo momento, e o PDF passaria a mostrar duas
+  // linhas para uma pessoa: quem confere não saberia qual traço vale.
+  const { data: jaAssinada } = await supabase
+    .from("termo_assinatura")
+    .select("id")
+    .eq("termo_id", termoId)
+    .eq("momento", "entrega")
+    .eq("papel", "funcionario")
+    .maybeSingle();
+  const assinouADistancia = Boolean(jaAssinada);
+
+  // A assinatura do funcionário só é EXIGIDA quando ele não assinou à
+  // distância. Exigi-la nos dois casos obrigaria o operador a colher de novo o
+  // traço de quem já assinou no celular.
+  const func = assinouADistancia ? null : assinaturaSchema.safeParse(assinaturas.funcionario);
+  if (func && !func.success) return falha(primeiroErro(func.error.issues));
 
   const { data: atual, error: erroLeitura } = await supabase
     .from("termo_equipamento")
@@ -533,16 +706,20 @@ export async function emitirTermo(
 
   const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
   const { error: erroAss } = await supabase.from("termo_assinatura").insert([
-    {
-      org_id: perfil.org_id,
-      termo_id: termoId,
-      momento: "entrega",
-      papel: "funcionario",
-      nome: func.data.nome,
-      cpf: func.data.cpf,
-      imagem: func.data.imagem,
-      assinado_ip: ip,
-    },
+    ...(func?.success
+      ? [
+          {
+            org_id: perfil.org_id,
+            termo_id: termoId,
+            momento: "entrega",
+            papel: "funcionario",
+            nome: func.data.nome,
+            cpf: func.data.cpf,
+            imagem: func.data.imagem,
+            assinado_ip: ip,
+          },
+        ]
+      : []),
     {
       org_id: perfil.org_id,
       termo_id: termoId,

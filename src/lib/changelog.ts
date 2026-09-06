@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.71.0";
+export const APP_VERSION = "0.72.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,19 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.72.0",
+    data: "2026-09-06",
+    titulo: "Assinar o termo pelo celular, sem estar na frente de ninguém",
+    mudancas: [
+      { tipo: "novo", texto: "Um termo em rascunho pode ser enviado por link: o funcionário abre no celular, confirma o próprio CPF e assina. Você emite o termo depois, com a assinatura dele já registrada." },
+      { tipo: "novo", texto: "O link vale 7 dias, serve uma vez só e pode ser revogado — para quando foi para o endereço errado." },
+      { tipo: "seguranca", texto: "É o CPF que confirma quem assinou. Sem CPF no cadastro, o sistema recusa gerar o link em vez de criar um que nunca destrava — e hoje NENHUM funcionário tem CPF cadastrado." },
+      { tipo: "seguranca", texto: "O endereço do link não fica guardado no sistema: ele só existe no e-mail que saiu. Se a pessoa perder, envie outro." },
+      { tipo: "seguranca", texto: "A página de assinatura mostra apenas o termo daquele link — sem lista, sem busca, sem nada do resto do sistema." },
+      { tipo: "correcao", texto: "Quem assinou à distância não tem a assinatura pedida de novo na emissão. Sem isso o documento mostraria duas assinaturas da mesma pessoa, e quem confere não saberia qual vale." },
+    ],
+  },
   {
     versao: "0.71.0",
     data: "2026-09-06",

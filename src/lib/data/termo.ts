@@ -260,3 +260,37 @@ export async function obterTermo(id: string): Promise<TermoDetalhe | null> {
     assinaturas: ((bruto.termo_assinatura ?? []) as Record<string, unknown>[]) as AssinaturaLinha[],
   };
 }
+
+export type LinkAssinatura = {
+  expira_em: string;
+  usado_em: string | null;
+};
+
+/**
+ * O link de assinatura mais recente de um termo, se ainda houver algum vivo ou
+ * usado.
+ *
+ * `createClient()`, nunca `createAdminClient()`: quem lê isto é a tela do
+ * operador, que TEM sessão. A rota pública não passa por aqui — ela chama
+ * `termo_do_link`, que é `security definer` e devolve só o que o token
+ * destrava.
+ */
+export async function ultimoLinkDoTermo(
+  termoId: string,
+): Promise<LinkAssinatura | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("termo_link")
+    .select("expira_em, usado_em")
+    .eq("termo_id", termoId)
+    .is("revogado_em", null)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error("ultimoLinkDoTermo", error);
+    return null;
+  }
+  return (data as LinkAssinatura | null) ?? null;
+}

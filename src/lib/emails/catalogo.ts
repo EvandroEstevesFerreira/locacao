@@ -86,6 +86,12 @@ export const CATALOGO: ItemCatalogo[] = [
     render: (ctx) => t.devolucaoFornecedor(ex.DEVOLUCAO, ctx),
   },
   {
+    id: "convite-assinatura",
+    titulo: "Assinatura à distância — o convite",
+    gatilho: "Operador manda o link de um termo em rascunho",
+    render: (ctx) => t.conviteAssinatura(ex.CONVITE_ASSINATURA, ctx),
+  },
+  {
     id: "termo-funcionario",
     titulo: "Termo de responsabilidade — cópia para quem assinou",
     gatilho: "Emissão do termo, para o e-mail CONFERIDO do funcionário",

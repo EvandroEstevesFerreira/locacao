@@ -23,11 +23,20 @@ export function TermoEmissao({
   funcionarioNome,
   funcionarioCpf,
   nomeEmpresa,
+  jaAssinou = false,
 }: {
   termoId: string;
   funcionarioNome: string;
   funcionarioCpf: string | null;
   nomeEmpresa: string;
+  /**
+   * O funcionário já assinou à distância, pelo link.
+   *
+   * Nesse caso o traço dele NÃO é pedido de novo — a assinatura está gravada,
+   * com data, hora e IP. Pedir outra faria o PDF mostrar duas linhas para a
+   * mesma pessoa, e quem confere não saberia qual vale.
+   */
+  jaAssinou?: boolean;
 }) {
   const router = useRouter();
   const [erro, setErro] = useState<string | null>(null);
@@ -37,7 +46,7 @@ export function TermoEmissao({
 
   function emitir() {
     setErro(null);
-    if (!assinaturaFunc) {
+    if (!jaAssinou && !assinaturaFunc) {
       return setErro("O funcionário precisa assinar para o termo ser emitido.");
     }
 
@@ -63,11 +72,19 @@ export function TermoEmissao({
         disponível na frota. A emissão é o que registra a entrega.
       </p>
       <div className="grid gap-4 sm:grid-cols-2">
-        <SignaturePad
-          name="assinatura_entrega_funcionario"
-          label={`Assinatura de ${funcionarioNome}`}
-          onChange={setAssinaturaFunc}
-        />
+        {jaAssinou ? (
+          <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+            <strong className="text-foreground">{funcionarioNome}</strong> já
+            assinou à distância. A assinatura está registrada com data, hora e
+            IP — não é preciso colher de novo.
+          </p>
+        ) : (
+          <SignaturePad
+            name="assinatura_entrega_funcionario"
+            label={`Assinatura de ${funcionarioNome}`}
+            onChange={setAssinaturaFunc}
+          />
+        )}
         <SignaturePad
           name="assinatura_entrega_empresa"
           label={`Assinatura de ${nomeEmpresa} (opcional)`}

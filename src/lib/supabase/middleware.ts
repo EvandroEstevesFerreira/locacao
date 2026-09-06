@@ -4,7 +4,8 @@ import { moduloDaRota, moduloLiberado } from "@/lib/modulos";
 
 /**
  * Renova a sessão do usuário a cada requisição e protege rotas.
- * Rotas públicas: /login, /auth/*. Todo o resto exige usuário autenticado.
+ * Rotas públicas: /login, /auth/*, /offline e /assinar/*. Todo o resto exige
+ * usuário autenticado.
  */
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -38,7 +39,13 @@ export async function updateSession(request: NextRequest) {
   const isPublic =
     request.nextUrl.pathname.startsWith("/login") ||
     request.nextUrl.pathname.startsWith("/auth") ||
-    request.nextUrl.pathname.startsWith("/offline");
+    request.nextUrl.pathname.startsWith("/offline") ||
+    // `/assinar/<token>` é a PRIMEIRA rota pública deste sistema que carrega
+    // dado. Ela não faz `select` em tabela nenhuma: chama funções
+    // `security definer` que devolvem exclusivamente o termo daquele token, e
+    // o escopo é imposto pelo banco. Sem esta linha, o funcionário que abre o
+    // link cairia no /login — e é justamente quem não tem login.
+    request.nextUrl.pathname.startsWith("/assinar");
 
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();
