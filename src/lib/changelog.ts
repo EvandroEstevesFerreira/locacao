@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.69.0";
+export const APP_VERSION = "0.70.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,20 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.70.0",
+    data: "2026-09-06",
+    titulo: "O parque de TI saiu da planilha",
+    mudancas: [
+      { tipo: "novo", texto: "As 127 máquinas da aba “ATIVAS.” entraram no cadastro: 26 modelos no catálogo, cada máquina com seu patrimônio, e a ficha de cada uma com sistema operacional, processador, armazenamento, tipo de disco e garantia." },
+      { tipo: "novo", texto: "As 11 áreas administrativas — RH, Diretoria, Financeiro, Suprimentos e as demais — viraram frentes de serviço da obra Administração. É o que faz o custo do equipamento descer do “Administração” para o setor." },
+      { tipo: "novo", texto: "Categoria TI ganhou os tipos NOTEBOOK, DESKTOP e SERVIDOR, com a mesma ficha de seis campos." },
+      { tipo: "novo", texto: "97 e-mails foram deduzidos do nome e gravados como “Por conferir”. Nenhum termo sai para um endereço nesse estado — confira antes de usar." },
+      { tipo: "melhoria", texto: "As 27 máquinas alugadas entraram marcadas como tal e aparecem numa pendência: elas ainda não têm contrato de locação no sistema." },
+      { tipo: "melhoria", texto: "Quem está com cada máquina segundo a planilha ficou anotado na observação da peça. A posse de verdade só nasce quando o termo for assinado — uma planilha não é prova de que alguém respondeu pelo equipamento." },
+      { tipo: "correcao", texto: "A importação não cria mais duas fichas para a mesma pessoa quando o nome aparece com e sem acento. “João Lirio” e “Joao Lirio” eram dois funcionários; agora são um." },
+    ],
+  },
   {
     versao: "0.69.0",
     data: "2026-09-05",

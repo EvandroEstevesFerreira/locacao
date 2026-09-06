@@ -73,38 +73,10 @@ export const funcionarioSchema = z.object({
 });
 export type FuncionarioInput = z.infer<typeof funcionarioSchema>;
 
-/** O domínio de e-mail da Sistenge. Uma constante, não uma string solta. */
-const DOMINIO_EMAIL = "sistenge.com";
-
-/**
- * O endereço provável de um funcionário, a partir do nome.
- *
- * É um PALPITE, e por isso quem grava tem de marcar `email_confirmado = false`.
- * O padrão aparece na própria planilha de inventário, que traz alguns nomes já
- * em formato de login (`Rodrigo.Ferreira`).
- *
- * Devolve `null` quando não dá para formar `nome.sobrenome` — nome de uma
- * palavra só, vazio, ou com algarismo (`Monitor 0109947` é uma linha da
- * planilha, não uma pessoa). Inventar `lourival.lourival` seria produzir um
- * endereço com cara de verdadeiro, que é pior que endereço nenhum.
- */
-export function emailDerivado(nome: string): string | null {
-  const partes = nome
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    // O ponto separa nome de sobrenome tanto em "Rodrigo.Ferreira" quanto no
-    // endereço final, então vale como espaço.
-    .replace(/[.\s]+/g, " ")
-    .trim()
-    .split(" ")
-    .filter((p) => p.length > 0);
-
-  // Uma parte que não é palavra derruba o nome inteiro, e não só a parte: um
-  // "nome" com algarismo dentro não é nome de gente.
-  if (partes.length < 2 || partes.some((p) => !/^[a-z]+$/.test(p))) return null;
-  return `${partes[0]}.${partes[partes.length - 1]}@${DOMINIO_EMAIL}`;
-}
+// A derivação do e-mail vive em `email-corporativo.ts`, sem dependência
+// nenhuma, porque o importador do inventário roda em Node puro e precisa da
+// MESMA regra. Reexportado aqui para que a tela continue importando do domínio.
+export { emailDerivado, DOMINIO_EMAIL } from "@/lib/email-corporativo";
 
 /**
  * O e-mail passa a valer como conferido?

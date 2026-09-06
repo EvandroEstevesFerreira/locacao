@@ -7,6 +7,83 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.70.0] — 2026-09-06
+
+Fase B do inventário de TI. **127 máquinas** da aba `ATIVAS.` de
+`Máquinas Sistenge.xlsx`.
+
+### Adicionado
+
+- **Migration 0075** — índice único em `item_catalogo (org_id, lower(descricao))`
+  e os tipos NOTEBOOK, DESKTOP e SERVIDOR.
+
+  O índice não é enfeite: o importador resolve o item pela descrição, e sem a
+  trava a segunda execução criaria 26 modelos duplicados **em silêncio**.
+  "Rodar duas vezes não duplica" é o critério de pronto desta fase.
+
+  Os três tipos compartilham a **mesma** ficha de seis campos. Três fichas
+  separadas seriam três cópias que divergem quando alguém acrescentar um campo.
+
+- **`scripts/db/importar-inventario-ti.mjs` reescrito** para a planilha nova e
+  para o catálogo de quatro níveis. Prévia obrigatória: sem `--aplicar` só
+  imprime o plano e as pendências.
+
+| | |
+|---|---|
+| Modelos no catálogo | 26 |
+| Peças | 127 — 96 notebooks, 29 desktops, 2 servidores |
+| Alugadas | 27, sem contrato (fase D) |
+| Frentes na obra 800 | 11 |
+| Funcionários criados | 22 |
+| E-mails deduzidos | 97, todos **por conferir** |
+| Custódias criadas | **0** |
+
+### O que a prévia pegou antes de gravar
+
+| Pendência | Linhas |
+|---|---|
+| `LIVRE` com nome de gente junto | 6 |
+| Departamento que diz um lugar sem dizer qual | 4 |
+| Coluna deslocada (RAM com data, HD com "8 GB") | 2 |
+| Chave de licença do Windows no lugar da TAG | 2 |
+| Tipo divergente do modelo (OptiPlex declarado notebook) | 2 |
+| Obra 685 (ELEA) remapeada para 659 | 2 |
+| Modelo incompleto (ThinkBook sem número) | 1 |
+
+**"Sem obra" e "pendência de lugar" são coisas diferentes de propósito.**
+`RESERVA` e `N/A` estão corretamente sem obra — a máquina está na prateleira.
+`OBRA` e `PASELI` *deveriam* dizer um lugar e não dizem. Misturar os dois
+esconderia as pendências dentro de um monte de máquinas que estão certas.
+
+### Corrigido
+
+- **A importação criava duas fichas para a mesma pessoa** quando o nome
+  aparecia com e sem acento. O cadastro já tinha `Joao Lirio` de julho;
+  comparar por `nome.toLowerCase()` fez `João Lirio` entrar como pessoa nova —
+  e um termo de responsabilidade poderia sair no registro errado.
+
+  A comparação passou a ignorar acento. **Isto resolve acento, e só:**
+  `Cleide Miriam` e `Cleide Mirian` continuam sendo dois registros, e devem
+  continuar. Decidir que são a mesma pessoa é juízo humano, não normalização.
+
+### Decisões registradas no código
+
+- **Custódia não nasce de importação.** `custodia_funcionario_exige_termo`
+  (0059) exige termo assinado, e a regra está certa: ninguém assinou nada ao
+  digitar aquela célula. O detentor fica na observação da peça.
+- **A memória RAM não entrou na ficha** — tem coluna nativa (`memoria_gb`) com
+  campo próprio no formulário da peça. Repeti-la criaria dois lugares para
+  digitar a mesma coisa. Isto **removeu** o campo "Memória RAM" que existia no
+  tipo DESKTOP; nenhuma peça tinha valor nele.
+- **A regra de e-mail tem UMA implementação.** `src/lib/email-corporativo.ts`
+  não importa nada, e o Node 24 remove os tipos na importação — é o que permite
+  o script `.mjs` usar a mesma função da tela. Duas cópias divergiriam do jeito
+  mais caro: o termo de uma pessoa indo para a caixa de outra.
+
+### Não verificado
+
+Nenhuma tela autenticada foi aberta num navegador.
+
 ## [0.69.0] — 2026-09-05
 
 Fase A do inventário de TI
