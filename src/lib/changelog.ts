@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.70.0";
+export const APP_VERSION = "0.71.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,18 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.71.0",
+    data: "2026-09-06",
+    titulo: "O funcionário recebe a própria via do termo",
+    mudancas: [
+      { tipo: "novo", texto: "Ao emitir o termo, o PDF assinado vai por e-mail para o funcionário. É a via dele — não é pedido de assinatura, que já foi colhida na tela." },
+      { tipo: "novo", texto: "A tela do termo mostra se a via foi enviada e quando, com botão de reenviar. Reenviar uma via já enviada é permitido: o e-mail pode ter ido para a caixa errada." },
+      { tipo: "seguranca", texto: "Endereço deduzido do nome e ainda não conferido NÃO recebe termo. Sem essa trava, o primeiro envio em massa poderia entregar o termo de responsabilidade de uma pessoa na caixa de outra." },
+      { tipo: "melhoria", texto: "Falha no envio não desfaz nada: o termo continua emitido e assinado, e a mensagem diz o que faltou em vez de a tela dizer “tudo certo” sobre uma via que não saiu." },
+      { tipo: "melhoria", texto: "O PDF anexado ao e-mail é gerado pelo mesmo caminho do PDF baixado na tela — são o mesmo documento, byte por byte." },
+    ],
+  },
   {
     versao: "0.70.0",
     data: "2026-09-06",

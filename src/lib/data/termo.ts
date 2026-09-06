@@ -59,6 +59,14 @@ export type TermoDetalhe = {
   funcionario_nome: string;
   funcionario_cpf: string | null;
   funcionario_cargo: string | null;
+  /** Para onde a cópia do termo assinado vai. */
+  funcionario_email: string | null;
+  /**
+   * Endereço deduzido do nome e ainda não conferido por ninguém NÃO recebe
+   * termo: a fase B deduziu 97 de uma vez, e o primeiro envio em massa
+   * descobriria os erros entregando o termo de uma pessoa na caixa de outra.
+   */
+  funcionario_email_confirmado: boolean;
   obra_id: string | null;
   obra_codigo: string | null;
   obra_nome: string | null;
@@ -66,6 +74,8 @@ export type TermoDetalhe = {
   data_entrega: string;
   previsao_devolucao: string | null;
   emitido_em: string | null;
+  /** Nulo = a cópia ainda não foi enviada. O envio pode ser refeito. */
+  email_enviado_em: string | null;
   encerrado_em: string | null;
   cancelado_em: string | null;
   motivo_cancelamento: string | null;
@@ -177,7 +187,8 @@ export async function obterTermo(id: string): Promise<TermoDetalhe | null> {
   const { data, error } = await supabase
     .from("termo_equipamento")
     .select(
-      "*, funcionario:funcionario_id(nome, cpf, cargo), obra:obra_id(codigo, nome), " +
+      "*, funcionario:funcionario_id(nome, cpf, cargo, email, email_confirmado), " +
+        "obra:obra_id(codigo, nome), " +
         "situacao:termo_equipamento_situacao(situacao), " +
         "termo_equipamento_item(id, item_id, unidade_id, quantidade, estado_entrega, " +
         "estado_devolucao, data_devolucao, observacoes, " +
@@ -197,7 +208,13 @@ export async function obterTermo(id: string): Promise<TermoDetalhe | null> {
   // `GenericStringError`. Mesmo padrão de `data/frota.ts` e `data/custo-item.ts`.
   const bruto = data as unknown as Record<string, unknown>;
 
-  const f = bruto.funcionario as { nome: string; cpf: string | null; cargo: string | null } | null;
+  const f = bruto.funcionario as {
+    nome: string;
+    cpf: string | null;
+    cargo: string | null;
+    email: string | null;
+    email_confirmado: boolean;
+  } | null;
   const o = bruto.obra as { codigo: string; nome: string } | null;
   const s = bruto.situacao as { situacao: string } | { situacao: string }[] | null;
 
@@ -208,6 +225,8 @@ export async function obterTermo(id: string): Promise<TermoDetalhe | null> {
     funcionario_nome: f?.nome ?? "—",
     funcionario_cpf: f?.cpf ?? null,
     funcionario_cargo: f?.cargo ?? null,
+    funcionario_email: f?.email ?? null,
+    funcionario_email_confirmado: f?.email_confirmado ?? false,
     obra_id: bruto.obra_id as string | null,
     obra_codigo: o?.codigo ?? null,
     obra_nome: o?.nome ?? null,
@@ -215,6 +234,7 @@ export async function obterTermo(id: string): Promise<TermoDetalhe | null> {
     data_entrega: bruto.data_entrega as string,
     previsao_devolucao: bruto.previsao_devolucao as string | null,
     emitido_em: bruto.emitido_em as string | null,
+    email_enviado_em: bruto.email_enviado_em as string | null,
     encerrado_em: bruto.encerrado_em as string | null,
     cancelado_em: bruto.cancelado_em as string | null,
     motivo_cancelamento: bruto.motivo_cancelamento as string | null,

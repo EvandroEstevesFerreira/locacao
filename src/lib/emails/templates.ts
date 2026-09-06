@@ -855,3 +855,98 @@ export function indicadoresQuinzenais(
     ),
   );
 }
+
+// ---------------------------------------------------------------------------
+// Termo de responsabilidade — cópia para quem assinou
+// ---------------------------------------------------------------------------
+
+export type ItemTermoEmail = {
+  descricao: string;
+  patrimonio?: string;
+  quantidade: string;
+  estado: string;
+};
+
+export type DadosTermoFuncionario = {
+  /** Número do registro, ex.: TRM-2026-0007. */
+  numero: string;
+  funcionario: string;
+  obra?: string;
+  dataEntrega: string;
+  previsaoDevolucao?: string;
+  itens: ItemTermoEmail[];
+  anexo: string;
+  observacoes?: string;
+};
+
+/**
+ * A cópia do termo que a pessoa acabou de assinar.
+ *
+ * NÃO é pedido de assinatura. A assinatura foi colhida na tela, com imagem e IP
+ * registrados — quando este e-mail sai, o documento já existe e já vale. O
+ * texto diz isso na primeira linha, porque um e-mail com um termo anexo é
+ * naturalmente lido como "assine e devolva", e quem lê assim guarda o anexo
+ * esperando um passo que não existe.
+ */
+export function termoFuncionario(
+  d: DadosTermoFuncionario,
+  ctx: Contexto,
+): EmailPronto {
+  const corpo =
+    L.p(
+      `Segue a sua via do termo de responsabilidade <strong>${esc(d.numero)}</strong>, ` +
+        `assinado em ${esc(d.dataEntrega)}. <strong>Não é preciso responder nem devolver nada</strong> — ` +
+        "é a sua cópia, para guardar.",
+    ) +
+    L.dados([
+      ["Registro", esc(d.numero)],
+      ["Funcionário", esc(d.funcionario)],
+      ...(d.obra ? ([["Obra", esc(d.obra)]] as [string, string][]) : []),
+      ["Data da entrega", esc(d.dataEntrega)],
+      ...(d.previsaoDevolucao
+        ? ([["Previsão de devolução", esc(d.previsaoDevolucao)]] as [string, string][])
+        : []),
+    ]) +
+    L.secao("Equipamento sob sua responsabilidade") +
+    L.tabela(
+      [
+        { label: "Item" },
+        { label: "Patrimônio" },
+        { label: "Qtd.", tipo: "numero" },
+        { label: "Estado na entrega" },
+      ],
+      linhasSimples(
+        d.itens.map((i) => [
+          esc(i.descricao),
+          esc(i.patrimonio ?? "—"),
+          esc(i.quantidade),
+          esc(i.estado),
+        ]),
+      ),
+    ) +
+    (d.observacoes ? L.nota(esc(d.observacoes)) : "") +
+    L.nota(`Termo assinado em PDF anexo: <strong>${esc(d.anexo)}</strong>.`) +
+    // O aviso de perda/dano fecha o e-mail porque é a obrigação que o termo
+    // cria. Enterrá-lo no meio faria a cópia parecer um comprovante e não um
+    // compromisso.
+    L.aviso(
+      "Perda, furto ou dano deve ser comunicado imediatamente. " +
+        "Ao sair da empresa ou trocar de equipamento, devolva os itens acima.",
+      "atencao",
+    );
+
+  return pronto(
+    `Seu termo de responsabilidade ${d.numero}`,
+    L.pagina(
+      {
+        titulo: "Termo de responsabilidade",
+        subtitulo: `${d.numero} · ${d.funcionario}`,
+        metricas: [
+          { valor: String(d.itens.length), rotulo: d.itens.length === 1 ? "item" : "itens" },
+        ],
+      },
+      corpo,
+      ctx,
+    ),
+  );
+}

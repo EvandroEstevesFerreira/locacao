@@ -86,6 +86,12 @@ export const CATALOGO: ItemCatalogo[] = [
     render: (ctx) => t.devolucaoFornecedor(ex.DEVOLUCAO, ctx),
   },
   {
+    id: "termo-funcionario",
+    titulo: "Termo de responsabilidade — cópia para quem assinou",
+    gatilho: "Emissão do termo, para o e-mail CONFERIDO do funcionário",
+    render: (ctx) => t.termoFuncionario(ex.TERMO_FUNCIONARIO, ctx),
+  },
+  {
     id: "documento",
     titulo: "Documento gerado",
     gatilho: "Envio de contrato ou termo ao fornecedor / proprietário",

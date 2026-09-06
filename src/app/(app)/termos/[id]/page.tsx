@@ -12,7 +12,13 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Campo } from "@/components/shared/campo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -23,6 +29,7 @@ import {
 } from "@/components/ui/table";
 import { TermoDevolucao } from "./_components/termo-devolucao";
 import { TermoEmissao } from "./_components/termo-emissao";
+import { TermoViaEmail } from "./_components/termo-via-email";
 import { TermoCancelar } from "./_components/termo-cancelar";
 import { TermoExcluir } from "./_components/termo-excluir";
 
@@ -190,6 +197,30 @@ export default async function TermoDetalhePage({
           </Table>
         </CardContent>
       </Card>
+
+      {/* Só termo EMITIDO tem via para enviar. Rascunho não tem número, e um
+          documento sem número circulando é o que a numeração existe para
+          impedir. Cancelado também não: a via seria de um termo que não vale. */}
+      {!rascunho && !cancelado ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Via do funcionário</CardTitle>
+            <CardDescription>
+              A cópia do termo assinado, na caixa de quem assinou. Não é pedido
+              de assinatura — ela já foi colhida aqui, com data e hora.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <TermoViaEmail
+              termoId={termo.id}
+              email={termo.funcionario_email}
+              emailConfirmado={termo.funcionario_email_confirmado}
+              enviadoEm={termo.email_enviado_em}
+              podeOperar={podeEditar}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
 
       {podeEditar && rascunho ? (
         <Card>

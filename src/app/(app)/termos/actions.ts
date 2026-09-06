@@ -7,6 +7,7 @@ import { getCurrentPerfil, podeOperar, podeEditarCadastros } from "@/lib/auth";
 import { falha, primeiroErro, type ActionResult } from "@/lib/acoes";
 import {
   confirmacaoDoEmail,
+  estadoLabel,
   funcionarioSchema,
   termoSchema,
   termoItemSchema,
@@ -18,6 +19,141 @@ import { hojeISOSaoPaulo } from "@/lib/locacao";
 // A matriz de transição da PEÇA é fonte única em frota.ts. O termo só a CHAMA.
 import { podeTransicionar, type Situacao as SituacaoPeca } from "@/lib/frota";
 import { abrirCustodia } from "@/lib/custodia-servidor";
+import { emailConfigurado, enviarEmail } from "@/lib/email";
+import { montarContexto, type LinhaOrganizacaoEmail } from "@/lib/emails/contexto";
+import { termoFuncionario } from "@/lib/emails/templates";
+import { gerarTermoEquipamentoPdf } from "@/lib/documentos/frm-eq-001-render";
+import { formatarData } from "@/lib/locacao";
+import { formatarNumero } from "@/lib/registros";
+import { obterTermo } from "@/lib/data/termo";
+
+/**
+ * Manda a via do funcionário: o PDF do termo JÁ ASSINADO, por e-mail.
+ *
+ * NÃO é pedido de assinatura. A assinatura é colhida na tela, com imagem e IP;
+ * quando isto roda, o documento já existe e já vale. O e-mail é a entrega da
+ * cópia — e por isso nada aqui desfaz nada: se o Resend cair, o termo continua
+ * emitido, `email_enviado_em` fica nulo e a tela mostra o botão de reenviar.
+ *
+ * A REGRA DURA: endereço NÃO CONFERIDO não recebe. A importação do inventário
+ * deduziu 97 endereços de `nome.sobrenome`, que é palpite e não fato; sem esta
+ * trava, o primeiro envio em massa descobriria os erros entregando o termo de
+ * responsabilidade de uma pessoa na caixa de outra.
+ */
+async function enviarViaDoFuncionario(
+  termoId: string,
+): Promise<{ enviado: boolean; motivo?: string }> {
+  if (!emailConfigurado()) {
+    return { enviado: false, motivo: "Envio de e-mail não configurado no sistema." };
+  }
+
+  try {
+    const termo = await obterTermo(termoId);
+    if (!termo) return { enviado: false, motivo: "Termo não encontrado." };
+    if (!termo.numero_registro) {
+      return { enviado: false, motivo: "Termo sem número não tem via para enviar." };
+    }
+    if (!termo.funcionario_email) {
+      return {
+        enviado: false,
+        motivo: `${termo.funcionario_nome} não tem e-mail cadastrado.`,
+      };
+    }
+    if (!termo.funcionario_email_confirmado) {
+      return {
+        enviado: false,
+        motivo:
+          `O e-mail de ${termo.funcionario_nome} (${termo.funcionario_email}) foi deduzido do nome ` +
+          "e ainda não foi conferido. Confirme-o no cadastro do funcionário antes de enviar.",
+      };
+    }
+
+    // O MESMO gerador da rota de download. Duas montagens fariam a via
+    // recebida por e-mail divergir da baixada na tela, num papel com valor de
+    // prova.
+    const doc = await gerarTermoEquipamentoPdf(termoId);
+    if (!doc) return { enviado: false, motivo: "Não foi possível gerar o PDF do termo." };
+
+    const supabase = await createClient();
+    const perfil = await getCurrentPerfil();
+    const { data: org } = await supabase
+      .from("organizacao")
+      .select("nome, razao_social, cnpj")
+      .eq("id", perfil!.org_id)
+      .maybeSingle();
+
+    const email = termoFuncionario(
+      {
+        numero: formatarNumero(termo.numero_registro),
+        funcionario: termo.funcionario_nome,
+        obra: [termo.obra_codigo, termo.obra_nome].filter(Boolean).join(" — ") || undefined,
+        dataEntrega: formatarData(termo.data_entrega),
+        previsaoDevolucao: termo.previsao_devolucao
+          ? formatarData(termo.previsao_devolucao)
+          : undefined,
+        itens: termo.itens.map((i) => ({
+          descricao: i.item_descricao,
+          patrimonio: i.patrimonio ?? undefined,
+          quantidade: `${i.quantidade}${i.unidade_medida ? ` ${i.unidade_medida}` : ""}`,
+          estado: estadoLabel(i.estado_entrega),
+        })),
+        anexo: doc.arquivo,
+        observacoes: termo.observacoes ?? undefined,
+      },
+      montarContexto((org as LinhaOrganizacaoEmail | null) ?? null),
+    );
+
+    await enviarEmail([termo.funcionario_email], email, [
+      { filename: doc.arquivo, content: doc.buffer },
+    ]);
+
+    // O e-mail JÁ SAIU aqui. Sem o carimbo, a tela diria "via não enviada" para
+    // sempre e alguém reenviaria um termo que a pessoa já tem.
+    const { error: erroCarimbo } = await supabase
+      .from("termo_equipamento")
+      .update({ email_enviado_em: new Date().toISOString() })
+      .eq("id", termoId);
+    if (erroCarimbo) {
+      console.error("enviarViaDoFuncionario/carimbo", erroCarimbo);
+      return {
+        enviado: true,
+        motivo:
+          "Via enviada, mas o registro do envio não foi gravado — a tela ainda vai mostrar como não enviada.",
+      };
+    }
+    return { enviado: true };
+  } catch (e) {
+    console.error("enviarViaDoFuncionario", e);
+    return { enviado: false, motivo: "O envio do e-mail falhou." };
+  }
+}
+
+/**
+ * Reenvia a via do funcionário.
+ *
+ * Existe porque a EMISSÃO é irreversível e o envio não: se o Resend cair, o
+ * termo fica emitido com `email_enviado_em` nulo, e sem este caminho a única
+ * saída seria mandar o PDF por fora do sistema — perdendo o registro de que a
+ * pessoa recebeu a própria via.
+ *
+ * Reenviar uma via JÁ ENVIADA é permitido de propósito: o e-mail pode ter ido
+ * para a caixa errada, ou a pessoa pode ter apagado.
+ */
+export async function reenviarTermo(raw: unknown): Promise<ActionResult> {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) {
+    return falha("Você não tem permissão para enviar o termo.");
+  }
+  const id = String((raw as { id?: string })?.id ?? "").trim();
+  if (!id) return falha("Termo não informado.");
+
+  const envio = await enviarViaDoFuncionario(id);
+  revalidatePath(`/termos/${id}`);
+  revalidatePath("/termos");
+
+  if (!envio.enviado) return falha(envio.motivo ?? "Não foi possível enviar a via.");
+  return { ok: true, id, aviso: envio.motivo };
+}
 
 export async function salvarFuncionario(
   _prev: ActionResult | null,
@@ -438,7 +574,21 @@ export async function emitirTermo(
       `O termo foi emitido, mas o histórico de posse da peça não foi atualizado. ${problemaNoLivro}`,
     );
   }
-  return { ok: true, id: termoId };
+
+  // A VIA DO FUNCIONÁRIO SAI POR ÚLTIMO, e falhar aqui não desfaz nada. O termo
+  // está emitido, numerado e assinado; o e-mail é a entrega da cópia. Sem
+  // e-mail conferido a emissão continua valendo — e a mensagem diz o que falta,
+  // em vez de deixar a tela dizer "tudo certo" sobre uma via que não saiu.
+  const envio = await enviarViaDoFuncionario(termoId);
+  revalidatePath(`/termos/${termoId}`);
+  if (!envio.enviado) {
+    return {
+      ok: true,
+      id: termoId,
+      aviso: `Termo emitido. A via por e-mail não saiu: ${envio.motivo ?? "falha no envio."}`,
+    };
+  }
+  return { ok: true, id: termoId, aviso: envio.motivo };
 }
 
 // ── Devolução, encerramento e cancelamento ───────────────────────────────────

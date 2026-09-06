@@ -7,6 +7,53 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.71.0] — 2026-09-06
+
+Fase C.1 do inventário de TI. O termo de responsabilidade chega a quem assinou.
+
+### O que isto é, e o que não é
+
+O termo é assinado **na tela, na hora**, com imagem da assinatura e IP
+registrado. O e-mail **não é o ato** — é a entrega da cópia a quem já assinou. O
+texto do e-mail diz isso na primeira linha, porque um e-mail com um termo anexo
+é naturalmente lido como "assine e devolva", e quem lê assim guarda o anexo
+esperando um passo que não existe.
+
+### Adicionado
+
+- **`termo_equipamento.email_enviado_em`** (migration 0076). Carimbo, não
+  condição: se o Resend cair, o termo continua emitido e assinado com a coluna
+  nula, e a tela mostra "via não enviada" com botão de reenviar.
+- **Bloco "Via do funcionário"** na tela do termo, com três estados que exigem
+  coisas diferentes de quem opera: *enviada*, *sem endereço cadastrado* e
+  *endereço por conferir*.
+- **`reenviarTermo`**, porque a emissão é irreversível e o envio não. Reenviar
+  uma via já enviada é permitido de propósito.
+- **Template de e-mail `termoFuncionario`**, registrado no catálogo da galeria
+  de pré-visualização.
+
+### Segurança
+
+- **Endereço não conferido não recebe termo.** A fase B deduziu 97 endereços de
+  `nome.sobrenome`, que é palpite e não fato. Sem esta trava o primeiro envio em
+  massa descobriria os erros entregando o termo de responsabilidade de uma
+  pessoa na caixa de outra. A tela aponta o conserto em vez de deixar tentar.
+
+### Alterado
+
+- **A montagem do PDF do termo saiu da rota** para
+  `src/lib/documentos/frm-eq-001-render.tsx`. O mesmo PDF agora sai por dois
+  caminhos — download e anexo —, e duas montagens fariam a via recebida por
+  e-mail divergir da baixada na tela, num papel com valor de prova. Uma função,
+  dois chamadores.
+- **Falha no envio não desfaz nada.** A emissão devolve `ok` com aviso dizendo o
+  que faltou, em vez de a tela dizer "tudo certo" sobre uma via que não saiu.
+
+### Não verificado
+
+Nenhuma tela autenticada foi aberta num navegador, e **nenhum e-mail de termo
+foi disparado de verdade** — o caminho foi exercitado só por tipos e testes.
+
 ## [0.70.0] — 2026-09-06
 
 Fase B do inventário de TI. **127 máquinas** da aba `ATIVAS.` de

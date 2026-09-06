@@ -18,7 +18,9 @@ import type {
   DadosSenhaRedefinida,
   DadosVencimentosCentral,
   DadosVencimentosObra,
-  DadosDevolucao,} from "./templates";
+  DadosDevolucao,
+  DadosTermoFuncionario,
+} from "./templates";
 
 export const CONTEXTO: Contexto = {
   remetente: {
@@ -290,4 +292,27 @@ export const INDICADORES: DadosIndicadores = {
   estouroTotal: "R$ 400.000,00",
   semDados: 1,
   previsaoTotal: "R$ 237.000,00",
+};
+
+export const TERMO_FUNCIONARIO: DadosTermoFuncionario = {
+  numero: "TRM-2026-0007",
+  funcionario: "Marcio Oliveira",
+  obra: "608 — Racional Dante",
+  dataEntrega: "06/09/2026",
+  previsaoDevolucao: "20/12/2026",
+  itens: [
+    {
+      descricao: "Dell Latitude 3410",
+      patrimonio: "4L1KL22",
+      quantidade: "1 un",
+      estado: "Novo",
+    },
+    {
+      descricao: "Mochila para notebook",
+      quantidade: "1 un",
+      estado: "Bom",
+    },
+  ],
+  anexo: "FRM-EQ-001-TRM-2026-0007.pdf",
+  observacoes: "Carregador entregue junto, sem patrimônio próprio.",
 };
