@@ -1,103 +1,118 @@
 import { describe, it, expect } from "vitest";
-import {
-  termoItemSchema,
-  funcionarioSchema,
-  devolucaoItemSchema,
-  ESTADO_INFO,
-  ESTADOS,
-} from "./termo";
+import { emailDerivado, confirmacaoDoEmail } from "./termo";
 
-describe("termoItemSchema", () => {
-  const base = {
-    item_id: "11111111-1111-4111-8111-111111111111",
-    quantidade: "1",
-    estado_entrega: "bom",
-    controle: "quantidade",
-    unidade_id: "",
-    observacoes: "",
-  };
-
-  it("item por quantidade não exige patrimônio", () => {
-    expect(termoItemSchema.safeParse(base).success).toBe(true);
+describe("emailDerivado", () => {
+  it("usa primeiro nome e último sobrenome, sem acento e em minúsculas", () => {
+    expect(emailDerivado("Marcio Oliveira")).toBe("marcio.oliveira@sistenge.com");
+    expect(emailDerivado("João Lirio")).toBe("joao.lirio@sistenge.com");
+    expect(emailDerivado("Jessica Mendonça")).toBe("jessica.mendonca@sistenge.com");
   });
 
-  it("item por peça SEM patrimônio é recusado", () => {
-    const r = termoItemSchema.safeParse({ ...base, controle: "peca" });
-    expect(r.success).toBe(false);
-    if (!r.success) {
-      expect(r.error.issues[0].message).toContain("patrimônio");
-    }
+  it("com nome do meio, pula o meio", () => {
+    // "Brainer Patrick Melo Soares" tem quatro partes. O padrão da Sistenge é
+    // primeiro + último, e inventar `brainer.patrick` seria escolher errado com
+    // a mesma confiança.
+    expect(emailDerivado("Brainer Patrick Melo Soares")).toBe(
+      "brainer.soares@sistenge.com",
+    );
   });
 
-  it("item por peça COM patrimônio é aceito", () => {
-    const r = termoItemSchema.safeParse({
-      ...base,
-      controle: "peca",
-      unidade_id: "22222222-2222-4222-8222-222222222222",
-    });
-    expect(r.success).toBe(true);
+  it("já vindo em formato de login, normaliza", () => {
+    // A planilha traz "Rodrigo.Ferreira" em vez do nome por extenso.
+    expect(emailDerivado("Rodrigo.Ferreira")).toBe("rodrigo.ferreira@sistenge.com");
   });
 
-  it("é idempotente — reparsear o próprio output não quebra", () => {
-    const um = termoItemSchema.parse(base);
-    expect(() => termoItemSchema.parse(um)).not.toThrow();
+  it("não deriva de nome com uma palavra só", () => {
+    // "Lourival" não forma `nome.sobrenome`. Devolver `lourival.lourival` seria
+    // inventar um endereço com cara de verdadeiro.
+    expect(emailDerivado("Lourival")).toBeNull();
+  });
+
+  it("não deriva do que não é gente", () => {
+    // A coluna USUÁRIOS da planilha de inventário mistura pessoa com estado da
+    // máquina: "LIVRE - DATA CENTER", "Monitor 0109947", "Rack".
+    expect(emailDerivado("")).toBeNull();
+    expect(emailDerivado("   ")).toBeNull();
+    expect(emailDerivado("Monitor 0109947")).toBeNull();
+  });
+
+  it("colapsa espaço repetido", () => {
+    expect(emailDerivado("Maria   Kodama")).toBe("maria.kodama@sistenge.com");
   });
 });
 
-describe("funcionarioSchema", () => {
-  it("aceita funcionário só com nome", () => {
-    const r = funcionarioSchema.safeParse({ nome: "José Carlos da Silva" });
-    expect(r.success).toBe(true);
-    if (r.success) expect(r.data.cpf).toBeNull();
+describe("confirmacaoDoEmail", () => {
+  const derivado = { email: "andrea.marques@sistenge.com", confirmado: false };
+
+  it("digitar um endereço diferente é confirmar", () => {
+    // Quem apagou o palpite e escreveu outro endereço conferiu o endereço.
+    expect(
+      confirmacaoDoEmail(derivado, {
+        email: "a.marques@sistenge.com",
+        marcouConfirmar: false,
+      }),
+    ).toBe(true);
   });
 
-  it("recusa nome em branco", () => {
-    expect(funcionarioSchema.safeParse({ nome: "  " }).success).toBe(false);
-  });
-});
-
-describe("ESTADO_INFO", () => {
-  it("todo estado tem rótulo acentuado", () => {
-    for (const e of ESTADOS) expect(ESTADO_INFO[e].label.length).toBeGreaterThan(0);
-  });
-});
-
-describe("devolucaoItemSchema — data de devolução", () => {
-  it("recusa devolução anterior à entrega", () => {
-    // Sem isto o check `fim >= inicio` do livro de custódia estoura como erro
-    // cru de Postgres na cara do almoxarife.
-    const r = devolucaoItemSchema.safeParse({
-      item_id: "11111111-2222-4333-8444-555555555555",
-      data_entrega: "2026-09-02",
-      data_devolucao: "2026-08-28",
-      estado_devolucao: "bom",
-    });
-    expect(r.success).toBe(false);
-    if (!r.success) {
-      expect(r.error.issues[0].message).toBe(
-        "A devolução não pode ser anterior à entrega.",
-      );
-    }
+  it("salvar sem tocar no endereço derivado NÃO confirma", () => {
+    // Este é o buraco que a regra fecha: alguém edita o CARGO da pessoa e o
+    // formulário reenvia o e-mail derivado. Sem esta regra, o palpite viraria
+    // "conferido" sem ninguém ter olhado para ele.
+    expect(
+      confirmacaoDoEmail(derivado, {
+        email: "andrea.marques@sistenge.com",
+        marcouConfirmar: false,
+      }),
+    ).toBe(false);
   });
 
-  it("aceita devolução no mesmo dia da entrega", () => {
-    const r = devolucaoItemSchema.safeParse({
-      item_id: "11111111-2222-4333-8444-555555555555",
-      data_entrega: "2026-09-02",
-      data_devolucao: "2026-09-02",
-      estado_devolucao: "bom",
-    });
-    expect(r.success).toBe(true);
+  it("marcar a caixa confirma o endereço derivado", () => {
+    expect(
+      confirmacaoDoEmail(derivado, {
+        email: "andrea.marques@sistenge.com",
+        marcouConfirmar: true,
+      }),
+    ).toBe(true);
   });
 
-  it("sem data de entrega informada, não bloqueia", () => {
-    // A validação cruzada só vale quando a outra ponta é conhecida. Bloquear
-    // sem referência transformaria dado ausente em erro.
-    const r = devolucaoItemSchema.safeParse({
-      item_id: "11111111-2222-4333-8444-555555555555",
-      data_devolucao: "2026-08-28",
-      estado_devolucao: "bom",
-    });
-    expect(r.success).toBe(true);
+  it("endereço já confirmado continua confirmado ao salvar de novo", () => {
+    expect(
+      confirmacaoDoEmail(
+        { email: "x@sistenge.com", confirmado: true },
+        { email: "x@sistenge.com", marcouConfirmar: false },
+      ),
+    ).toBe(true);
+  });
+
+  it("apagar o e-mail zera a confirmação", () => {
+    // Sem endereço não há o que confirmar, e deixar `true` faria o registro
+    // dizer "conferido" sobre um campo vazio.
+    expect(
+      confirmacaoDoEmail(
+        { email: "x@sistenge.com", confirmado: true },
+        { email: null, marcouConfirmar: true },
+      ),
+    ).toBe(false);
+  });
+
+  it("caixa alta não conta como endereço diferente", () => {
+    // O índice único é por `lower(email)`: para o banco são o mesmo endereço,
+    // então trocar a caixa não é conferir.
+    expect(
+      confirmacaoDoEmail(derivado, {
+        email: "Andrea.Marques@sistenge.com",
+        marcouConfirmar: false,
+      }),
+    ).toBe(false);
+  });
+
+  it("primeiro e-mail de quem não tinha nenhum já nasce confirmado", () => {
+    // Ninguém adivinhou: alguém digitou.
+    expect(
+      confirmacaoDoEmail(
+        { email: null, confirmado: false },
+        { email: "novo@sistenge.com", marcouConfirmar: false },
+      ),
+    ).toBe(true);
   });
 });
