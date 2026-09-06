@@ -7,6 +7,70 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.68.0] — 2026-09-05
+
+Fase 3b — **a última do módulo de equipamento**.
+
+### O que destravou
+
+A pergunta que a segurava era "a frente já existe em algum lugar — orçamento,
+cronograma, avanço — ou seria cadastro novo?". Criar um cadastro que duplica
+conceito existente é o defeito que custou caro várias vezes nesta sessão.
+
+**A resposta veio do banco, não de suposição:**
+
+| Onde | O que tem |
+|---|---|
+| `avanco_obra` | percentual da OBRA INTEIRA por semana. Sem etapa |
+| `orcamento_locacao` | itens locados. Sem frente |
+| `etapa_obra` | não existe |
+
+A frente **não vive em lugar nenhum do Loca**. Não há o que duplicar aqui
+dentro.
+
+E o desenho sobrevive à outra pergunta — se as frentes são estáveis ou
+informais. O cadastro é **por obra e criado na hora de usar**: estáveis são
+cadastradas uma vez e reusadas; informais, cada obra cria o que precisa.
+
+### Adicionado
+
+- **`frente_obra`** (migration 0072), por obra. "Fundação" na obra A e
+  "Fundação" na obra B são frentes diferentes, com equipe, prazo e custo
+  próprios — uma lista global obrigaria a inventar nomes únicos
+  ("Fundação — Unimed Maceió") e o seletor de cada obra ofereceria as frentes de
+  todas as outras.
+- **`item_locado.frente_id`** — o que FAZ O CUSTO DESCER.
+- **`apontamento_uso.frente_id`** — a hora trabalhada também desce ao serviço.
+- **Relatório "Custo por frente"**, com a linha `(sem frente)` deliberada:
+  ela mostra quanto do custo ainda não desceu, e é ela que diz se vale confiar
+  no resto. Escondê-la faria um rateio parcial parecer completo.
+
+### Segurança
+
+- **Trigger recusa frente de outra obra**, nas duas pontas. Sem ele, o relatório
+  somaria despesa de uma obra dentro de outra, em silêncio. É trigger e não FK
+  composta porque a obra do `item_locado` vem pelo CONTRATO — não há coluna
+  `obra_id` nele para uma chave composta apontar.
+- **Frente com item alocado não se exclui** — desativa-se. A FK é `set null`, então
+  excluir não quebraria nada: os itens só perderiam a alocação em silêncio, e o
+  relatório encolheria sem explicação.
+
+Verificado em produção numa transação revertida:
+
+| Cenário | Resultado |
+|---|---|
+| Frente da mesma obra | aceita |
+| Frente de outra obra | recusada |
+| Duas "Fundação" na mesma obra | recusada |
+| "Fundação" em duas obras diferentes | aceita |
+
+### Alterado
+
+- `item_locado.frente_id` é **opcional e permanentemente**: obra sem frentes
+  continua funcionando como antes, e o custo continua sendo da obra. O seletor
+  nem aparece quando a obra não tem frentes cadastradas — um campo vazio que só
+  serve para ser ignorado é pior que campo nenhum.
+
 ## [0.67.0] — 2026-09-05
 
 Fase 3a, construída sob duas suposições declaradas: quais peças têm horímetro se

@@ -20,6 +20,9 @@ import { custoPorItemDaObra } from "@/lib/data/custo-item";
 import { fechamentosDaObra } from "@/lib/data/orcamento";
 import { competenciaAnterior } from "@/lib/fechamento";
 import { BlocoFechamento } from "./_components/bloco-fechamento";
+import { BlocoFrentes } from "./_components/bloco-frentes";
+import { listarFrentesDaObra } from "@/lib/data/frentes";
+import { podeOperar } from "@/lib/auth";
 
 export const metadata = { title: "Editar obra — Loca" };
 
@@ -57,7 +60,7 @@ export default async function EditarObraPage({
 
   // Em paralelo: são quatro leituras independentes, e serializá-las somaria
   // latência sem motivo.
-  const [historico, orcamento, historicoOrc, realizado, custoItens, fechamentos, catalogo] = await Promise.all([
+  const [historico, orcamento, historicoOrc, realizado, custoItens, fechamentos, catalogo, frentes] = await Promise.all([
     historicoAvanco(id),
     orcamentoVigente(id),
     historicoOrcamento(id),
@@ -70,6 +73,7 @@ export default async function EditarObraPage({
       .eq("ativo", true)
       .order("descricao")
       .then((r) => r.data ?? []),
+    listarFrentesDaObra(id),
   ]);
 
   const hojeISO = hojeISOSaoPaulo();
@@ -87,6 +91,14 @@ export default async function EditarObraPage({
           <ObraForm obra={obra} vinculados={vinculados} />
         </CardContent>
       </Card>
+
+      {/* As frentes vêm antes do orçamento e do custo: são elas que dão o
+          recorte pelo qual os dois passam a poder ser lidos. */}
+      <BlocoFrentes
+        obraId={id}
+        frentes={frentes}
+        podeEditar={podeOperar(perfil?.papel)}
+      />
 
       <BlocoAvanco obra={obra} historico={historico} consumido={consumido} />
 

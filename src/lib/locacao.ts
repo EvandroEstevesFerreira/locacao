@@ -1,6 +1,11 @@
 import { z } from "zod";
 import { differenceInCalendarDays } from "date-fns";
-import { idOpcional, dataOpcional as dataOpcionalCampo, textoOpcional } from "@/lib/campos";
+import {
+  idOpcional,
+  dataOpcional as dataOpcionalCampo,
+  textoOpcional,
+  uuidOpcional,
+} from "@/lib/campos";
 
 export type Cadencia = "diaria" | "semanal" | "quinzenal" | "mensal";
 
@@ -260,6 +265,18 @@ export const itemLocadoSchema = z
     data_retirada: z.string().min(1, "Informe a data de retirada."),
     data_devolucao_prevista: dataOpcional,
     identificacao: textoOpcional(120),
+    /**
+     * A frente de serviço a que este item é alocado (migration 0072).
+     *
+     * É o que FAZ O CUSTO DESCER. Sem ela, o custo de locação morre na obra:
+     * sabe-se que a obra gastou, não em quê.
+     *
+     * OPCIONAL, e permanentemente: obra sem frentes definidas continua
+     * funcionando exatamente como antes, e o custo continua sendo da obra.
+     * Exigir travaria o cadastro de contrato de toda obra que ainda não
+     * organizou suas frentes.
+     */
+    frente_id: uuidOpcional,
   })
   // Regra cruzada: devolver antes de retirar não existe, e o custo por período
   // sairia negativo.

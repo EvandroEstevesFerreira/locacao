@@ -13,6 +13,7 @@ import * as estoque from "./estoque";
 import * as fechamento from "./fechamento";
 import * as financeiro from "./financeiro";
 import * as fornecedor from "./fornecedor";
+import * as frente from "./frente";
 import * as frota from "./frota";
 import * as imoveis from "./imoveis";
 import * as itens from "./itens";
@@ -62,6 +63,7 @@ const MODULOS: Record<string, Record<string, unknown>> = {
   fechamento,
   financeiro,
   fornecedor,
+  frente,
   frota,
   imoveis,
   itens,
@@ -214,6 +216,7 @@ const AMOSTRAS: Record<string, unknown> = {
   fecharDevolucaoSchema: { id: UUID, ciente: true },
   apontamentoSchema: { unidade_id: UUID, data: "2026-09-05", leitura: "1234.5" },
   laudoAvariaSchema: { id: UUID, data: "2026-09-05", responsabilidade: "indefinida" },
+  frenteSchema: { obra_id: UUID, nome: "Fundação", ativo: true },
   "catalogo.categoriaSchema": { nome: "Concretagem" },
   tipoEquipamentoSchema: {
     categoria_id: UUID,
