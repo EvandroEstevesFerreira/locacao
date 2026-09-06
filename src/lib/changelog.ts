@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.66.0";
+export const APP_VERSION = "0.67.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,18 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.67.0",
+    data: "2026-09-05",
+    titulo: "Apontamento de uso: a máquina parada dentro da obra",
+    mudancas: [
+      { tipo: "novo", texto: "Peças com horímetro ganharam o lançamento de leitura. O que se registra é o número do mostrador, acumulado — não “quantas horas trabalhou”. Quem lê o horímetro copia um número; quem estima horas de memória inventa." },
+      { tipo: "novo", texto: "Relatório de uso do equipamento: horas trabalhadas por peça e quanto falta para a revisão. É o único relatório que enxerga a betoneira que está na obra há 40 dias e trabalhou 6 horas — o de ociosidade mede calendário e para ele ela está em uso." },
+      { tipo: "novo", texto: "Cada tipo pode definir de quantas em quantas horas suas peças precisam de revisão. O aviso começa a 10% do intervalo, porque 25 horas de antecedência é muito para um intervalo de 50 e pouco para um de 500." },
+      { tipo: "novo", texto: "Horímetro trocado tem marca própria. Sem ela, uma leitura menor que a anterior seria recusada para sempre — o horímetro não anda para trás." },
+      { tipo: "correcao", texto: "Lançar uma leitura com data anterior a outra já registrada recalcula as horas da leitura seguinte. Sem isso, o total do mês ficaria certo por acaso e a distribuição no tempo, errada." },
+    ],
+  },
   {
     versao: "0.66.0",
     data: "2026-09-05",

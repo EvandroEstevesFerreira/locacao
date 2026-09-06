@@ -7,6 +7,8 @@ import type { Situacao, Propriedade, Estado } from "@/lib/frota";
 import { camposFichaSchema, type CampoFicha } from "@/lib/catalogo";
 
 export type PecaDetalhe = {
+  /** Peças com horímetro entram no apontamento de uso (migration 0071). */
+  temHorimetro: boolean;
   /** Valores dos campos definidos pelo tipo do item (migration 0070). */
   ficha: Record<string, unknown>;
   /** A definição desses campos, para o formulário saber o que desenhar. */
@@ -43,7 +45,7 @@ export async function obterPeca(id: string): Promise<PecaDetalhe | null> {
     .select(
       "id, identificador, numero_serie, situacao, propriedade, estado, ano, observacoes, " +
         "obra_id, item_id, imei, imei_2, linha_telefonica, operadora, service_tag, " +
-        "memoria_gb, configuracao, ficha, " +
+        "memoria_gb, configuracao, ficha, tem_horimetro, " +
         "item:item_id(descricao, tipo:tipo_id(campos_ficha), categoria:categoria_id(nome, perfil_campos)), " +
         "obra:obra_id(codigo, nome)",
     )
@@ -78,6 +80,7 @@ export async function obterPeca(id: string): Promise<PecaDetalhe | null> {
     // `?? {}` e não o valor cru: a coluna é `not null default '{}'`, mas uma
     // linha antiga lida antes da 0070 chegaria como `undefined` — e o
     // formulário faria `Object.keys(undefined)`.
+    temHorimetro: Boolean(b.tem_horimetro),
     ficha: (b.ficha as Record<string, unknown> | null) ?? {},
     camposDoTipo: definicao.success ? definicao.data : [],
     id: b.id as string,

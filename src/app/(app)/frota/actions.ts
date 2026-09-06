@@ -157,6 +157,7 @@ export async function editarPeca(raw: unknown): Promise<ActionResult> {
       service_tag: d.service_tag,
       memoria_gb: d.memoria_gb,
       configuracao: d.configuracao,
+      tem_horimetro: d.tem_horimetro,
       ficha: conferida.ficha,
     })
     .eq("id", d.id);

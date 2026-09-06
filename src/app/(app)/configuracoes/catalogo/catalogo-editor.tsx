@@ -365,6 +365,7 @@ function TipoForm({
         categoria_id: categoriaId,
         nome: String(fd.get("nome") ?? ""),
         natureza_padrao: natureza,
+        intervalo_manutencao_h: String(fd.get("intervalo_manutencao_h") ?? ""),
         ativo: fd.get("ativo") === "on",
       });
       if (!r.ok) {
@@ -416,6 +417,31 @@ function TipoForm({
         </NativeSelect>
         <p className="text-xs text-muted-foreground">
           Sugestão para o item novo deste tipo — quem cadastra pode mudar.
+        </p>
+      </div>
+
+      <div className="space-y-1.5 sm:col-span-2">
+        <Label htmlFor={`tipo-int-${tipo?.id ?? "novo"}`}>
+          Revisão a cada{" "}
+          <span className="font-normal text-muted-foreground">(opcional)</span>
+        </Label>
+        <Input
+          id={`tipo-int-${tipo?.id ?? "novo"}`}
+          name="intervalo_manutencao_h"
+          type="number"
+          min="1"
+          step="1"
+          inputMode="numeric"
+          className="max-w-40"
+          disabled={pendente}
+          defaultValue={tipo?.intervaloManutencaoH ?? ""}
+          placeholder="250"
+        />
+        {/* Só faz sentido onde o fabricante publica o intervalo, e só serve
+            para peças com horímetro. Em branco é o caso da maioria. */}
+        <p className="text-xs text-muted-foreground">
+          Horas de horímetro entre manutenções preventivas — 250 h para um
+          gerador, por exemplo. Em branco, este tipo não tem revisão por uso.
         </p>
       </div>
 

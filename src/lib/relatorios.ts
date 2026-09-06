@@ -22,6 +22,7 @@ import {
   conferenciaPendente,
   equipamentoFora,
   manutencaoCusto,
+  usoEquipamento,
 } from "./relatorios-equipamento";
 
 export type TipoRelatorio =
@@ -34,6 +35,7 @@ export type TipoRelatorio =
   | "conferencia_pendente"
   | "equipamento_fora"
   | "manutencao_custo"
+  | "uso_equipamento"
   | "imoveis_custo"
   | "imoveis_contratos_vencer"
   | "imoveis_sem_contrato"
@@ -103,6 +105,13 @@ export const TIPOS_RELATORIO: {
     label: "Custo de manutenção",
     descricao:
       "Quanto cada peça já consumiu em conserto, e quantas vezes. É o número que decide entre consertar de novo e substituir.",
+    usaPeriodo: true,
+  },
+  {
+    valor: "uso_equipamento",
+    label: "Uso do equipamento",
+    descricao:
+      "Horas trabalhadas por peça com horímetro, e quanto falta para a revisão. É o único relatório que enxerga a máquina parada dentro da obra — o de ociosidade mede calendário.",
     usaPeriodo: true,
   },
   {
@@ -700,6 +709,7 @@ export async function gerarRelatorio(
     return conferenciaPendente(supabase, filtros);
   if (tipo === "equipamento_fora") return equipamentoFora(supabase, filtros);
   if (tipo === "manutencao_custo") return manutencaoCusto(supabase, filtros);
+  if (tipo === "uso_equipamento") return usoEquipamento(supabase, filtros);
   if (tipo === "imoveis_custo") return imoveisCusto(supabase, filtros);
   if (tipo === "imoveis_contratos_vencer")
     return imoveisContratosVencer(supabase, filtros);

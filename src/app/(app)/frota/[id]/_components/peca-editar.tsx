@@ -67,6 +67,7 @@ export function PecaEditar({ peca }: { peca: PecaDetalhe }) {
       service_tag: peca.serviceTag ?? "",
       memoria_gb: peca.memoriaGb == null ? "" : String(peca.memoriaGb),
       configuracao: peca.configuracao ?? "",
+      tem_horimetro: peca.temHorimetro,
     },
   });
 
@@ -293,6 +294,26 @@ export function PecaEditar({ peca }: { peca: PecaDetalhe }) {
           </div>
         </div>
       ) : null}
+
+      {/* A marca que faz a peça aparecer no apontamento de uso. Fica junto do
+          cadastro e não numa tela à parte: quem cadastra o gerador sabe, ali,
+          que ele tem horímetro. */}
+      <label className="flex items-start gap-2 text-sm">
+        <input
+          type="checkbox"
+          className="mt-0.5 size-4"
+          disabled={pendente}
+          {...register("tem_horimetro")}
+        />
+        <span>
+          Esta peça tem horímetro
+          <span className="block text-xs text-muted-foreground">
+            Habilita o lançamento de leituras e a conta de horas trabalhadas —
+            que é o que responde “esta máquina está ociosa?” e “quando vence a
+            revisão?”.
+          </span>
+        </span>
+      </label>
 
       {/* Os campos que o TIPO deste item define. Vazio quando o item não tem
           tipo, ou quando o tipo não pede nada além do patrimônio. */}

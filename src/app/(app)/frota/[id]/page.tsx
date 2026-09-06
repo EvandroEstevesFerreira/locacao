@@ -21,6 +21,9 @@ import { PecaMover } from "./_components/peca-mover";
 import { PecaEditar } from "./_components/peca-editar";
 import { PecaSituacao } from "./_components/peca-situacao";
 import { PecaReparos } from "./_components/peca-reparos";
+import { PecaApontamentos } from "./_components/peca-apontamentos";
+import { listarApontamentosDaPeca } from "@/lib/data/apontamentos";
+import { listarObrasParaFiltro } from "@/lib/data/obras";
 
 export const metadata = { title: "Peça — Loca" };
 
@@ -46,6 +49,13 @@ export default async function PecaDetalhePage({
     getCurrentPerfil(),
   ]);
   if (!peca) notFound();
+
+  // Só busca o histórico e a lista de obras quando a peça TEM horímetro: para
+  // toda betoneira e escora do sistema, seriam duas consultas para desenhar
+  // nada.
+  const [apontamentos, obrasParaApontamento] = peca.temHorimetro
+    ? await Promise.all([listarApontamentosDaPeca(peca.id), listarObrasParaFiltro()])
+    : [[], []];
 
   const hoje = hojeISOSaoPaulo();
   const linha = montarLinhaDoTempo(posses, hoje);
@@ -125,6 +135,17 @@ export default async function PecaDetalhePage({
           ) : null}
         </CardContent>
       </Card>
+
+      {/* Uso antes de Manutenção: é a leitura do horímetro que diz quando a
+          revisão vence, então ela vem primeiro na ordem de leitura. */}
+      <PecaApontamentos
+        unidadeId={peca.id}
+        temHorimetro={peca.temHorimetro}
+        apontamentos={apontamentos}
+        obras={obrasParaApontamento}
+        hoje={hojeISOSaoPaulo()}
+        podeEditar={podeEditar}
+      />
 
       {/* Manutenção vem logo depois da custódia: as duas contam a vida da
           peça — com quem ela esteve e quantas vezes quebrou. */}
