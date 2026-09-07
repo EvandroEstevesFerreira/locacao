@@ -15,6 +15,10 @@ import {
   type GrupoAlerta,
 } from "@/lib/emails/templates";
 import {
+  candidatosDeCertificado,
+  type LinhaPendencia,
+} from "@/lib/certificado";
+import {
   formatarData,
   formatarBRL,
   hojeISOSaoPaulo,
@@ -88,8 +92,15 @@ export async function GET(request: Request) {
     const limite = format(addDays(agora, maxPrazo), "yyyy-MM-dd");
 
     // Candidatos: devoluções, fins de contrato e pagamentos dentro da janela.
-    const [devolucoes, contratos, pagamentos, imovelContratos, imoveisAtivos] =
-      await Promise.all([
+    const [
+      devolucoes,
+      contratos,
+      pagamentos,
+      imovelContratos,
+      imoveisAtivos,
+      certificados,
+      obrasDoOrg,
+    ] = await Promise.all([
         supabase
           .from("item_locado")
           .select("id, data_devolucao_prevista, quantidade, valor_unitario_periodo, item:item_id(descricao), contrato:contrato_id(numero, cadencia, obra:obra_id(id, codigo, nome))")
@@ -124,6 +135,23 @@ export async function GET(request: Request) {
           .select("id, apelido, obra:obra_id(id, codigo, nome), contrato_imovel(vigente)")
           .eq("org_id", cfg.org_id)
           .eq("status", "ativo"),
+        // Certificados do equipamento (migration 0081). A view já cruza o que o
+        // TIPO exige com o que a PEÇA tem, então ela devolve as duas coisas de
+        // uma vez: o que está para vencer e o que nunca foi lançado.
+        //
+        // Sem filtro de data na consulta: `vence_em` nulo é a pendência de
+        // ausência, e um `.lte(...)` a descartaria — justamente o caso grave.
+        supabase
+          .from("certificado_pendencia")
+          .select("unidade_id, identificador, obra_id, modelo, tipo, especie, certificado_id, vence_em")
+          .eq("org_id", cfg.org_id),
+        // As obras, só para o rótulo dos candidatos de certificado: a view não
+        // tem FK que o PostgREST possa seguir até `obra`, e são 8 linhas.
+        supabase
+          .from("obra")
+          .select("id, codigo, nome")
+          .eq("org_id", cfg.org_id)
+          .is("deleted_at", null),
       ]);
 
     type Cand = {
@@ -248,6 +276,38 @@ export async function GET(request: Request) {
       }
     }
 
+    // ---------------------------------------------------------------------
+    // Certificados do equipamento
+    // ---------------------------------------------------------------------
+    // A tradução mora em `candidatosDeCertificado`, e não aqui: é a única parte
+    // desta rota que dá para provar sem subir o Next inteiro, e é a que erra em
+    // silêncio. Os que TÊM data entram em `brutos` (escalonam 30 → 15 → 3); os
+    // ausentes vão direto para `candidatos`, com marco fixo.
+    const rotuloObra = new Map(
+      (obrasDoOrg.data ?? []).map((o) => [o.id as string, `${o.codigo} — ${o.nome}`]),
+    );
+    const deCertificado = candidatosDeCertificado(
+      (certificados.data ?? []) as LinhaPendencia[],
+      { hoje, limite, mesRef: format(agora, "yyyy-MM-01") },
+    );
+    const paraCand = (c: (typeof deCertificado)[number]) => ({
+      tipo: c.tipo,
+      referencia_id: c.referencia_id,
+      data_referencia: c.data_referencia,
+      obra_id: c.obra_id,
+      obra_rotulo: c.obra_id ? (rotuloObra.get(c.obra_id) ?? null) : null,
+      linha: {
+        categoria: c.categoria,
+        descricao: c.descricao,
+        data: c.data === "—" ? "—" : formatarData(c.data),
+        obra: c.obra_id ? rotuloObra.get(c.obra_id) : undefined,
+      },
+    });
+
+    for (const c of deCertificado) {
+      if (c.dias === null) brutos.push(paraCand(c));
+    }
+
     // Anexa o marco (dias) a cada candidato; descarta o que não está
     // dentro de nenhum prazo configurado.
     const candidatos: Cand[] = [];
@@ -283,6 +343,12 @@ export async function GET(request: Request) {
           obra: nomeObra(obraIm),
         },
       });
+    }
+
+    // Os ausentes: sem data, marco fixo, uma vez por mês (ver
+    // `candidatosDeCertificado`).
+    for (const c of deCertificado) {
+      if (c.dias !== null) candidatos.push({ ...paraCand(c), dias: c.dias });
     }
 
     if (candidatos.length === 0) continue;

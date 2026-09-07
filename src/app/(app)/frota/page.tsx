@@ -15,6 +15,12 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { ListFilters } from "@/components/shared/list-filters";
 import { ListSearch } from "@/components/shared/list-search";
 import { SelectFilter } from "@/components/shared/select-filter";
+import { listarPendenciasDoParque } from "@/lib/data/certificados";
+import {
+  piorPorPeca,
+  ESTADO_CERTIFICADO_INFO,
+  type EstadoCertificado,
+} from "@/lib/certificado";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -54,15 +60,29 @@ export default async function FrotaPage({
     categoria: um(sp.categoria),
     q: um(sp.q),
   };
+  // O filtro de certificado NÃO entra em `filtros`: ele não vai ao banco. A
+  // pendência vem de uma view separada e o cruzamento é aqui — mandar este
+  // parâmetro para `listarFrota` faria a consulta procurar uma coluna que a
+  // tabela não tem.
+  const certificado = um(sp.certificado) ?? "";
 
-  const [pecas, categorias, obras] = await Promise.all([
+  const [pecas, categorias, obras, pendencias] = await Promise.all([
     listarFrota(filtros),
     listarCategorias(),
     listarObrasParaFiltro(),
+    listarPendenciasDoParque(),
   ]);
 
-  const resumo = resumirFrota(pecas);
-  const temFiltro = Object.values(filtros).some((v) => v && v !== "");
+  // O selo de cada peça é o do problema MAIS GRAVE dela: uma PTA com a inspeção
+  // em dia e o teste de carga ausente não pode aparecer como "em dia".
+  const selo = piorPorPeca(pendencias);
+  const visiveis = certificado
+    ? pecas.filter((p) => selo.get(p.id) === certificado)
+    : pecas;
+
+  const resumo = resumirFrota(visiveis);
+  const temFiltro =
+    Object.values(filtros).some((v) => v && v !== "") || certificado !== "";
 
   return (
     <div className="space-y-6">
@@ -110,6 +130,18 @@ export default async function FrotaPage({
             label: `${o.codigo} — ${o.nome}`,
           }))}
         />
+        {/* Só aparece quando algum tipo exige certificado. Antes disso o filtro
+            não teria o que filtrar, e ocuparia lugar ensinando a ignorá-lo. */}
+        {pendencias.length > 0 ? (
+          <SelectFilter
+            param="certificado"
+            label="Certificado"
+            placeholder="Qualquer situação"
+            opcoes={(
+              ["ausente", "vencido", "proximo", "em_dia"] as EstadoCertificado[]
+            ).map((e) => ({ value: e, label: ESTADO_CERTIFICADO_INFO[e].label }))}
+          />
+        ) : null}
       </ListFilters>
 
       {pecas.length === 0 && !temFiltro ? (
@@ -135,7 +167,7 @@ export default async function FrotaPage({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {pecas.length === 0 ? (
+                {visiveis.length === 0 ? (
                   // Linha com colSpan, e não EmptyState: preserva o cabeçalho e
                   // mostra sobre o que se está filtrando.
                   <TableRow>
@@ -144,7 +176,7 @@ export default async function FrotaPage({
                     </TableCell>
                   </TableRow>
                 ) : (
-                  pecas.map((p) => (
+                  visiveis.map((p) => (
                     <TableRow key={p.id}>
                       <TableCell className="font-medium">
                         <Link href={`/frota/${p.id}`} className="hover:underline">
@@ -173,6 +205,21 @@ export default async function FrotaPage({
                         <Badge variant={SITUACAO_INFO[p.situacao].variant}>
                           {SITUACAO_INFO[p.situacao].label}
                         </Badge>
+                        {/* Certificado em dia não ganha selo: se toda linha
+                            mostrar um, o selo deixa de chamar atenção — e ele
+                            existe justamente para isso. */}
+                        {(() => {
+                          const e = selo.get(p.id);
+                          if (!e || e === "em_dia") return null;
+                          return (
+                            <Badge
+                              variant={ESTADO_CERTIFICADO_INFO[e].variant}
+                              className="ml-1"
+                            >
+                              {ESTADO_CERTIFICADO_INFO[e].label}
+                            </Badge>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {/* Nulo não é dado faltando: é o almoxarifado central. */}

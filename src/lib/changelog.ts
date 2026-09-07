@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.76.0";
+export const APP_VERSION = "0.77.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,19 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.77.0",
+    data: "2026-09-06",
+    titulo: "O certificado vencendo avisa sozinho",
+    mudancas: [
+      { tipo: "novo", texto: "Certificado próximo do vencimento entra no e-mail de vencimentos que você já recebe — mesmo aviso, mesma obra, mesmos prazos de 30, 15 e 3 dias. Não é mais um e-mail para ler." },
+      { tipo: "novo", texto: "Exigência que nunca foi cumprida também avisa, uma vez por mês. Ela não tem data para vencer — e por isso ficaria calada para sempre se dependesse de calendário." },
+      { tipo: "novo", texto: "A lista da Frota ganhou o filtro Certificado e um selo na linha da peça. O selo mostra o pior problema dela: uma PTA com a inspeção em dia e o teste de carga ausente não aparece como “em dia”." },
+      { tipo: "novo", texto: "PTA já nasce exigindo inspeção periódica anual e ar-condicionado exigindo PMOC — as duas que a lei nomeia sem margem. As demais você configura em Categorias e tipos." },
+      { tipo: "melhoria", texto: "Certificado em dia não ganha selo na lista. Selo em toda linha deixa de chamar atenção, e ele existe justamente para isso." },
+      { tipo: "melhoria", texto: "O aviso de vencimento não insiste depois que o certificado vence: ele já avisou antes, e repetir todo dia é como um alerta deixa de ser lido. A tela continua mostrando." },
+    ],
+  },
   {
     versao: "0.76.0",
     data: "2026-09-06",

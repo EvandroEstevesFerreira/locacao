@@ -7,6 +7,49 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.77.0] — 2026-09-06
+
+O certificado vencendo avisa sozinho.
+
+### O aviso entra no cron que já existe
+
+`api/cron/vencimentos` já reúne devolução, fim de contrato, pagamento, fim de
+contrato de imóvel, reajuste e imóvel sem contrato; agrupa por obra; escalona
+pelos prazos configurados; deduplica por `notificacao_log`; e manda o resto à
+lista central. Certificado entrou ali como **mais duas fontes de candidato** —
+não é cron novo nem e-mail separado.
+
+### As duas fontes, e por que têm naturezas diferentes
+
+- **`certificado_vence`** tem data e escalona normalmente. A referência é o
+  **certificado**, e não a peça: renovado, o próximo tem id novo e a dedupe
+  deixa o aviso sair de novo no ano seguinte.
+- **`certificado_ausente`** não tem data. Segue o padrão que o imóvel sem
+  contrato estabeleceu — uma vez por mês, dia 1º, `dias = 0`. Sem isso, ou
+  avisaria todo dia até alguém resolver, ou nunca. O `tipo` **inclui a espécie**
+  (`certificado_ausente:pmoc`): duas exigências ausentes na mesma peça são dois
+  avisos, e com uma chave só a dedupe descartaria a segunda como repetida.
+
+**O vencido não insiste.** Ele já foi avisado quando estava vencendo; repetir
+todo dia até alguém agir é exatamente como um alerta deixa de ser lido. A tela
+mostra; o e-mail não.
+
+### A tradução saiu da rota
+
+`candidatosDeCertificado` vive em `src/lib/certificado.ts`, e não dentro da rota
+de 500 linhas. É a única parte daquele arquivo que dá para provar sem subir o
+Next inteiro — e a que erra em silêncio. São 8 casos de teste, incluindo as duas
+bordas da janela e a chave composta da dedupe.
+
+### Adicionado
+
+- Filtro **Certificado** e selo na lista da Frota. O selo é o **pior** estado da
+  peça; certificado em dia não ganha selo nenhum.
+- Migration `0082`: PTA exige inspeção periódica anual, ar-condicionado exige
+  PMOC. São as duas que a lei nomeia sem margem (NR-12/NR-18 e Lei
+  13.589/2018); as demais dependem de como a Sistenge opera e entram pela tela.
+  A migration **não sobrescreve** exigência já configurada à mão.
+
 ## [0.76.0] — 2026-09-06
 
 Certificados do equipamento — o vencimento que é **data**, e não horímetro.

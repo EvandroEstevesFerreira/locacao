@@ -8,6 +8,8 @@ import {
   ESPECIE_INFO,
   ESTADO_CERTIFICADO_INFO,
   piorPorPeca,
+  candidatosDeCertificado,
+  type LinhaPendencia,
 } from "./certificado";
 
 describe("estadoCertificado", () => {
@@ -203,5 +205,78 @@ describe("piorPorPeca", () => {
     const pior = piorPorPeca([{ unidadeId: "a", estado: "em_dia" as const }]);
     expect(pior.has("b")).toBe(false);
     expect(pior.get("a")).toBe("em_dia");
+  });
+});
+
+describe("candidatosDeCertificado", () => {
+  const janela = { hoje: "2026-09-06", limite: "2026-10-06", mesRef: "2026-09-01" };
+  const base: LinhaPendencia = {
+    unidade_id: "u1",
+    identificador: "PTA-0007",
+    obra_id: "obra-1",
+    modelo: "Genie GS-1932",
+    tipo: "PTA",
+    especie: "inspecao_periodica",
+    certificado_id: "c1",
+    vence_em: "2026-09-20",
+  };
+
+  it("o que vence dentro da janela referencia o CERTIFICADO", () => {
+    // Renovado, o próximo certificado tem id novo — e é assim que a dedupe do
+    // notificacao_log deixa o aviso sair de novo no ano seguinte. Referenciar a
+    // peça faria o segundo aviso ser descartado como repetido, para sempre.
+    const [c] = candidatosDeCertificado([base], janela);
+    expect(c.tipo).toBe("certificado_vence");
+    expect(c.referencia_id).toBe("c1");
+    expect(c.dias).toBeNull();
+    expect(c.categoria).toBe("Certificado — Inspeção periódica");
+    expect(c.descricao).toBe("PTA-0007 — Genie GS-1932");
+  });
+
+  it("o ausente referencia a PEÇA e vem com marco fixo", () => {
+    const [c] = candidatosDeCertificado(
+      [{ ...base, vence_em: null, certificado_id: null }],
+      janela,
+    );
+    expect(c.tipo).toBe("certificado_ausente:inspecao_periodica");
+    expect(c.referencia_id).toBe("u1");
+    expect(c.dias).toBe(0);
+    expect(c.data_referencia).toBe("2026-09-01");
+    expect(c.data).toBe("—");
+  });
+
+  it("duas exigências ausentes na mesma peça são dois avisos distintos", () => {
+    // Com uma chave só, a dedupe do notificacao_log descartaria a segunda como
+    // repetida — e a peça ficaria avisando de uma exigência e calada na outra.
+    const cs = candidatosDeCertificado(
+      [
+        { ...base, vence_em: null, certificado_id: null, especie: "inspecao_periodica" },
+        { ...base, vence_em: null, certificado_id: null, especie: "teste_carga" },
+      ],
+      janela,
+    );
+    expect(cs).toHaveLength(2);
+    expect(new Set(cs.map((c) => c.tipo)).size).toBe(2);
+  });
+
+  it("fora da janela não vira candidato", () => {
+    expect(candidatosDeCertificado([{ ...base, vence_em: "2027-01-01" }], janela)).toEqual([]);
+  });
+
+  it("o vencido não insiste por e-mail", () => {
+    // Ele já foi avisado quando estava vencendo. Repetir todo dia até alguém
+    // agir é como um alerta deixa de ser lido. A tela mostra; o e-mail não.
+    expect(candidatosDeCertificado([{ ...base, vence_em: "2026-08-01" }], janela)).toEqual([]);
+  });
+
+  it("o dia de hoje ainda está na janela", () => {
+    const cs = candidatosDeCertificado([{ ...base, vence_em: "2026-09-06" }], janela);
+    expect(cs).toHaveLength(1);
+  });
+
+  it("peça sem obra não quebra o candidato", () => {
+    // `equipamento_unidade.obra_id` é nulável: peça no estoque central.
+    const [c] = candidatosDeCertificado([{ ...base, obra_id: null }], janela);
+    expect(c.obra_id).toBeNull();
   });
 });

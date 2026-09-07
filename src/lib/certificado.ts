@@ -277,3 +277,102 @@ export function piorPorPeca<T extends { unidadeId: string; estado: EstadoCertifi
   }
   return pior;
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Os candidatos a alerta
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** Uma linha da view `certificado_pendencia`, como o cron a lê. */
+export type LinhaPendencia = {
+  unidade_id: string;
+  identificador: string;
+  obra_id: string | null;
+  modelo: string;
+  tipo: string;
+  especie: string;
+  certificado_id: string | null;
+  vence_em: string | null;
+};
+
+/**
+ * Um candidato a alerta, na forma que o cron de vencimentos consome.
+ *
+ * `dias` é `null` quando o candidato precisa passar pelo escalonamento de
+ * prazos (30 → 15 → 3) e `0` quando ele já vem com marco fixo — que é o caso
+ * do ausente, sem data para escalonar.
+ */
+export type CandidatoCertificado = {
+  tipo: string;
+  referencia_id: string;
+  data_referencia: string;
+  dias: number | null;
+  obra_id: string | null;
+  categoria: string;
+  descricao: string;
+  data: string;
+};
+
+/**
+ * Traduz as pendências em candidatos a alerta.
+ *
+ * Vive aqui, e não dentro da rota do cron, porque é a única parte daquele
+ * arquivo de 500 linhas que dá para provar sem subir o Next inteiro — e é a
+ * parte que erra em silêncio.
+ *
+ * Duas fontes, com naturezas diferentes:
+ *
+ * - **vencendo**: tem data, entra no escalonamento normal (`dias: null`), e a
+ *   referência é o CERTIFICADO. Renovado, o próximo tem id novo e a dedupe
+ *   deixa o aviso sair de novo no ano seguinte.
+ * - **ausente**: não tem data. Segue o padrão que o imóvel sem contrato
+ *   estabeleceu — uma vez por mês, `dias: 0` — e a referência é a PEÇA, porque
+ *   não existe certificado para referenciar.
+ *
+ * O `tipo` do ausente INCLUI A ESPÉCIE. Duas exigências ausentes na mesma peça
+ * são dois avisos; com uma chave só, a dedupe do `notificacao_log` descartaria
+ * a segunda como repetida.
+ */
+export function candidatosDeCertificado(
+  linhas: LinhaPendencia[],
+  janela: { hoje: string; limite: string; mesRef: string },
+): CandidatoCertificado[] {
+  const saida: CandidatoCertificado[] = [];
+
+  for (const l of linhas) {
+    const especie = ESPECIE_INFO[l.especie as EspecieCertificado]?.label ?? l.especie;
+    const descricao = `${l.identificador} — ${l.modelo}`;
+
+    if (!l.vence_em) {
+      saida.push({
+        tipo: `certificado_ausente:${l.especie}`,
+        referencia_id: l.unidade_id,
+        data_referencia: janela.mesRef,
+        dias: 0,
+        obra_id: l.obra_id,
+        categoria: `Sem certificado — ${especie}`,
+        descricao,
+        data: "—",
+      });
+      continue;
+    }
+
+    // Fora da janela não vira candidato. O `< hoje` descarta o VENCIDO: ele já
+    // foi avisado quando estava vencendo, e repetir todo dia até alguém agir é
+    // como um alerta deixa de ser lido. A tela mostra; o e-mail não insiste.
+    if (l.vence_em < janela.hoje || l.vence_em > janela.limite) continue;
+    if (!l.certificado_id) continue;
+
+    saida.push({
+      tipo: "certificado_vence",
+      referencia_id: l.certificado_id,
+      data_referencia: l.vence_em,
+      dias: null,
+      obra_id: l.obra_id,
+      categoria: `Certificado — ${especie}`,
+      descricao,
+      data: l.vence_em,
+    });
+  }
+
+  return saida;
+}
