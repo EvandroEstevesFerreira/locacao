@@ -72,3 +72,142 @@ describe("migrations — segurança", () => {
     }
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// As funções que o linter aponta e que NÃO podem ser fechadas
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// O advisor do Supabase lista 14 funções `security definer` alcançáveis pelo
+// papel `anon`, e vai continuar listando. As migrations 0089 e 0090 explicam por
+// quê, mas explicação em comentário é lida por quem abre o arquivo — e quem vai
+// "resolver o apontamento" abre o painel do Supabase, não a migration.
+//
+// Este teste é a guarda que falta. Ele reprova a migration que tentar revogar
+// `EXECUTE` das funções abaixo, com a razão no corpo da mensagem.
+//
+// DOIS GRUPOS, e os dois quebram coisas diferentes:
+//
+//   Helpers de RLS — `current_org_id` é chamada em 136 policies, `pode_operar`
+//   em 43. Policy roda com o privilégio de QUEM CONSULTA: sem o EXECUTE, toda
+//   requisição anônima estoura. Não há requisição anônima no app autenticado,
+//   mas há na página `/assinar/[token]`.
+//
+//   Página de assinatura — `termo_do_link`, `conferir_cpf_do_link` e
+//   `assinar_termo_por_link` são chamadas com a CHAVE ANÔNIMA de propósito: é
+//   assim que o funcionário assina o termo pelo celular sem ter login no Loca.
+//   Fechá-las mata a assinatura à distância inteira.
+const INTOCAVEIS_RLS = [
+  "current_org_id",
+  "current_papel",
+  "is_master",
+  "pode_operar",
+  "pode_financeiro",
+  "pode_gerir_cadastros",
+  "has_obra_access",
+  "has_imovel_access",
+  "has_contrato_access",
+  "has_termo_access",
+  "is_member_of_obra",
+  "obra_do_contrato",
+];
+
+const INTOCAVEIS_ASSINATURA = [
+  "termo_do_link",
+  "conferir_cpf_do_link",
+  "assinar_termo_por_link",
+];
+
+describe("migrations — o que não se revoga", () => {
+  const sqlCompleto = migrations()
+    .map((m) => m.sql)
+    .join("\n")
+    .toLowerCase();
+
+  /**
+   * Um `revoke ... on function <nome>(` em qualquer migration.
+   *
+   * Sem expressão regular de propósito: a versão com regex precisava de quatro
+   * escapes, e eles se perderam na primeira escrita deste arquivo — o teste
+   * quebrou com "Unterminated group" em vez de reprovar o que devia. Uma guarda
+   * que falha por erro de sintaxe não guarda nada.
+   *
+   * O parêntese no fim é o que torna a busca exata: `.soft_delete(` não casa
+   * com `.soft_delete_devolucao(`.
+   */
+  function revogada(nome: string): boolean {
+    return sqlCompleto
+      .split(";")
+      .some(
+        (cmd) =>
+          cmd.includes("revoke") &&
+          cmd.includes("on function") &&
+          (cmd.includes("." + nome + "(") ||
+            cmd.includes("." + nome + " (") ||
+            cmd.includes(" " + nome + "(") ||
+            cmd.includes(" " + nome + " (")),
+      );
+  }
+
+  /**
+   * Um `grant execute on function <nome>( ... to ... anon` em alguma migration.
+   *
+   * O invariante das funções da página de assinatura NÃO é “ninguém revoga” — a
+   * 0077 revoga de `public` e concede a `anon` logo em seguida, que é o padrão
+   * correto de endurecimento. A primeira versão desta guarda olhava só o revoke
+   * e reprovou as três, sendo que estavam certas.
+   *
+   * O que precisa ser verdade é o FIM: elas têm de acabar alcançáveis pelo anon.
+   */
+  function concedidaAoAnon(nome: string): boolean {
+    return sqlCompleto
+      .split(";")
+      .some(
+        (cmd) =>
+          cmd.includes("grant") &&
+          cmd.includes("on function") &&
+          cmd.includes("anon") &&
+          (cmd.includes("." + nome + "(") ||
+            cmd.includes("." + nome + " (") ||
+            cmd.includes(" " + nome + "(") ||
+            cmd.includes(" " + nome + " (")),
+      );
+  }
+
+  it.each(INTOCAVEIS_RLS)(
+    "nenhuma migration revoga EXECUTE de %s — é avaliada dentro das policies",
+    (nome) => {
+      expect(
+        revogada(nome),
+        `\`${nome}\` é chamada dentro de policies de RLS, que rodam com o ` +
+          `privilégio de quem consulta. Revogar o EXECUTE faria toda requisição ` +
+          `anônima estourar — e há uma página pública neste sistema: ` +
+          `/assinar/[token]. O apontamento do linter é conhecido e aceito; ` +
+          `ver o cabeçalho da migration 0089.`,
+      ).toBe(false);
+    },
+  );
+
+  it.each(INTOCAVEIS_ASSINATURA)(
+    "%s continua concedida ao anon — é a página de assinatura",
+    (nome) => {
+      expect(
+        concedidaAoAnon(nome),
+        `\`${nome}\` é chamada com a CHAVE ANÔNIMA de propósito: é assim que o ` +
+          `funcionário assina o termo pelo celular sem ter login no Loca. ` +
+          `Sem o grant, a assinatura à distância inteira para de funcionar.`,
+      ).toBe(true);
+    },
+  );
+
+  it("a varredura enxerga os revokes que EXISTEM", () => {
+    // Sem isto o bloco passaria por vacuidade se a expressão parasse de casar —
+    // e uma guarda que nunca reprova é uma guarda que não existe.
+    expect(revogada("soft_delete")).toBe(true);
+    expect(revogada("registrar_auditoria")).toBe(true);
+    expect(concedidaAoAnon("termo_do_link")).toBe(true);
+    // E não enxerga o que não existe: `current_org_id` nunca foi concedida
+    // explicitamente ao anon — ela chega lá pelo grant que o Postgres dá a
+    // PUBLIC, que é justamente o que ninguém deve revogar.
+    expect(concedidaAoAnon("current_org_id")).toBe(false);
+  });
+});

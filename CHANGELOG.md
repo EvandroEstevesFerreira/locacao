@@ -7,7 +7,7 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
-## [0.82.2] — 2026-09-07
+## [0.82.3] — 2026-09-07
 
 Faxina de segurança nas funções do banco.
 
@@ -82,6 +82,22 @@ fechadas, com os triggers seguindo ativos. O Postgres confere o `EXECUTE` ao
 Depois: **0 funções de trigger expostas** (eram 5) e **84 triggers ativos**
 intactos. As 17 `security definer` que continuam alcançáveis pelo `anon` são
 exatamente as que precisam: 14 helpers de RLS e as 3 da página de assinatura.
+
+### A guarda que faltava
+
+Comentário em migration é lido por quem abre a migration — e quem vai “resolver
+o apontamento” abre o painel do Supabase, não o arquivo SQL. Então a regra virou
+**teste**, em `migrations-seguranca.test.ts`, ao lado da varredura de
+`security_invoker` que já existia:
+
+- **12 helpers de RLS**: reprova qualquer migration que revogue o EXECUTE deles,
+  com a razão na mensagem do erro.
+- **3 funções da página de assinatura**: o invariante não é “ninguém revoga” —
+  é “precisa acabar concedida ao anon”. A 0077 revoga de `public` e concede a
+  `anon` logo depois, que é o padrão correto de endurecimento; a primeira versão
+  da guarda olhava só o revoke e **reprovou as três estando certas**.
+- E um teste que confere que a varredura **enxerga o que existe**, porque uma
+  guarda que nunca reprova é uma guarda que não existe.
 
 ### Migration
 
