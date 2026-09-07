@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.86.0";
+export const APP_VERSION = "0.86.1";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -29,13 +29,14 @@ export const TIPO_MUDANCA_INFO: Record<
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
   {
-    versao: "0.86.0",
+    versao: "0.86.1",
     data: "2026-09-07",
     titulo: "O seletor de item do termo estava vazio",
     mudancas: [
       { tipo: "correcao", texto: "A lista de itens do termo de responsabilidade vinha vazia, com 27 itens cadastrados no catálogo. A consulta filtrava por uma coluna que essa tabela não tem — o banco recusava a busca inteira e a tela mostrava a lista vazia, sem erro nenhum. Era por isso que nunca se conseguiu emitir um termo." },
       { tipo: "correcao", texto: "O mesmo defeito estava em duas consultas da tela de Estoque." },
       { tipo: "novo", texto: "Catálogo vazio agora diz o que fazer, com um link “Cadastre aqui” — em vez de oferecer um botão que abre um seletor sem nenhuma opção." },
+      { tipo: "seguranca", texto: "Uma varredura automática passa a reprovar qualquer consulta que filtre por coluna que a tabela não tem — o tipo de erro que deixa a tela vazia sem avisar ninguém." },
       { tipo: "melhoria", texto: "Sem item no catálogo, o botão Acrescentar item fica desabilitado: ele só produzia a linha vazia que ninguém consegue preencher." },
     ],
   },

@@ -7,7 +7,7 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
-## [0.86.0] — 2026-09-07
+## [0.86.1] — 2026-09-07
 
 O seletor de item do termo estava vazio.
 
@@ -49,6 +49,28 @@ aqui apareceria como um botão que leva a uma lista onde a peça não está.
 
 Foi o **segundo** caso de regra duplicada no mesmo dia, depois do de
 `precisaConferencia`.
+
+### A varredura que pega a próxima
+
+O TypeScript não vê nada disso: o projeto não gera os tipos do Supabase. Então
+virou teste, em `colunas-inexistentes.test.ts`, **sem lista a manter** — as
+tabelas que têm `deleted_at` são lidas das próprias migrations. Tabela nova com
+a coluna passa a valer sozinha; consulta nova numa tabela sem ela reprova.
+
+**Duas vezes a guarda estava errada, e as duas apareceram por eu insistir em
+prová-la:**
+
+1. Ela reprovou o arquivo que ela mesma tinha consertado — o comentário lá diz
+   literalmente `SEM .is("deleted_at", null)` para explicar o que não fazer, e a
+   varredura leu o aviso como se fosse a consulta.
+2. Ao apagar os comentários eu deixava a linha em branco — e o recorte de cada
+   consulta para justamente em linha em branco. Um comentário entre `.select()`
+   e `.is()` partia a cadeia ao meio, e o filtro ficava fora do trecho
+   examinado. **Descoberto reintroduzindo o defeito de propósito para ver a
+   guarda reprovar: ela passou.**
+
+Corrigido tirando a linha em vez de esvaziá-la. Com o defeito plantado ela
+reprova; sem ele, passa.
 
 ### Sem migration
 
