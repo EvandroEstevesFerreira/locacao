@@ -7,6 +7,8 @@ import {
   mapearPessoa,
   proximoCursor,
   semRepetidas,
+  precisaVarreduraCompleta,
+  ausentesNaVarredura,
 } from "./mapeamento";
 
 const ORG = "aaaaaaaa-1111-4222-8333-444444444444";
@@ -262,5 +264,49 @@ describe("semRepetidas", () => {
 
   it("lote vazio devolve vazio", () => {
     expect(semRepetidas([])).toEqual([]);
+  });
+});
+
+describe("precisaVarreduraCompleta", () => {
+  const AGORA = "2026-09-07T12:00:00.000Z";
+
+  it("nunca varrida: varre", () => {
+    // A primeira rodada é completa por natureza — não há cursor de onde partir.
+    expect(precisaVarreduraCompleta(null, AGORA)).toBe(true);
+  });
+
+  it("varrida ontem: não varre", () => {
+    expect(precisaVarreduraCompleta("2026-09-06T12:00:00.000Z", AGORA)).toBe(false);
+  });
+
+  it("varrida há 7 dias: varre", () => {
+    expect(precisaVarreduraCompleta("2026-08-31T12:00:00.000Z", AGORA)).toBe(true);
+  });
+
+  it("data ilegível cai para varrer", () => {
+    // Errar para o lado de conferir demais custa cinco requisições; para o
+    // outro lado, custa não notar que alguém sumiu.
+    expect(precisaVarreduraCompleta("nao-e-data", AGORA)).toBe(true);
+  });
+});
+
+describe("ausentesNaVarredura", () => {
+  it("aponta quem estava vinculado e não veio", () => {
+    expect(ausentesNaVarredura(["a", "b", "c"], ["a", "c"])).toEqual(["b"]);
+  });
+
+  it("todos vieram: ninguém ausente", () => {
+    expect(ausentesNaVarredura(["a", "b"], ["a", "b", "z"])).toEqual([]);
+  });
+
+  it("sem vínculo nenhum, nada a apontar", () => {
+    expect(ausentesNaVarredura([], ["a", "b"])).toEqual([]);
+  });
+
+  it("varredura vazia acusa TODOS os vinculados", () => {
+    // Comportamento correto e por isso mesmo perigoso: é a razão de só a
+    // varredura COMPLETA poder marcar ausência. Vinda de um delta, uma resposta
+    // vazia — que é o caso normal — acusaria a base inteira.
+    expect(ausentesNaVarredura(["a", "b"], [])).toEqual(["a", "b"]);
   });
 });

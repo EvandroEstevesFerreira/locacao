@@ -168,3 +168,51 @@ export function semRepetidas(pessoas: PessoaPeople[]): PessoaPeople[] {
   }
   return [...porId.values()];
 }
+
+/** De quantos em quantos dias a varredura completa roda. */
+export const DIAS_ENTRE_VARREDURAS = 7;
+
+/**
+ * Hoje é dia de varrer tudo?
+ *
+ * A sincronização de todo dia é DELTA: traz só quem mudou, e é barata. Mas
+ * ausência não é mudança — quem foi mesclado no People nunca mais aparece em
+ * resposta nenhuma, e o delta não tem como notar o buraco.
+ *
+ * A varredura completa é a única que pode marcar alguém como sumido. Marcar a
+ * partir de um delta acusaria de ausente todo mundo que simplesmente não mudou
+ * nada naquele dia — ou seja, quase todos.
+ *
+ * Nunca varrida devolve `true`: a primeira rodada é completa por natureza,
+ * porque não há cursor de onde partir.
+ */
+export function precisaVarreduraCompleta(
+  ultima: string | null,
+  agoraISO: string,
+): boolean {
+  if (!ultima) return true;
+  const dias =
+    (Date.parse(agoraISO) - Date.parse(ultima)) / (1000 * 60 * 60 * 24);
+  // `NaN` (data ilegível) cai para varrer: errar para o lado de conferir
+  // demais custa cinco requisições; para o outro, custa não notar que alguém
+  // sumiu.
+  return !(dias < DIAS_ENTRE_VARREDURAS);
+}
+
+/**
+ * Quem estava vinculado e NÃO veio na varredura completa.
+ *
+ * Devolve os `people_id` órfãos — provável merge de cadastro duplicado do lado
+ * do People, ou pessoa que saiu do recorte de 2026.
+ *
+ * NÃO É EXCLUSÃO, e não deve virar uma. A linha continua com o histórico de
+ * equipamento de alguém que talvez ainda esteja com ele; o que se ganha aqui é
+ * saber que ela parou de ser atualizada.
+ */
+export function ausentesNaVarredura(
+  vinculadosLocais: string[],
+  recebidos: string[],
+): string[] {
+  const veio = new Set(recebidos);
+  return vinculadosLocais.filter((id) => !veio.has(id));
+}

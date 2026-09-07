@@ -256,3 +256,35 @@ export async function pecasComResponsavel(): Promise<Set<string> | null> {
   }
   return new Set((data ?? []).map((c) => c.unidade_id as string));
 }
+
+/**
+ * As peças que estão com alguém JÁ DESLIGADO da empresa.
+ *
+ * Spec: docs/superpowers/specs/2026-09-07-integracao-people-design.md
+ *
+ * É a pergunta que motivou incluir 211 desligados no recorte da API do People,
+ * e que o Loca não tinha como fazer antes: o cadastro só sabia `ativo`
+ * booleano, e ali afastado e desligado eram a mesma coisa.
+ *
+ * `situacao_people` guarda a situação crua. AFASTADO NÃO ENTRA: quem está de
+ * licença volta, e continua respondendo pelo notebook que levou para casa.
+ * Desligado não volta — o equipamento precisa ser cobrado, e é isso que a faixa
+ * na Frota diz.
+ *
+ * `null` quando a consulta falha, e não um conjunto vazio: quem chama omite a
+ * pendência em vez de afirmar que não há nenhuma.
+ */
+export async function pecasComPessoaDesligada(): Promise<Set<string> | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("custodia_peca")
+    .select("unidade_id, funcionario:funcionario_id!inner(situacao_people)")
+    .is("fim", null)
+    .eq("funcionario.situacao_people", "desligado");
+
+  if (error) {
+    console.error("pecasComPessoaDesligada", error);
+    return null;
+  }
+  return new Set((data ?? []).map((c) => c.unidade_id as string));
+}
