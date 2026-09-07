@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.82.3";
+export const APP_VERSION = "0.83.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,17 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.83.0",
+    data: "2026-09-07",
+    titulo: "O que foi excluído volta a ficar escondido",
+    mudancas: [
+      { tipo: "correcao", texto: "Registro excluído continuava aparecendo para quem tem permissão de operar — em oito telas, entre elas medida disciplinar, entrega ao ocupante, recebimento e ordem de reparo. Excluir escondia de uns e não de outros." },
+      { tipo: "seguranca", texto: "A causa era uma regra de permissão que valia para “todas as operações” — e “todas” inclui a leitura. Ela abria uma segunda porta que não conferia se o registro tinha sido excluído." },
+      { tipo: "melhoria", texto: "Uma trava automática impede o padrão de voltar: a próxima tabela com exclusão suave reprova nos testes se nascer com o mesmo furo." },
+      { tipo: "melhoria", texto: "A tela de certificados de uma peça ficou mais rápida de abrir, e excluir uma peça com muitos certificados deixou de varrer a tabela inteira." },
+    ],
+  },
   {
     versao: "0.82.3",
     data: "2026-09-07",

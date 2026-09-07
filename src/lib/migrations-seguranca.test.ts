@@ -211,3 +211,90 @@ describe("migrations — o que não se revoga", () => {
     expect(concedidaAoAnon("current_org_id")).toBe(false);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// A policy `for all` que deixa o excluído reaparecer
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// O PADRÃO QUE ESTAVA ERRADO EM OITO TABELAS, e que eu copiei para uma nona ao
+// criar `certificado_equipamento`:
+//
+//   create policy x_select on t for select using (org = ... and deleted_at is null);
+//   create policy x_write  on t for all    using (org = ... and pode_operar());
+//
+// `for all` INCLUI SELECT, e policies permissivas são OR'd. Quem passa por
+// `pode_operar()` lê pela segunda porta e enxerga o que foi excluído. Provado
+// contra a produção em 07/09/2026: duas linhas, uma com `deleted_at`, e a
+// consulta devolveu as duas.
+//
+// A migration 0091 corrigiu as nove. Este teste é o que impede a décima —
+// porque o padrão errado é o mais natural de escrever, e foi assim que ele se
+// espalhou.
+//
+// A varredura é sobre o TEXTO das migrations, então ela não sabe quais tabelas
+// têm `deleted_at`. Em vez de manter uma lista, procura o par: um `for all` e
+// um `deleted_at` na MESMA migration indicam tabela com exclusão suave — e aí
+// o `for all` precisa mencionar `deleted_at` também.
+describe("migrations — policy `for all` e exclusão suave", () => {
+  const todas = migrations();
+
+  // A CORREÇÃO É A FRONTEIRA. As migrations anteriores a esta CRIARAM o padrão
+  // errado, e o arquivo delas é histórico: não se reescreve migration aplicada.
+  // A 0091 consertou as nove policies no banco com `alter policy`.
+  //
+  // Então o invariante não é “nenhum arquivo contém o padrão” — é “nenhuma
+  // migration NOVA o introduz”. A fronteira é o próprio nome do conserto, e não
+  // um número solto: se ele mudar de lugar, o teste reclama em vez de silenciar.
+  const CONSERTO = "0091_write_policy_esconde_apagados.sql";
+
+  /** Blocos `create policy ... for all ... using (...)` de uma migration. */
+  function politicasForAll(sql: string): string[] {
+    return sql
+      .split(/create\s+policy/i)
+      .slice(1)
+      .map((bloco) => bloco.split(";")[0])
+      .filter((bloco) => /\bfor\s+all\b/i.test(bloco));
+  }
+
+  it("a migration que serve de fronteira existe", () => {
+    // Sem isto, renomear o conserto faria a varredura começar do zero — e um
+    // teste que passa a olhar tudo desde 2026-07 volta a reprovar história.
+    expect(todas.some((m) => m.nome === CONSERTO)).toBe(true);
+  });
+
+  it("nenhuma migration NOVA cria `for all` que ignora deleted_at", () => {
+    const posteriores = todas.filter((m) => m.nome > CONSERTO);
+    const faltando: string[] = [];
+
+    for (const m of posteriores) {
+      // A migration fala de exclusão suave? Se não, o `for all` dali não tem o
+      // que esconder — é tabela sem `deleted_at`.
+      if (!/deleted_at/i.test(m.sql)) continue;
+
+      for (const bloco of politicasForAll(m.sql)) {
+        // Policy criada por `format()` dentro de `do 148691`: o nome é `%I` e o
+        // corpo não dá para ler por texto. Fica de fora em vez de dar falso
+        // positivo.
+        if (bloco.includes("%I")) continue;
+        if (!/deleted_at/i.test(bloco)) {
+          faltando.push(m.nome + ": " + (bloco.trim().split(/\s+/)[0] ?? "?"));
+        }
+      }
+    }
+
+    expect(
+      faltando,
+      "policy `for all` inclui SELECT, e policies permissivas são OR'd: sem " +
+        "`deleted_at is null` no `using`, quem passa pelo teste de papel " +
+        "enxerga o que foi excluído. Ponha a condição no `using` — e NUNCA no " +
+        "`with check`, que abortaria a própria exclusão (incidente da 0.19.4).",
+    ).toEqual([]);
+  });
+
+  it("a varredura enxerga policies `for all` que EXISTEM", () => {
+    // Sem isto o bloco passaria por vacuidade se a quebra por `create policy`
+    // parasse de casar. Conta em TODAS as migrations, e não só nas novas.
+    const total = todas.reduce((n, m) => n + politicasForAll(m.sql).length, 0);
+    expect(total).toBeGreaterThan(5);
+  });
+});

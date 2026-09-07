@@ -7,6 +7,82 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.83.0] — 2026-09-07
+
+O que foi excluído volta a ficar escondido.
+
+### O defeito, provado
+
+Oito tabelas com exclusão suave tinham **duas** policies permissivas: uma
+`..._select`, que esconde `deleted_at`, e uma `..._write` declarada `for all`.
+
+**`for all` inclui SELECT**, e policies permissivas são OR'd. Como o `using` da
+`_write` não mencionava `deleted_at`, todo usuário que passa por `pode_operar()`
+lia pela segunda porta e **enxergava o que tinha sido excluído**.
+
+Provado contra a produção, em transação com limpeza explícita: duas linhas em
+`certificado_equipamento`, uma com `deleted_at` preenchido; sob a sessão de um
+usuário que opera, a consulta devolveu **`ZZ_EXCLUIDO, ZZ_VIVO`**. Depois da
+correção, `ZZ_VIVO`.
+
+Isso contradizia o que o `AGENTS.md` afirma — *“a policy de SELECT esconde
+linhas com `deleted_at`”* — e o que a tela promete a quem clica em excluir. Uma
+dessas tabelas guarda **medida disciplinar**; outra, **entrega ao ocupante**.
+
+### Como cheguei nele
+
+Rodando os advisors de **desempenho**, que eu tinha deixado de fora: a auditoria
+da 0.82.2 cobriu só segurança. O apontamento era
+`multiple_permissive_policies` — um aviso de *performance*, porque o Postgres
+avalia as duas policies a cada leitura. Fui ver por que havia duas e encontrei o
+furo.
+
+### As tabelas afetadas
+
+`certificado_equipamento` (criada ontem, com o padrão copiado),
+`checklist_limpeza`, `devolucao`, `entrega_ocupante`, `medida_disciplinar`,
+`recebimento`, `reparo_equipamento`, `tarefa_limpeza`.
+
+### Só no `using`, nunca no `with check`
+
+Pôr `deleted_at is null` também no `with check` recriaria o **incidente da
+0.19.4**: o Postgres aplica o `with check` à linha NOVA de um `UPDATE`, e a
+linha nova de uma exclusão suave tem `deleted_at` preenchido — o próprio
+comando de excluir abortaria.
+
+`using` decide **quais linhas o comando enxerga**; `with check`, **como a linha
+pode ficar**. Só a primeira pergunta estava errada.
+
+Conferido antes de mexer: **não existe caminho de “restaurar”** em nenhuma das
+oito. `restaurarTemplate` é de template de documento, e o “Restaurar” da peça
+mexe em `situacao`.
+
+### A trava contra a décima
+
+O padrão errado é o mais natural de escrever — foi assim que se espalhou por
+oito tabelas, e eu o copiei para a nona. Agora há teste: **nenhuma migration
+posterior à correção** pode criar `for all` que ignore `deleted_at`.
+
+A fronteira é o **nome do arquivo que corrigiu**, e não um número solto: se ele
+mudar de lugar, um segundo teste reclama em vez de a varredura silenciar.
+Migration aplicada é história e não se reescreve — por isso a varredura olha só
+para a frente.
+
+### Desempenho
+
+- `certificado_equipamento.unidade_id` é chave estrangeira com `on delete
+  cascade` e não tinha índice que a cobrisse. O `idx_certificado_atual` começa
+  por `org_id`, então não serve. Pagavam por isso a exclusão de uma peça (o
+  cascade varria a tabela) e a seção Certificados da tela da peça.
+
+### Migrations
+
+- `0091_write_policy_esconde_apagados.sql` — corrige as nove por `alter policy`,
+  reaproveitando a condição existente em vez de transcrevê-la (são nove `using`
+  diferentes, e é transcrevendo que se perde um `is_member_of_obra` no caminho).
+  Aborta se sobrar alguma.
+- `0092_indice_da_fk_do_certificado.sql` — o índice por `unidade_id`.
+
 ## [0.82.3] — 2026-09-07
 
 Faxina de segurança nas funções do banco.
