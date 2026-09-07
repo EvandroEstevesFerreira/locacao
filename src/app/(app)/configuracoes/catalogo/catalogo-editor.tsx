@@ -9,7 +9,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Pencil, X, ChevronRight, ChevronDown, ListChecks } from "lucide-react";
+import { Plus, Pencil, X, ChevronRight, ChevronDown, ListChecks, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { NATUREZAS_ITEM, NATUREZA_ITEM, type NaturezaItem } from "@/lib/itens";
 import type { CategoriaComTipos } from "@/lib/data/catalogo";
@@ -23,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { FichaEditor } from "./ficha-editor";
+import { ExigenciasEditor } from "./exigencias-editor";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -206,6 +207,7 @@ function LinhaTipo({
 }) {
   const [editando, setEditando] = useState(false);
   const [ficha, setFicha] = useState(false);
+  const [exigencias, setExigencias] = useState(false);
 
   return (
     <div>
@@ -243,6 +245,21 @@ function LinhaTipo({
                 </span>
               ) : null}
             </Button>
+            {/* Ao lado da ficha, e não dentro dela: a ficha diz o que a peça
+                É, a exigência diz o que ela precisa TER em dia. */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setExigencias((v) => !v)}
+            >
+              <ShieldCheck className="size-3.5" aria-hidden />
+              Exigências
+              {tipo.exigencias.length > 0 ? (
+                <span className="text-xs text-muted-foreground">
+                  ({tipo.exigencias.length})
+                </span>
+              ) : null}
+            </Button>
             <Button
               variant="ghost"
               size="icon-sm"
@@ -277,6 +294,17 @@ function LinhaTipo({
             tipoNome={tipo.nome}
             campos={tipo.campos}
             aoConcluir={() => setFicha(false)}
+          />
+        </div>
+      ) : null}
+
+      {exigencias ? (
+        <div className="border-t bg-muted/30 p-3">
+          <ExigenciasEditor
+            tipoId={tipo.id}
+            tipoNome={tipo.nome}
+            exigencias={tipo.exigencias}
+            aoConcluir={() => setExigencias(false)}
           />
         </div>
       ) : null}

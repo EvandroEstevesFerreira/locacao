@@ -18,6 +18,7 @@ import {
   unidadeMedidaSchema,
   salvarCamposSchema,
 } from "@/lib/catalogo";
+import { ESPECIE_INFO, salvarExigenciasSchema } from "@/lib/certificado";
 
 function revalidar() {
   revalidatePath("/configuracoes/catalogo");
@@ -312,6 +313,69 @@ export async function salvarCamposDoTipo(raw: unknown): Promise<ActionResult> {
     aviso:
       removidas.length > 0
         ? `Campos salvos. ${removidas.length === 1 ? "O campo" : "Os campos"} ${removidas.join(", ")} ${removidas.length === 1 ? "saiu" : "saíram"} da ficha — o valor continua gravado nas peças, mas deixa de aparecer.`
+        : undefined,
+  };
+}
+
+/**
+ * Grava a lista inteira de exigências do tipo.
+ *
+ * Mesma razão de `salvarCamposDoTipo` salvar a lista de uma vez: é um array
+ * jsonb, e salvar linha a linha exigiria uma chave que ele não tem.
+ *
+ * O aviso quando uma exigência SAI é diferente do da ficha, e mais grave. Tirar
+ * um campo da ficha esconde um valor; tirar uma exigência **apaga a pendência**:
+ * as PTAs que estavam marcadas como "sem inspeção" passam a não exigir nada, e
+ * o alerta que ia chegar simplesmente para de chegar. Os certificados já
+ * lançados continuam gravados — mas ninguém mais é cobrado por eles.
+ */
+export async function salvarExigenciasDoTipo(raw: unknown): Promise<ActionResult> {
+  const g = await guarda();
+  if (g.erro) return falha(g.erro);
+
+  const parsed = salvarExigenciasSchema.safeParse(raw);
+  if (!parsed.success) return falha(primeiroErro(parsed.error.issues));
+  const { tipo_id, exigencias } = parsed.data;
+
+  const supabase = await createClient();
+
+  const { data: antes } = await supabase
+    .from("tipo_equipamento")
+    .select("certificados_exigidos")
+    .eq("id", tipo_id)
+    .maybeSingle();
+
+  const especiesAntes: string[] = Array.isArray(antes?.certificados_exigidos)
+    ? (antes.certificados_exigidos as { especie?: string }[])
+        .map((e) => e.especie)
+        .filter((e): e is string => Boolean(e))
+    : [];
+  const agora = new Set(exigencias.map((e) => e.especie));
+  const removidas = especiesAntes.filter((e) => !agora.has(e as never));
+
+  const { error } = await supabase
+    .from("tipo_equipamento")
+    .update({ certificados_exigidos: exigencias })
+    .eq("id", tipo_id);
+
+  if (error) {
+    console.error("salvarExigenciasDoTipo", error);
+    return falha("Não foi possível salvar as exigências.");
+  }
+
+  revalidar();
+  revalidatePath("/frota");
+
+  const rotulos = removidas
+    .map((e) => ESPECIE_INFO[e as keyof typeof ESPECIE_INFO]?.label ?? e)
+    .join(", ");
+
+  return {
+    ok: true,
+    id: tipo_id,
+    aviso:
+      removidas.length > 0
+        ? `Exigências salvas. As peças deste tipo deixam de ser cobradas por ${rotulos} — os certificados já lançados continuam gravados, mas o aviso para de chegar.`
         : undefined,
   };
 }

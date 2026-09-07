@@ -3,6 +3,7 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import type { NaturezaItem } from "@/lib/itens";
 import { camposFichaSchema, type CampoFicha } from "@/lib/catalogo";
+import { exigenciasSchema, type Exigencia } from "@/lib/certificado";
 
 /**
  * Lê `campos_ficha` com tolerância.
@@ -15,6 +16,20 @@ function lerCampos(bruto: unknown): CampoFicha[] {
   const r = camposFichaSchema.safeParse(bruto ?? []);
   if (r.success) return r.data;
   console.error("lerCampos: campos_ficha com forma inválida", r.error.issues[0]);
+  return [];
+}
+
+/**
+ * Lê `certificados_exigidos` com a mesma tolerância de `lerCampos`.
+ *
+ * Uma exigência com forma errada some da tela, mas o log diz que existe —
+ * derrubar Configurações inteira por causa de uma linha de jsonb seria trocar
+ * um problema pequeno por um grande.
+ */
+function lerExigencias(bruto: unknown): Exigencia[] {
+  const r = exigenciasSchema.safeParse(bruto ?? []);
+  if (r.success) return r.data;
+  console.error("lerExigencias: certificados_exigidos com forma inválida", r.error.issues[0]);
   return [];
 }
 
@@ -37,6 +52,8 @@ export type CategoriaComTipos = {
     campos: CampoFicha[];
     /** Horas entre revisões (migration 0071). Nulo = sem manutenção por uso. */
     intervaloManutencaoH: number | null;
+    /** O que as PEÇAS deste tipo precisam ter em dia (migration 0081). */
+    exigencias: Exigencia[];
   }[];
 };
 
@@ -55,7 +72,7 @@ export async function listarCategoriasComTipos(): Promise<CategoriaComTipos[]> {
       supabase.from("categoria_equipamento").select("id, nome").order("nome"),
       supabase
         .from("tipo_equipamento")
-        .select("id, nome, categoria_id, natureza_padrao, ativo, campos_ficha, intervalo_manutencao_h, item_catalogo(count)")
+        .select("id, nome, categoria_id, natureza_padrao, ativo, campos_ficha, certificados_exigidos, intervalo_manutencao_h, item_catalogo(count)")
         .order("nome"),
     ]);
 
@@ -79,6 +96,7 @@ export async function listarCategoriasComTipos(): Promise<CategoriaComTipos[]> {
       // vez de ser ignorado.
       campos: lerCampos(t.campos_ficha),
       intervaloManutencaoH: t.intervalo_manutencao_h ?? null,
+      exigencias: lerExigencias(t.certificados_exigidos),
     });
     porCategoria.set(t.categoria_id, lista);
   }
