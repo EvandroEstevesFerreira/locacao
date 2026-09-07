@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Pencil, Users, X, MailCheck } from "lucide-react";
+import { Pencil, Users, X, MailCheck, Link2 } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeOperar } from "@/lib/auth";
@@ -54,7 +54,7 @@ export default async function FuncionariosPage({
     supabase
       .from("funcionario")
       .select(
-        "id, nome, cpf, cargo, matricula, telefone, email, email_confirmado, ativo, obra:obra_id(codigo, nome)",
+        "id, nome, cpf, cargo, matricula, telefone, email, email_confirmado, ativo, people_id, obra:obra_id(codigo, nome)",
       )
       .order("nome"),
     listarObrasParaFiltro(),
@@ -96,9 +96,15 @@ export default async function FuncionariosPage({
     email: string | null;
     email_confirmado: boolean;
     ativo: boolean;
+    people_id: string | null;
     obra: { codigo: string; nome: string } | null;
   };
   const linhas = (funcionarios ?? []) as unknown as Linha[];
+
+  // Quantos ativos ainda não têm vínculo com o People. Enquanto houver algum,
+  // LIGAR A SINCRONIZAÇÃO DUPLICARIA GENTE: o upsert casa por `people_id`, e
+  // linha sem ele vira uma segunda linha da mesma pessoa.
+  const semVinculo = linhas.filter((f) => f.ativo && !f.people_id).length;
 
   // `obra_id` não vem no select da lista (a lista mostra código e nome), então
   // o funcionário em edição é lido à parte. São dois `select` só quando alguém
@@ -132,6 +138,17 @@ export default async function FuncionariosPage({
                 <MailCheck className="size-4" aria-hidden />
                 Conferir {aConferir}{" "}
                 {aConferir === 1 ? "e-mail" : "e-mails"}
+              </Button>
+            ) : null}
+            {/* Enquanto houver quem conciliar, este é o caminho ANTES de
+                sincronizar — e por isso vem antes do outro botão. */}
+            {semVinculo > 0 ? (
+              <Button
+                variant="outline"
+                render={<Link href="/termos/funcionarios/conciliar" />}
+              >
+                <Link2 className="size-4" aria-hidden />
+                Conciliar {semVinculo} com o People
               </Button>
             ) : null}
             {/* Só aparece quando a organização está habilitada: um botão que

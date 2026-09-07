@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.88.0";
+export const APP_VERSION = "0.89.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,19 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.89.0",
+    data: "2026-09-07",
+    titulo: "Conciliar os funcionários com o Sistenge People",
+    mudancas: [
+      { tipo: "novo", texto: "Nova tela “Conciliar com o People”: liga cada funcionário já cadastrado no Loca à pessoa correspondente no Sistenge People, mostrando os candidatos lado a lado com situação, cargo e matrícula." },
+      { tipo: "novo", texto: "Quem tem um único candidato possível é vinculado em lote, com um botão só. O resto vem um a um, porque escolher entre dois “Tiago Silva” é decisão de quem conhece as pessoas." },
+      { tipo: "melhoria", texto: "O cruzamento de nomes passou a aceitar nome do meio: “Andre Piva” encontra “Andre Piva Correa”. A regra anterior comparava só primeiro e último nome e perdia esses casos." },
+      { tipo: "seguranca", texto: "A conciliação vem ANTES de ligar a sincronização, e a tela de Funcionários avisa quantos faltam. Sincronizar com gente ainda não vinculada criaria uma segunda linha para cada pessoa que já estava cadastrada." },
+      { tipo: "novo", texto: "As obras passaram a conhecer o código do centro de resultado do People. São sete, e o código é o mesmo dos dois lados — com isso 422 das 483 pessoas chegam com a obra certa preenchida." },
+      { tipo: "seguranca", texto: "Duas linhas do Loca que apontem para a mesma pessoa saem do vínculo automático e vão para decisão humana — uma delas é cadastro duplicado e precisa ser resolvida antes." },
+    ],
+  },
   {
     versao: "0.88.0",
     data: "2026-09-07",
