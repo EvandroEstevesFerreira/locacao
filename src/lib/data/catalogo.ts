@@ -69,7 +69,14 @@ export async function listarCategoriasComTipos(): Promise<CategoriaComTipos[]> {
 
   const [{ data: categorias, error: erroCat }, { data: tipos, error: erroTipos }] =
     await Promise.all([
-      supabase.from("categoria_equipamento").select("id, nome").order("nome"),
+      // Mesma ordem do trilho da tela de Itens: `ordem` primeiro, nome como
+      // desempate. Configurações listando as categorias numa ordem e Itens em
+      // outra faria a pessoa procurar duas vezes.
+      supabase
+        .from("categoria_equipamento")
+        .select("id, nome")
+        .order("ordem")
+        .order("nome"),
       supabase
         .from("tipo_equipamento")
         .select("id, nome, categoria_id, natureza_padrao, ativo, campos_ficha, certificados_exigidos, intervalo_manutencao_h, item_catalogo(count)")

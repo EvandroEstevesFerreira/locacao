@@ -7,6 +7,50 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.78.0] — 2026-09-06
+
+O item não conta mais em dois lugares.
+
+### O defeito, medido
+
+O modelo **Dell Optiplex 380** tinha `tipo_id` = DESKTOP (que pertence a TI) e
+`categoria_id` **nulo**. Na tela de Itens ele aparecia agrupado sob DESKTOP na
+lista **e** contado em “Sem categoria” no trilho — o mesmo item em dois lugares
+que se contradizem. Por isso TI mostrava 26 modelos num catálogo de 27.
+
+### A causa não é digitação, é estrutural
+
+Todo tipo pertence a exatamente uma categoria, então `item_catalogo.categoria_id`
+é **redundante** desde que o nível TIPO nasceu (0.63.0 / migration 0069) — e o
+que é redundante diverge. O formulário do item nem pergunta a categoria: ele
+oferece “TI › DESKTOP” e grava só o tipo. Quem preenchia `categoria_id` era o
+importador de inventário, e o que ele não tocou ficou para trás.
+
+Com a planilha de coleta chegando e dezenas de cadastros novos, isso divergiria
+mais.
+
+### Corrigido
+
+- `categoria_id` passa a ser **derivada do tipo por trigger**, no banco.
+  Escrevem em `item_catalogo` a action do formulário, o importador e o que vier
+  depois da planilha — se a regra morasse na action, bastaria um caminho novo
+  esquecer a linha para a divergência voltar, que é exatamente como ela nasceu.
+- Mover um **tipo** de categoria leva junto os modelos dele. O trigger do item
+  só olha a linha do item, e ninguém toca no item nessa operação.
+- Item **sem tipo** mantém a categoria que tiver: `tipo_id` é nulável de
+  propósito e permanentemente — é o cadastro rápido que a obra faz com o
+  caminhão no portão.
+- O trilho de Itens ordena por **`ordem`**, não por nome. A coluna existia e não
+  fazia nada ali: a view `categoria_resumo` nem a expunha. A lista da Frota já
+  ordenava assim, e as duas telas mostravam as mesmas categorias em ordens
+  diferentes. Configurações → Categorias e tipos entrou na mesma ordem.
+
+### Migration
+
+- `0083_categoria_derivada_do_tipo.sql` — alinha o que está gravado, cria as
+  duas triggers, recria `categoria_resumo` com `ordem` (`security_invoker = on`)
+  e **aborta** se sobrar item com categoria diferente da do tipo.
+
 ## [0.77.0] — 2026-09-06
 
 O certificado vencendo avisa sozinho.

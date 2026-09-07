@@ -199,7 +199,12 @@ export async function listarTrilhoDeCategorias(): Promise<CategoriaTrilho[]> {
   const [{ data, error }, { count: semCategoria }] = await Promise.all([
     supabase
       .from("categoria_resumo")
-      .select("categoria_id, nome, modelos, pecas, em_uso")
+      .select("categoria_id, nome, ordem, modelos, pecas, em_uso")
+      // Por `ordem`, e não por nome: a coluna carrega intenção — TI é 80 e fica
+      // por último de propósito, por ser a única categoria que não é de obra.
+      // A lista da Frota já ordenava assim, e as duas telas mostravam as mesmas
+      // categorias em ordens diferentes. `nome` fica como critério de desempate.
+      .order("ordem")
       .order("nome"),
     supabase
       .from("item_catalogo")
@@ -215,6 +220,7 @@ export async function listarTrilhoDeCategorias(): Promise<CategoriaTrilho[]> {
   const linhas = ((data ?? []) as unknown as {
     categoria_id: string;
     nome: string;
+    ordem: number;
     modelos: number;
     pecas: number;
     em_uso: number;

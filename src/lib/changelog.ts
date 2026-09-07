@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.77.0";
+export const APP_VERSION = "0.78.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,18 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.78.0",
+    data: "2026-09-06",
+    titulo: "O item não conta mais em dois lugares",
+    mudancas: [
+      { tipo: "correcao", texto: "Um modelo podia aparecer agrupado sob o tipo dele na lista e contado em “Sem categoria” no trilho, ao mesmo tempo. Era o caso do Dell Optiplex 380 — e por isso TI mostrava 26 modelos num catálogo de 27." },
+      { tipo: "correcao", texto: "A categoria do item passa a vir do tipo, sempre. Como o cadastro só pergunta o tipo, a categoria não tinha como ser mantida à mão — e o que ninguém mantém, diverge." },
+      { tipo: "melhoria", texto: "Mudar um tipo de categoria leva junto todos os modelos dele. Antes eles ficariam apontando para a categoria antiga, sem ninguém perceber." },
+      { tipo: "correcao", texto: "O trilho de categorias respeita a ordem configurada, e não a alfabética. A lista da Frota já fazia isso: as duas telas mostravam as mesmas categorias em ordens diferentes." },
+      { tipo: "melhoria", texto: "Configurações → Categorias e tipos usa a mesma ordem das outras telas. Procurar a mesma categoria em dois lugares diferentes não deveria custar duas buscas." },
+    ],
+  },
   {
     versao: "0.77.0",
     data: "2026-09-06",
