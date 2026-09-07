@@ -51,8 +51,10 @@ export async function saldosDeEstoque(f: FiltrosEstoque): Promise<LinhaEstoque[]
     .from("item_catalogo")
     .select("id, descricao, unidade, estoque_minimo")
     .eq("controle", "quantidade")
+    // `item_catalogo` nao tem `deleted_at` -- filtrar por ela faz o PostgREST
+    // recusar a consulta e a lista sair vazia em silencio. Exclusao aqui e
+    // `ativo = false`.
     .eq("ativo", true)
-    .is("deleted_at", null)
     .order("descricao");
 
   if (erroItens || !itens) {
@@ -189,8 +191,10 @@ export async function itensDeEstoque(): Promise<
     .from("item_catalogo")
     .select("id, descricao, unidade")
     .eq("controle", "quantidade")
+    // `item_catalogo` nao tem `deleted_at` -- filtrar por ela faz o PostgREST
+    // recusar a consulta e a lista sair vazia em silencio. Exclusao aqui e
+    // `ativo = false`.
     .eq("ativo", true)
-    .is("deleted_at", null)
     .order("descricao");
 
   if (error || !data) {

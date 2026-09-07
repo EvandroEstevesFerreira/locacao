@@ -267,3 +267,53 @@ export const editarPecaSchema = z.object({
 
 export type EditarPecaInput = z.input<typeof editarPecaSchema>;
 export type EditarPecaDados = z.output<typeof editarPecaSchema>;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Quem pode receber um termo
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Esta peça pode entrar num termo de responsabilidade?
+ *
+ * FONTE ÚNICA da regra, e ela nasceu duplicada — de novo. A tela da peça e a de
+ * novo termo faziam a mesma pergunta em formatos diferentes: uma comparava
+ * `situacao` com `atual === null`, a outra consultava um `Set` de custódias
+ * abertas. Duas escritas da mesma regra divergem na primeira correção, e a
+ * divergência aqui aparece como um botão que leva a uma lista onde a peça não
+ * está.
+ *
+ * A GUARDA É A POSSE, NÃO A SITUAÇÃO. Peça com custódia aberta já tem alguém
+ * que assinou por ela — oferecê-la produziria dois termos sobre o mesmo
+ * patrimônio, que é o que o filtro original queria impedir e mirava errado.
+ *
+ * `em_uso` sem posse aberta ENTRA de propósito: é o estado em que a importação
+ * do inventário deixou 95 máquinas, e era um beco sem saída. A matriz de
+ * transição só admite chegar a `em_uso` por um termo, e sair dali por devolução
+ * registrada num termo — sem esta regra, elas não podiam receber um nem voltar
+ * a `disponivel`.
+ *
+ * `manutencao`, `baixada` e `perdida` ficam de fora: entregar a alguém uma peça
+ * que está na oficina ou dada como perdida é um documento que nasce mentindo.
+ */
+export function podeReceberTermo(p: {
+  situacao: string;
+  temPosseAberta: boolean;
+}): boolean {
+  if (p.temPosseAberta) return false;
+  return p.situacao === "disponivel" || p.situacao === "em_uso";
+}
+
+/**
+ * O termo é uma ENTREGA nova, ou a regularização de uma posse que já existe no
+ * mundo e não no sistema?
+ *
+ * Muda o rótulo do botão, e o rótulo importa: "Entregar a funcionário" numa
+ * máquina que já está com a pessoa há meses faria quem clica achar que está
+ * fazendo outra coisa.
+ */
+export function ehRegularizacao(p: {
+  situacao: string;
+  temPosseAberta: boolean;
+}): boolean {
+  return p.situacao === "em_uso" && !p.temPosseAberta;
+}

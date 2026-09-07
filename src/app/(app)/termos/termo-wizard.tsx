@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Plus, X, ChevronLeft, ChevronRight } from "lucide-react";
@@ -287,13 +288,42 @@ export function TermoWizard({
               O estado na entrega é o que protege os dois lados quando o
               equipamento voltar.
             </p>
-            <Button type="button" variant="outline" size="sm" onClick={acrescentar}>
+            {/* Sem catálogo não há o que acrescentar: habilitado, o botão
+                produz a linha com um seletor sem nenhuma opção. */}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={acrescentar}
+              disabled={itens.length === 0}
+            >
               <Plus className="size-4" />
               Acrescentar item
             </Button>
           </div>
 
-          {linhas.length === 0 ? (
+          {/* CATÁLOGO VAZIO É OUTRO PROBLEMA, e merece outra resposta. "Acrescente
+              o que está saindo" manda a pessoa clicar num botão que abre um
+              seletor sem nenhuma opção — ela descobre o beco depois de entrar
+              nele. Aqui o beco é dito antes, com a saída junto. */}
+          {itens.length === 0 ? (
+            <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
+              <p>
+                Não há nenhum item no catálogo, então não há o que entregar.
+              </p>
+              <p className="mt-1">
+                O item é o modelo — “Dell Latitude 3540”, “PTA” — e as peças
+                pendem dele.{" "}
+                <Link
+                  href="/itens/novo"
+                  className="font-medium text-primary underline underline-offset-4"
+                >
+                  Cadastre aqui
+                </Link>
+                .
+              </p>
+            </div>
+          ) : linhas.length === 0 ? (
             <p className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
               Nenhum item ainda. Acrescente o que está saindo com o funcionário.
             </p>

@@ -7,6 +7,53 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.86.0] — 2026-09-07
+
+O seletor de item do termo estava vazio.
+
+### O defeito
+
+A consulta de itens do termo filtrava por `deleted_at`. **`item_catalogo` não
+tem essa coluna.**
+
+O PostgREST recusa a consulta inteira quando ela cita coluna inexistente, `data`
+volta `null`, e o `?? []` do call site transforma o erro numa lista vazia. **Nada
+aparece na tela, e nada aparece no log.** Com 27 itens ativos no banco, o
+seletor mostrava só “Selecione o item…”.
+
+É a explicação de um número que eu vinha citando o dia inteiro sem entender:
+**zero termos emitidos**. Não era falta de uso — o fluxo não tinha como chegar ao
+fim.
+
+O mesmo filtro impossível estava em **duas consultas da tela de Estoque**. Não
+era um deslize isolado: era um padrão copiado de tabelas que têm `deleted_at`
+para uma que não tem. Exclusão de item aqui é `ativo = false`.
+
+### O catálogo vazio ganhou saída
+
+Quando não há item nenhum, a tela dizia “Acrescente o que está saindo com o
+funcionário” — e o botão abria um seletor sem nenhuma opção. A pessoa descobria
+o beco **depois de entrar nele**.
+
+Agora o beco é dito antes, com a saída junto: *“Não há nenhum item no catálogo
+(…) o item é o modelo, e as peças pendem dele.* **Cadastre aqui.**” E o botão
+**Acrescentar item** fica desabilitado, porque só produzia a linha impossível.
+
+### A regra do termo virou fonte única
+
+`podeReceberTermo` e `ehRegularizacao` moram agora em `src/lib/custodia.ts`, com
+8 testes. Nasceram duplicadas na 0.85.0 — a tela da peça comparava
+`situacao` com `atual === null`, a de novo termo consultava um `Set` — e é a
+mesma pergunta. Duas escritas divergem na primeira correção, e a divergência
+aqui apareceria como um botão que leva a uma lista onde a peça não está.
+
+Foi o **segundo** caso de regra duplicada no mesmo dia, depois do de
+`precisaConferencia`.
+
+### Sem migration
+
+Nenhuma. A coluna não precisa existir — a consulta é que não devia citá-la.
+
 ## [0.85.0] — 2026-09-07
 
 As 95 máquinas destravadas, e o botão Editar que nunca funcionou.

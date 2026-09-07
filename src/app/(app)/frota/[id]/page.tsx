@@ -8,7 +8,12 @@ import {
   listarPossesDaPeca,
   listarObrasEFornecedores,
 } from "@/lib/data/custodia";
-import { descreverDetentor, montarLinhaDoTempo } from "@/lib/custodia";
+import {
+  descreverDetentor,
+  ehRegularizacao,
+  montarLinhaDoTempo,
+  podeReceberTermo,
+} from "@/lib/custodia";
 import { SITUACAO_INFO, PROPRIEDADE_INFO, ESTADO_INFO } from "@/lib/frota";
 import { hojeISOSaoPaulo } from "@/lib/locacao";
 import { PageHeader } from "@/components/shared/page-header";
@@ -81,6 +86,9 @@ export default async function PecaDetalhePage({
   const hoje = hojeISOSaoPaulo();
   const linha = montarLinhaDoTempo(posses, hoje);
   const atual = linha.find((p) => p.aberta) ?? null;
+  // O par que as duas regras de termo consultam. Montado uma vez para que a
+  // pergunta "tem posse aberta?" tenha uma resposta so nesta pagina.
+  const posseDaPeca = { situacao: peca.situacao, temPosseAberta: atual !== null };
 
   const podeMover = podeOperar(perfil?.papel);
   const podeEditar = podeEditarCadastros(perfil?.papel);
@@ -108,12 +116,10 @@ export default async function PecaDetalhePage({
                 A condição certa nunca foi a SITUAÇÃO, e sim a POSSE: peça sem
                 custódia aberta não está com ninguém, diga a coluna o que
                 disser. */}
-            {podeMover &&
-            (peca.situacao === "disponivel" ||
-              (peca.situacao === "em_uso" && atual === null)) ? (
+            {podeMover && podeReceberTermo(posseDaPeca) ? (
               <Button variant="outline" render={<Link href="/termos/novo" />}>
                 <FileSignature className="size-4" />
-                {atual === null && peca.situacao === "em_uso"
+                {ehRegularizacao(posseDaPeca)
                   ? "Registrar quem está com ela"
                   : "Entregar a funcionário"}
               </Button>

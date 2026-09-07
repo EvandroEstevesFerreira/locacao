@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeOperar } from "@/lib/auth";
 import { listarObrasParaFiltro } from "@/lib/data/obras";
 import { pecasComResponsavel } from "@/lib/data/frota";
+import { podeReceberTermo } from "@/lib/custodia";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
@@ -29,8 +30,13 @@ export default async function NovoTermoPage() {
       supabase
         .from("item_catalogo")
         .select("id, descricao, unidade, controle")
+        // SEM `.is("deleted_at", null)`: `item_catalogo` NÃO TEM essa coluna.
+        // O PostgREST recusa a consulta inteira, `data` volta nulo, e a lista
+        // sai vazia sem erro na tela. Era por isso que o seletor de item do
+        // termo não mostrava nada, com 27 itens ativos no banco — e por isso o
+        // sistema tinha ZERO termos emitidos. Quem exclui item aqui usa
+        // `ativo = false`.
         .eq("ativo", true)
-        .is("deleted_at", null)
         .order("descricao"),
       // A PROTEÇÃO É "SEM CUSTÓDIA ABERTA", e não "situação disponível".
       //
@@ -68,7 +74,15 @@ export default async function NovoTermoPage() {
     identificador: string;
     item_id: string;
     situacao: string;
-  }[]).filter((p) => comResponsavel !== null && !comResponsavel.has(p.id));
+  }[]).filter(
+    (p) =>
+      // `null` = a consulta de custodia falhou; nesse caso nenhuma peca entra.
+      comResponsavel !== null &&
+      podeReceberTermo({
+        situacao: p.situacao,
+        temPosseAberta: comResponsavel.has(p.id),
+      }),
+  );
 
   const listaFuncionarios = (funcionarios ?? []) as unknown as {
     id: string;
