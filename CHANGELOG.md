@@ -7,6 +7,67 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.75.0] — 2026-09-06
+
+O catálogo saiu da TI e chegou à obra.
+
+### Por que agora
+
+Sete das oito categorias estavam **vazias** — só TI tinha tipos. E
+ar-condicionado não tinha categoria nenhuma: não é acesso, não é energia, não é
+ferramenta. Ficaria em “sem categoria”, o balde onde o item some.
+
+O levantamento das locações foi cobrado das obras com retorno para 25/09. A
+estrutura precisa existir antes do dado chegar, ou a planilha volta e não há
+onde pôr.
+
+### Por que apenas cinco tipos
+
+Quais famílias a Sistenge realmente aluga é **o que a planilha responde**.
+Semear as trinta por adivinhação encheria o seletor de tipos que ninguém
+escolhe, e cada um seria uma correção a mais depois. Entraram as cinco que o
+e-mail de cobrança nomeou — PTA, andaime, betoneira, gerador e ar-condicionado
+— porque é sobre elas que o responsável vai responder. O resto entra por
+Configurações → Catálogo, conforme o dado chegar.
+
+### Adicionado
+
+- Categoria **Climatização**, na ordem 65 — ao lado de Energia, com que divide
+  instalação predial. TI segue por último, a única que não é de obra.
+- **PTA** (Acesso e altura, 250 h de revisão): formato — tesoura, articulada,
+  telescópica —, altura de trabalho, capacidade e tração. Um tipo só, e não
+  três: o que muda entre elas é exatamente o que a ficha pergunta, e três tipos
+  exigiriam manter três fichas iguais em sincronia.
+- **ANDAIME** (Acesso e altura), controlado por **quantidade**: aluga-se por
+  painel e devolve-se contando painel. Ficha vazia é a afirmação correta — não
+  há peça com patrimônio onde gravar valor.
+- **BETONEIRA** (Concretagem): capacidade em litros, acionamento e tensão. Sem
+  intervalo por horímetro — a maioria não tem horímetro.
+- **GERADOR** (Energia, 250 h): potência em kVA, combustível, cabinado e tanque.
+  Cabinado não é detalhe estético: gerador aberto não opera perto de frente de
+  serviço por ruído, e é a primeira pergunta de quem procura um.
+- **AR-CONDICIONADO** (Climatização): capacidade em BTU/h, formato, ciclo,
+  tensão e **gás refrigerante**. O gás entra porque decide o custo da
+  manutenção: R-22 está em descontinuação e recarregar custa mais que o
+  conserto.
+
+### O que ficou de fora, de propósito
+
+- **Ano, número de série, patrimônio e estado** têm coluna nativa em
+  `equipamento_unidade`, com campo próprio no formulário da peça. Repeti-los na
+  ficha criaria dois lugares para digitar a mesma coisa — a mesma regra da
+  0.70.0, onde a memória RAM ficou de fora.
+- **Inspeção anual, PMOC e teste de carga** não entraram como campo `data`.
+  Campo de ficha é inerte: ninguém lê, nada avisa, e a renovação sobrescreve a
+  anterior sem deixar histórico. São certificados, e ganham estrutura própria
+  na fatia seguinte.
+
+### Migration
+
+- `0080_catalogo_de_obra.sql` — idempotente por `on conflict`, e aborta se
+  alguma peça sob estes tipos já tiver ficha preenchida: o `do update`
+  redefiniria os campos e orfanaria os valores em silêncio.
+
 ## [0.74.0] — 2026-09-06
 
 Trilho de categorias na tela de Itens — **modelo C**, escolhido entre três.

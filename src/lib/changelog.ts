@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.74.0";
+export const APP_VERSION = "0.75.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,19 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.75.0",
+    data: "2026-09-06",
+    titulo: "O catálogo saiu da TI e chegou à obra",
+    mudancas: [
+      { tipo: "novo", texto: "Nasceu a categoria Climatização. Ar-condicionado não cabia em nenhuma das oito categorias e ficava em “sem categoria”, que é o balde onde o item some." },
+      { tipo: "novo", texto: "Cinco tipos de equipamento de obra prontos para uso: PTA, ANDAIME, BETONEIRA, GERADOR e AR-CONDICIONADO — cada um com a ficha da peça já desenhada." },
+      { tipo: "novo", texto: "A ficha da PTA pergunta formato (tesoura, articulada, telescópica), altura de trabalho, capacidade e tração. A do gerador, potência em kVA, combustível, se é cabinado e o tanque." },
+      { tipo: "novo", texto: "A ficha do ar-condicionado registra o gás refrigerante. Aparelho de R-22 custa mais para recarregar do que para consertar, e saber quantos ainda existem é decisão de troca." },
+      { tipo: "novo", texto: "PTA e gerador já nascem com intervalo de revisão de 250 horas de horímetro. Dá para mudar em Configurações → Catálogo, sem esperar por ninguém." },
+      { tipo: "melhoria", texto: "Andaime entra controlado por quantidade, não por peça: aluga-se por painel e devolve-se contando painel." },
+    ],
+  },
   {
     versao: "0.74.0",
     data: "2026-09-06",
