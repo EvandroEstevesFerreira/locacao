@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.90.0";
+export const APP_VERSION = "0.90.1";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,15 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.90.1",
+    data: "2026-09-07",
+    titulo: "A primeira sincronização de verdade",
+    mudancas: [
+      { tipo: "correcao", texto: "A primeira sincronização com o People não gravava nada. Dois defeitos, os dois só visíveis com a base real: um índice que o banco não conseguia usar para atualizar, e cinco cadastros duplicados do People que trazem o mesmo CPF." },
+      { tipo: "seguranca", texto: "Cadastro duplicado no People deixa de derrubar a rodada inteira. As duas linhas entram — uma delas pode ser por onde alguém está com equipamento — e o CPF repetido fica com o cadastro atualizado mais recentemente." },
+    ],
+  },
   {
     versao: "0.90.0",
     data: "2026-09-07",

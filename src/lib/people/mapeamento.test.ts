@@ -9,6 +9,7 @@ import {
   semRepetidas,
   precisaVarreduraCompleta,
   ausentesNaVarredura,
+  resolverColisoes,
 } from "./mapeamento";
 
 const ORG = "aaaaaaaa-1111-4222-8333-444444444444";
@@ -308,5 +309,74 @@ describe("ausentesNaVarredura", () => {
     // varredura COMPLETA poder marcar ausência. Vinda de um delta, uma resposta
     // vazia — que é o caso normal — acusaria a base inteira.
     expect(ausentesNaVarredura(["a", "b"], [])).toEqual(["a", "b"]);
+  });
+});
+
+describe("resolverColisoes", () => {
+  const base = (over: Partial<PessoaPeople>): PessoaPeople =>
+    pessoa({ id: "11111111-1111-4111-8111-111111111111", ...over });
+
+  it("mesmo CPF em dois cadastros: o mais recente fica com ele", () => {
+    // Os cinco cadastros duplicados do People por bug de import da ADP. As
+    // duas linhas entram — o que não pode entrar duas vezes é o CPF.
+    const r = resolverColisoes([
+      base({ id: "aaaaaaaa-1111-4111-8111-111111111111", cpf: "12345678901", atualizado_em: "2026-09-01T10:00:00.000Z" }),
+      base({ id: "bbbbbbbb-1111-4111-8111-111111111111", cpf: "12345678901", atualizado_em: "2026-09-06T10:00:00.000Z" }),
+    ]);
+    expect(r).toHaveLength(2);
+    expect(r.find((p) => p.id.startsWith("bbbb"))!.cpf).toBe("12345678901");
+    expect(r.find((p) => p.id.startsWith("aaaa"))!.cpf).toBeNull();
+  });
+
+  it("APAGA O VALOR, NUNCA A LINHA", () => {
+    // Descartar um cadastro esconderia um vínculo que existe do lado do
+    // People — e é por um deles que alguém pode estar com equipamento.
+    const r = resolverColisoes([
+      base({ id: "aaaaaaaa-1111-4111-8111-111111111111", cpf: "99999999999" }),
+      base({ id: "bbbbbbbb-1111-4111-8111-111111111111", cpf: "99999999999" }),
+    ]);
+    expect(r.map((p) => p.id).sort()).toEqual([
+      "aaaaaaaa-1111-4111-8111-111111111111",
+      "bbbbbbbb-1111-4111-8111-111111111111",
+    ]);
+  });
+
+  it("e-mail repetido recebe o mesmo tratamento, ignorando a caixa", () => {
+    const r = resolverColisoes([
+      base({ id: "aaaaaaaa-1111-4111-8111-111111111111", cpf: null, email: "X@sistenge.com", atualizado_em: "2026-09-06T10:00:00.000Z" }),
+      base({ id: "bbbbbbbb-1111-4111-8111-111111111111", cpf: null, email: "x@sistenge.com", atualizado_em: "2026-09-01T10:00:00.000Z" }),
+    ]);
+    expect(r.find((p) => p.id.startsWith("aaaa"))!.email).toBe("X@sistenge.com");
+    expect(r.find((p) => p.id.startsWith("bbbb"))!.email).toBeNull();
+  });
+
+  it("empate de data resolve por id, para amanhã decidir igual a hoje", () => {
+    const mesmaData = "2026-09-06T10:00:00.000Z";
+    const duas = [
+      base({ id: "bbbbbbbb-1111-4111-8111-111111111111", cpf: "55555555555", atualizado_em: mesmaData }),
+      base({ id: "aaaaaaaa-1111-4111-8111-111111111111", cpf: "55555555555", atualizado_em: mesmaData }),
+    ];
+    const um = resolverColisoes(duas);
+    const dois = resolverColisoes([...duas].reverse());
+    const vencedor = (r: PessoaPeople[]) => r.find((p) => p.cpf !== null)!.id;
+    expect(vencedor(um)).toBe(vencedor(dois));
+  });
+
+  it("sem colisão nenhuma, devolve tudo intacto", () => {
+    const entrada = [
+      base({ id: "aaaaaaaa-1111-4111-8111-111111111111", cpf: "11111111111", email: "a@x.com" }),
+      base({ id: "bbbbbbbb-1111-4111-8111-111111111111", cpf: "22222222222", email: "b@x.com" }),
+    ];
+    expect(resolverColisoes(entrada)).toEqual(entrada);
+  });
+
+  it("preserva a ordem de chegada", () => {
+    const entrada = [
+      base({ id: "cccccccc-1111-4111-8111-111111111111", cpf: null, email: null }),
+      base({ id: "aaaaaaaa-1111-4111-8111-111111111111", cpf: null, email: null }),
+    ];
+    expect(resolverColisoes(entrada).map((p) => p.id)).toEqual(
+      entrada.map((p) => p.id),
+    );
   });
 });

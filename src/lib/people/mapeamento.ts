@@ -216,3 +216,65 @@ export function ausentesNaVarredura(
   const veio = new Set(recebidos);
   return vinculadosLocais.filter((id) => !veio.has(id));
 }
+
+/**
+ * Apaga valores que colidiriam nos índices únicos do Loca.
+ *
+ * O PROBLEMA, ENCONTRADO NA PRIMEIRA SINCRONIZAÇÃO DE VERDADE. Cinco pessoas
+ * têm hoje dois cadastros no People, por um bug de import da ADP — dois
+ * `people_id` diferentes para o mesmo ser humano, e portanto o MESMO CPF. O
+ * Loca tem `idx_funcionario_cpf` único em `(org_id, cpf)`, e o lote inteiro
+ * morria com "duplicate key value violates unique constraint".
+ *
+ * `semRepetidas` não pega isto: lá as duas linhas têm a mesma chave e uma
+ * vence. Aqui são DUAS PESSOAS legítimas do ponto de vista do People, e as duas
+ * têm de entrar — o que não pode entrar duas vezes é o CPF.
+ *
+ * ┌─ POR QUE APAGAR O VALOR, E NÃO A LINHA ──────────────────────────────────┐
+ * │ Descartar um dos cadastros esconderia um vínculo que existe do lado do    │
+ * │ People, e é por um deles que alguém pode estar com equipamento. Some o    │
+ * │ CPF do perdedor, que é dado repetido e recuperável: quando o People       │
+ * │ mesclar os dois, o sobrevivente continua com o dele.                      │
+ * └──────────────────────────────────────────────────────────────────────────┘
+ *
+ * Quem fica com o valor é o cadastro ATUALIZADO MAIS RECENTEMENTE — o mais
+ * provável de ser o que sobrevive à mescla. Empate resolve por `id`, para a
+ * rodada de amanhã decidir igual à de hoje.
+ *
+ * `email` entra junto por ser o outro índice único da tabela. Hoje não há
+ * nenhum repetido no People; a guarda existe porque uma mescla mal feita lá
+ * produziria exatamente isso, e o sintoma seria de novo o lote inteiro morrendo.
+ */
+export function resolverColisoes(pessoas: PessoaPeople[]): PessoaPeople[] {
+  const ordenadas = [...pessoas].sort((a, b) =>
+    a.atualizado_em === b.atualizado_em
+      ? a.id.localeCompare(b.id)
+      : b.atualizado_em.localeCompare(a.atualizado_em),
+  );
+
+  const cpfVisto = new Set<string>();
+  const emailVisto = new Set<string>();
+  const ajustadas = new Map<string, PessoaPeople>();
+
+  for (const p of ordenadas) {
+    let cpf = p.cpf;
+    let email = p.email;
+
+    if (cpf) {
+      if (cpfVisto.has(cpf)) cpf = null;
+      else cpfVisto.add(cpf);
+    }
+
+    const chaveEmail = normalizarEmail(email);
+    if (chaveEmail) {
+      if (emailVisto.has(chaveEmail)) email = null;
+      else emailVisto.add(chaveEmail);
+    }
+
+    ajustadas.set(p.id, { ...p, cpf, email });
+  }
+
+  // Devolve na ordem em que chegou: a ordenação acima é só para decidir quem
+  // fica com o valor, e trocar a ordem do lote não é assunto desta função.
+  return pessoas.map((p) => ajustadas.get(p.id)!);
+}

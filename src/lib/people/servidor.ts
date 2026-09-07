@@ -8,6 +8,7 @@ import {
   proximoCursor,
   semRepetidas,
   ausentesNaVarredura,
+  resolverColisoes,
 } from "./mapeamento";
 
 /**
@@ -105,7 +106,12 @@ export async function sincronizarPessoas(
     // Repetida no mesmo lote derrubaria o upsert inteiro com "ON CONFLICT DO
     // UPDATE command cannot affect row a second time".
     const unicas = semRepetidas(pessoas);
-    const linhas = unicas.map((p) => mapearPessoa(p, orgId, dePara, agoraISO));
+
+    // Duas pessoas LEGÍTIMAS do People podem trazer o mesmo CPF — são os cinco
+    // cadastros duplicados por bug de import. Sem isto, o lote inteiro morre no
+    // índice único de CPF do Loca.
+    const semColisao = resolverColisoes(unicas);
+    const linhas = semColisao.map((p) => mapearPessoa(p, orgId, dePara, agoraISO));
 
     let gravadas = 0;
     for (let i = 0; i < linhas.length; i += LOTE) {
