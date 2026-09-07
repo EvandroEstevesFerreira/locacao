@@ -1,0 +1,170 @@
+import {
+  SITUACAO_PEOPLE_INFO,
+  type PessoaPeople,
+  type SituacaoPeople,
+} from "./contrato";
+
+/**
+ * De pessoa do People para linha de `funcionario`.
+ *
+ * Spec: docs/superpowers/specs/2026-09-07-integracao-people-design.md
+ *
+ * Tudo aqui é PURO e sem I/O, porque é onde estão as regras que doem quando
+ * erram — e regra que só roda contra um endpoint que ainda não existe não tem
+ * como ser conferida.
+ */
+
+/**
+ * A linha que vai para o `upsert`.
+ *
+ * ┌─ AS TRÊS COLUNAS DE CNH NÃO ESTÃO AQUI, E É O PONTO ────────────────────┐
+ * │ O People NÃO GUARDA CNH — não há coluna para isso em tabela nenhuma lá. │
+ * │ `cnh`, `cnh_categoria` e `cnh_validade` continuam sendo do Loca.        │
+ * │                                                                         │
+ * │ Um `upsert` que montasse o objeto a partir da pessoa inteira apagaria as │
+ * │ três em silêncio, e ninguém notaria até alguém perguntar quem pode       │
+ * │ dirigir o caminhão. Por isso o tipo é FECHADO e a ausência delas tem     │
+ * │ teste próprio.                                                          │
+ * └─────────────────────────────────────────────────────────────────────────┘
+ */
+export type LinhaFuncionario = {
+  org_id: string;
+  people_id: string;
+  nome: string;
+  cpf: string | null;
+  matricula: string | null;
+  cargo: string | null;
+  telefone: string | null;
+  email: string | null;
+  email_confirmado: boolean;
+  situacao_people: SituacaoPeople;
+  ativo: boolean;
+  obra_id: string | null;
+  sincronizado_em: string;
+};
+
+/**
+ * `ativo` e `afastado` são `true`; `desligado` é `false`.
+ *
+ * A situação crua vai junto, em `situacao_people`. Colapsar os três num
+ * booleano perderia a distinção que importa para quem está com equipamento: de
+ * quem se cobra a devolução hoje.
+ */
+export function ehAtivo(situacao: SituacaoPeople): boolean {
+  return SITUACAO_PEOPLE_INFO[situacao].ativo;
+}
+
+/**
+ * O código do centro de resultado do People vira `obra_id` do Loca.
+ *
+ * SEM CORRESPONDÊNCIA, NULO. Chutar por semelhança de nome colocaria
+ * equipamento na obra errada, e o erro só apareceria numa cobrança. O contrato
+ * avisa que os códigos já divergiram historicamente entre sistemas da casa.
+ */
+export function resolverObra(
+  centroCusto: { codigo: string } | null,
+  deParaObra: Map<string, string>,
+): string | null {
+  if (!centroCusto) return null;
+  return deParaObra.get(centroCusto.codigo.trim()) ?? null;
+}
+
+/**
+ * Normaliza o e-mail para o formato em que o índice único da 0074 o compara.
+ *
+ * O índice é `(org_id, lower(email))`: `Fulano@` e `fulano@` são o mesmo
+ * endereço, e gravar os dois casos diferentes derrubaria a segunda gravação com
+ * violação de unicidade no meio de uma rodada.
+ *
+ * String vazia vira nulo. O contrato diz que campo ausente vem `null`
+ * explícito, mas `""` atravessando o índice único faria duas pessoas sem
+ * e-mail colidirem — e o índice é parcial justamente para permitir muitas
+ * pessoas sem endereço.
+ */
+export function normalizarEmail(email: string | null): string | null {
+  if (email === null) return null;
+  const limpo = email.trim().toLowerCase();
+  return limpo === "" ? null : limpo;
+}
+
+/**
+ * Uma pessoa do People, pronta para gravar.
+ *
+ * O E-MAIL DO PEOPLE MANDA, INCLUSIVE QUANDO É NULO. O Loca tem 97 endereços
+ * deduzidos de `nome.sobrenome@sistenge.com`, todos com `email_confirmado =
+ * false` — palpites que ninguém conferiu. Palpite não confirmado perde para o
+ * silêncio de quem é fonte da verdade.
+ *
+ * `email_confirmado` acompanha: endereço que veio do cadastro oficial É
+ * confirmado, e endereço ausente não tem o que confirmar.
+ */
+export function mapearPessoa(
+  pessoa: PessoaPeople,
+  orgId: string,
+  deParaObra: Map<string, string>,
+  agoraISO: string,
+): LinhaFuncionario {
+  const email = normalizarEmail(pessoa.email);
+  return {
+    org_id: orgId,
+    people_id: pessoa.id,
+    nome: pessoa.nome.trim(),
+    cpf: pessoa.cpf,
+    matricula: pessoa.matricula,
+    cargo: pessoa.cargo,
+    telefone: pessoa.telefone,
+    email,
+    email_confirmado: email !== null,
+    situacao_people: pessoa.situacao,
+    ativo: ehAtivo(pessoa.situacao),
+    obra_id: resolverObra(pessoa.centro_custo, deParaObra),
+    sincronizado_em: agoraISO,
+  };
+}
+
+/**
+ * O maior `atualizado_em` do lote — o cursor da próxima rodada.
+ *
+ * Comparação de STRING, e não de `Date`. O contrato entrega ISO 8601 com fuso,
+ * e ISO com o mesmo fuso ordena lexicograficamente na mesma ordem que
+ * cronologicamente. Converter para `Date` só acrescentaria uma chance de o
+ * fuso do servidor se meter no meio.
+ *
+ * Lote vazio devolve o cursor anterior, e não `null`: uma rodada sem novidade
+ * NÃO PODE ZERAR o delta, ou a rodada seguinte varreria as 483 de novo.
+ */
+export function proximoCursor(
+  pessoas: { atualizado_em: string }[],
+  cursorAtual: string | null,
+): string | null {
+  let maior = cursorAtual;
+  for (const p of pessoas) {
+    if (maior === null || p.atualizado_em > maior) maior = p.atualizado_em;
+  }
+  return maior;
+}
+
+/**
+ * Tira as repetidas, ficando com a mais recente de cada `people_id`.
+ *
+ * O CONTRATO AVISA QUE ISSO ACONTECE: uma pessoa atualizada no meio de uma
+ * varredura pode chegar duas vezes, porque o People falha deliberadamente para
+ * o lado de repetir e nunca de perder.
+ *
+ * Sem esta passagem, o `upsert` levaria duas linhas com a mesma chave no mesmo
+ * comando — o Postgres recusa isso com "ON CONFLICT DO UPDATE command cannot
+ * affect row a second time", e a rodada inteira morreria por causa de uma
+ * pessoa que mudou de cargo na hora errada.
+ *
+ * Há também cinco pessoas com dois cadastros no People, por um bug de import.
+ * Essas têm `people_id` DIFERENTES e passam as duas de propósito: são duas
+ * linhas legítimas até o People mesclá-las.
+ */
+export function semRepetidas(pessoas: PessoaPeople[]): PessoaPeople[] {
+  const porId = new Map<string, PessoaPeople>();
+  for (const p of pessoas) {
+    const anterior = porId.get(p.id);
+    if (!anterior || p.atualizado_em >= anterior.atualizado_em) porId.set(p.id, p);
+  }
+  return [...porId.values()];
+}

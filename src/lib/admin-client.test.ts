@@ -55,6 +55,18 @@ const PERMITIDOS: Record<string, { tabelas: string[] | "*"; motivo: string }> = 
     tabelas: "*",
     motivo: "cron roda sem sessão de usuário; não há RLS a respeitar",
   },
+  "app/api/cron/people/route.ts": {
+    // Duas tabelas nomeadas, e não "*", de propósito: a gravação em
+    // `funcionario` NAO acontece aqui. Ela mora em `lib/people/servidor.ts`,
+    // que recebe o client de quem chama — o cron passa o admin, e o botão
+    // "Sincronizar agora" passa o do usuário, que atravessa as policies.
+    // Se um dia alguém escrever `funcionario` direto nesta rota, esta lista
+    // reclama.
+    tabelas: ["people_sync"],
+    motivo:
+      "cron roda sem sessão de usuário; o recorte por organização é feito à " +
+      "mão, a partir das linhas de `people_sync`",
+  },
   "app/(app)/usuarios/actions.ts": {
     tabelas: ["perfil"],
     motivo:

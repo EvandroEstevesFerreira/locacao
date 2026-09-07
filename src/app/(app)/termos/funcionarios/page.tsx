@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeOperar } from "@/lib/auth";
 import { listarObrasParaFiltro } from "@/lib/data/obras";
 import { precisaConferencia } from "@/lib/termo";
+import { formatarDataHora } from "@/lib/locacao";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { FuncionarioForm, type FuncionarioParaEditar } from "./funcionario-form";
+import { SincronizarPeople } from "./sincronizar-people";
 
 export const metadata = { title: "Funcionários — Loca" };
 
@@ -48,7 +50,7 @@ export default async function FuncionariosPage({
   const editarId = Array.isArray(sp.editar) ? sp.editar[0] : sp.editar;
 
   const supabase = await createClient();
-  const [{ data: funcionarios }, obras] = await Promise.all([
+  const [{ data: funcionarios }, obras, { data: sync }] = await Promise.all([
     supabase
       .from("funcionario")
       .select(
@@ -56,7 +58,20 @@ export default async function FuncionariosPage({
       )
       .order("nome"),
     listarObrasParaFiltro(),
+    // `maybeSingle`: sem linha aqui a organização não sincroniza, e o botão nem
+    // aparece. Fail-closed igual ao cron.
+    supabase
+      .from("people_sync")
+      .select("ativo, ultimo_sync_em, pessoas_recebidas, ultimo_erro")
+      .maybeSingle(),
   ]);
+
+  const people = sync as {
+    ativo: boolean;
+    ultimo_sync_em: string | null;
+    pessoas_recebidas: number;
+    ultimo_erro: string | null;
+  } | null;
 
   // Quantos endereços DEDUZIDOS ainda esperam conferência. Recalcular a
   // dedução e compará-la com o gravado é o que separa “deduzido” de
@@ -118,6 +133,17 @@ export default async function FuncionariosPage({
                 Conferir {aConferir}{" "}
                 {aConferir === 1 ? "e-mail" : "e-mails"}
               </Button>
+            ) : null}
+            {/* Só aparece quando a organização está habilitada: um botão que
+                sempre falha por falta de configuração ensina a não clicar. */}
+            {people?.ativo ? (
+              <SincronizarPeople
+                ultimoSync={
+                  people.ultimo_sync_em
+                    ? formatarDataHora(people.ultimo_sync_em)
+                    : null
+                }
+              />
             ) : null}
             <Button variant="outline" render={<Link href="/termos" />}>
               Voltar aos termos

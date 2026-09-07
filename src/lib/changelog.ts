@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.87.0";
+export const APP_VERSION = "0.88.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,19 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.88.0",
+    data: "2026-09-07",
+    titulo: "A base de pessoas passa a vir do Sistenge People",
+    mudancas: [
+      { tipo: "novo", texto: "A base de pessoas passa a vir do Sistenge People. O Loca deixa de manter cadastro próprio de funcionário e lê de lá — 483 pessoas, incluindo desligados de 2026, que entram porque podem estar com equipamento na mão." },
+      { tipo: "novo", texto: "Sincronização automática todo dia às 7h30, meia hora antes dos alertas de vencimento saírem — e um botão “Sincronizar agora” na tela de Funcionários, para quem foi contratado de manhã e recebe o notebook à tarde." },
+      { tipo: "novo", texto: "O sistema passa a distinguir afastado de desligado. São coisas diferentes para quem está com equipamento: de um se cobra a devolução hoje, do outro não." },
+      { tipo: "seguranca", texto: "A CNH continua sendo do Loca e a sincronização nunca a sobrescreve — o People não guarda esse dado. Duas travas automáticas impedem que uma alteração futura apague categoria e validade sem ninguém perceber." },
+      { tipo: "seguranca", texto: "Se o People devolver algo fora do combinado, a sincronização para inteira em vez de gravar meia verdade. Meio cadastro gravado aparece depois como termo emitido com o nome de quem recebe em branco." },
+      { tipo: "melhoria", texto: "A obra da pessoa vem do código do centro de resultado, por uma correspondência que você preenche na tela da obra. Sem correspondência, a obra fica em branco — nunca chutada." },
+    ],
+  },
   {
     versao: "0.87.0",
     data: "2026-09-07",
