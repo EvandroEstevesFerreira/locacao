@@ -7,6 +7,65 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.82.0] — 2026-09-07
+
+Conferir os e-mails deduzidos, de uma vez.
+
+### Por que esta tela existe
+
+Ela destrava uma corrente inteira, e a corrente foi medida:
+
+```
+95 peças em uso sem responsável
+  └─ exige custódia de funcionário
+       └─ exige TERMO com termo_id      ← trava do banco, migration 0059
+            └─ exige ASSINATURA
+                 └─ presencial, ou convite por link
+                      └─ exige E-MAIL CONFIRMADO
+                           └─ 0 de 97 confirmados   ← o elo que faltava
+```
+
+O importador do inventário deduziu 97 endereços no padrão
+`nome.sobrenome@sistenge.com`. A regra da 0.69.0 recusa enviar termo para
+endereço deduzido enquanto ninguém conferir — e a conferência só existia **um
+funcionário por vez**. Para 97 pessoas, 97 navegações.
+
+Medido na produção: **97 de 97** dos endereços não confirmados são deduzidos.
+**Nenhum** foi digitado à mão.
+
+### Adicionado
+
+- **Funcionários → Conferir e-mails**: nome, cargo e endereço lado a lado, uma
+  caixa por linha, uma barra de salvar grudada embaixo. Com 97 linhas, um botão
+  no fim da página obrigaria a rolar de volta.
+- O botão de entrada **só aparece quando há o que conferir**, e diz quantos são.
+  Um botão permanente que leva a uma tela vazia ensina a não clicar nele.
+
+### Decisões que valem registro
+
+- **Não existe “marcar todos”**, e é a decisão central. A regra existe para que
+  alguém *olhe* cada endereço; um botão que marca 97 de uma vez a transformaria
+  em formalidade, e o primeiro endereço errado mandaria um documento assinável
+  para fora da empresa. Por isso nome e e-mail ficam na mesma altura: conferir
+  “Elaine Silva → elaine.silva@sistenge.com” vira um movimento do olho.
+- **A tela lista só endereço DEDUZIDO.** A dedução é recalculada e comparada com
+  o gravado: se não bate, alguém digitou — e digitar já é conferir. Encher a
+  lista de linhas em que não há nada a fazer é como uma tela de conferência
+  deixa de ser conferida.
+- **A confirmação em lote só LIGA, nunca desliga.** O que não foi marcado é
+  “ainda não conferi”, não “está errado”. Desconfirmar em lote apagaria a
+  conferência de quem já tinha olhado, sem ninguém saber.
+- **Ação própria, e não 97 chamadas a `salvarFuncionario`.** Aquela grava o
+  cadastro inteiro a partir do formulário: usá-la aqui reescreveria nome, cargo,
+  matrícula e obra a partir de campos que esta tela nem mostra — e campo ausente
+  viraria nulo.
+- **Não envia nada.** Confirmar é dizer que o endereço foi lido; o convite de
+  assinatura continua sendo outro ato, com outro botão.
+
+### Sem migration
+
+Nenhuma. `email_confirmado` existe desde a 0074.
+
 ## [0.81.1] — 2026-09-06
 
 Placa e chassi no cadastro do veículo, e a contração do medidor.

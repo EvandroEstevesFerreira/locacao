@@ -1058,3 +1058,58 @@ export async function excluirRascunho(formData: FormData): Promise<ActionResult>
   revalidatePath("/termos");
   return { ok: true };
 }
+
+/**
+ * Confirma em lote os e-mails que alguém acabou de conferir na tela.
+ *
+ * POR QUE UMA AÇÃO PRÓPRIA, e não 97 chamadas a `salvarFuncionario`. Aquela
+ * grava o cadastro inteiro a partir do formulário: mandá-la 97 vezes só para
+ * virar um booleano reescreveria nome, cargo, matrícula e obra de cada pessoa a
+ * partir de campos que a tela de conferência nem mostra — e um campo ausente
+ * viraria nulo.
+ *
+ * SÓ LIGA, NUNCA DESLIGA. A tela manda os marcados; os não marcados são
+ * "ainda não conferi", e não "está errado". Desconfirmar em lote apagaria a
+ * conferência de quem já tinha olhado, e ninguém saberia que apagou.
+ *
+ * NÃO ENVIA NADA. Confirmar é dizer que o endereço foi lido por alguém que
+ * conhece a pessoa; o convite de assinatura é outro ato, com outro botão.
+ */
+export async function confirmarEmails(ids: string[]): Promise<ActionResult> {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id) return falha("Sessão inválida. Entre novamente.");
+  if (!podeOperar(perfil.papel)) {
+    return falha("Você não tem permissão para conferir e-mails.");
+  }
+
+  const limpos = [...new Set(ids.map((i) => String(i).trim()).filter(Boolean))];
+  if (limpos.length === 0) return falha("Nenhum e-mail marcado.");
+
+  const supabase = await createClient();
+  // `not("email", "is", null)` é cinto e suspensório: a tela só lista quem tem
+  // endereço, mas confirmar um e-mail nulo gravaria "conferido" sobre o nada.
+  const { data, error } = await supabase
+    .from("funcionario")
+    .update({ email_confirmado: true })
+    .in("id", limpos)
+    .not("email", "is", null)
+    .select("id");
+
+  if (error) {
+    console.error("confirmarEmails", error);
+    return falha("Não foi possível confirmar os e-mails.");
+  }
+
+  revalidatePath("/termos/funcionarios");
+  revalidatePath("/termos/funcionarios/conferir");
+
+  const n = (data ?? []).length;
+  return {
+    ok: true,
+    id: perfil.org_id,
+    aviso:
+      n < limpos.length
+        ? `${n} de ${limpos.length} confirmados — o restante não tinha endereço cadastrado.`
+        : undefined,
+  };
+}
