@@ -22,8 +22,14 @@ import { PecaEditar } from "./_components/peca-editar";
 import { PecaSituacao } from "./_components/peca-situacao";
 import { PecaReparos } from "./_components/peca-reparos";
 import { PecaApontamentos } from "./_components/peca-apontamentos";
+import { PecaCertificados } from "./_components/peca-certificados";
 import { listarApontamentosDaPeca } from "@/lib/data/apontamentos";
 import { listarObrasParaFiltro } from "@/lib/data/obras";
+import {
+  listarPendenciasDaPeca,
+  listarCertificadosDaPeca,
+} from "@/lib/data/certificados";
+import { assinarUrls } from "@/lib/data/storage";
 
 export const metadata = { title: "Peça — Loca" };
 
@@ -56,6 +62,21 @@ export default async function PecaDetalhePage({
   const [apontamentos, obrasParaApontamento] = peca.temHorimetro
     ? await Promise.all([listarApontamentosDaPeca(peca.id), listarObrasParaFiltro()])
     : [[], []];
+
+  // As exigências do TIPO desta peça, e os certificados já lançados. As duas
+  // consultas correm juntas; a de URLs assinadas espera, porque depende dos
+  // caminhos que a segunda devolve.
+  const [pendencias, certificados] = await Promise.all([
+    listarPendenciasDaPeca(peca.id),
+    listarCertificadosDaPeca(peca.id),
+  ]);
+
+  // UM lote de assinatura para todos os laudos, e não um por arquivo: uma peça
+  // com quatro exigências renovadas três vezes são doze chamadas ao Storage
+  // antes do primeiro byte de HTML.
+  const urls = Object.fromEntries(
+    await assinarUrls("certificados", certificados.map((c) => c.arquivoPath)),
+  );
 
   const hoje = hojeISOSaoPaulo();
   const linha = montarLinhaDoTempo(posses, hoje);
@@ -146,6 +167,20 @@ export default async function PecaDetalhePage({
         hoje={hojeISOSaoPaulo()}
         podeEditar={podeEditar}
       />
+
+      {/* Certificados ANTES da manutenção: reparo é histórico, certificado
+          vencido é impedimento. O que impede a máquina de operar hoje vem
+          primeiro. A seção some sozinha quando o tipo não exige nada. */}
+      {perfil?.org_id ? (
+        <PecaCertificados
+          unidadeId={peca.id}
+          orgId={perfil.org_id}
+          pendencias={pendencias}
+          certificados={certificados}
+          urls={urls}
+          podeEditar={podeMover}
+        />
+      ) : null}
 
       {/* Manutenção vem logo depois da custódia: as duas contam a vida da
           peça — com quem ela esteve e quantas vezes quebrou. */}

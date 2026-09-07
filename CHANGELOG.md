@@ -7,6 +7,56 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.76.0] — 2026-09-06
+
+Certificados do equipamento — o vencimento que é **data**, e não horímetro.
+
+### O problema
+
+O Loca já avisava revisão **por uso**: 250 h de óleo no gerador, com a leitura
+do horímetro e o selo na tela. A metade que custa multa não era essa. Inspeção
+de PTA, PMOC de ar-condicionado, teste de carga de talha e calibração de
+instrumento vencem por **calendário** — 12 meses depois da última, tenha a
+máquina trabalhado 2.000 horas ou ficado parada no pátio.
+
+### O desenho
+
+O **tipo declara** o que exige; a **peça acumula** os certificados; uma view
+cruza os dois. Cruzar é o ponto: sem a declaração no tipo, o sistema não
+distingue “não exige inspeção” de “ninguem lançou a inspeção” — e o segundo é
+o que gera interdição.
+
+### Adicionado
+
+- **Configurações → Categorias e tipos → Exigências**: sete espécies de
+  documento (inspeção periódica, PMOC, teste de carga, calibração, ART, laudo
+  elétrico, outro) com periodicidade em meses.
+- **Seção Certificados na peça**: uma linha por exigência, com validade, selo de
+  situação e histórico de emissões. Vem **antes** da manutenção: reparo é
+  histórico, certificado vencido é impedimento.
+- **“Sem certificado”** como estado próprio, mais grave que “vencido” — numa
+  exigência vencida alguém ao menos sabia que ela existia.
+- **Laudo em PDF** anexado ao certificado, em bucket próprio, com download por
+  link temporário assinado em lote.
+
+### Decisões que valem registro
+
+- **Renovar não substitui.** Cada renovação é uma linha nova, e a tabela não tem
+  unicidade por (peça, espécie): o acúmulo é o recurso.
+- **O vencimento é proposto, nunca calculado.** A validade impressa no laudo
+  manda — inspeção feita com atraso costuma valer 12 meses a partir da vistoria.
+- **O dia do vencimento ainda vale.** Marcá-lo como vencido tiraria de operação
+  uma máquina legal.
+- **Nada bloqueia.** Certificado vencido não impede locar nem mover a peça.
+  Interditar equipamento é decisão de gente, e um bloqueio automático em cima de
+  dado recém-cadastrado pararia obra por erro de digitação.
+
+### Migration
+
+- `0081_certificado_equipamento.sql` — coluna no tipo, tabela, view
+  `certificado_pendencia` (com `security_invoker = on`), bucket `certificados` e
+  o ramo do certificado em `soft_delete`.
+
 ## [0.75.0] — 2026-09-06
 
 O catálogo saiu da TI e chegou à obra.

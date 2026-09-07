@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.75.0";
+export const APP_VERSION = "0.76.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,19 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.76.0",
+    data: "2026-09-06",
+    titulo: "Certificados do equipamento",
+    mudancas: [
+      { tipo: "novo", texto: "Cada tipo de equipamento passa a declarar o que suas peças precisam ter em dia — inspeção periódica, PMOC, teste de carga, calibração, ART, laudo elétrico. Fica em Configurações → Categorias e tipos, no botão Exigências." },
+      { tipo: "novo", texto: "A tela da peça ganhou a seção Certificados: uma linha por exigência, com a validade, o selo de situação e o histórico de todas as emissões." },
+      { tipo: "novo", texto: "Exigência que nunca foi lançada aparece como “Sem certificado”, em vermelho. É o caso que interdita máquina em fiscalização — e o que um campo de data em branco jamais mostraria." },
+      { tipo: "novo", texto: "Ao renovar, o sistema propõe o vencimento a partir da periodicidade do tipo. Propõe: quem manda é a validade impressa no laudo, e ela continua editável." },
+      { tipo: "novo", texto: "O PDF do laudo fica anexado ao certificado, com download por link temporário. Renovar não apaga o anterior — a inspeção do ano passado continua lá, que é o que a fiscalização pede." },
+      { tipo: "melhoria", texto: "A seção Certificados não aparece em peça cujo tipo não exige nada. Um cartão vazio em todo notebook ensinaria a ignorar o cartão." },
+    ],
+  },
   {
     versao: "0.75.0",
     data: "2026-09-06",
