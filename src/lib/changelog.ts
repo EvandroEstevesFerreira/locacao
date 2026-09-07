@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.81.1";
+export const APP_VERSION = "0.82.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,18 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.82.0",
+    data: "2026-09-07",
+    titulo: "Conferir os e-mails deduzidos, de uma vez",
+    mudancas: [
+      { tipo: "novo", texto: "Nova tela em Funcionários → Conferir e-mails: os endereços deduzidos do nome, nome e e-mail lado a lado, com uma caixa por linha. Antes isso só existia um funcionário por vez — para 97 pessoas eram 97 navegações." },
+      { tipo: "novo", texto: "O botão de conferir só aparece quando há o que conferir, e mostra quantos são." },
+      { tipo: "melhoria", texto: "A tela lista só quem tem endereço DEDUZIDO. Quem digitou o próprio e-mail já conferiu ao digitar, e não aparece — uma lista com linhas em que não há nada a fazer é uma lista que ninguém confere." },
+      { tipo: "seguranca", texto: "Não existe “marcar todos”, de propósito. A regra existe para que alguém olhe endereço por endereço; um botão que marca 97 de uma vez a transformaria em formalidade, e o primeiro endereço errado mandaria um documento assinável para fora." },
+      { tipo: "seguranca", texto: "A confirmação em lote só LIGA, nunca desliga: o que não foi marcado é “ainda não conferi”, e não “está errado”. E não envia nada — o convite de assinatura continua sendo outro botão." },
+    ],
+  },
   {
     versao: "0.81.1",
     data: "2026-09-06",

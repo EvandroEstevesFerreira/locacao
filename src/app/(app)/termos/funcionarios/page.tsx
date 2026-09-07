@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Pencil, Users, X } from "lucide-react";
+import { Pencil, Users, X, MailCheck } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeOperar } from "@/lib/auth";
 import { listarObrasParaFiltro } from "@/lib/data/obras";
+import { emailDerivado } from "@/lib/termo";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Badge } from "@/components/ui/badge";
@@ -57,6 +58,18 @@ export default async function FuncionariosPage({
     listarObrasParaFiltro(),
   ]);
 
+  // Quantos endereços DEDUZIDOS ainda esperam conferência. Recalcular a
+  // dedução e compará-la com o gravado é o que separa “deduzido” de
+  // “digitado”: quem digitou o próprio endereço já conferiu ao digitar.
+  const aConferir = (funcionarios ?? []).filter((f) => {
+    if (!f.ativo || !f.email || f.email_confirmado) return false;
+    const derivado = emailDerivado(f.nome as string);
+    return (
+      derivado !== null &&
+      derivado.toLowerCase() === (f.email as string).toLowerCase()
+    );
+  }).length;
+
   type Linha = {
     id: string;
     nome: string;
@@ -92,9 +105,23 @@ export default async function FuncionariosPage({
         titulo="Funcionários"
         descricao="Quem recebe equipamento e assina o termo de responsabilidade"
         acoes={
-          <Button variant="outline" render={<Link href="/termos" />}>
-            Voltar aos termos
-          </Button>
+          <>
+            {/* Só aparece quando há o que conferir: um botão permanente que leva
+                a uma tela vazia ensina a não clicar nele. */}
+            {aConferir > 0 ? (
+              <Button
+                variant="outline"
+                render={<Link href="/termos/funcionarios/conferir" />}
+              >
+                <MailCheck className="size-4" aria-hidden />
+                Conferir {aConferir}{" "}
+                {aConferir === 1 ? "e-mail" : "e-mails"}
+              </Button>
+            ) : null}
+            <Button variant="outline" render={<Link href="/termos" />}>
+              Voltar aos termos
+            </Button>
+          </>
         }
       />
 
