@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.82.1";
+export const APP_VERSION = "0.82.2";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,16 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.82.2",
+    data: "2026-09-07",
+    titulo: "Faxina de segurança nas funções do banco",
+    mudancas: [
+      { tipo: "seguranca", texto: "As funções que excluem devolução, recebimento e ordem de reparo não são mais alcançáveis por quem não está autenticado. Não havia brecha — as três já recusavam sem sessão —, mas função com privilégio elevado não deve ficar exposta a quem não entrou." },
+      { tipo: "seguranca", texto: "Cinco funções internas de gatilho saíram da interface pública do banco. Elas nunca puderam ser chamadas de fora, mas apareciam no relatório de segurança — e um relatório cheio de apontamentos inócuos é um relatório que ninguém lê no dia em que aparecer um de verdade." },
+      { tipo: "melhoria", texto: "Ficou escrito nas próprias migrations quais funções NÃO devem ser mexidas e por quê: tirar o acesso de “current_org_id” quebraria 136 regras de permissão e derrubaria a assinatura de termo pelo celular." },
+    ],
+  },
   {
     versao: "0.82.1",
     data: "2026-09-07",

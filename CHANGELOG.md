@@ -7,6 +7,95 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.82.2] — 2026-09-07
+
+Faxina de segurança nas funções do banco.
+
+### De onde veio
+
+Uma auditoria de segurança rodada depois das nove migrations do dia. O linter
+do Supabase aponta **22 funções `security definer` que o papel `anon` pode
+executar** via `/rest/v1/rpc/...`.
+
+Três delas são irmãs do `soft_delete` e repetem o caso que a migration 0042 já
+tinha resolvido para ele — nasceram depois e não receberam o mesmo tratamento:
+`soft_delete_devolucao`, `soft_delete_recebimento` e
+`soft_delete_reparo_equipamento`.
+
+**Não era vulnerabilidade.** As três exigem sessão, recusam com “Sessão
+inválida” sem JWT e conferem o papel antes de tocar em qualquer linha —
+verificado no corpo de cada uma. Uma chamada anônima não fazia nada. Mas função
+com privilégio elevado não deve ficar exposta a quem não entrou, e foi essa a
+palavra da 0042.
+
+### Por que só três, e não as 22
+
+Porque revogar as outras quebraria o sistema. Medido nas policies desta base:
+
+| Função | Usada em policies |
+|---|---|
+| `current_org_id` | **136** |
+| `pode_operar` | 43 |
+| `is_member_of_obra` | 25 |
+| `pode_gerir_cadastros` | 24 |
+| … e mais oito | 1 a 23 |
+
+Policy roda com os privilégios de **quem consulta**. Tirar o `EXECUTE` do `anon`
+faria toda policy que chama `current_org_id()` estourar em requisição anônima —
+e há uma página pública neste sistema: `/assinar/[token]`, onde o funcionário
+assina o termo pelo celular com a chave anônima. “Resolver o aviso” custaria a
+assinatura à distância inteira.
+
+Outras seis são funções de **trigger**: devolvem `trigger`, o PostgREST não as
+expõe, e não há como chamá-las por RPC. E `termo_do_link`,
+`conferir_cpf_do_link` e `assinar_termo_por_link` ficam acessíveis ao `anon`
+**de propósito** — são a página de assinatura.
+
+O raciocínio está escrito dentro da migration, porque o linter vai continuar
+apontando as 19 e a tentação de “limpar o aviso” volta a cada auditoria.
+
+### Um erro no caminho
+
+A primeira versão revogava só `from anon`, e **não tirou nada**: o Postgres
+concede `EXECUTE` de toda função ao papel `PUBLIC` por padrão, e o `anon` herda
+dali. É por isso que a 0041 e a 0042 precisaram ser duas migrations. A
+conferência no fim do próprio arquivo pegou — abortou com “3 função(ões)
+continuam executáveis pelo anon”.
+
+### E a passagem de higiene que a 0.45.x deixou marcada
+
+O changelog da 0.45.x (01/09) termina assim: *“as outras quatro funções de
+trigger do projeto têm o mesmo apontamento (…) e ficam para uma passagem própria
+de higiene.”* É esta — e hoje são **cinco**, porque `sincronizar_situacao_peca`
+nasceu depois.
+
+São funções que devolvem `trigger` e **nunca puderam ser chamadas por RPC**:
+quem tentasse receberia *“trigger functions can only be called as triggers”*.
+Não havia brecha. Mas cinco apontamentos permanentes e inócuos num relatório de
+segurança são cinco linhas que ninguém lê — e o dia em que aparecer um
+apontamento de verdade, ele vai estar no meio delas.
+
+O padrão já estava provado nesta base: três funções de trigger já haviam sido
+fechadas, com os triggers seguindo ativos. O Postgres confere o `EXECUTE` ao
+**criar** o trigger, não a cada disparo.
+
+Depois: **0 funções de trigger expostas** (eram 5) e **84 triggers ativos**
+intactos. As 17 `security definer` que continuam alcançáveis pelo `anon` são
+exatamente as que precisam: 14 helpers de RLS e as 3 da página de assinatura.
+
+### Migration
+
+- `0089_revoke_anon_soft_delete_irmaos.sql` — revoga de `public, anon`, garante
+  `authenticated`, e **aborta nos dois sentidos**: se alguma seguir aberta ao
+  anônimo, ou se alguma tiver ficado inacessível a quem opera. O segundo erro
+  seria pior: ninguém mais conseguiria excluir uma devolução, e o motivo não
+  apareceria em lugar nenhum.
+- `0090_higiene_funcoes_de_trigger.sql` — as cinco de gatilho, com a conferência
+  em duas metades: fechadas **e** ainda disparando. Fechar sem conferir os
+  triggers seria trocar um apontamento de linter por uma numeração de documento
+  que parou de acontecer — e ninguém descobriria até o próximo recebimento
+  nascer sem número.
+
 ## [0.82.1] — 2026-09-07
 
 Conferir os e-mails deduzidos, de uma vez.
