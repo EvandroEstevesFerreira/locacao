@@ -67,7 +67,7 @@ Medido na produção: **97 de 97** dos endereços não confirmados são deduzido
 - **A regra nasceu duplicada.** O contador do botão e o filtro da tela faziam a
   mesma comparação em dois arquivos. Duas cópias divergem na primeira correção,
   e a divergência aqui apareceria como um botão dizendo “conferir 97” abrindo
-  uma tela com 94 linhas. Agora é  em ,
+  uma tela com 94 linhas. Agora é `precisaConferencia()` em `src/lib/termo.ts`,
   com 9 testes — incluindo acento no nome, caixa diferente e nome do meio.
 
 ### Sem migration
