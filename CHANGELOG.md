@@ -7,6 +7,118 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.88.0] — 2026-09-07
+
+A base de pessoas passa a vir do Sistenge People — **fase 1: o consumidor**.
+
+Spec: `docs/superpowers/specs/2026-09-07-integracao-people-design.md`. O
+contrato da API é do People e fica **fora do git**, porque traz nomes de
+pessoas reais.
+
+### Por que
+
+`funcionario` tem 118 linhas digitadas à mão, com **zero CPF, zero matrícula e
+zero CNH**. O People é a fonte da verdade de pessoa na Sistenge, e tem 483 no
+recorte acordado: 265 ativos, 8 afastados e 210 desligados de 2026.
+
+Desligado entra porque **pode estar com equipamento na mão** — e hoje o Loca
+não tem como fazer essa pergunta.
+
+### As três decisões
+
+**A chave é `people_id`, nunca CPF nem matrícula.** No People, 23 pessoas não
+têm CPF e 5 carregam matrícula gerada por bug de import. Chave que falta em 28
+linhas não é chave. O índice único é **por organização**, e não global.
+
+**A obra vem por de-para explícito.** Coluna `codigo_people` em `obra`, 8
+linhas, preenchida por quem conhece as obras. Sem correspondência, `obra_id`
+fica **nulo** — chutar por semelhança de nome colocaria equipamento na obra
+errada, e o erro só apareceria numa cobrança.
+
+**Diária às 7h30, mais um botão.** Meia hora antes do cron de vencimentos, para
+os alertas das 8h saírem com a base fresca. O botão existe porque contratar de
+manhã e entregar o notebook à tarde é caso real.
+
+### A CNH é do Loca, e a sincronização nunca a toca
+
+O People **não guarda CNH** — não existe coluna para categoria nem validade em
+tabela nenhuma lá. As três colunas da 0086 são o único dado de pessoa que
+continua sendo do Loca.
+
+É a regra mais fácil de quebrar por descuido: um `upsert` montado a partir da
+pessoa inteira zeraria as três em silêncio, e ninguém ligaria uma coisa à outra
+quando, meses depois, perguntassem quem pode dirigir o caminhão.
+
+Duas travas: o tipo da linha é **fechado** (o TypeScript recusa) e uma varredura
+reprova qualquer menção às três colunas em código da integração. A varredura foi
+conferida **reintroduzindo o defeito de propósito** — ela reprovou.
+
+### O e-mail do People manda, inclusive quando é nulo
+
+Só **194 das 483** têm e-mail corporativo. O Loca tem 97 endereços **deduzidos**
+de `nome.sobrenome@sistenge.com`, todos com `email_confirmado = false` —
+palpites que ninguém conferiu. Palpite não confirmado perde para o silêncio de
+quem é fonte da verdade.
+
+Isso **não bloqueia termo nenhum**: a assinatura na tela sempre foi o caminho
+padrão do wizard e não depende de e-mail. O e-mail é o atalho para quem está
+longe.
+
+### Afastado não é desligado
+
+A situação vai crua em `situacao_people` **e** mapeada em `ativo`. Colapsar os
+três num booleano perderia a distinção que mais importa para quem está com
+equipamento: de quem se cobra a devolução hoje. Afastado volta; desligado não.
+
+### O que a rede entrega é `unknown` até alguém olhar
+
+O contrato está fechado, mas um deploy do People com campo renomeado escreveria
+`undefined` em 483 linhas — e o estrago só apareceria com o nome de quem recebe
+o termo em branco. A resposta é validada em zod e a rodada morre inteira em vez
+de gravar meia verdade.
+
+**O cursor só avança se tudo gravou.** Salvá-lo antes deixaria a janela para trás
+em definitivo: a rodada seguinte pediria só o que mudou depois dela, e ninguém
+jamais saberia que faltaram pessoas. Falhar e repetir a janela é barato;
+perdê-la é silencioso.
+
+Idempotência: o People falha deliberadamente para o lado de **repetir**, nunca
+de perder, e a mesma pessoa pode chegar duas vezes. Toda escrita é `upsert`, e
+as repetidas do mesmo lote são reduzidas antes — senão o Postgres recusaria o
+comando inteiro com *“ON CONFLICT DO UPDATE command cannot affect row a second
+time”*.
+
+### Onde mora a configuração
+
+Mesmo desenho dos quatro crons que já existiam: **tabela por organização,
+segredo no ambiente**. `PEOPLE_API_URL` e `PEOPLE_API_TOKEN` no ambiente; o
+token nunca entra no banco nem na query string. **Sem linha em `people_sync`,
+não há sincronização** — fail-closed.
+
+O escritor recebe o `supabase` de quem chama: o cron passa o client admin (roda
+sem sessão), e o botão passa o do usuário, que atravessa as policies. A
+varredura de client admin pegou a rota nova e a exceção foi declarada nomeando
+**só `people_sync`** — se alguém escrever `funcionario` direto lá, ela reclama.
+
+### Migrations
+
+- `0094_integracao_people.sql` — `people_id`, `situacao_people` e
+  `sincronizado_em` em `funcionario`; `codigo_people` em `obra`; a tabela
+  `people_sync` com RLS. Aborta se as três colunas de CNH tiverem sumido.
+
+### O que ainda não está pronto
+
+**Fase 2 — conciliar as 118 linhas de hoje.** O cruzamento por nome casa 75 de
+forma inequívoca; **43 (36%) precisam de decisão humana**, entre elas 6 ambíguas
+e 36 sem nenhum candidato. Os nomes do Loca estão abreviados contra o nome
+completo do People, e a heurística quebra no nome do meio. Não é automatizável,
+e não deve fingir que é.
+
+**Fase 3 — a limpeza**, depois da 2.
+
+Os endpoints do People ainda não respondem. O consumidor foi escrito contra o
+contrato e verificado com fixtures copiadas dele.
+
 ## [0.87.0] — 2026-09-07
 
 O termo que nasce na peça já sabe qual é a peça.
