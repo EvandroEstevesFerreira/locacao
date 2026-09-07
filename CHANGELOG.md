@@ -7,6 +7,70 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.89.0] — 2026-09-07
+
+Conciliar os funcionários com o Sistenge People — **fase 2**.
+
+### A ordem importa, e é contraintuitiva
+
+**Conciliar vem ANTES de ligar a sincronização.** As 118 linhas de hoje têm
+`people_id` nulo, e o `upsert` casa por `people_id`: sincronizar antes criaria
+uma linha nova para cada pessoa que já está cadastrada, e as duas apareceriam
+lado a lado na hora de emitir um termo.
+
+Vinculada, a linha é **encontrada** pelo upsert e atualizada. Por isso o vínculo
+grava só o `people_id` — nome completo, CPF, cargo e obra chegam sozinhos na
+primeira sincronização.
+
+A tela de Funcionários agora diz quantos faltam, e o botão de conciliar vem
+antes do de sincronizar.
+
+### O cruzamento por subsequência
+
+Os nomes do Loca estão abreviados (“Evandro Ferreira”) contra o nome completo do
+People (“Evandro Esteves Ferreira”), e a tabela não tem CPF nem matrícula para
+comparar.
+
+O documento do People mediu o cruzamento por **primeiro + último nome**: 75
+inequívocos, 6 ambíguos, 36 sem candidato, 1 de uma palavra só. Aquela regra
+quebra no nome do meio — “Andre Piva” virava a chave “andre correa” contra
+“Andre Piva Correa” e não casava.
+
+Aqui a comparação é por **subsequência na ordem**: “andre piva” cabe dentro de
+“andre piva correa”. Partículas (`de`, `da`, `dos`) saem, porque “João da Silva”
+e “João Silva” são a mesma pessoa. A **ordem é respeitada**: “Silva Joao” não
+casa com “Joao Silva”, porque nome invertido é outro registro, não um apelido.
+
+### O que sai do automático
+
+- **Ambíguos** — dois ou mais candidatos. A tela mostra todos, com situação,
+  cargo e matrícula, que é o que desempata.
+- **Nome de uma palavra** (“Lourival”) — mesmo casando com um único cadastro,
+  um primeiro nome sozinho não identifica ninguém numa base de 483.
+- **Duas linhas do Loca apontando para a MESMA pessoa** — o documento avisa de
+  três pares duplicados. Vincular as duas criaria dois vínculos para uma pessoa
+  só; uma delas é duplicata e precisa ser resolvida antes.
+
+Para linha que nunca foi pessoa — há uma “Adm Obra” —, há **“Não é pessoa —
+desativar”**. `funcionario` não tem `deleted_at` de propósito, porque o vínculo
+com os termos antigos precisa sobreviver; desativar é reversível pela edição.
+
+### O lote é calculado no servidor
+
+A tela mostra os pares que vão ser criados, mas **não é ela que os manda**.
+Aceitar uma lista vinda do cliente deixaria qualquer um enviar os vínculos que
+quisesse — e vínculo errado gruda o histórico de equipamento de uma pessoa no
+cadastro de outra. O servidor recalcula antes de gravar.
+
+Os vínculos são gravados **um a um**, e não em lote: se um esbarrar no índice
+único, os outros ainda valem.
+
+### Sem tabela de apoio
+
+As 483 pessoas são lidas ao vivo, em cinco páginas. Esta tela é usada um punhado
+de vezes na vida do sistema — uma tabela de staging seria estrutura permanente
+para um trabalho que acaba.
+
 ## [0.88.0] — 2026-09-07
 
 A base de pessoas passa a vir do Sistenge People — **fase 1: o consumidor**.
