@@ -265,6 +265,31 @@
   }
 }
 
+/* ── Lista suspensa do <select> nativo ─────────────────────────────────
+   O popup do select não é alcançável por classe do Tailwind: Chrome e Edge o
+   pintam a partir do background-color do próprio <select>, e o nosso é
+   translúcido (`bg-transparent` + `dark:bg-input/30`, para casar com o Input).
+   No tema escuro o composite dessa translucidez com o fundo do sistema devolve
+   um cinza-azulado que não pertence à paleta, e a opção selecionada quase não
+   se distingue das demais.
+
+   Fixar `option`/`optgroup` nos tokens de popover põe a lista na mesma
+   superfície dos outros menus do app. Vale para todo <select> nativo, não só o
+   `ui/native-select` — o de /termos/funcionarios ainda é uma tag crua.
+
+   `option:checked` usa o shorthand `background` de propósito: o UA do Chrome
+   marca o item selecionado com um `background-image` em gradiente, e só o
+   shorthand o zera. */
+select option,
+select optgroup {
+  background-color: var(--popover);
+  color: var(--popover-foreground);
+}
+select option:checked {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
 /* ── Tabelas: números alinhados em colunas ─────────────────────────── */
 table tbody td.font-mono,
 table tbody td .font-mono {

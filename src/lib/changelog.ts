@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.78.0";
+export const APP_VERSION = "0.79.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,21 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.79.0",
+    data: "2026-09-06",
+    titulo: "A revisão preventiva zera a contagem",
+    mudancas: [
+      { tipo: "novo", texto: "A leitura do horímetro ganhou a caixa “Revisão preventiva feita nesta leitura”. Marcar ali reinicia a contagem para a próxima — e a leitura marcada aparece com um selo Revisão no histórico da peça." },
+      { tipo: "novo", texto: "A revisão é marcada na leitura, e não numa ordem de reparo. Troca de óleo preventiva quase nunca abre ordem: quem revisa já lança o horímetro do dia, e marcar uma caixa nessa leitura é o menor esforço possível." },
+      { tipo: "correcao", texto: "A contagem para a próxima revisão nunca recomeçava. Um gerador de intervalo 250 h com o horímetro em 1.200 aparecia como “revisão vencida em 950 h” — e continuava assim depois de revisado, e da revisão seguinte. Um alarme que grita sempre é um alarme que ninguém lê." },
+      { tipo: "correcao", texto: "Máquina cadastrada com horímetro já rodado não nasce mais vencida. Toda peça usada que a planilha de coleta trouxer entraria no sistema em vermelho no primeiro dia." },
+      { tipo: "melhoria", texto: "Trocar o horímetro não atrapalha a conta: o que vale são as horas rodadas desde a revisão, não o número do mostrador. O mostrador novo começa em zero, e isso deixou de ser um caso especial." },
+      { tipo: "correcao", texto: "A peça sem nenhuma leitura dizia “sem intervalo definido” mesmo com o intervalo preenchido no tipo. O sistema mandava procurar um campo que já estava certo; agora ele diz o que de fato falta, que é a leitura." },
+      { tipo: "melhoria", texto: "No relatório de uso, o estado da revisão é sobre a máquina hoje. Filtrar por mês não faz mais uma escavadeira revisada em janeiro parecer que nunca foi revisada." },
+      { tipo: "correcao", texto: "No tema escuro, a lista que abre ao clicar num filtro vinha com um cinza-azulado que não é do sistema, e a opção marcada quase não se distinguia das outras. Agora ela usa a mesma superfície dos demais menus." },
+    ],
+  },
   {
     versao: "0.78.0",
     data: "2026-09-06",

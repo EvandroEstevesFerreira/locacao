@@ -7,6 +7,68 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.79.0] — 2026-09-06
+
+A revisão preventiva zera a contagem.
+
+### O defeito, medido
+
+`horasAteRevisao(leituraAtual, intervalo, leituraUltimaRevisao)` foi escrita
+certa e testada — e os **dois** lugares que a chamavam passavam `0` no terceiro
+argumento, porque não havia de onde tirar o número. Com zero, a conta virava
+`intervalo - leituraAtual`: um gerador de intervalo 250 h com o horímetro em
+1.200 aparecia como “revisão vencida em 950 h”, e continuava assim depois da
+revisão, e da seguinte. Pior, toda máquina usada vinda da planilha de coleta
+nasceria em vermelho.
+
+### A correção não é guardar a leitura da revisão — é contar horas
+
+Guardar “revisou na leitura 1.000” quebra na troca de horímetro: o mostrador
+novo começa em zero e 1.000 vira número de outra escala. A coluna `horas` já
+existe, já é calculada pelo trigger da 0071 e já trata a troca (período com
+`reiniciado` conta zero). Faltava só a **marca**: em qual apontamento a revisão
+foi feita — daí a coluna `revisao` da migration 0084, que espelha `reiniciado`
+por ser um fato sobre *aquela leitura*, não sobre a peça.
+
+A marca vai no apontamento e não em `reparo_equipamento`: troca de óleo
+preventiva quase nunca abre OS, e amarrá-la à ordem de reparo faria o sistema
+enxergar só a manutenção que já deu problema — justamente a que a preventiva
+existe para evitar.
+
+### Adicionado
+
+- Caixa “Revisão preventiva feita nesta leitura” no formulário de apontamento,
+  e selo `Revisão` na linha correspondente do histórico da peça.
+- `apontamento_uso.revisao` (migration 0084), com índice parcial
+  `(unidade_id, data desc) where revisao` para a pergunta “qual foi a última
+  revisão desta peça”, feita por linha na tela e no relatório.
+
+### Corrigido
+
+- A contagem para a próxima revisão agora recomeça na revisão marcada.
+- `sem_leitura` deixou de se disfarçar de `sem_intervalo`: a peça recém-cadastrada
+  com 250 h definidas no tipo dizia “sem intervalo definido”, mandando a pessoa
+  conferir um campo já preenchido.
+- O popup do `<select>` nativo não é alcançável por classe: Chrome e Edge o
+  pintam a partir do `background-color` do próprio `<select>`, que é
+  translúcido (`bg-transparent` + `dark:bg-input/30`, para casar com o Input).
+  No tema escuro o composite dessa translucidez devolvia um cinza-azulado fora
+  da paleta, e a opção marcada quase não se distinguia das demais. `option` e
+  `optgroup` passam a usar os tokens `--popover`, e `option:checked` usa
+  `--accent` — pelo shorthand `background`, porque o UA do Chrome marca o item
+  selecionado com um `background-image` em gradiente que só o shorthand zera.
+  Vale para todo `<select>` nativo do app, inclusive o de
+  `/termos/funcionarios`, que ainda é uma tag crua.
+
+### Alterado
+
+- O relatório de uso acumula a contagem no laço em vez de chamar
+  `horasDesdeRevisao` — aquela consulta já vem em ordem crescente, e zerar na
+  revisão é a mesma conta sem guardar o histórico de cada peça em memória. E
+  ignora o filtro de período de propósito: o estado da revisão é sobre a
+  máquina **hoje**, e recortar por mês diria que uma escavadeira revisada em
+  janeiro nunca foi revisada.
+
 ## [0.78.0] — 2026-09-06
 
 O item não conta mais em dois lugares.
