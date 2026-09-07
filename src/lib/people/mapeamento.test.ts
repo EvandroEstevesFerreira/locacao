@@ -10,6 +10,8 @@ import {
   precisaVarreduraCompleta,
   ausentesNaVarredura,
   resolverColisoes,
+  chavesALiberar,
+  type ChaveLocal,
 } from "./mapeamento";
 
 const ORG = "aaaaaaaa-1111-4222-8333-444444444444";
@@ -378,5 +380,60 @@ describe("resolverColisoes", () => {
     expect(resolverColisoes(entrada).map((p) => p.id)).toEqual(
       entrada.map((p) => p.id),
     );
+  });
+});
+
+describe("chavesALiberar", () => {
+  const local = (o: Partial<ChaveLocal>): ChaveLocal => ({
+    id: "f1", people_id: null, email: null, cpf: null, ...o,
+  });
+
+  it("libera o e-mail que outra linha segura", () => {
+    // O caso real: endereço deduzido antes da integração, numa linha ainda não
+    // conciliada, enquanto o People manda o mesmo para o dono verdadeiro.
+    const r = chavesALiberar(
+      [local({ id: "f1", email: "alex.felipe@sistenge.com" })],
+      [{ people_id: "p1", email: "alex.felipe@sistenge.com", cpf: null }],
+    );
+    expect(r.email).toEqual(["f1"]);
+    expect(r.cpf).toEqual([]);
+  });
+
+  it("NÃO mexe na linha já vinculada à mesma pessoa", () => {
+    // Ali o e-mail é dela mesma, e o upsert simplesmente o reescreve.
+    const r = chavesALiberar(
+      [local({ id: "f1", people_id: "p1", email: "x@sistenge.com" })],
+      [{ people_id: "p1", email: "x@sistenge.com", cpf: null }],
+    );
+    expect(r.email).toEqual([]);
+  });
+
+  it("compara e-mail sem caixa, como o índice único faz", () => {
+    const r = chavesALiberar(
+      [local({ id: "f1", email: "Alex.Felipe@Sistenge.com" })],
+      [{ people_id: "p1", email: "alex.felipe@sistenge.com", cpf: null }],
+    );
+    expect(r.email).toEqual(["f1"]);
+  });
+
+  it("libera CPF pela mesma regra", () => {
+    const r = chavesALiberar(
+      [local({ id: "f1", cpf: "12345678901" })],
+      [{ people_id: "p1", email: null, cpf: "12345678901" }],
+    );
+    expect(r.cpf).toEqual(["f1"]);
+  });
+
+  it("chave que ninguém do lote reclama fica onde está", () => {
+    const r = chavesALiberar(
+      [local({ id: "f1", email: "outro@sistenge.com", cpf: "99999999999" })],
+      [{ people_id: "p1", email: "alguem@sistenge.com", cpf: "11111111111" }],
+    );
+    expect(r).toEqual({ email: [], cpf: [] });
+  });
+
+  it("lote vazio não libera nada", () => {
+    const r = chavesALiberar([local({ id: "f1", email: "x@y.com" })], []);
+    expect(r).toEqual({ email: [], cpf: [] });
   });
 });

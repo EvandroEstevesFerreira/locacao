@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.90.1";
+export const APP_VERSION = "0.90.2";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,15 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.90.2",
+    data: "2026-09-07",
+    titulo: "O e-mail deduzido que bloqueava o dono verdadeiro",
+    mudancas: [
+      { tipo: "correcao", texto: "Um endereço de e-mail deduzido antes da integração, parado numa linha ainda não conciliada, derrubava a sincronização inteira — porque o dono verdadeiro daquele endereço vinha na mesma rodada." },
+      { tipo: "seguranca", texto: "Quando o People diz que um e-mail é de uma pessoa, nenhuma outra linha do Loca continua segurando aquele endereço. E-mail corporativo não é compartilhado, e mantê-lo faria o termo de uma pessoa chegar na caixa de outra." },
+    ],
+  },
   {
     versao: "0.90.1",
     data: "2026-09-07",

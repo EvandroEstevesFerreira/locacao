@@ -9,6 +9,9 @@ import {
   semRepetidas,
   ausentesNaVarredura,
   resolverColisoes,
+  chavesALiberar,
+  type ChaveLocal,
+  type LinhaFuncionario,
 } from "./mapeamento";
 
 /**
@@ -112,6 +115,12 @@ export async function sincronizarPessoas(
     // índice único de CPF do Loca.
     const semColisao = resolverColisoes(unicas);
     const linhas = semColisao.map((p) => mapearPessoa(p, orgId, dePara, agoraISO));
+
+    // LIBERA AS CHAVES QUE OUTRAS LINHAS SEGURAM, antes de gravar. Um e-mail
+    // deduzido antes da integração, sentado numa linha ainda não conciliada,
+    // derruba o lote inteiro no índice único — e o dono verdadeiro daquele
+    // endereço está justamente neste lote.
+    await liberarChaves(supabase, orgId, linhas);
 
     let gravadas = 0;
     for (let i = 0; i < linhas.length; i += LOTE) {
@@ -245,4 +254,43 @@ async function marcarAusentes(
   }
 
   return sumidos.length;
+}
+
+/**
+ * Solta e-mail e CPF que linhas locais seguram e que o People atribui a outra
+ * pessoa.
+ *
+ * Roda ANTES do upsert, e sobre o lote inteiro — não por fatia. Liberar dentro
+ * do laço deixaria a fatia seguinte esbarrando numa chave que a anterior ainda
+ * não soltou.
+ */
+async function liberarChaves(
+  supabase: SupabaseClient,
+  orgId: string,
+  linhas: LinhaFuncionario[],
+) {
+  const { data, error } = await supabase
+    .from("funcionario")
+    .select("id, people_id, email, cpf")
+    .eq("org_id", orgId);
+
+  if (error) return;
+
+  const { email, cpf } = chavesALiberar(
+    (data ?? []) as ChaveLocal[],
+    linhas.map((l) => ({ people_id: l.people_id, email: l.email, cpf: l.cpf })),
+  );
+
+  if (email.length > 0) {
+    // `email_confirmado` volta a falso junto: o que sobra na linha é a ausência
+    // de endereço, e "confirmado" sem endereço é um estado que não quer dizer
+    // nada.
+    await supabase
+      .from("funcionario")
+      .update({ email: null, email_confirmado: false })
+      .in("id", email);
+  }
+  if (cpf.length > 0) {
+    await supabase.from("funcionario").update({ cpf: null }).in("id", cpf);
+  }
 }
