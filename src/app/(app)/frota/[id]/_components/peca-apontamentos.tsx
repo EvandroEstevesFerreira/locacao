@@ -12,7 +12,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Gauge, Plus, X, RotateCcw } from "lucide-react";
+import { Gauge, Plus, X, RotateCcw, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { formatarData } from "@/lib/locacao";
 import type { ApontamentoLinha } from "@/lib/data/apontamentos";
@@ -86,6 +86,12 @@ export function PecaApontamentos({
                   {a.leitura.toLocaleString("pt-BR")} h
                 </span>
                 <span className="min-w-0 flex-1 text-muted-foreground">
+                  {a.revisao ? (
+                    <Badge variant="outline" className="mr-2 gap-1">
+                      <Wrench className="size-3" aria-hidden />
+                      Revisão
+                    </Badge>
+                  ) : null}
                   {a.reiniciado ? (
                     <Badge variant="secondary" className="gap-1">
                       <RotateCcw className="size-3" aria-hidden />
@@ -162,6 +168,7 @@ function ApontamentoForm({
   const router = useRouter();
   const [erro, setErro] = useState<string | null>(null);
   const [reiniciado, setReiniciado] = useState(false);
+  const [revisao, setRevisao] = useState(false);
   const [pendente, startTransition] = useTransition();
 
   function enviar(evento: React.FormEvent<HTMLFormElement>) {
@@ -174,6 +181,7 @@ function ApontamentoForm({
         data: String(fd.get("data") ?? ""),
         leitura: String(fd.get("leitura") ?? ""),
         reiniciado,
+        revisao,
         observacoes: String(fd.get("observacoes") ?? ""),
       });
       if (!r.ok) {
@@ -261,6 +269,27 @@ function ApontamentoForm({
           <span className="block text-xs text-muted-foreground">
             Marque quando o mostrador voltou a zero. Sem isso, uma leitura menor
             que a anterior é recusada — o horímetro não anda para trás.
+          </span>
+        </span>
+      </label>
+
+      {/* A revisão mora na LEITURA, e não numa tela própria, porque quem troca o
+          óleo já lê o horímetro: marcar uma caixa na leitura que ele ia lançar de
+          qualquer jeito é o menor atrito possível — e sem essa marca a contagem
+          para a próxima revisão nunca recomeça. */}
+      <label className="flex items-start gap-2 text-sm sm:col-span-2">
+        <input
+          type="checkbox"
+          className="mt-0.5 size-4"
+          checked={revisao}
+          disabled={pendente}
+          onChange={(e) => setRevisao(e.target.checked)}
+        />
+        <span>
+          Revisão preventiva feita nesta leitura
+          <span className="block text-xs text-muted-foreground">
+            Zera a contagem para a próxima. Marque na leitura do dia em que a
+            máquina foi revisada, mesmo que não tenha aberto ordem de reparo.
           </span>
         </span>
       </label>

@@ -392,7 +392,7 @@ export async function usoEquipamento(
 
   const { data: aps, error: erroAps } = await supabase
     .from("apontamento_uso")
-    .select("unidade_id, data, leitura, horas")
+    .select("unidade_id, data, leitura, horas, revisao")
     .in(
       "unidade_id",
       (pecas ?? []).map((p: Bruta) => p.id),
@@ -401,7 +401,23 @@ export async function usoEquipamento(
 
   if (erroAps) throw erroAps;
 
-  type Acc = { primeira: string; ultima: string; leitura: number; horas: number };
+  type Acc = {
+    primeira: string;
+    ultima: string;
+    leitura: number;
+    horas: number;
+    /**
+     * Horas desde a última revisão. Acumulada AQUI e não por
+     * `horasDesdeRevisao`, porque esta consulta vem em ordem CRESCENTE: dando
+     * um passo por vez para a frente, zerar na revisão é a mesma conta e não
+     * exige guardar o histórico inteiro de cada peça em memória.
+     *
+     * Ignora o filtro de período do relatório de propósito: o estado da revisão
+     * é sobre a máquina HOJE, e recortar por mês diria que uma escavadeira
+     * revisada em janeiro nunca foi revisada.
+     */
+    desdeRevisao: number;
+  };
   const porPeca = new Map<string, Acc>();
 
   for (const a of (aps ?? []) as Bruta[]) {
@@ -419,6 +435,7 @@ export async function usoEquipamento(
       ultima: quando,
       leitura: Number(a.leitura),
       horas: 0,
+      desdeRevisao: 0,
     };
     if (quando < atual.primeira) atual.primeira = quando;
     // A consulta vem ordenada por data crescente, então a última que passa
@@ -428,6 +445,9 @@ export async function usoEquipamento(
       atual.leitura = Number(a.leitura);
     }
     if (dentro) atual.horas += Number(a.horas);
+    // A revisão zera: as horas daquele período foram trabalhadas ANTES dela.
+    if (a.revisao) atual.desdeRevisao = 0;
+    else atual.desdeRevisao += Number(a.horas);
     porPeca.set(chave, atual);
   }
 
@@ -444,7 +464,7 @@ export async function usoEquipamento(
       | null;
     const acc = porPeca.get(String(p.id)) ?? null;
     const intervalo = tipo?.intervalo_manutencao_h ?? null;
-    const faltam = horasAteRevisao(acc?.leitura ?? null, intervalo, 0);
+    const faltam = horasAteRevisao(acc?.desdeRevisao ?? null, intervalo);
 
     return {
       peca: p.identificador as string,

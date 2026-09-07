@@ -1,7 +1,12 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
-import { horasAteRevisao, estadoRevisao, type EstadoRevisao } from "@/lib/apontamento";
+import {
+  horasAteRevisao,
+  horasDesdeRevisao,
+  estadoRevisao,
+  type EstadoRevisao,
+} from "@/lib/apontamento";
 
 // Leituras do apontamento de uso.
 //
@@ -21,6 +26,7 @@ export type ApontamentoLinha = {
   leitura: number;
   horas: number;
   reiniciado: boolean;
+  revisao: boolean;
   observacoes: string | null;
   obra: string | null;
 };
@@ -32,7 +38,7 @@ export async function listarApontamentosDaPeca(
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("apontamento_uso")
-    .select("id, data, leitura, horas, reiniciado, observacoes, obra:obra_id(codigo, nome)")
+    .select("id, data, leitura, horas, reiniciado, revisao, observacoes, obra:obra_id(codigo, nome)")
     .eq("unidade_id", unidadeId)
     .order("data", { ascending: false });
 
@@ -49,6 +55,7 @@ export async function listarApontamentosDaPeca(
       leitura: Number(a.leitura),
       horas: Number(a.horas),
       reiniciado: a.reiniciado,
+      revisao: a.revisao,
       observacoes: a.observacoes,
       obra: o ? `${o.codigo} — ${o.nome}` : null,
     };
@@ -64,8 +71,8 @@ export type UsoDaPeca = {
   ultimaData: string | null;
   /** Intervalo de manutenção do TIPO, em horas. `null` = tipo sem intervalo. */
   intervalo: number | null;
-  /** Leitura em que a última revisão foi feita — vem da ordem de reparo. */
-  leituraUltimaRevisao: number;
+  /** Horas rodadas desde a última revisão. `null` = peça nunca apontada. */
+  horasDesdeRevisao: number | null;
   faltamHoras: number | null;
   estado: EstadoRevisao;
 };
@@ -105,7 +112,10 @@ export async function listarUsoDasPecas(): Promise<UsoDaPeca[]> {
   // dezenas — e este quadro é justamente o que alguém abre de manhã.
   const { data: leituras, error: erroLeituras } = await supabase
     .from("apontamento_uso")
-    .select("unidade_id, data, leitura")
+    // `horas` e `revisao` entram porque a contagem para a próxima revisão é a
+    // soma das horas POSTERIORES à última revisão — e não uma subtração de
+    // leituras do mostrador, que a troca de horímetro invalidaria.
+    .select("unidade_id, data, leitura, horas, revisao")
     .in(
       "unidade_id",
       (pecas ?? []).map((p) => p.id),
@@ -118,12 +128,18 @@ export async function listarUsoDasPecas(): Promise<UsoDaPeca[]> {
   if (erroLeituras) console.error("listarUsoDasPecas.leituras", erroLeituras);
 
   const ultima = new Map<string, { data: string; leitura: number }>();
+  // O histórico de cada peça, na mesma ordem (recente → antigo) que
+  // `horasDesdeRevisao` espera.
+  const historico = new Map<string, { horas: number; revisao: boolean }[]>();
   for (const l of leituras ?? []) {
     // A consulta vem ordenada por data desc, então a PRIMEIRA de cada peça é a
     // mais recente.
     if (!ultima.has(l.unidade_id)) {
       ultima.set(l.unidade_id, { data: l.data, leitura: Number(l.leitura) });
     }
+    const lista = historico.get(l.unidade_id) ?? [];
+    lista.push({ horas: Number(l.horas), revisao: Boolean(l.revisao) });
+    historico.set(l.unidade_id, lista);
   }
 
   return (pecas ?? []).map((p) => {
@@ -136,7 +152,8 @@ export async function listarUsoDasPecas(): Promise<UsoDaPeca[]> {
     const tipo = achatar(item?.tipo ?? null);
     const u = ultima.get(p.id) ?? null;
     const intervalo = tipo?.intervalo_manutencao_h ?? null;
-    const faltam = horasAteRevisao(u?.leitura ?? null, intervalo, 0);
+    const desde = horasDesdeRevisao(historico.get(p.id) ?? []);
+    const faltam = horasAteRevisao(desde, intervalo);
 
     return {
       unidadeId: p.id,
@@ -145,7 +162,7 @@ export async function listarUsoDasPecas(): Promise<UsoDaPeca[]> {
       leituraAtual: u?.leitura ?? null,
       ultimaData: u?.data ?? null,
       intervalo,
-      leituraUltimaRevisao: 0,
+      horasDesdeRevisao: desde,
       faltamHoras: faltam,
       estado: estadoRevisao(faltam, intervalo),
     };
