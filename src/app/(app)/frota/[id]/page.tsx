@@ -94,18 +94,44 @@ export default async function PecaDetalhePage({
         acoes={
           <>
             {/* Entregar a pessoa é o termo, com assinatura — não um botão de
-                movimentação aqui. */}
-            {podeMover && peca.situacao === "disponivel" ? (
+                movimentação aqui.
+
+                E APARECE TAMBÉM PARA A PEÇA "EM USO" SEM POSSE ABERTA, que era
+                um beco sem saída: a importação do inventário marcou 95 máquinas
+                como em uso a partir da planilha, sem criar termo. A matriz de
+                transição só admite chegar a `em_uso` POR um termo, e só sair
+                dali por devolução registrada NUM termo — então essas 95 não
+                podiam receber um nem voltar a `disponivel`. Ficavam presas,
+                dizendo "Sem registro de posse" e sem lugar nenhum onde
+                registrá-la.
+
+                A condição certa nunca foi a SITUAÇÃO, e sim a POSSE: peça sem
+                custódia aberta não está com ninguém, diga a coluna o que
+                disser. */}
+            {podeMover &&
+            (peca.situacao === "disponivel" ||
+              (peca.situacao === "em_uso" && atual === null)) ? (
               <Button variant="outline" render={<Link href="/termos/novo" />}>
                 <FileSignature className="size-4" />
-                Entregar a funcionário
+                {atual === null && peca.situacao === "em_uso"
+                  ? "Registrar quem está com ela"
+                  : "Entregar a funcionário"}
               </Button>
             ) : null}
             {/* O formulário de cadastro fica no fim da página, depois da
                 linha do tempo. Sem esta âncora quem chega ao topo conclui que a
-                peça não é editável — foi o relato do Evandro em 03/09/2026. */}
+                peça não é editável — foi o relato do Evandro em 03/09/2026.
+
+                ÂNCORA NATIVA, e não `<Link>` do Next. O botão nasceu com
+                `render={<Link href="#cadastro" />}` e NUNCA funcionou: o docs do
+                Next diz que "Next.js will scroll to the Page if it is not
+                visible in the viewport upon navigation" — a lógica de rolagem
+                dele compete com a da âncora, e todos os exemplos do próprio
+                docs usam caminho + hash (`/dashboard#settings`), nunca hash
+                sozinho. Um `<a>` puro o navegador resolve, e o `scroll-mt-6` no
+                cartão de destino cuida do deslocamento. */}
             {podeEditar ? (
-              <Button variant="outline" render={<Link href="#cadastro" />}>
+              <Button variant="outline" render={<a href="#cadastro" />}>
                 <Pencil className="size-4" />
                 Editar
               </Button>

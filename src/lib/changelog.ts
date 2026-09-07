@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.84.0";
+export const APP_VERSION = "0.85.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,17 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.85.0",
+    data: "2026-09-07",
+    titulo: "As 95 máquinas destravadas, e o botão Editar que nunca funcionou",
+    mudancas: [
+      { tipo: "correcao", texto: "Não havia onde registrar quem está com as 95 máquinas importadas. Elas constavam “Em uso”, e a tela só oferecia entregar peça “Disponível” — mas para ficar disponível era preciso uma devolução registrada num termo que não existia. Impasse fechado." },
+      { tipo: "novo", texto: "A tela da peça passa a oferecer “Registrar quem está com ela” quando a peça consta em uso mas ninguém assinou por ela." },
+      { tipo: "correcao", texto: "O botão Editar na tela da peça não fazia nada. Ele existia desde 03/09 e nunca funcionou: era um link do Next para uma âncora na mesma página, e a rolagem do Next competia com a do navegador." },
+      { tipo: "seguranca", texto: "A proteção contra dois termos sobre o mesmo patrimônio continua, e ficou mais correta: ela pergunta se alguém JÁ ASSINOU pela peça, e não qual a situação dela." },
+    ],
+  },
   {
     versao: "0.84.0",
     data: "2026-09-07",

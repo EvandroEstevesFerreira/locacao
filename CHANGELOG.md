@@ -7,6 +7,63 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.85.0] — 2026-09-07
+
+As 95 máquinas destravadas, e o botão Editar que nunca funcionou.
+
+### O impasse
+
+A pergunta foi “onde eu cadastro a pessoa que está com o equipamento?”. A
+resposta era: **em lugar nenhum**.
+
+| Caminho | Por que fechava |
+|---|---|
+| Emitir termo | a peça precisa estar *Disponível* — e ela consta *Em uso* |
+| Marcar como *Disponível* | a matriz de transição exige um **evento**: devolução registrada num termo |
+| E o termo… | exige que ela esteja disponível |
+
+A importação do inventário marcou `em_uso` a partir da planilha **sem criar
+termo**. E `em_uso` é um estado que a matriz só admite alcançar *pelo* termo, e
+do qual só se sai por devolução *num* termo. As 95 ficaram presas dizendo “Sem
+registro de posse”, sem lugar onde registrá-la.
+
+### A correção
+
+A guarda certa nunca foi a **situação**, e sim a **posse**: peça sem custódia
+aberta não está com ninguém, diga a coluna o que disser.
+
+- `/termos/novo` passa a listar peça *disponível* **ou** *em uso sem posse
+  aberta*. A proteção original — não produzir dois termos assinados sobre o
+  mesmo patrimônio — continua, e ficou mais precisa.
+- A tela da peça oferece **“Registrar quem está com ela”** nesse caso, com rótulo
+  próprio: não é uma entrega nova, é regularizar o que a planilha já dizia.
+- Se a consulta de custódia falhar, a lista sai **vazia** em vez de oferecer
+  tudo — errar para o lado de oferecer produziria termo duplicado.
+
+**Efeito medido:** 128 peças passam a poder receber termo (33 disponíveis + 95
+presas), e nenhuma com posse aberta entra na lista.
+
+### O botão Editar
+
+Não fazia nada, e **nunca fez**. Ele nasceu em 03/09 de um relato do próprio
+Evandro — *“quem chega ao topo conclui que a peça não é editável”* — como
+`<Link href="#cadastro">` do Next.
+
+O docs do Next (`node_modules/next/dist/docs`, que o `AGENTS.md` manda ler)
+explica: *“Next.js will scroll to the Page if it is not visible in the viewport
+upon navigation”*. A rolagem do roteador compete com a da âncora, e **todos** os
+exemplos do próprio docs usam caminho + hash (`/dashboard#settings`), nunca hash
+sozinho. Era a única âncora do app inteiro — o padrão nunca tinha sido provado.
+
+Agora é `<a href="#cadastro">` puro: o navegador resolve, e o `scroll-mt-6` no
+cartão de destino cuida do deslocamento.
+
+### Sem migration
+
+Nenhuma. O impasse era de interface, não de dados — o banco sempre aceitou
+`em_uso → em_uso`, porque `podeTransicionar` devolve `true` quando origem e
+destino são iguais.
+
 ## [0.84.0] — 2026-09-07
 
 A tela de Frota ganhou a forma do catálogo — **modelo D**, escolhido entre
