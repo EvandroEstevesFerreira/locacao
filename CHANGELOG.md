@@ -7,6 +7,75 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.80.0] — 2026-09-06
+
+A frota ganhou veículos.
+
+### A ironia que começou isto
+
+Em português, **frota** é a palavra para conjunto de veículos. A tela se chamava
+Frota e não tinha um único carro dentro — nem categoria de transporte, nem
+coluna de placa. São ~20 carros mais caminhão e caminhonete, próprios **e**
+locados: pesa quase tanto quanto as 128 peças de TI.
+
+### São três frotas, e cada uma pergunta outra coisa
+
+| | TI | Obra | Veículos |
+|---|---|---|---|
+| “Onde está” quer dizer | com **quem** | em qual **obra** | quem **dirige** |
+| Documento que a rege | termo | contrato + certificado | CRLV, seguro, **e a CNH** |
+| Mede uso por | — | horímetro (horas) | hodômetro (**km**) |
+
+### O que já servia, e por isso não precisou de linha nova
+
+A placa é o `identificador`, o chassi é o `numero_serie`, o ano é o `ano`, quem
+dirige é `custodia_peca` — o mesmo modelo do notebook, com termo assinado — e
+**CRLV e seguro são `certificado_equipamento`**, a estrutura que nasceu de manhã
+para a inspeção de PTA. Ela serve o carro inteiro sem alteração.
+
+### Adicionado
+
+- Categoria **Veículos** (ordem 75, entre Medição e ensaio e TI) com perfil
+  próprio, e os tipos **CARRO**, **CAMINHONETE** e **CAMINHÃO**.
+- Ficha dos leves: renavam, combustível, câmbio e cor. O **caminhão** acrescenta
+  capacidade de carga e eixos — e não ganha ficha própria, porque dois campos a
+  mais não justificam manter duas fichas em sincronia. Pô-los na ficha dos leves
+  deixaria dois campos vazios em vinte carros.
+- Espécies **Licenciamento** e **Seguro** no vocabulário de certificado, e os
+  três tipos já nascem exigindo as duas, anuais. `licenciamento` e não `crlv`: o
+  documento mudou de nome duas vezes e vai mudar de novo — a obrigação é
+  licenciar, o papel é detalhe.
+- **CNH, categoria e validade** no funcionário, com a categoria em lista fechada
+  na forma da resolução do Contran.
+
+### Segurança
+
+- **Número de CNH e validade só entram juntos**, travado no banco e no schema.
+  Número sem validade faria a tela dizer “habilitado” sem saber até quando — e
+  entregar carro a quem está com a habilitação vencida faz a autuação cair na
+  empresa, que é a proprietária.
+- A CNH é **do funcionário e não da peça**. Amarrá-la a um `certificado_equipamento`
+  faria a mesma habilitação ser recadastrada a cada troca de veículo, e as
+  cópias divergiriam na primeira renovação.
+
+### O que ficou de fora, de propósito
+
+- **A revisão por quilometragem.** `intervalo_manutencao_h` é `h` no nome e na
+  conta, e `tem_horimetro` também. Os dois aparecem em **11 arquivos** que a
+  produção no ar lê agora — renomear junto derrubaria Configurações até o deploy
+  seguinte. Vai em fatia própria, por expansão: colunas novas, código migrado,
+  deploy, e só então as antigas saem. Consequência assumida: os tipos de veículo
+  nascem **sem** intervalo de manutenção, porque é melhor nascer sem do que
+  nascer com 10.000 gravado numa coluna que diz horas.
+- **Multas e abastecimento.** Não existem em lugar nenhum e podem esperar.
+
+### Migrations
+
+- `0085_frota_de_veiculos.sql` — perfil `'veiculo'`, as duas espécies de
+  certificado, a categoria e os três tipos.
+- `0086_cnh_do_funcionario.sql` — CNH, categoria e validade, com a trava cruzada
+  e o índice que serve ao alerta de vencimento.
+
 ## [0.79.0] — 2026-09-06
 
 A revisão preventiva zera a contagem.

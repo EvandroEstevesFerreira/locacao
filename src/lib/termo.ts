@@ -9,6 +9,7 @@ import {
   opcional,
   textoOpcional,
   dataOpcional,
+  enumOpcional,
   emailOpcional,
   uuidOpcional,
 } from "@/lib/campos";
@@ -17,6 +18,7 @@ import {
 // divergirem — e a divergência apareceria como rótulo errado num documento
 // assinado.
 import { ESTADOS, ESTADO_INFO, type Estado } from "@/lib/frota";
+import { ehDataISO } from "@/lib/locacao";
 
 export { ESTADOS, ESTADO_INFO };
 export type { Estado };
@@ -56,6 +58,20 @@ export const SITUACAO_TERMO_INFO: Record<
   },
 };
 
+/**
+ * As categorias de habilitação, na forma da resolução do Contran.
+ *
+ * Combinações, e não letras soltas: quem tem AB tem as duas, e guardar “A” e
+ * “B” em duas linhas exigiria uma tabela para uma pergunta que é de uma coluna.
+ * Lista fechada porque campo livre aqui produz “B”, “b” e “A/B” na mesma
+ * coluna — e aí “quem pode dirigir o caminhão” deixa de ter resposta.
+ */
+export const CATEGORIAS_CNH = [
+  "A", "B", "AB", "C", "AC", "D", "AD", "E", "AE",
+] as const;
+
+export type CategoriaCNH = (typeof CATEGORIAS_CNH)[number];
+
 export const funcionarioSchema = z.object({
   nome: z.string().trim().min(1, "Informe o nome do funcionário.").max(200),
   cpf: textoOpcional(20),
@@ -70,7 +86,28 @@ export const funcionarioSchema = z.object({
   // e calculado pela action a partir de `confirmacaoDoEmail`.
   email: emailOpcional(200),
   obra_id: uuidOpcional,
-});
+
+  // CNH — só faz sentido para quem dirige, e por isso os três são opcionais.
+  //
+  // A trava é CRUZADA e espelha a do banco: número sem validade é o caso
+  // perigoso, porque a tela diria “habilitado” sem saber até quando — e
+  // entregar carro a quem está com a CNH vencida faz a autuação cair na
+  // empresa, que é a proprietária.
+  cnh: textoOpcional(20),
+  cnh_categoria: enumOpcional(CATEGORIAS_CNH),
+  cnh_validade: dataOpcional.refine(
+    (v) => v === null || ehDataISO(v),
+    "Informe a validade da CNH.",
+  ),
+})
+  .refine(
+    (f) => (f.cnh === null) === (f.cnh_validade === null),
+    {
+      message:
+        "Preencha o número da CNH e a validade juntos — um sem o outro não diz se a pessoa pode dirigir.",
+      path: ["cnh_validade"],
+    },
+  );
 export type FuncionarioInput = z.infer<typeof funcionarioSchema>;
 
 // A derivação do e-mail vive em `email-corporativo.ts`, sem dependência

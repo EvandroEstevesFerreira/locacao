@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.79.0";
+export const APP_VERSION = "0.80.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,18 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.80.0",
+    data: "2026-09-06",
+    titulo: "A frota ganhou veículos",
+    mudancas: [
+      { tipo: "novo", texto: "Nasceu a categoria Veículos, com os tipos CARRO, CAMINHONETE e CAMINHÃO. A tela se chamava Frota e não tinha um único carro dentro." },
+      { tipo: "novo", texto: "A ficha do veículo pede renavam, combustível, câmbio e cor — e a do caminhão acrescenta capacidade de carga e eixos. A placa é o patrimônio e o chassi é o número de série, então não se digitam duas vezes." },
+      { tipo: "novo", texto: "Licenciamento e Seguro entraram como espécies de certificado, e todo tipo de veículo já nasce exigindo os dois, anuais. Vencendo, o aviso sai no mesmo e-mail de vencimentos que você já recebe." },
+      { tipo: "novo", texto: "O funcionário passa a ter CNH, categoria e validade. Dirigir com a habilitação vencida há mais de 30 dias é infração gravíssima — e com o carro da empresa, a autuação vem para a empresa." },
+      { tipo: "seguranca", texto: "Número de CNH e validade só entram juntos. Número sem validade faria a tela dizer “habilitado” sem saber até quando, que é pior que não ter nada." },
+    ],
+  },
   {
     versao: "0.79.0",
     data: "2026-09-06",

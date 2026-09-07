@@ -35,6 +35,8 @@ export const ESPECIES_CERTIFICADO = [
   "calibracao",
   "art",
   "laudo_eletrico",
+  "licenciamento",
+  "seguro",
   "outro",
 ] as const;
 
@@ -67,6 +69,14 @@ export const ESPECIE_INFO: Record<
   laudo_eletrico: {
     label: "Laudo elétrico",
     ajuda: "SPDA, aterramento, quadro de distribuição. NR-10.",
+  },
+  licenciamento: {
+    label: "Licenciamento",
+    ajuda: "CRLV anual do veículo. Circular sem ele é infração e o carro pode ser retido.",
+  },
+  seguro: {
+    label: "Seguro",
+    ajuda: "Apólice do veículo ou do equipamento, com a vigência que consta nela.",
   },
   outro: {
     label: "Outro",

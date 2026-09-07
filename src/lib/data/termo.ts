@@ -15,6 +15,10 @@ export type FuncionarioLinha = {
   obra_id: string | null;
   obra_codigo: string | null;
   ativo: boolean;
+  cnh: string | null;
+  cnh_categoria: string | null;
+  /** Vencimento da habilitação. Nulo = a pessoa não dirige, ou ninguém lançou. */
+  cnh_validade: string | null;
 };
 
 export type TermoLinha = {
@@ -93,7 +97,7 @@ export async function listarFuncionarios(
   let q = supabase
     .from("funcionario")
     .select(
-      "id, nome, cpf, cargo, matricula, telefone, email, email_confirmado, obra_id, ativo, obra:obra_id(codigo)",
+      "id, nome, cpf, cargo, matricula, telefone, email, email_confirmado, obra_id, ativo, cnh, cnh_categoria, cnh_validade, obra:obra_id(codigo)",
     )
     .order("nome");
   if (opts.apenasAtivos) q = q.eq("ativo", true);
@@ -118,6 +122,9 @@ export async function listarFuncionarios(
       obra_id: f.obra_id,
       obra_codigo: Array.isArray(obra) ? (obra[0]?.codigo ?? null) : (obra?.codigo ?? null),
       ativo: f.ativo,
+      cnh: f.cnh ?? null,
+      cnh_categoria: f.cnh_categoria ?? null,
+      cnh_validade: f.cnh_validade ?? null,
     };
   });
 }

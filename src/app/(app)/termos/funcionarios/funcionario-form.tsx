@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { salvarFuncionario } from "../actions";
 import type { FuncionarioLinha } from "@/lib/data/termo";
+import { CATEGORIAS_CNH } from "@/lib/termo";
 
 /**
  * O que o formulário precisa saber do funcionário — e só isso.
@@ -25,6 +26,9 @@ export type FuncionarioParaEditar = Pick<
   | "email"
   | "email_confirmado"
   | "obra_id"
+  | "cnh"
+  | "cnh_categoria"
+  | "cnh_validade"
 >;
 
 export function FuncionarioForm({
@@ -104,6 +108,46 @@ export function FuncionarioForm({
           ))}
         </select>
       </label>
+      {/* CNH — só quem dirige preenche, e por isso vem depois da obra e não no
+          meio dos campos que todo funcionário tem.
+
+          O número e a validade andam juntos: número sem validade faria a tela
+          dizer “habilitado” sem saber até quando — e entregar carro a quem está
+          com a CNH vencida faz a autuação cair na empresa, que é a dona do
+          veículo. O schema recusa um sem o outro. */}
+      <fieldset className="grid gap-3 sm:col-span-2 sm:grid-cols-3">
+        <legend className="text-xs font-medium text-muted-foreground">
+          Habilitação — preencha só para quem dirige veículo da empresa
+        </legend>
+        <label className="grid gap-1">
+          <span className="text-xs text-muted-foreground">Número da CNH</span>
+          <Input name="cnh" defaultValue={funcionario?.cnh ?? ""} maxLength={20} />
+        </label>
+        <label className="grid gap-1">
+          <span className="text-xs text-muted-foreground">Categoria</span>
+          <select
+            name="cnh_categoria"
+            defaultValue={funcionario?.cnh_categoria ?? ""}
+            className="h-9 rounded-lg border border-input bg-transparent px-3 text-sm outline-none"
+          >
+            <option value="">—</option>
+            {CATEGORIAS_CNH.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="grid gap-1">
+          <span className="text-xs text-muted-foreground">Válida até</span>
+          <Input
+            name="cnh_validade"
+            type="date"
+            defaultValue={funcionario?.cnh_validade ?? ""}
+          />
+        </label>
+      </fieldset>
+
       <div className="sm:col-span-2">
         <Button type="submit" disabled={pendente}>
           {pendente ? "Salvando…" : "Salvar funcionário"}
