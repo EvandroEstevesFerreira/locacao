@@ -7,6 +7,57 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.84.0] — 2026-09-07
+
+A tela de Frota ganhou a forma do catálogo — **modelo D**, escolhido entre
+quatro e desenhado em `docs/superpowers/specs/2026-09-06-frota-modelo-d-design.md`.
+
+### O problema, medido
+
+Sete colunas para 128 peças, e **duas não carregavam informação**: `Estado` com
+zero valores distintos, `Categoria` com um só (“TI”, nas 128 linhas). A mesma
+doença que a tela de Itens tinha, e a mesma cura: **o que se repete vira
+navegação, o que varia vira seção**.
+
+### As três decisões
+
+**Trilho de categoria, e não de obra.** Obra tem 8 valores e não escala;
+categoria vai de 1 para 10 com equipamento de obra e veículos — e é o mesmo eixo
+de Itens. A obra continua como filtro, que já funcionava.
+
+**Faixa de pendência que some sozinha.** A urgência muda de assunto: hoje são 95
+máquinas de TI entregues sem termo; em outubro serão inspeções de PTA; depois,
+CRLV vencido. Faixa permanente vira moldura e deixa de ser lida justamente no dia
+em que importa. Ela conta a categoria inteira (não a lista já filtrada, senão
+apontaria para si mesma) e some quando o próprio filtro dela está aplicado, com
+um selo tomando o lugar.
+
+**A coluna que segue o perfil da categoria.** Em TI e veículo a pergunta é *com
+quem*; em obra, *onde*. Uma tela só, com “com quem está” vazio em toda betoneira,
+ensina a ignorar a coluna.
+
+### O que saiu e o que ficou
+
+Saiu a coluna **Categoria** — virou o trilho. **Ficou `Estado`**: está vazia hoje
+porque a importação de TI não a preencheu, mas é onde o equipamento locado volta
+marcado como avariado. Apagá-la seria desenhar a tela para o passado — foi o erro
+da primeira versão deste desenho, corrigido depois da pergunta sobre equipamento
+de obra.
+
+### Detalhes que valem registro
+
+- **`pecasComResponsavel` devolve quem TEM custódia aberta**, e `null` em caso de
+  erro — conjunto vazio significaria “ninguém assinou nada” e acenderia a faixa
+  para a frota inteira.
+- **O grupo “sem tipo” vai por último mesmo sendo o maior**: é lacuna de
+  cadastro, e liderar por ser numeroso lhe daria a importância de um tipo.
+- Agrupamento e pendência são **funções puras**, com 13 testes. A página só
+  orquestra.
+
+### Sem migration
+
+Nenhuma. A tela lê o que já existe.
+
 ## [0.83.1] — 2026-09-07
 
 O que foi excluído volta a ficar escondido.

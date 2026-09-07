@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.83.1";
+export const APP_VERSION = "0.84.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,19 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.84.0",
+    data: "2026-09-07",
+    titulo: "A tela de Frota ganhou a forma do catálogo",
+    mudancas: [
+      { tipo: "novo", texto: "As categorias viraram um trilho fixo à esquerda da Frota, igual ao da tela de Itens — e cada uma mostra quantas peças tem, inclusive as que você não está olhando. Quem aprende uma tela sabe a outra." },
+      { tipo: "novo", texto: "As peças aparecem agrupadas por tipo, cada seção com quantas são, quantas em uso, quantas livres e quantas locadas." },
+      { tipo: "novo", texto: "Uma faixa vermelha no topo avisa o que precisa de ação naquela categoria — hoje, as 95 máquinas em uso sem termo assinado — e some sozinha quando não há pendência. Clicar nela isola as peças." },
+      { tipo: "melhoria", texto: "Saiu a coluna Categoria, que repetia a mesma palavra nas 128 linhas: agora ela é o trilho. A obra continua como filtro." },
+      { tipo: "melhoria", texto: "A coluna do meio muda conforme a categoria: em TI e veículos ela diz com quem a peça está; em equipamento de obra, em qual obra." },
+      { tipo: "melhoria", texto: "Equipamento sem tipo definido ganha uma seção própria, sempre por último — é lacuna de cadastro, não uma família." },
+    ],
+  },
   {
     versao: "0.83.1",
     data: "2026-09-07",
