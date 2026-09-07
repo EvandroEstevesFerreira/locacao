@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.82.0";
+export const APP_VERSION = "0.82.1";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -29,7 +29,7 @@ export const TIPO_MUDANCA_INFO: Record<
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
   {
-    versao: "0.82.0",
+    versao: "0.82.1",
     data: "2026-09-07",
     titulo: "Conferir os e-mails deduzidos, de uma vez",
     mudancas: [
@@ -37,6 +37,7 @@ export const CHANGELOG: Release[] = [
       { tipo: "novo", texto: "O botão de conferir só aparece quando há o que conferir, e mostra quantos são." },
       { tipo: "melhoria", texto: "A tela lista só quem tem endereço DEDUZIDO. Quem digitou o próprio e-mail já conferiu ao digitar, e não aparece — uma lista com linhas em que não há nada a fazer é uma lista que ninguém confere." },
       { tipo: "seguranca", texto: "Não existe “marcar todos”, de propósito. A regra existe para que alguém olhe endereço por endereço; um botão que marca 97 de uma vez a transformaria em formalidade, e o primeiro endereço errado mandaria um documento assinável para fora." },
+      { tipo: "correcao", texto: "O contador do botão e a lista da tela passam a usar a MESMA regra. Nasceram como duas cópias, e duas cópias divergem — apareceria como um botão dizendo “conferir 97” abrindo uma tela com 94 linhas." },
       { tipo: "seguranca", texto: "A confirmação em lote só LIGA, nunca desliga: o que não foi marcado é “ainda não conferi”, e não “está errado”. E não envia nada — o convite de assinatura continua sendo outro botão." },
     ],
   },

@@ -113,6 +113,7 @@ export type FuncionarioInput = z.infer<typeof funcionarioSchema>;
 // A derivação do e-mail vive em `email-corporativo.ts`, sem dependência
 // nenhuma, porque o importador do inventário roda em Node puro e precisa da
 // MESMA regra. Reexportado aqui para que a tela continue importando do domínio.
+import { emailDerivado } from "@/lib/email-corporativo";
 export { emailDerivado, DOMINIO_EMAIL } from "@/lib/email-corporativo";
 
 /**
@@ -205,4 +206,35 @@ export const cancelamentoSchema = z.object({
 /** Rótulo curto para o select de estado. */
 export function estadoLabel(e: string): string {
   return ESTADO_INFO[e as Estado]?.label ?? e;
+}
+
+/**
+ * Este endereço precisa que alguém confira?
+ *
+ * Fonte ÚNICA da regra, e ela nasceu duplicada: a tela de conferência e o
+ * contador na lista de funcionários faziam a mesma comparação em dois arquivos.
+ * Duas cópias de "quem aparece na lista" divergem na primeira correção, e a
+ * divergência aqui aparece como um botão dizendo "conferir 97" que abre uma
+ * tela com 94 linhas.
+ *
+ * TRÊS CONDIÇÕES, e a terceira é a que carrega o raciocínio:
+ *
+ * 1. Tem endereço — sem ele não há o que conferir.
+ * 2. Ainda não foi confirmado.
+ * 3. O endereço é o que o NOME produziria. Se não é, alguém o digitou — e
+ *    digitar já é conferir. Listar quem digitou encheria a tela de linhas em
+ *    que não há nada a fazer, e é assim que uma tela de conferência deixa de
+ *    ser conferida.
+ *
+ * Comparação por `toLowerCase()` porque o índice único do banco é por
+ * `lower(email)`: trocar a caixa não torna o endereço outro.
+ */
+export function precisaConferencia(f: {
+  nome: string;
+  email: string | null;
+  email_confirmado: boolean;
+}): boolean {
+  if (!f.email || f.email_confirmado) return false;
+  const derivado = emailDerivado(f.nome);
+  return derivado !== null && derivado.toLowerCase() === f.email.toLowerCase();
 }

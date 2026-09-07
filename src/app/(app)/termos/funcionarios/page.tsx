@@ -5,7 +5,7 @@ import { Pencil, Users, X, MailCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeOperar } from "@/lib/auth";
 import { listarObrasParaFiltro } from "@/lib/data/obras";
-import { emailDerivado } from "@/lib/termo";
+import { precisaConferencia } from "@/lib/termo";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Badge } from "@/components/ui/badge";
@@ -61,14 +61,15 @@ export default async function FuncionariosPage({
   // Quantos endereços DEDUZIDOS ainda esperam conferência. Recalcular a
   // dedução e compará-la com o gravado é o que separa “deduzido” de
   // “digitado”: quem digitou o próprio endereço já conferiu ao digitar.
-  const aConferir = (funcionarios ?? []).filter((f) => {
-    if (!f.ativo || !f.email || f.email_confirmado) return false;
-    const derivado = emailDerivado(f.nome as string);
-    return (
-      derivado !== null &&
-      derivado.toLowerCase() === (f.email as string).toLowerCase()
-    );
-  }).length;
+  const aConferir = (funcionarios ?? []).filter(
+    (f) =>
+      f.ativo &&
+      precisaConferencia({
+        nome: f.nome as string,
+        email: (f.email as string | null) ?? null,
+        email_confirmado: Boolean(f.email_confirmado),
+      }),
+  ).length;
 
   type Linha = {
     id: string;

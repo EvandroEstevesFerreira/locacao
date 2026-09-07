@@ -7,7 +7,7 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
-## [0.82.0] — 2026-09-07
+## [0.82.1] — 2026-09-07
 
 Conferir os e-mails deduzidos, de uma vez.
 
@@ -61,6 +61,14 @@ Medido na produção: **97 de 97** dos endereços não confirmados são deduzido
   viraria nulo.
 - **Não envia nada.** Confirmar é dizer que o endereço foi lido; o convite de
   assinatura continua sendo outro ato, com outro botão.
+
+### Corrigido no mesmo dia
+
+- **A regra nasceu duplicada.** O contador do botão e o filtro da tela faziam a
+  mesma comparação em dois arquivos. Duas cópias divergem na primeira correção,
+  e a divergência aqui apareceria como um botão dizendo “conferir 97” abrindo
+  uma tela com 94 linhas. Agora é  em ,
+  com 9 testes — incluindo acento no nome, caixa diferente e nome do meio.
 
 ### Sem migration
 
