@@ -109,8 +109,29 @@ export function pendenciasDaLista(
   comResponsavel: Set<string> | null,
   certificado: Map<string, "ausente" | "vencido" | "proximo" | "em_dia">,
   base: string,
+  comPessoaDesligada: Set<string> | null = null,
 ): PendenciaFrota[] {
   const saida: PendenciaFrota[] = [];
+
+  // PRIMEIRO DE TODOS, de propósito. É a pendência com prazo do mundo real: a
+  // pessoa já saiu da empresa e o equipamento foi com ela. As outras esperam;
+  // esta piora a cada dia, porque o vínculo que permitiria cobrar acabou.
+  //
+  // `null` = a consulta falhou; omite em vez de afirmar que não há nenhuma.
+  const comDesligado =
+    comPessoaDesligada === null
+      ? 0
+      : pecas.filter((p) => comPessoaDesligada.has(p.id)).length;
+  if (comDesligado > 0) {
+    saida.push({
+      chave: "pessoa_desligada",
+      texto:
+        comDesligado === 1
+          ? "1 peça está com alguém já desligado da empresa"
+          : `${comDesligado} peças estão com alguém já desligado da empresa`,
+      href: `${base}pendencia=pessoa_desligada`,
+    });
+  }
 
   // `null` = a consulta de custódia falhou. Omite a pendência em vez de
   // marcar a frota inteira — a faixa só é lida enquanto não dá alarme falso.

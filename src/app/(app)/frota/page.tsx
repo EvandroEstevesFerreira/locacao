@@ -6,6 +6,7 @@ import {
   resumirFrota,
   listarTrilhoDaFrota,
   pecasComResponsavel,
+  pecasComPessoaDesligada,
 } from "@/lib/data/frota";
 import { listarObrasParaFiltro } from "@/lib/data/obras";
 import {
@@ -80,13 +81,14 @@ export default async function FrotaPage({
   const pendencia = um(sp.pendencia) ?? "";
   const categoriaSel = um(sp.categoria) ?? "";
 
-  const [todas, trilho, obras, pendenciasParque, comResponsavel] =
+  const [todas, trilho, obras, pendenciasParque, comResponsavel, comDesligado] =
     await Promise.all([
       listarFrota(filtros),
       listarTrilhoDaFrota(),
       listarObrasParaFiltro(),
       listarPendenciasDoParque(),
       pecasComResponsavel(),
+      pecasComPessoaDesligada(),
     ]);
 
   // `categoria=sem` é filtrado aqui porque `listarFrota` compara `categoriaId`
@@ -103,7 +105,9 @@ export default async function FrotaPage({
       pendencia === "sem_responsavel"
         ? p.situacao === "em_uso" && comResponsavel !== null &&
           !comResponsavel.has(p.id)
-        : true,
+        : pendencia === "pessoa_desligada"
+          ? comDesligado !== null && comDesligado.has(p.id)
+          : true,
     );
 
   // O link do trilho preserva tudo o que a pessoa acabou de aplicar — trocar de
@@ -136,9 +140,16 @@ export default async function FrotaPage({
   // clicar nela, ela continuaria lá com o mesmo número apontando para si mesma.
   // E some a que já está aplicada — quem está vendo as 95 peças sem termo não
   // precisa de um aviso dizendo que elas existem.
-  const avisos = pendenciasDaLista(daCategoria, comResponsavel, selo, base).filter(
+  const avisos = pendenciasDaLista(
+    daCategoria,
+    comResponsavel,
+    selo,
+    base,
+    comDesligado,
+  ).filter(
     (a) =>
       !(a.chave === "sem_responsavel" && pendencia === "sem_responsavel") &&
+      !(a.chave === "pessoa_desligada" && pendencia === "pessoa_desligada") &&
       !(a.chave === "certificado" && certificado !== ""),
   );
   const grupos = agruparPorTipo(visiveis);
@@ -247,11 +258,13 @@ export default async function FrotaPage({
           {/* O CONTRAPESO DE ESCONDER A FAIXA. Quando a pendência está
               aplicada, a faixa some — e sem isto a lista encurtaria sem nada
               dizer por quê. O selo diz o recorte e traz o X para sair dele. */}
-          {pendencia === "sem_responsavel" ? (
+          {pendencia === "sem_responsavel" || pendencia === "pessoa_desligada" ? (
             <div className="flex flex-wrap items-center gap-2 text-sm">
               <span className="text-muted-foreground">Mostrando apenas:</span>
               <Badge variant="secondary" className="gap-1">
-                Em uso sem termo assinado
+                {pendencia === "pessoa_desligada"
+                  ? "Com alguém já desligado da empresa"
+                  : "Em uso sem termo assinado"}
                 <Link
                   href={montarLink({ pendencia: undefined })}
                   aria-label="Tirar o filtro de pendência"

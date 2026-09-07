@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { logger, erroMeta } from "@/lib/logger";
 import { peopleConfigurado } from "@/lib/people/cliente";
 import { sincronizarPessoas, registrarRodada } from "@/lib/people/servidor";
+import { precisaVarreduraCompleta } from "@/lib/people/mapeamento";
 
 /**
  * A sincronização diária da base de pessoas com o Sistenge People.
@@ -42,7 +43,7 @@ export async function GET(request: Request) {
   // organização só recebe pessoas quando alguém declarar que ela deve.
   const { data: configs, error } = await supabase
     .from("people_sync")
-    .select("org_id, ultimo_atualizado_em")
+    .select("org_id, ultimo_atualizado_em, ultima_varredura_completa")
     .eq("ativo", true);
 
   if (error) {
@@ -53,15 +54,24 @@ export async function GET(request: Request) {
   const linhas = (configs ?? []) as {
     org_id: string;
     ultimo_atualizado_em: string | null;
+    ultima_varredura_completa: string | null;
   }[];
 
   const resumo = [];
   for (const cfg of linhas) {
+    // Toda semana a rodada é COMPLETA em vez de delta. É a única que enxerga
+    // quem sumiu do People — ausência não é mudança, e `?desde=` nunca a traz.
+    const completa = precisaVarreduraCompleta(
+      cfg.ultima_varredura_completa,
+      agoraISO,
+    );
+
     const r = await sincronizarPessoas(
       supabase,
       cfg.org_id,
       cfg.ultimo_atualizado_em,
       agoraISO,
+      completa,
     );
     const falhaAoRegistrar = await registrarRodada(supabase, cfg.org_id, r, agoraISO);
 
@@ -78,12 +88,21 @@ export async function GET(request: Request) {
       });
     }
 
+    if (r.ausentes > 0) {
+      logger.warn("cron/people: vínculos que sumiram do People", {
+        org_id: cfg.org_id,
+        ausentes: r.ausentes,
+      });
+    }
+
     resumo.push({
       org_id: cfg.org_id,
       ok: r.ok,
+      completa: r.completa,
       recebidas: r.recebidas,
       gravadas: r.gravadas,
       paginas: r.paginas,
+      ausentes: r.ausentes,
       erro: r.erro,
     });
   }

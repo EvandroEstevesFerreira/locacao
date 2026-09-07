@@ -7,6 +7,55 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.90.0] — 2026-09-07
+
+Equipamento com quem já saiu da empresa — **fase 3**.
+
+### A pergunta que o sistema não sabia fazer
+
+211 dos 483 do recorte são desligados de 2026, e eles entram **porque podem
+estar com equipamento na mão**. Até agora o Loca não tinha como perguntar
+isso: o cadastro guardava um `ativo` booleano, e ali afastado e desligado eram
+a mesma coisa.
+
+Com `situacao_people` crua, viram coisas diferentes — e a distinção é a que
+mais importa para quem cobra devolução. **Afastado não entra no aviso:** quem
+está de licença volta, e continua respondendo pelo notebook que levou para casa.
+
+A faixa vem **antes** das outras pendências da Frota, de propósito. É a única
+com prazo do mundo real: as outras esperam, esta piora a cada dia, porque o
+vínculo que permitiria cobrar acabou.
+
+### Quando alguém desaparece do People
+
+Cinco pessoas têm hoje dois cadastros no People, por um bug de import. Quando
+forem mescladas, o `people_id` descartado **deixa de existir**.
+
+Do nosso lado o estrago é silencioso e de outro tipo: a linha vinculada
+simplesmente **para de ser atualizada**. Nada quebra, nada avisa — ela só
+envelhece, com o cargo de antigamente e a obra de antigamente, enquanto alguém
+segue com o notebook.
+
+**O delta não consegue ver isso.** `?desde=` traz só quem mudou; ausência não é
+mudança, e quem sumiu nunca mais aparece em resposta nenhuma. Por isso uma vez
+por semana a rodada é **completa**, e só ela pode marcar ausência — vinda de um
+delta, uma resposta vazia (o caso normal de um dia sem novidade) acusaria a base
+inteira.
+
+**Marca, não apaga.** A causa provável é o merge; mas pode ser alguém que saiu
+do recorte de 2026. Apagar o vínculo levaria junto o histórico de equipamento
+de uma pessoa que talvez ainda esteja com ele — e essa é decisão de gente, não
+de cron. Quem volta a aparecer tem a marca limpa sozinha.
+
+A varredura completa só conta como feita quando **dá certo**: marcar uma que
+falhou empurraria a próxima por mais uma semana, e a ausência ficaria invisível
+justamente depois de um problema.
+
+### Migrations
+
+- `0096_ausente_no_people.sql` — `funcionario.ausente_no_people_em` com índice
+  parcial, e `people_sync.ultima_varredura_completa`.
+
 ## [0.89.0] — 2026-09-07
 
 Conciliar os funcionários com o Sistenge People — **fase 2**.

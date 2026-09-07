@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.89.0";
+export const APP_VERSION = "0.90.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,17 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.90.0",
+    data: "2026-09-07",
+    titulo: "Equipamento com quem já saiu da empresa",
+    mudancas: [
+      { tipo: "novo", texto: "A Frota avisa quando uma peça está com alguém já desligado da empresa, e o aviso leva direto à lista dessas peças. É a pergunta que motivou trazer os desligados do People, e que o sistema não sabia responder." },
+      { tipo: "melhoria", texto: "Afastado e desligado deixam de ser a mesma coisa. Quem está de licença continua respondendo pelo equipamento que levou; quem saiu, não volta — e o aviso separa os dois." },
+      { tipo: "seguranca", texto: "Uma vez por semana a sincronização confere a base inteira, e não só quem mudou. É assim que o sistema percebe alguém que desapareceu do People — por exemplo quando dois cadastros duplicados são unificados lá." },
+      { tipo: "seguranca", texto: "Quem sumiu é marcado, nunca apagado: a linha guarda o histórico de equipamento de alguém que talvez ainda esteja com ele. A tela de Funcionários mostra quantos são." },
+    ],
+  },
   {
     versao: "0.89.0",
     data: "2026-09-07",

@@ -54,7 +54,7 @@ export default async function FuncionariosPage({
     supabase
       .from("funcionario")
       .select(
-        "id, nome, cpf, cargo, matricula, telefone, email, email_confirmado, ativo, people_id, obra:obra_id(codigo, nome)",
+        "id, nome, cpf, cargo, matricula, telefone, email, email_confirmado, ativo, people_id, ausente_no_people_em, situacao_people, obra:obra_id(codigo, nome)",
       )
       .order("nome"),
     listarObrasParaFiltro(),
@@ -97,6 +97,8 @@ export default async function FuncionariosPage({
     email_confirmado: boolean;
     ativo: boolean;
     people_id: string | null;
+    ausente_no_people_em: string | null;
+    situacao_people: string | null;
     obra: { codigo: string; nome: string } | null;
   };
   const linhas = (funcionarios ?? []) as unknown as Linha[];
@@ -105,6 +107,12 @@ export default async function FuncionariosPage({
   // LIGAR A SINCRONIZAÇÃO DUPLICARIA GENTE: o upsert casa por `people_id`, e
   // linha sem ele vira uma segunda linha da mesma pessoa.
   const semVinculo = linhas.filter((f) => f.ativo && !f.people_id).length;
+
+  // Quem estava vinculado e sumiu do People na última varredura completa.
+  // Causa provável: merge dos cadastros duplicados do lado de lá. A linha
+  // continua aqui, com o histórico de equipamento — o que ela perdeu foi a
+  // atualização, e isso é silencioso se ninguém contar.
+  const ausentes = linhas.filter((f) => f.ausente_no_people_em !== null).length;
 
   // `obra_id` não vem no select da lista (a lista mostra código e nome), então
   // o funcionário em edição é lido à parte. São dois `select` só quando alguém
@@ -139,6 +147,13 @@ export default async function FuncionariosPage({
                 Conferir {aConferir}{" "}
                 {aConferir === 1 ? "e-mail" : "e-mails"}
               </Button>
+            ) : null}
+            {ausentes > 0 ? (
+              <Badge variant="destructive" className="self-center">
+                {ausentes === 1
+                  ? "1 pessoa sumiu do People"
+                  : `${ausentes} pessoas sumiram do People`}
+              </Badge>
             ) : null}
             {/* Enquanto houver quem conciliar, este é o caminho ANTES de
                 sincronizar — e por isso vem antes do outro botão. */}

@@ -165,3 +165,66 @@ describe("pendência quando a custódia não pôde ser lida", () => {
     expect(r).toEqual([]);
   });
 });
+
+describe("pendência de pessoa desligada", () => {
+  const semCert = new Map<string, "ausente" | "vencido" | "proximo" | "em_dia">();
+  const pecas = [
+    { id: "p1", situacao: "em_uso" },
+    { id: "p2", situacao: "em_uso" },
+    { id: "p3", situacao: "disponivel" },
+  ];
+
+  it("conta as peças que estão com quem já saiu", () => {
+    const r = pendenciasDaLista(
+      pecas,
+      new Set(["p1", "p2"]),
+      semCert,
+      "/frota?",
+      new Set(["p1"]),
+    );
+    const a = r.find((x) => x.chave === "pessoa_desligada");
+    expect(a?.texto).toBe("1 peça está com alguém já desligado da empresa");
+    expect(a?.href).toBe("/frota?pendencia=pessoa_desligada");
+  });
+
+  it("VEM PRIMEIRO, antes de termo e certificado", () => {
+    // É a única pendência com prazo do mundo real: a pessoa já saiu, e o
+    // vínculo que permitiria cobrar acabou. As outras esperam.
+    const r = pendenciasDaLista(
+      pecas,
+      new Set(),
+      semCert,
+      "/frota?",
+      new Set(["p1", "p2"]),
+    );
+    expect(r[0].chave).toBe("pessoa_desligada");
+    expect(r.map((x) => x.chave)).toContain("sem_responsavel");
+  });
+
+  it("sem ninguém desligado, a pendência não aparece", () => {
+    const r = pendenciasDaLista(pecas, new Set(["p1"]), semCert, "/frota?", new Set());
+    expect(r.find((x) => x.chave === "pessoa_desligada")).toBeUndefined();
+  });
+
+  it("consulta que falhou OMITE a pendência, em vez de dizer que não há", () => {
+    // `null` é "não sei", e alarme falso na faixa é o que faz parar de lê-la.
+    const r = pendenciasDaLista(pecas, new Set(["p1"]), semCert, "/frota?", null);
+    expect(r.find((x) => x.chave === "pessoa_desligada")).toBeUndefined();
+  });
+
+  it("o argumento é opcional: quem não passa nada não ganha a pendência", () => {
+    const r = pendenciasDaLista(pecas, new Set(["p1"]), semCert, "/frota?");
+    expect(r.find((x) => x.chave === "pessoa_desligada")).toBeUndefined();
+  });
+
+  it("plural correto acima de uma", () => {
+    const r = pendenciasDaLista(
+      pecas,
+      new Set(["p1", "p2"]),
+      semCert,
+      "/frota?",
+      new Set(["p1", "p2"]),
+    );
+    expect(r[0].texto).toBe("2 peças estão com alguém já desligado da empresa");
+  });
+});
