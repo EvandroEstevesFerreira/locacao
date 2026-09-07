@@ -117,7 +117,13 @@ export default async function PecaDetalhePage({
                 custódia aberta não está com ninguém, diga a coluna o que
                 disser. */}
             {podeMover && podeReceberTermo(posseDaPeca) ? (
-              <Button variant="outline" render={<Link href="/termos/novo" />}>
+              // `?peca=` LEVA A ESCOLHA JUNTO. Sem ele o termo abria pedindo o
+              // equipamento de novo, no passo 2, depois de a pessoa ter aberto
+              // esta peça e clicado num botão que diz o patrimônio dela.
+              <Button
+                variant="outline"
+                render={<Link href={`/termos/novo?peca=${peca.id}`} />}
+              >
                 <FileSignature className="size-4" />
                 {ehRegularizacao(posseDaPeca)
                   ? "Registrar quem está com ela"

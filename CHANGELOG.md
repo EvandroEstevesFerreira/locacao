@@ -7,6 +7,60 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.87.0] — 2026-09-07
+
+O termo que nasce na peça já sabe qual é a peça.
+
+### O que estava errado
+
+Abrir a peça `13RK564`, clicar em **“Registrar quem está com ela”**, preencher o
+passo 1 — e o passo 2 pedir para **escolher o equipamento de novo**, começando de
+uma lista vazia com um botão “Acrescentar item”.
+
+A escolha já tinha sido feita, dois cliques antes, num botão que estampa o
+patrimônio. Perguntar de novo é pedir a mesma resposta duas vezes.
+
+O motivo era simples: o botão em `frota/[id]/page.tsx` apontava para
+`/termos/novo` **sem parâmetro nenhum**, e `termos/novo/page.tsx` não lia
+`searchParams`. A peça se perdia na porta.
+
+### O que passa a acontecer
+
+`?peca=` leva a escolha junto. O passo 2 chega com a linha montada — item,
+patrimônio e quantidade — restando o estado de entrega. A **obra da peça**
+também vem preenchida no passo 1, pelo mesmo motivo: é o mesmo conhecimento
+vindo do mesmo clique.
+
+Mesmo desenho do `?avaria=` da abertura de ordem de reparo, que já existia no
+projeto.
+
+### Linha normal, não linha travada
+
+A peça pré-selecionada entra como **linha comum**, editável e removível. Termo
+com duas peças para a mesma pessoa é caso corriqueiro — o notebook e o celular
+saem juntos — e uma linha imutável obrigaria a um segundo modo do wizard só
+para atender isso.
+
+### A conferência que não é opcional
+
+O parâmetro vem da URL, e URL é digitável, editável e compartilhável. Aceitá-lo
+sem conferir permitiria montar um termo sobre peça que **já está com outra
+pessoa** — dois documentos assinados sobre o mesmo patrimônio, que é exatamente
+o que a lista de livres existe para impedir.
+
+`resolverPecaPedida` procura o id **dentro da lista de livres** e nada além
+disso. Cinco testes a prendem, entre eles o que recusa id que não está na lista
+e o que impede confundir `id` com `identificador` — um `find` pelo patrimônio
+aceitaria `13RK564` na URL, e patrimônio se repete entre organizações.
+
+Quando a peça pedida não está mais livre — alguém emitiu um termo para ela entre
+o clique e o carregamento — a tela **diz isso**, em vez de abrir vazia e deixar
+a pessoa procurar no passo 2 uma peça que não está lá.
+
+A obra só é pré-selecionada quando existe no seletor: a leitura da peça é livre
+na organização, mas a lista de obras respeita o escopo de quem está olhando, e
+um `value` sem `<option>` correspondente perderia a obra em silêncio.
+
 ## [0.86.1] — 2026-09-07
 
 O seletor de item do termo estava vazio.

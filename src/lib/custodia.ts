@@ -317,3 +317,27 @@ export function ehRegularizacao(p: {
 }): boolean {
   return p.situacao === "em_uso" && !p.temPosseAberta;
 }
+
+/**
+ * A peça que veio no `?peca=` da URL, conferida contra as que podem receber
+ * termo.
+ *
+ * O QUE ESTA FUNÇÃO IMPEDE: montar um termo sobre peça que já está com outra
+ * pessoa. O parâmetro chega pela URL, e URL é digitável, editável e
+ * compartilhável — aceitá-la de olhos fechados aceitaria qualquer id que
+ * couber ali. A lista de livres já respondeu quem pode receber, com RLS e
+ * custódia; aqui só se procura dentro dela.
+ *
+ * `foraDaLista` distingue os dois "sem peça" que a tela precisa tratar
+ * diferente: quem entrou por "Novo termo" não pediu peça nenhuma e não deve
+ * ver aviso; quem clicou no botão da peça pediu uma e merece saber por que ela
+ * não veio.
+ */
+export function resolverPecaPedida<T extends { id: string }>(
+  pedida: string | undefined | null,
+  livres: T[],
+): { peca: T | null; foraDaLista: boolean } {
+  if (!pedida) return { peca: null, foraDaLista: false };
+  const peca = livres.find((p) => p.id === pedida) ?? null;
+  return { peca, foraDaLista: peca === null };
+}

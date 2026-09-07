@@ -55,12 +55,24 @@ export function TermoWizard({
   pecas,
   obras,
   nomeEmpresa,
+  pecaInicial = null,
+  obraInicial = "",
+  avisoPeca = null,
 }: {
   funcionarios: OpcaoFuncionario[];
   itens: OpcaoItem[];
   pecas: OpcaoPeca[];
   obras: OpcaoObra[];
   nomeEmpresa: string;
+  /**
+   * A peça de onde o termo nasceu, quando ele nasceu de uma.
+   *
+   * Vem da página da peça pelo `?peca=` — ver `novo/page.tsx`. Chega já
+   * validada contra a lista `pecas`: aqui não se confere de novo.
+   */
+  pecaInicial?: OpcaoPeca | null;
+  obraInicial?: string;
+  avisoPeca?: string | null;
 }) {
   const router = useRouter();
   const [passo, setPasso] = useState(0);
@@ -69,13 +81,35 @@ export function TermoWizard({
 
   // Passo 1
   const [funcionarioId, setFuncionarioId] = useState("");
-  const [obraId, setObraId] = useState("");
+  const [obraId, setObraId] = useState(obraInicial);
   const [dataEntrega, setDataEntrega] = useState(hojeISOSaoPaulo());
   const [previsao, setPrevisao] = useState("");
   const [observacoes, setObservacoes] = useState("");
 
   // Passo 2
-  const [linhas, setLinhas] = useState<LinhaItem[]>([]);
+  //
+  // A LINHA JÁ VEM MONTADA quando o termo nasceu de uma peça. Pedir o
+  // equipamento de novo, depois de a pessoa tê-lo escolhido na Frota e clicado
+  // num botão que diz o patrimônio, é fazê-la responder duas vezes à mesma
+  // pergunta — foi o relato do Evandro em 07/09/2026.
+  //
+  // Ela entra como LINHA NORMAL, editável e removível, e não travada: termo com
+  // duas peças para a mesma pessoa é caso corriqueiro (o notebook e o celular
+  // saem juntos), e uma linha imutável obrigaria a um segundo modo do wizard
+  // para atender isso.
+  const [linhas, setLinhas] = useState<LinhaItem[]>(() =>
+    pecaInicial
+      ? [
+          {
+            item_id: pecaInicial.itemId,
+            unidade_id: pecaInicial.id,
+            quantidade: "1",
+            estado_entrega: "bom",
+            observacoes: "",
+          },
+        ]
+      : [],
+  );
 
   // Passo 3
   const [termoId, setTermoId] = useState<string | null>(null);
@@ -200,6 +234,16 @@ export function TermoWizard({
           </li>
         ))}
       </ol>
+
+      {/* A pessoa clicou num botão que dizia o patrimônio e chegou aqui sem
+          ele. Sem uma frase, ela procura a peça no passo 2, não acha, e conclui
+          que a tela está quebrada — quando na verdade alguém emitiu um termo
+          para aquela peça no intervalo entre o clique e o carregamento. */}
+      {avisoPeca ? (
+        <p className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+          {avisoPeca}
+        </p>
+      ) : null}
 
       {passo === 0 ? (
         <div className="grid gap-4 sm:grid-cols-2">
