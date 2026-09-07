@@ -27,7 +27,17 @@ export default defineConfig({
     // porque o Helvetica não tem o glifo ☐ e sem elas o formulário é inútil.
     // O default de 5s ficava exatamente na fronteira, e o teste falhava por
     // timeout sem nada estar errado.
-    testTimeout: 30_000,
+    //
+    // 30s NÃO BASTOU. Em 06/09/2026 o `romaneio.test.tsx` estourou os 30s numa
+    // rodada completa que levou 102s — e passou em 10,5s quando rodado sozinho.
+    // A causa não é aquele teste: são OITO arquivos renderizando PDF de verdade,
+    // e o vitest os roda em workers paralelos disputando CPU. Três vezes mais
+    // lento sob carga, e o runner do GitHub tem dois núcleos — metade desta
+    // máquina.
+    //
+    // 60s dá folga para a contenção sem esconder regressão de verdade: um PDF
+    // que passasse a custar o dobro ainda estouraria.
+    testTimeout: 60_000,
     exclude: ["node_modules", ".next", "supabase"],
   },
 });

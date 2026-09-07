@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Boxes, TriangleAlert, ArrowRight } from "lucide-react";
+import { Boxes, TriangleAlert, ArrowRight, X } from "lucide-react";
 
 import {
   listarFrota,
@@ -108,26 +108,29 @@ export default async function FrotaPage({
 
   // O link do trilho preserva tudo o que a pessoa acabou de aplicar — trocar de
   // categoria é navegar, não recomeçar.
-  const linkDaCategoria = (c: string) => {
-    const p = new URLSearchParams();
-    for (const [k, v] of Object.entries({
+  const montarLink = (
+    mudanca: Partial<Record<string, string | undefined>> = {},
+  ) => {
+    const atual: Record<string, string | undefined> = {
       q: filtros.q,
       situacao: filtros.situacao,
       propriedade: filtros.propriedade,
       obra: filtros.obra,
+      categoria: categoriaSel,
       certificado,
       pendencia,
-    })) {
-      if (v) p.set(k, v);
-    }
-    if (c) p.set("categoria", c);
+      ...mudanca,
+    };
+    const p = new URLSearchParams();
+    for (const [k, v] of Object.entries(atual)) if (v) p.set(k, v);
     const s = p.toString();
     return s ? `/frota?${s}` : "/frota";
   };
 
-  const base = linkDaCategoria(categoriaSel).includes("?")
-    ? `${linkDaCategoria(categoriaSel)}&`
-    : `${linkDaCategoria(categoriaSel)}?`;
+  const linkDaCategoria = (c: string) => montarLink({ categoria: c });
+
+  const link = montarLink();
+  const base = link.includes("?") ? `${link}&` : `${link}?`;
 
   // A faixa conta a CATEGORIA inteira, e não a lista já filtrada: senão, ao
   // clicar nela, ela continuaria lá com o mesmo número apontando para si mesma.
@@ -240,6 +243,25 @@ export default async function FrotaPage({
               />
             ) : null}
           </ListFilters>
+
+          {/* O CONTRAPESO DE ESCONDER A FAIXA. Quando a pendência está
+              aplicada, a faixa some — e sem isto a lista encurtaria sem nada
+              dizer por quê. O selo diz o recorte e traz o X para sair dele. */}
+          {pendencia === "sem_responsavel" ? (
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <span className="text-muted-foreground">Mostrando apenas:</span>
+              <Badge variant="secondary" className="gap-1">
+                Em uso sem termo assinado
+                <Link
+                  href={montarLink({ pendencia: undefined })}
+                  aria-label="Tirar o filtro de pendência"
+                  className="rounded hover:bg-background/60"
+                >
+                  <X className="size-3.5" aria-hidden />
+                </Link>
+              </Badge>
+            </div>
+          ) : null}
 
           {/* A FAIXA. Some sozinha quando `avisos` está vazio — não existe
               versão "tudo em ordem" dela. */}
