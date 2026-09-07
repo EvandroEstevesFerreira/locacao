@@ -4,7 +4,7 @@ import { ArrowLeft, MailCheck } from "lucide-react";
 
 import { getCurrentPerfil, podeOperar } from "@/lib/auth";
 import { listarFuncionarios } from "@/lib/data/termo";
-import { emailDerivado } from "@/lib/termo";
+import { precisaConferencia } from "@/lib/termo";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
@@ -36,14 +36,11 @@ export default async function ConferirEmailsPage() {
 
   const funcionarios = await listarFuncionarios({ apenasAtivos: true });
 
+  // A regra vive em `precisaConferencia`, e não aqui: o contador na lista de
+  // funcionários faz a mesma pergunta, e duas cópias divergiriam na primeira
+  // correção — um botão dizendo “conferir 97” abrindo uma tela com 94 linhas.
   const linhas: LinhaConferencia[] = funcionarios
-    .filter((f) => f.email && !f.email_confirmado)
-    .filter((f) => {
-      // O endereço bate com o que o nome produz? Então é dedução, e precisa de
-      // olho humano. Se não bate, foi digitado — e digitar já é conferir.
-      const derivado = emailDerivado(f.nome);
-      return derivado !== null && derivado.toLowerCase() === f.email!.toLowerCase();
-    })
+    .filter(precisaConferencia)
     .map((f) => ({
       id: f.id,
       nome: f.nome,
