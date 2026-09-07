@@ -21,9 +21,13 @@ jobs:
   verificar:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # v7 nas duas: o runner deprecou o Node 20 e vinha forçando as v4 a rodar
+      # em Node 24 mesmo assim — funciona hoje, quebra quando a compatibilidade
+      # sair. As entradas que usamos (`node-version`, `cache`) não mudaram de v4
+      # para v7, então a subida é substituição direta.
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           # 22 LTS: o Loca é Next 16 / React 19. O Sistenge People usa 20, que
           # também funciona, mas 22 é o alinhado ao runtime da Vercel hoje.
