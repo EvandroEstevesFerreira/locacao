@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.86.1";
+export const APP_VERSION = "0.87.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,17 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.87.0",
+    data: "2026-09-07",
+    titulo: "O termo que nasce na peça já sabe qual é a peça",
+    mudancas: [
+      { tipo: "melhoria", texto: "Ao clicar em “Registrar quem está com ela” ou “Entregar a funcionário” na página de uma peça, o termo abre com o equipamento já preenchido no passo “O que sai”. Antes ele pedia para escolher o equipamento de novo, depois de você já tê-lo escolhido na Frota." },
+      { tipo: "melhoria", texto: "A obra da peça também vem preenchida, pelo mesmo motivo." },
+      { tipo: "melhoria", texto: "O equipamento pré-selecionado continua editável e pode ser removido: termo com duas peças para a mesma pessoa — o notebook e o celular saindo juntos — é caso corriqueiro." },
+      { tipo: "seguranca", texto: "A peça que chega pelo endereço da página só é aceita se estiver realmente livre. Sem essa conferência, um endereço editado à mão poderia gerar dois termos assinados sobre o mesmo patrimônio." },
+    ],
+  },
   {
     versao: "0.86.1",
     data: "2026-09-07",

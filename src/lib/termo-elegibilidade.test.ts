@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { podeReceberTermo, ehRegularizacao } from "./custodia";
+import { podeReceberTermo, ehRegularizacao, resolverPecaPedida } from "./custodia";
 
 const peca = (situacao: string, temPosseAberta = false) => ({
   situacao,
@@ -55,5 +55,52 @@ describe("ehRegularizacao", () => {
   it("com posse aberta não é nem uma coisa nem outra", () => {
     // E nem chega a aparecer: `podeReceberTermo` já barrou.
     expect(ehRegularizacao(peca("em_uso", true))).toBe(false);
+  });
+});
+
+describe("resolverPecaPedida", () => {
+  const livres = [
+    { id: "aaa", identificador: "13RK564" },
+    { id: "bbb", identificador: "14L4594" },
+  ];
+
+  it("devolve a peça quando ela está entre as livres", () => {
+    const r = resolverPecaPedida("aaa", livres);
+    expect(r.peca?.identificador).toBe("13RK564");
+    expect(r.foraDaLista).toBe(false);
+  });
+
+  it("sem parâmetro não é peça fora da lista — é termo que não nasceu de peça", () => {
+    // Quem entra por "Novo termo" na lista de Termos não pediu peça nenhuma.
+    // Marcar `foraDaLista` aqui mostraria a essa pessoa um aviso sobre uma
+    // escolha que ela nunca fez.
+    for (const vazio of [undefined, null, ""]) {
+      const r = resolverPecaPedida(vazio, livres);
+      expect(r.peca).toBeNull();
+      expect(r.foraDaLista).toBe(false);
+    }
+  });
+
+  it("RECUSA id que não está na lista de livres", () => {
+    // A regra que impede dois termos assinados sobre o mesmo patrimônio. O
+    // parâmetro vem da URL — digitável, editável, compartilhável —, e a lista
+    // de livres é quem já respondeu, com RLS e custódia, quem pode receber.
+    const r = resolverPecaPedida("ccc", livres);
+    expect(r.peca).toBeNull();
+    expect(r.foraDaLista).toBe(true);
+  });
+
+  it("recusa também com a lista vazia", () => {
+    const r = resolverPecaPedida("aaa", []);
+    expect(r.peca).toBeNull();
+    expect(r.foraDaLista).toBe(true);
+  });
+
+  it("não confunde id com identificador", () => {
+    // Um `find` por identificador aceitaria "13RK564" na URL. São chaves
+    // diferentes, e o patrimônio se repete entre organizações.
+    const r = resolverPecaPedida("13RK564", livres);
+    expect(r.peca).toBeNull();
+    expect(r.foraDaLista).toBe(true);
   });
 });

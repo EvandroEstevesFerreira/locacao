@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeOperar } from "@/lib/auth";
 import { listarObrasParaFiltro } from "@/lib/data/obras";
 import { pecasComResponsavel } from "@/lib/data/frota";
-import { podeReceberTermo } from "@/lib/custodia";
+import { podeReceberTermo, resolverPecaPedida } from "@/lib/custodia";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
@@ -14,9 +14,22 @@ import { TermoWizard } from "../termo-wizard";
 
 export const metadata = { title: "Novo termo — Loca" };
 
-export default async function NovoTermoPage() {
+/**
+ * Emissão de um termo.
+ *
+ * `?peca=` pré-monta a linha do passo 2 e é o caminho de chegada mais comum:
+ * o botão "Registrar quem está com ela" / "Entregar a funcionário" da página da
+ * peça. Mesmo desenho do `?avaria=` da abertura de ordem de reparo.
+ */
+export default async function NovoTermoPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
   const perfil = await getCurrentPerfil();
   if (!podeOperar(perfil?.papel)) redirect("/termos");
+
+  const { peca: pecaPedida } = await searchParams;
 
   const supabase = await createClient();
 
@@ -54,7 +67,10 @@ export default async function NovoTermoPage() {
       // `situacao` o que disser. É essa a pergunta que protege.
       supabase
         .from("equipamento_unidade")
-        .select("id, identificador, item_id, situacao")
+        // `obra_id` entra para pré-selecionar a obra quando o termo nasce da
+        // peça: é o mesmo conhecimento vindo do mesmo clique, e escolhê-la de
+        // novo é a mesma fricção de escolher o equipamento de novo.
+        .select("id, identificador, item_id, situacao, obra_id")
         .in("situacao", ["disponivel", "em_uso"])
         .order("identificador"),
       listarObrasParaFiltro(),
@@ -74,6 +90,7 @@ export default async function NovoTermoPage() {
     identificador: string;
     item_id: string;
     situacao: string;
+    obra_id: string | null;
   }[]).filter(
     (p) =>
       // `null` = a consulta de custodia falhou; nesse caso nenhuma peca entra.
@@ -89,6 +106,15 @@ export default async function NovoTermoPage() {
     nome: string;
     cpf: string | null;
   }[];
+
+  // O botão da peça só aparece quando ela PODE receber termo, então cair no
+  // ramo do aviso é raro: alguém emitiu um termo para ela entre o clique e o
+  // carregamento desta tela. Raro não é nunca, e o silêncio nesse caso manda a
+  // pessoa procurar no passo 2 uma peça que não está lá.
+  const { peca: pecaEscolhida, foraDaLista } = resolverPecaPedida(pecaPedida, livres);
+  const avisoPeca = foraDaLista
+    ? "A peça que você escolheu não está mais livre — alguém deve tê-la entregado agora há pouco. Monte o termo escolhendo o equipamento abaixo, ou volte à Frota para conferir com quem ela está."
+    : null;
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -130,6 +156,27 @@ export default async function NovoTermoPage() {
               }))}
               obras={obras}
               nomeEmpresa={(org as { nome: string } | null)?.nome ?? "Sistenge"}
+              pecaInicial={
+                pecaEscolhida
+                  ? {
+                      id: pecaEscolhida.id,
+                      identificador: pecaEscolhida.identificador,
+                      itemId: pecaEscolhida.item_id,
+                    }
+                  : null
+              }
+              // Só pré-seleciona obra que existe na lista do seletor: a leitura
+              // da peça é livre na organização, mas `listarObrasParaFiltro`
+              // respeita o escopo por obra de quem está olhando. Um `value` sem
+              // `<option>` correspondente deixa o select em branco e a obra se
+              // perde em silêncio na emissão.
+              obraInicial={
+                pecaEscolhida?.obra_id &&
+                obras.some((o) => o.id === pecaEscolhida.obra_id)
+                  ? pecaEscolhida.obra_id
+                  : ""
+              }
+              avisoPeca={avisoPeca}
             />
           </CardContent>
         </Card>
