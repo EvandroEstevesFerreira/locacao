@@ -7,6 +7,43 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.90.2] — 2026-09-07
+
+O e-mail deduzido que bloqueava o dono verdadeiro.
+
+```
+duplicate key value violates unique constraint "idx_funcionario_email"
+```
+
+**Não era duplicata dentro do People** — lá os 194 e-mails são todos distintos,
+medido. Era um endereço **deduzido** de `nome.sobrenome@sistenge.com`, gravado
+no Loca antes da integração, sentado numa linha ainda não conciliada — enquanto
+o People mandava aquele mesmo endereço para o cadastro de quem ele realmente é.
+Duas linhas, as duas em cadastros sem vínculo.
+
+O People é a fonte da verdade de pessoa. Se ele diz que um endereço é da pessoa
+P, nenhuma outra linha daqui pode segurá-lo: **e-mail corporativo não é
+compartilhado**. A chave é liberada de quem a segura, e o dono recebe a dele na
+mesma rodada.
+
+**Libera a chave, não apaga a linha.** Quem perde o e-mail continua existindo,
+com nome, obra e histórico de equipamento. O que perde é um palpite que
+pertencia a outro — e mantê-lo faria o termo de responsabilidade de uma pessoa
+chegar na caixa de outra, que é exatamente o incidente que `email_confirmado`
+existe para evitar.
+
+A liberação roda **antes** do upsert e sobre o lote inteiro, nunca por fatia:
+liberar dentro do laço deixaria a fatia seguinte esbarrando numa chave que a
+anterior ainda não soltou.
+
+### Uma observação sobre os lotes
+
+As fatias de 200 **não são atômicas entre si**: nesta falha, o lote 1 gravou e o
+lote 2 abortou, deixando 200 das 483 no banco. Não houve estrago porque toda
+escrita é `upsert` e o cursor **não avança** quando a rodada falha — a próxima
+tentativa refaz tudo e converge. É o mesmo desenho que segurou os dois defeitos
+da 0.90.1.
+
 ## [0.90.1] — 2026-09-07
 
 A primeira sincronização de verdade — e os dois defeitos que só ela achou.

@@ -278,3 +278,64 @@ export function resolverColisoes(pessoas: PessoaPeople[]): PessoaPeople[] {
   // fica com o valor, e trocar a ordem do lote não é assunto desta função.
   return pessoas.map((p) => ajustadas.get(p.id)!);
 }
+
+/** Uma linha local, do ponto de vista das chaves únicas. */
+export type ChaveLocal = {
+  id: string;
+  people_id: string | null;
+  email: string | null;
+  cpf: string | null;
+};
+
+/**
+ * As linhas locais que SEGURAM uma chave que o People diz ser de outra pessoa.
+ *
+ * O PROBLEMA, ENCONTRADO NA TERCEIRA TENTATIVA DA PRIMEIRA SINCRONIZAÇÃO:
+ *
+ *   duplicate key value violates unique constraint "idx_funcionario_email"
+ *
+ * Não era duplicata dentro do People — lá os e-mails são todos distintos. Era
+ * um endereço DEDUZIDO, gravado no Loca antes da integração, sentado numa linha
+ * ainda não conciliada, enquanto o People manda o mesmo endereço para o
+ * cadastro de quem ele realmente é.
+ *
+ * O People é a fonte da verdade de pessoa. Se ele diz que `fulano@` é da pessoa
+ * P, nenhuma outra linha daqui pode segurar aquele endereço — e-mail
+ * corporativo não é compartilhado. Então a chave é LIBERADA de quem a segura,
+ * e o dono recebe a dele na mesma rodada.
+ *
+ * ┌─ LIBERA A CHAVE, NÃO APAGA A LINHA ──────────────────────────────────────┐
+ * │ A linha que perde o e-mail continua existindo, com nome, obra e histórico │
+ * │ de equipamento. O que ela perde é um palpite que pertencia a outro \u2014     │
+ * │ e mantê-lo faria o termo de responsabilidade de uma pessoa chegar na      │
+ * │ caixa de outra, que é o incidente que `email_confirmado` existe para      │
+ * │ evitar.                                                                  │
+ * └──────────────────────────────────────────────────────────────────────────┘
+ *
+ * Linha já vinculada à MESMA pessoa não entra: ali o e-mail é dela mesma, e o
+ * upsert vai simplesmente reescrevê-lo.
+ */
+export function chavesALiberar(
+  locais: ChaveLocal[],
+  entrando: { people_id: string; email: string | null; cpf: string | null }[],
+): { email: string[]; cpf: string[] } {
+  const donoDoEmail = new Map<string, string>();
+  const donoDoCpf = new Map<string, string>();
+  for (const l of entrando) {
+    if (l.email) donoDoEmail.set(l.email, l.people_id);
+    if (l.cpf) donoDoCpf.set(l.cpf, l.people_id);
+  }
+
+  const email: string[] = [];
+  const cpf: string[] = [];
+  for (const f of locais) {
+    const e = normalizarEmail(f.email);
+    if (e && donoDoEmail.has(e) && donoDoEmail.get(e) !== f.people_id) {
+      email.push(f.id);
+    }
+    if (f.cpf && donoDoCpf.has(f.cpf) && donoDoCpf.get(f.cpf) !== f.people_id) {
+      cpf.push(f.id);
+    }
+  }
+  return { email, cpf };
+}
