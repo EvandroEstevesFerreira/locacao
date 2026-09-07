@@ -84,13 +84,25 @@ export function PecaEditar({ peca }: { peca: PecaDetalhe }) {
     });
   }
 
+  // OS DOIS CAMPOS NATIVOS MUDAM DE NOME conforme o perfil da categoria.
+  //
+  // São a mesma coluna — `identificador` e `numero_serie` — e por isso não
+  // ganharam colunas próprias: a placa É o patrimônio do carro, e o chassi É o
+  // número de série dele. Duplicar em coluna nova criaria dois lugares para
+  // digitar a mesma coisa. O que muda é como se chama na tela de quem preenche
+  // — ninguém que cadastra um Fiat Argo procura o campo “número de série”.
+  const rotulos =
+    peca.perfilCampos === "veiculo"
+      ? { identificador: "Placa", numeroSerie: "Chassi" }
+      : { identificador: "Patrimônio", numeroSerie: "Número de série" };
+
   return (
     <form onSubmit={handleSubmit(onSubmit, aoInvalidar(setErroServidor))} className="space-y-5">
       <input type="hidden" {...register("id")} />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label htmlFor="identificador">Patrimônio</Label>
+          <Label htmlFor="identificador">{rotulos.identificador}</Label>
           <Input
             id="identificador"
             maxLength={80}
@@ -105,7 +117,7 @@ export function PecaEditar({ peca }: { peca: PecaDetalhe }) {
 
         <div className="space-y-1.5">
           <Label htmlFor="numero_serie">
-            Número de série{" "}
+            {rotulos.numeroSerie}{" "}
             <span className="font-normal text-muted-foreground">(opcional)</span>
           </Label>
           <Input

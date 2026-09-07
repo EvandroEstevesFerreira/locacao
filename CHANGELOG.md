@@ -7,6 +7,29 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.81.1] — 2026-09-06
+
+Placa e chassi no cadastro do veículo, e a contração do medidor.
+
+### Alterado
+
+- No cadastro de uma peça de categoria com perfil **veículo**, os dois campos
+  nativos mudam de nome: **Placa** e **Chassi**. São as mesmas colunas
+  `identificador` e `numero_serie` — a placa **é** o patrimônio do carro e o
+  chassi **é** o número de série dele, então duplicar em coluna nova criaria dois
+  lugares para digitar a mesma coisa. O que muda é como se chama para quem
+  preenche.
+
+### Migration
+
+- `0088_contracao_do_medidor.sql` — a segunda metade do expande-e-contrai:
+  derruba os dois triggers de ponte e as colunas
+  `intervalo_manutencao_h` e `tem_horimetro`, agora que a v0.81.0 está
+  publicada e nada mais as lê. Confere a coerência das duas formas **antes** de
+  perder o dado, e a conferência é guardada por um `if` — ela lê justamente as
+  colunas que derruba, e sem a guarda a segunda execução quebraria num arquivo
+  cujo trabalho já estava feito.
+
 ## [0.81.0] — 2026-09-06
 
 O medidor passou a ter unidade.

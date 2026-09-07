@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.81.0";
+export const APP_VERSION = "0.81.1";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,14 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.81.1",
+    data: "2026-09-06",
+    titulo: "Placa e chassi, no cadastro do veículo",
+    mudancas: [
+      { tipo: "melhoria", texto: "No cadastro de um veículo, os campos passam a se chamar Placa e Chassi. São as mesmas colunas de patrimônio e número de série — mas ninguém que cadastra um carro procura o campo “número de série”." },
+    ],
+  },
   {
     versao: "0.81.0",
     data: "2026-09-06",
