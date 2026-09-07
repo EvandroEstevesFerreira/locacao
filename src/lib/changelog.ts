@@ -37,6 +37,7 @@ export const CHANGELOG: Release[] = [
       { tipo: "novo", texto: "Quem tem um único candidato possível é vinculado em lote, com um botão só. O resto vem um a um, porque escolher entre dois “Tiago Silva” é decisão de quem conhece as pessoas." },
       { tipo: "melhoria", texto: "O cruzamento de nomes passou a aceitar nome do meio: “Andre Piva” encontra “Andre Piva Correa”. A regra anterior comparava só primeiro e último nome e perdia esses casos." },
       { tipo: "seguranca", texto: "A conciliação vem ANTES de ligar a sincronização, e a tela de Funcionários avisa quantos faltam. Sincronizar com gente ainda não vinculada criaria uma segunda linha para cada pessoa que já estava cadastrada." },
+      { tipo: "novo", texto: "As obras passaram a conhecer o código do centro de resultado do People. São sete, e o código é o mesmo dos dois lados — com isso 422 das 483 pessoas chegam com a obra certa preenchida." },
       { tipo: "seguranca", texto: "Duas linhas do Loca que apontem para a mesma pessoa saem do vínculo automático e vão para decisão humana — uma delas é cadastro duplicado e precisa ser resolvida antes." },
     ],
   },

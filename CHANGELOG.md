@@ -71,6 +71,34 @@ As 483 pessoas são lidas ao vivo, em cinco páginas. Esta tela é usada um punh
 de vezes na vida do sistema — uma tabela de staging seria estrutura permanente
 para um trabalho que acaba.
 
+### O de-para de obra saiu de graça
+
+Medido contra a API real, com as 483 pessoas em mãos: **os códigos são os
+mesmos**. O People manda o código do centro de resultado e a obra do Loca já usa
+exatamente esse número — com o mesmo nome nas sete.
+
+O documento do People listava o **800** entre os administrativos “sem obra
+correspondente”. Tem sim: a obra 800 “Administração” existe no Loca e é onde
+estão os notebooks da sede. Sem ela, 17 pessoas iriam para o nulo à toa.
+
+**422 das 483 (87%)** chegam com obra. Ficam nulas 61: Elea (685, 697), Equinix
+SP6 (702), os administrativos 801 a 807 e 5 sem centro de resultado. A obra 695
+do Loca não tem CR no People e segue sem código.
+
+### Verificado contra a API de verdade
+
+As **483 pessoas passaram no schema**, sem uma exceção. Cobertura real:
+`matricula` e `admissao` 483/483, `cargo` 478, `cpf` 461 (o documento previa
+442), `telefone` 437, `email` **194** — os 40% documentados.
+
+O cruzamento por subsequência rendeu mais que o previsto: **82 automáticas**
+contra as 75 estimadas, e o trabalho manual caiu de 43 para **36** — 6 ambíguas,
+23 sem candidato, 1 de uma palavra e 6 pares apontando para a mesma pessoa.
+
+### Migrations
+
+- `0095_de_para_de_obra.sql` — as sete obras ganham `codigo_people`.
+
 ## [0.88.0] — 2026-09-07
 
 A base de pessoas passa a vir do Sistenge People — **fase 1: o consumidor**.
