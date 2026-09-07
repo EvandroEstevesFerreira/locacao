@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.80.0";
+export const APP_VERSION = "0.81.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,17 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.81.0",
+    data: "2026-09-06",
+    titulo: "O medidor passou a ter unidade",
+    mudancas: [
+      { tipo: "novo", texto: "A revisão preventiva do tipo agora pergunta a unidade: horímetro em horas, ou hodômetro em quilômetros. CARRO e CAMINHONETE já nascem com 10.000 km." },
+      { tipo: "melhoria", texto: "A tela da peça segue a unidade do tipo. Onde dizia “h” fixo, um carro com 48.000 km agora mostra quilômetros — antes apareceria como 48.000 horas, que são cinco anos e meio de motor ligado sem parar." },
+      { tipo: "seguranca", texto: "Intervalo e unidade só entram juntos. Um número sem unidade ninguém sabe ler: 250 pode ser horas de gerador ou quilômetros de nada, e a conta de revisão escolheria sozinha." },
+      { tipo: "melhoria", texto: "“Sem leitura do horímetro” virou “Sem leitura do medidor”, porque carro não tem horímetro." },
+    ],
+  },
   {
     versao: "0.80.0",
     data: "2026-09-06",

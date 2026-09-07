@@ -1,9 +1,10 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import type { UnidadeMedidor } from "@/lib/catalogo";
 import {
-  horasAteRevisao,
-  horasDesdeRevisao,
+  faltaAteRevisao,
+  usoDesdeRevisao,
   estadoRevisao,
   type EstadoRevisao,
 } from "@/lib/apontamento";
@@ -69,10 +70,13 @@ export type UsoDaPeca = {
   /** Última leitura do horímetro, ou `null` se nunca foi apontada. */
   leituraAtual: number | null;
   ultimaData: string | null;
-  /** Intervalo de manutenção do TIPO, em horas. `null` = tipo sem intervalo. */
+  /** Intervalo de manutenção do TIPO. `null` = tipo sem revisão por uso. */
   intervalo: number | null;
-  /** Horas rodadas desde a última revisão. `null` = peça nunca apontada. */
-  horasDesdeRevisao: number | null;
+  /** A unidade do intervalo e da leitura: `h` ou `km`. */
+  unidade: UnidadeMedidor | null;
+  /** Quanto rodou desde a última revisão, na unidade acima. */
+  usoDesdeRevisao: number | null;
+  /** Quanto falta até a próxima, na unidade acima. Negativo = vencida. */
   faltamHoras: number | null;
   estado: EstadoRevisao;
 };
@@ -80,7 +84,7 @@ export type UsoDaPeca = {
 /**
  * O quadro de uso e revisão das peças com horímetro.
  *
- * Só as marcadas com `tem_horimetro`: gerador e compressor costumam ter,
+ * Só as marcadas com `tem_medidor`: gerador e compressor costumam ter,
  * betoneira e vibrador quase nunca. Trazer todas encheria a tela de peças que
  * não têm o que apontar.
  *
@@ -96,9 +100,9 @@ export async function listarUsoDasPecas(): Promise<UsoDaPeca[]> {
   const { data: pecas, error } = await supabase
     .from("equipamento_unidade")
     .select(
-      "id, identificador, item:item_id(descricao, tipo:tipo_id(intervalo_manutencao_h))",
+      "id, identificador, item:item_id(descricao, tipo:tipo_id(intervalo_manutencao, unidade_medidor))",
     )
-    .eq("tem_horimetro", true)
+    .eq("tem_medidor", true)
     .eq("ativo", true)
     .order("identificador");
 
@@ -129,7 +133,7 @@ export async function listarUsoDasPecas(): Promise<UsoDaPeca[]> {
 
   const ultima = new Map<string, { data: string; leitura: number }>();
   // O histórico de cada peça, na mesma ordem (recente → antigo) que
-  // `horasDesdeRevisao` espera.
+  // `usoDesdeRevisao` espera.
   const historico = new Map<string, { horas: number; revisao: boolean }[]>();
   for (const l of leituras ?? []) {
     // A consulta vem ordenada por data desc, então a PRIMEIRA de cada peça é a
@@ -146,14 +150,18 @@ export async function listarUsoDasPecas(): Promise<UsoDaPeca[]> {
     const item = achatar(
       p.item as unknown as {
         descricao: string;
-        tipo: { intervalo_manutencao_h: number | null } | null;
+        tipo: {
+          intervalo_manutencao: number | null;
+          unidade_medidor: string | null;
+        } | null;
       } | null,
     );
     const tipo = achatar(item?.tipo ?? null);
     const u = ultima.get(p.id) ?? null;
-    const intervalo = tipo?.intervalo_manutencao_h ?? null;
-    const desde = horasDesdeRevisao(historico.get(p.id) ?? []);
-    const faltam = horasAteRevisao(desde, intervalo);
+    const intervalo = tipo?.intervalo_manutencao ?? null;
+    const unidade = (tipo?.unidade_medidor as UnidadeMedidor | null) ?? null;
+    const desde = usoDesdeRevisao(historico.get(p.id) ?? []);
+    const faltam = faltaAteRevisao(desde, intervalo);
 
     return {
       unidadeId: p.id,
@@ -162,7 +170,8 @@ export async function listarUsoDasPecas(): Promise<UsoDaPeca[]> {
       leituraAtual: u?.leitura ?? null,
       ultimaData: u?.data ?? null,
       intervalo,
-      horasDesdeRevisao: desde,
+      unidade,
+      usoDesdeRevisao: desde,
       faltamHoras: faltam,
       estado: estadoRevisao(faltam, intervalo),
     };

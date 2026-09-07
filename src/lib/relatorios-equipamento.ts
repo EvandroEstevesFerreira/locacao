@@ -28,7 +28,7 @@ import {
 } from "./locacao";
 import type { Relatorio, FiltrosRelatorio, Coluna } from "./relatorios";
 import {
-  horasAteRevisao,
+  faltaAteRevisao,
   estadoRevisao,
   ESTADO_REVISAO_INFO,
 } from "./apontamento";
@@ -379,9 +379,9 @@ export async function usoEquipamento(
   const { data: pecas, error } = await supabase
     .from("equipamento_unidade")
     .select(
-      "id, identificador, item:item_id(descricao, tipo:tipo_id(intervalo_manutencao_h))",
+      "id, identificador, item:item_id(descricao, tipo:tipo_id(intervalo_manutencao))",
     )
-    .eq("tem_horimetro", true)
+    .eq("tem_medidor", true)
     .eq("ativo", true)
     .order("identificador");
 
@@ -408,7 +408,7 @@ export async function usoEquipamento(
     horas: number;
     /**
      * Horas desde a última revisão. Acumulada AQUI e não por
-     * `horasDesdeRevisao`, porque esta consulta vem em ordem CRESCENTE: dando
+     * `usoDesdeRevisao`, porque esta consulta vem em ordem CRESCENTE: dando
      * um passo por vez para a frente, zerar na revisão é a mesma conta e não
      * exige guardar o histórico inteiro de cada peça em memória.
      *
@@ -455,16 +455,16 @@ export async function usoEquipamento(
     const item = (Array.isArray(p.item) ? p.item[0] : p.item) as {
       descricao?: string;
       tipo:
-        | { intervalo_manutencao_h: number | null }
-        | { intervalo_manutencao_h: number | null }[]
+        | { intervalo_manutencao: number | null }
+        | { intervalo_manutencao: number | null }[]
         | null;
     } | null;
     const tipo = (Array.isArray(item?.tipo) ? item?.tipo[0] : item?.tipo) as
-      | { intervalo_manutencao_h: number | null }
+      | { intervalo_manutencao: number | null }
       | null;
     const acc = porPeca.get(String(p.id)) ?? null;
-    const intervalo = tipo?.intervalo_manutencao_h ?? null;
-    const faltam = horasAteRevisao(acc?.desdeRevisao ?? null, intervalo);
+    const intervalo = tipo?.intervalo_manutencao ?? null;
+    const faltam = faltaAteRevisao(acc?.desdeRevisao ?? null, intervalo);
 
     return {
       peca: p.identificador as string,

@@ -53,7 +53,11 @@ export type ApontamentoInput = z.input<typeof apontamentoSchema>;
 export type ApontamentoDados = z.output<typeof apontamentoSchema>;
 
 /**
- * Quantas horas a peça rodou DESDE a última revisão.
+ * Quanto a peça rodou DESDE a última revisão — em horas OU em quilômetros.
+ *
+ * A unidade não aparece aqui de propósito: a conta é a mesma para as duas, e
+ * quem sabe qual é o `unidade_medidor` do TIPO. Uma função por unidade seriam
+ * duas cópias da mesma soma, e a segunda divergiria na primeira correção.
  *
  * Recebe o histórico na ordem em que `listarApontamentosDaPeca` devolve: do
  * mais RECENTE para o mais antigo.
@@ -70,7 +74,7 @@ export type ApontamentoDados = z.output<typeof apontamentoSchema>;
  * `null` quando não há apontamento nenhum. Zero afirmaria "rodou zero hora
  * desde a revisão", que é diferente de "não sabemos se rodou".
  */
-export function horasDesdeRevisao(
+export function usoDesdeRevisao(
   historico: { horas: number; revisao: boolean }[],
 ): number | null {
   if (historico.length === 0) return null;
@@ -86,7 +90,7 @@ export function horasDesdeRevisao(
 }
 
 /**
- * Quanto falta para a próxima revisão, em horas.
+ * Quanto falta para a próxima revisão — na unidade do medidor do tipo.
  *
  * Negativo = VENCIDA, e o negativo é a informação: "passou 30 h do intervalo" é
  * o que faz alguém agir, enquanto um zero truncado diria só "chegou a hora" e
@@ -95,7 +99,7 @@ export function horasDesdeRevisao(
  * `null` quando o tipo não tem intervalo (a maioria — só faz sentido onde o
  * fabricante publica o número) ou quando a peça nunca foi apontada.
  */
-export function horasAteRevisao(
+export function faltaAteRevisao(
   desdeRevisao: number | null,
   intervalo: number | null,
 ): number | null {
@@ -141,6 +145,6 @@ export const ESTADO_REVISAO_INFO: Record<
   vencida: { label: "Revisão vencida", variant: "destructive" },
   proxima: { label: "Revisão próxima", variant: "secondary" },
   em_dia: { label: "Em dia", variant: "outline" },
-  sem_leitura: { label: "Sem leitura do horímetro", variant: "outline" },
+  sem_leitura: { label: "Sem leitura do medidor", variant: "outline" },
   sem_intervalo: { label: "Sem intervalo definido", variant: "outline" },
 };

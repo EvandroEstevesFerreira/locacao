@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { Plus, Pencil, X, ChevronRight, ChevronDown, ListChecks, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { NATUREZAS_ITEM, NATUREZA_ITEM, type NaturezaItem } from "@/lib/itens";
+import { UNIDADES_MEDIDOR, UNIDADE_MEDIDOR_INFO } from "@/lib/catalogo";
 import type { CategoriaComTipos } from "@/lib/data/catalogo";
 import {
   salvarCategoria,
@@ -393,7 +394,8 @@ function TipoForm({
         categoria_id: categoriaId,
         nome: String(fd.get("nome") ?? ""),
         natureza_padrao: natureza,
-        intervalo_manutencao_h: String(fd.get("intervalo_manutencao_h") ?? ""),
+        intervalo_manutencao: String(fd.get("intervalo_manutencao") ?? ""),
+        unidade_medidor: String(fd.get("unidade_medidor") ?? ""),
         ativo: fd.get("ativo") === "on",
       });
       if (!r.ok) {
@@ -455,21 +457,37 @@ function TipoForm({
         </Label>
         <Input
           id={`tipo-int-${tipo?.id ?? "novo"}`}
-          name="intervalo_manutencao_h"
+          name="intervalo_manutencao"
           type="number"
           min="1"
           step="1"
           inputMode="numeric"
           className="max-w-40"
           disabled={pendente}
-          defaultValue={tipo?.intervaloManutencaoH ?? ""}
+          defaultValue={tipo?.intervaloManutencao ?? ""}
           placeholder="250"
         />
-        {/* Só faz sentido onde o fabricante publica o intervalo, e só serve
-            para peças com horímetro. Em branco é o caso da maioria. */}
+        {/* A UNIDADE fica ao lado do número, e não numa configuração à parte:
+            250 e 10.000 são o mesmo campo com sentidos opostos, e separá-los
+            deixaria o número sozinho na tela sem dizer o que ele conta. */}
+        <NativeSelect
+          name="unidade_medidor"
+          aria-label="Unidade do medidor"
+          className="max-w-40"
+          disabled={pendente}
+          defaultValue={tipo?.unidadeMedidor ?? ""}
+        >
+          <option value="">—</option>
+          {UNIDADES_MEDIDOR.map((u) => (
+            <option key={u} value={u}>
+              {UNIDADE_MEDIDOR_INFO[u].medidor} ({UNIDADE_MEDIDOR_INFO[u].label})
+            </option>
+          ))}
+        </NativeSelect>
         <p className="text-xs text-muted-foreground">
-          Horas de horímetro entre manutenções preventivas — 250 h para um
-          gerador, por exemplo. Em branco, este tipo não tem revisão por uso.
+          Quanto a máquina roda entre manutenções preventivas — 250 h para um
+          gerador, 10.000 km para um carro. Em branco, este tipo não tem revisão
+          por uso, que é o caso da maioria.
         </p>
       </div>
 

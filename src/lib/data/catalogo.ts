@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { NaturezaItem } from "@/lib/itens";
 import { camposFichaSchema, type CampoFicha } from "@/lib/catalogo";
 import { exigenciasSchema, type Exigencia } from "@/lib/certificado";
+import type { UnidadeMedidor } from "@/lib/catalogo";
 
 /**
  * Lê `campos_ficha` com tolerância.
@@ -51,7 +52,9 @@ export type CategoriaComTipos = {
     /** Os campos que as PEÇAS deste tipo pedem (migration 0070). */
     campos: CampoFicha[];
     /** Horas entre revisões (migration 0071). Nulo = sem manutenção por uso. */
-    intervaloManutencaoH: number | null;
+    intervaloManutencao: number | null;
+    /** `h` de horímetro, `km` de hodômetro. Nulo quando não há intervalo. */
+    unidadeMedidor: UnidadeMedidor | null;
     /** O que as PEÇAS deste tipo precisam ter em dia (migration 0081). */
     exigencias: Exigencia[];
   }[];
@@ -79,7 +82,7 @@ export async function listarCategoriasComTipos(): Promise<CategoriaComTipos[]> {
         .order("nome"),
       supabase
         .from("tipo_equipamento")
-        .select("id, nome, categoria_id, natureza_padrao, ativo, campos_ficha, certificados_exigidos, intervalo_manutencao_h, item_catalogo(count)")
+        .select("id, nome, categoria_id, natureza_padrao, ativo, campos_ficha, certificados_exigidos, intervalo_manutencao, unidade_medidor, item_catalogo(count)")
         .order("nome"),
     ]);
 
@@ -102,7 +105,8 @@ export async function listarCategoriasComTipos(): Promise<CategoriaComTipos[]> {
       // array, e um campo gravado por SQL com forma errada derrubaria a tela em
       // vez de ser ignorado.
       campos: lerCampos(t.campos_ficha),
-      intervaloManutencaoH: t.intervalo_manutencao_h ?? null,
+      intervaloManutencao: t.intervalo_manutencao ?? null,
+      unidadeMedidor: (t.unidade_medidor as UnidadeMedidor | null) ?? null,
       exigencias: lerExigencias(t.certificados_exigidos),
     });
     porCategoria.set(t.categoria_id, lista);

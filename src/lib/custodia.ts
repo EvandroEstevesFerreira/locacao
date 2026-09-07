@@ -253,7 +253,7 @@ export const editarPecaSchema = z.object({
    * nunca. Ligado para todas, a tela de apontamento encheria de peças que não
    * têm o que apontar, e a lista viraria ruído no primeiro dia.
    */
-  tem_horimetro: z.boolean().default(false),
+  tem_medidor: z.boolean().default(false),
   /**
    * Os campos definidos pelo TIPO do item desta peça (migration 0070).
    *

@@ -67,7 +67,7 @@ export function PecaEditar({ peca }: { peca: PecaDetalhe }) {
       service_tag: peca.serviceTag ?? "",
       memoria_gb: peca.memoriaGb == null ? "" : String(peca.memoriaGb),
       configuracao: peca.configuracao ?? "",
-      tem_horimetro: peca.temHorimetro,
+      tem_medidor: peca.temMedidor,
     },
   });
 
@@ -303,7 +303,7 @@ export function PecaEditar({ peca }: { peca: PecaDetalhe }) {
           type="checkbox"
           className="mt-0.5 size-4"
           disabled={pendente}
-          {...register("tem_horimetro")}
+          {...register("tem_medidor")}
         />
         <span>
           Esta peça tem horímetro

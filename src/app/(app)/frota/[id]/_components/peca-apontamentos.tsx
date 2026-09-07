@@ -1,6 +1,11 @@
 "use client";
 
-// Apontamento de uso da peça — a leitura do horímetro.
+// Apontamento de uso da peça — a leitura do medidor.
+//
+// O MEDIDOR TEM UNIDADE, e ela vem do TIPO: horímetro conta horas (gerador,
+// PTA), hodômetro conta quilômetros (carro). Os rótulos desta tela seguem a
+// unidade — sem isso, 48.000 km num carro apareceria como “48.000 h”, que é
+// cinco anos e meio de motor ligado sem parar.
 //
 // O que se lança é a LEITURA DO MOSTRADOR, acumulada, e não "quantas horas
 // trabalhou". Quem lê o horímetro copia um número; quem estima horas de memória
@@ -13,6 +18,10 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Gauge, Plus, X, RotateCcw, Wrench } from "lucide-react";
+import {
+  UNIDADE_MEDIDOR_INFO,
+  type UnidadeMedidor,
+} from "@/lib/catalogo";
 import { toast } from "sonner";
 import { formatarData } from "@/lib/locacao";
 import type { ApontamentoLinha } from "@/lib/data/apontamentos";
@@ -33,14 +42,16 @@ import {
 
 export function PecaApontamentos({
   unidadeId,
-  temHorimetro,
+  temMedidor,
+  unidade,
   apontamentos,
   obras,
   hoje,
   podeEditar,
 }: {
   unidadeId: string;
-  temHorimetro: boolean;
+  temMedidor: boolean;
+  unidade: UnidadeMedidor | null;
   apontamentos: ApontamentoLinha[];
   obras: { id: string; codigo: string; nome: string }[];
   hoje: string;
@@ -50,7 +61,12 @@ export function PecaApontamentos({
 
   // A seção some por inteiro para peça sem horímetro. Mostrá-la vazia em toda
   // betoneira e escora do sistema seria ruído em cada tela de peça.
-  if (!temHorimetro) return null;
+  if (!temMedidor) return null;
+
+  // Sem unidade definida no tipo, `h` é o padrão: era o único caso que
+  // existia antes da frota de veículos, e todo apontamento gravado até aqui
+  // é de horímetro.
+  const un = UNIDADE_MEDIDOR_INFO[unidade ?? "h"];
 
   const ultima = apontamentos[0] ?? null;
   const totalHoras = apontamentos.reduce((s, a) => s + a.horas, 0);
@@ -62,10 +78,13 @@ export function PecaApontamentos({
         <CardDescription>
           {ultima ? (
             <>
-              Horímetro em <strong>{ultima.leitura.toLocaleString("pt-BR")} h</strong>,
+              {un.medidor} em{" "}
+              <strong>
+                {ultima.leitura.toLocaleString("pt-BR")} {un.label}
+              </strong>,
               lido em {formatarData(ultima.data)}
               {totalHoras > 0
-                ? ` · ${totalHoras.toLocaleString("pt-BR")} h registradas`
+                ? ` · ${totalHoras.toLocaleString("pt-BR")} ${un.label} registradas`
                 : ""}
               .
             </>
@@ -83,7 +102,7 @@ export function PecaApontamentos({
                   {formatarData(a.data)}
                 </span>
                 <span className="w-28 shrink-0 tabular-nums">
-                  {a.leitura.toLocaleString("pt-BR")} h
+                  {a.leitura.toLocaleString("pt-BR")} {un.label}
                 </span>
                 <span className="min-w-0 flex-1 text-muted-foreground">
                   {a.revisao ? (
@@ -95,7 +114,7 @@ export function PecaApontamentos({
                   {a.reiniciado ? (
                     <Badge variant="secondary" className="gap-1">
                       <RotateCcw className="size-3" aria-hidden />
-                      Horímetro trocado
+                      {un.medidor} trocado
                     </Badge>
                   ) : (
                     <>
@@ -104,7 +123,7 @@ export function PecaApontamentos({
                           exatamente o que o relatório de ociosidade real
                           procura. */}
                       <strong className="text-foreground">
-                        {a.horas.toLocaleString("pt-BR")} h
+                        {a.horas.toLocaleString("pt-BR")} {un.label}
                       </strong>{" "}
                       no período
                     </>
@@ -129,6 +148,7 @@ export function PecaApontamentos({
           lancando ? (
             <div className="rounded-lg border border-dashed p-3">
               <ApontamentoForm
+                un={un}
                 unidadeId={unidadeId}
                 obras={obras}
                 hoje={hoje}
@@ -157,12 +177,15 @@ function ApontamentoForm({
   obras,
   hoje,
   ultimaLeitura,
+  un,
   aoConcluir,
 }: {
   unidadeId: string;
   obras: { id: string; codigo: string; nome: string }[];
   hoje: string;
   ultimaLeitura: number | null;
+  /** Já resolvida pelo componente de cima — o form não volta ao tipo. */
+  un: (typeof UNIDADE_MEDIDOR_INFO)[UnidadeMedidor];
   aoConcluir: () => void;
 }) {
   const router = useRouter();
@@ -210,7 +233,7 @@ function ApontamentoForm({
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="leitura">Leitura do horímetro</Label>
+        <Label htmlFor="leitura">Leitura do {un.medidor.toLowerCase()}</Label>
         <Input
           id="leitura"
           name="leitura"
@@ -229,7 +252,10 @@ function ApontamentoForm({
           {ultimaLeitura !== null ? (
             <>
               {" "}
-              A última foi <strong>{ultimaLeitura.toLocaleString("pt-BR")} h</strong>.
+              A última foi{" "}
+              <strong>
+                {ultimaLeitura.toLocaleString("pt-BR")} {un.label}
+              </strong>.
             </>
           ) : null}
         </p>
@@ -265,10 +291,10 @@ function ApontamentoForm({
           onChange={(e) => setReiniciado(e.target.checked)}
         />
         <span>
-          Horímetro trocado ou reiniciado
+          {un.medidor} trocado ou reiniciado
           <span className="block text-xs text-muted-foreground">
             Marque quando o mostrador voltou a zero. Sem isso, uma leitura menor
-            que a anterior é recusada — o horímetro não anda para trás.
+            que a anterior é recusada — o medidor não anda para trás.
           </span>
         </span>
       </label>

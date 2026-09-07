@@ -4,11 +4,14 @@ import { createClient } from "@/lib/supabase/server";
 import type { Posse, TipoDetentor } from "@/lib/custodia";
 import type { Situacao, Propriedade, Estado } from "@/lib/frota";
 
+import type { UnidadeMedidor } from "@/lib/catalogo";
 import { camposFichaSchema, type CampoFicha } from "@/lib/catalogo";
 
 export type PecaDetalhe = {
   /** Peças com horímetro entram no apontamento de uso (migration 0071). */
-  temHorimetro: boolean;
+  temMedidor: boolean;
+  /** `h` ou `km`. Nulo quando o tipo não define revisão por uso. */
+  unidadeMedidor: UnidadeMedidor | null;
   /** Valores dos campos definidos pelo tipo do item (migration 0070). */
   ficha: Record<string, unknown>;
   /** A definição desses campos, para o formulário saber o que desenhar. */
@@ -45,8 +48,8 @@ export async function obterPeca(id: string): Promise<PecaDetalhe | null> {
     .select(
       "id, identificador, numero_serie, situacao, propriedade, estado, ano, observacoes, " +
         "obra_id, item_id, imei, imei_2, linha_telefonica, operadora, service_tag, " +
-        "memoria_gb, configuracao, ficha, tem_horimetro, " +
-        "item:item_id(descricao, tipo:tipo_id(campos_ficha), categoria:categoria_id(nome, perfil_campos)), " +
+        "memoria_gb, configuracao, ficha, tem_medidor, " +
+        "item:item_id(descricao, tipo:tipo_id(campos_ficha, unidade_medidor), categoria:categoria_id(nome, perfil_campos)), " +
         "obra:obra_id(codigo, nome)",
     )
     .eq("id", id)
@@ -63,7 +66,7 @@ export async function obterPeca(id: string): Promise<PecaDetalhe | null> {
   const b = data as unknown as Record<string, unknown>;
   const item = b.item as {
     descricao: string;
-    tipo: { campos_ficha: unknown } | null;
+    tipo: { campos_ficha: unknown; unidade_medidor: string | null } | null;
     categoria: { nome: string; perfil_campos: string } | null;
   } | null;
 
@@ -80,7 +83,10 @@ export async function obterPeca(id: string): Promise<PecaDetalhe | null> {
     // `?? {}` e não o valor cru: a coluna é `not null default '{}'`, mas uma
     // linha antiga lida antes da 0070 chegaria como `undefined` — e o
     // formulário faria `Object.keys(undefined)`.
-    temHorimetro: Boolean(b.tem_horimetro),
+    temMedidor: Boolean(b.tem_medidor),
+    // A unidade vem do TIPO e desce até os rótulos: sem ela a tela diria “h”
+    // no hodômetro de um carro, e a leitura de 48.000 viraria “48.000 h”.
+    unidadeMedidor: (item?.tipo?.unidade_medidor as UnidadeMedidor | null) ?? null,
     ficha: (b.ficha as Record<string, unknown> | null) ?? {},
     camposDoTipo: definicao.success ? definicao.data : [],
     id: b.id as string,

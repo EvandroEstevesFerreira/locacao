@@ -59,7 +59,7 @@ export default async function PecaDetalhePage({
   // Só busca o histórico e a lista de obras quando a peça TEM horímetro: para
   // toda betoneira e escora do sistema, seriam duas consultas para desenhar
   // nada.
-  const [apontamentos, obrasParaApontamento] = peca.temHorimetro
+  const [apontamentos, obrasParaApontamento] = peca.temMedidor
     ? await Promise.all([listarApontamentosDaPeca(peca.id), listarObrasParaFiltro()])
     : [[], []];
 
@@ -161,7 +161,8 @@ export default async function PecaDetalhePage({
           revisão vence, então ela vem primeiro na ordem de leitura. */}
       <PecaApontamentos
         unidadeId={peca.id}
-        temHorimetro={peca.temHorimetro}
+        temMedidor={peca.temMedidor}
+        unidade={peca.unidadeMedidor}
         apontamentos={apontamentos}
         obras={obrasParaApontamento}
         hoje={hojeISOSaoPaulo()}

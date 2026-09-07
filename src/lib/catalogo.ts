@@ -5,9 +5,33 @@
 // seis vezes (ver o cabeçalho de `campos.ts`).
 
 import { z } from "zod";
-import { numeroOpcional, textoOpcional, uuidOpcional } from "@/lib/campos";
+import {
+  enumOpcional,
+  numeroOpcional,
+  textoOpcional,
+  uuidOpcional,
+} from "@/lib/campos";
 import { ehDataISO } from "@/lib/locacao";
 import { NATUREZAS_ITEM } from "@/lib/itens";
+
+/**
+ * As unidades em que um medidor conta.
+ *
+ * `h` para horímetro — gerador, PTA, betoneira. `km` para hodômetro — carro,
+ * caminhonete. Nenhum equipamento tem os dois, e por isso é uma coluna com
+ * unidade, e não duas colunas em alternância.
+ */
+export const UNIDADES_MEDIDOR = ["h", "km"] as const;
+
+export type UnidadeMedidor = (typeof UNIDADES_MEDIDOR)[number];
+
+export const UNIDADE_MEDIDOR_INFO: Record<
+  UnidadeMedidor,
+  { label: string; medidor: string }
+> = {
+  h: { label: "horas", medidor: "Horímetro" },
+  km: { label: "km", medidor: "Hodômetro" },
+};
 
 export const categoriaSchema = z.object({
   id: uuidOpcional,
@@ -40,19 +64,41 @@ export const tipoEquipamentoSchema = z.object({
     .transform((v) => v.toUpperCase()),
   natureza_padrao: z.enum(NATUREZAS_ITEM),
   /**
-   * Intervalo de manutenção preventiva, em horas de horímetro.
+   * Intervalo de manutenção preventiva, na unidade do medidor.
    *
    * Vive no TIPO e não na peça: o intervalo é do fabricante e vale para toda a
-   * família — GERADOR revisa a cada 250 h, todos eles. Repetir por peça faria
-   * cada cadastro novo pedir um número que ninguém lembra, e metade ficaria
-   * zero.
+   * família — GERADOR revisa a cada 250 h, todos eles; CARRO a cada 10.000 km.
+   * Repetir por peça faria cada cadastro novo pedir um número que ninguém
+   * lembra, e metade ficaria zero.
    *
    * NULO = este tipo não tem manutenção por uso. É o caso de NOTEBOOK e da
    * maioria: só faz sentido onde o fabricante publica o intervalo.
    */
-  intervalo_manutencao_h: numeroOpcional,
+  intervalo_manutencao: numeroOpcional,
+  /**
+   * Como se lê o mostrador: `h` de horímetro, `km` de hodômetro.
+   *
+   * A unidade é do TIPO e não do número, porque `apontamento_uso.leitura` é
+   * genérica — "o número do mostrador". Sem esta coluna, 10.000 num campo
+   * chamado "horas" faria a conta de revisão errar por um fator de cem.
+   */
+  unidade_medidor: enumOpcional(UNIDADES_MEDIDOR),
   ativo: z.boolean(),
-});
+})
+  // Os dois andam juntos, e a trava também existe no banco (0087). Aqui ela
+  // vira mensagem no formulário; lá é a última linha de defesa.
+  //
+  // Intervalo sem unidade é um número que ninguém sabe ler — 250 pode ser horas
+  // de gerador ou quilômetros de nada. Unidade sem intervalo não manda em coisa
+  // alguma.
+  .refine(
+    (t) => (t.intervalo_manutencao === null) === (t.unidade_medidor === null),
+    {
+      message:
+        "Informe o intervalo e a unidade juntos — um número sem unidade ninguém sabe ler.",
+      path: ["unidade_medidor"],
+    },
+  );
 
 export type TipoEquipamentoInput = z.input<typeof tipoEquipamentoSchema>;
 export type TipoEquipamentoDados = z.output<typeof tipoEquipamentoSchema>;

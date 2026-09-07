@@ -7,6 +7,74 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.81.0] — 2026-09-06
+
+O medidor passou a ter unidade.
+
+### O problema
+
+`tipo_equipamento.intervalo_manutencao_h` tinha a unidade **no nome** — e a
+frota de veículos revisa por quilometragem. Gravar 10.000 ali seria o sistema
+afirmando “dez mil horas”, e a conta de revisão erraria por um fator de cem.
+`equipamento_unidade.tem_horimetro` tinha o mesmo defeito: carro não tem
+horímetro, tem hodômetro.
+
+`apontamento_uso.leitura` já era genérica de propósito — “o número do
+mostrador”. Ela serve os dois sem mudar. O que faltava era dizer **qual**
+mostrador.
+
+### Por que uma coluna com unidade, e não duas colunas
+
+Nenhum equipamento tem os dois: gerador conta horas, carro conta quilômetros, e
+nenhum conta ambos. Duas colunas nulas em alternância convidam a preencher as
+duas — e aí a conta teria de escolher uma, em silêncio.
+
+### Feito por expansão, e não por renomeação
+
+A produção no ar lia `intervalo_manutencao_h` e `tem_horimetro` em **11
+arquivos**. Renomear e migrar no mesmo passo derrubaria a tela de Configurações
+até o deploy seguinte.
+
+Então a `0087` **acrescenta** `intervalo_manutencao`, `unidade_medidor` e
+`tem_medidor`, preenche a partir das antigas, e instala dois triggers que mantêm
+as duas formas em acordo enquanto as duas versões do código convivem. **Quem
+mudou vence**: o código velho escreve `_h` e o novo acompanha; o novo escreve a
+unidade e o antigo acompanha.
+
+**O caso que importa:** quando a unidade é `km`, `intervalo_manutencao_h` fica
+**nulo**. Copiar 10.000 para uma coluna que diz horas faria o código velho
+anunciar “revisão vencida” em toda a frota. Nulo é honesto — ele mostra “sem
+intervalo definido”, que é o que de fato sabe.
+
+A migration de **contração**, depois deste deploy, derruba triggers e colunas
+antigas.
+
+### Alterado
+
+- O formulário do tipo ganhou o seletor de unidade **ao lado do número**, e não
+  numa configuração à parte: 250 e 10.000 são o mesmo campo com sentidos
+  opostos, e separá-los deixaria o número sozinho sem dizer o que conta.
+- A tela da peça segue a unidade do tipo em todos os rótulos — leitura,
+  histórico, período e o aviso de medidor trocado.
+- `horasDesdeRevisao` e `horasAteRevisao` viraram `usoDesdeRevisao` e
+  `faltaAteRevisao`. A conta é a mesma para horas e quilômetros; o nome não
+  podia continuar prometendo horas.
+- “Sem leitura do horímetro” virou “Sem leitura do medidor”.
+- **CARRO** e **CAMINHONETE** nascem com 10.000 km. **CAMINHÃO** fica sem:
+  intervalo de pesado varia demais com motor e uso, e chutar produziria alarme
+  errado em todos eles.
+
+### Segurança
+
+- Intervalo e unidade **só entram juntos**, travado no banco e no schema. Um
+  número sem unidade ninguém sabe ler.
+
+### Migration
+
+- `0087_medidor_com_unidade.sql` — colunas novas, preenchimento, os dois
+  triggers de ponte, o intervalo dos veículos, e uma conferência que **aborta**
+  se sobrar tipo com as duas formas em desacordo.
+
 ## [0.80.0] — 2026-09-06
 
 A frota ganhou veículos.
