@@ -7,6 +7,60 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.90.1] — 2026-09-07
+
+A primeira sincronização de verdade — e os dois defeitos que só ela achou.
+
+### 1. O índice que o `ON CONFLICT` não enxergava
+
+```
+Falha ao gravar o lote 1: there is no unique or exclusion constraint
+matching the ON CONFLICT specification
+```
+
+A 0094 criou `idx_funcionario_people` **parcial**, `where people_id is not
+null`. O `ON CONFLICT (org_id, people_id)` do upsert não consegue inferir um
+índice parcial — para usá-lo, o comando teria de repetir o mesmo predicado, e o
+PostgREST não emite `WHERE` nenhum.
+
+**O raciocinio que levou ao parcial estava errado.** O comentário justificava
+“parcial porque as 118 linhas de hoje ficam com `people_id` nulo”. Não
+precisava: no Postgres dois `NULL` nunca são iguais entre si num índice único, e
+um índice **completo** já aceita quantas linhas sem vínculo existirem.
+
+### 2. Cinco cadastros duplicados, um CPF só
+
+```
+duplicate key value violates unique constraint "idx_funcionario_cpf"
+```
+
+Cinco pessoas têm dois cadastros no People, por um bug de import da ADP: dois
+`people_id` para o mesmo ser humano e, portanto, o **mesmo CPF**.
+
+`semRepetidas` não pegava isso — lá as duas linhas têm a mesma chave e uma
+vence. Aqui são duas pessoas legítimas do ponto de vista do People, e **as duas
+têm de entrar**: é por uma delas que alguém pode estar com equipamento.
+
+O que não pode entrar duas vezes é o CPF. Então **apaga o valor, nunca a
+linha** — dado repetido e recuperável, que volta sozinho quando o People
+mesclar os dois. Fica com o cadastro **atualizado mais recentemente**, e empate
+resolve por `id`, para a rodada de amanhã decidir igual à de hoje.
+
+O e-mail entra na mesma guarda por ser o outro índice único da tabela. Hoje não
+há nenhum repetido; a guarda existe porque uma mescla mal feita produziria
+exatamente isso, e o sintoma seria de novo o lote inteiro morrendo.
+
+### O desenho segurou
+
+Nas duas falhas: `gravadas: 0`, cursor **não avançou**, rodada `ok: false`. Nada
+foi gravado pela metade, e a janela inteira é tentada de novo — que era
+exatamente o desenhado.
+
+### Migrations
+
+- `0097_indice_people_nao_parcial.sql` — refaz o índice completo e aborta se
+  alguém o recriar parcial.
+
 ## [0.90.0] — 2026-09-07
 
 Equipamento com quem já saiu da empresa — **fase 3**.
