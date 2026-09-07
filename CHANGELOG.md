@@ -7,7 +7,7 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
-## [0.83.0] — 2026-09-07
+## [0.83.1] — 2026-09-07
 
 O que foi excluído volta a ficar escondido.
 
@@ -75,6 +75,35 @@ para a frente.
   por `org_id`, então não serve. Pagavam por isso a exclusão de uma peça (o
   cascade varria a tabela) e a seção Certificados da tela da peça.
 
+### Desempenho da RLS
+
+Três policies antigas chamavam `auth.uid()` e `current_org_id()` soltas, e o
+Postgres as **reavaliava para cada linha examinada**. Envolvidas em
+`(select ...)`, ele resolve uma vez, como InitPlan. O projeto já escreve assim
+desde as policies mais novas; estas eram sobreviventes das primeiras migrations.
+
+O ganho hoje é pequeno — `perfil` tem onze linhas — mas
+`perfil_select_same_org` é avaliada em toda consulta que junta perfil, e são
+muitas: o nome de quem fez alguma coisa aparece em quase toda tela.
+
+Conferido depois de aplicar, sob a sessão de um usuário real: ele continua vendo
+a si, os onze perfis da organização e os vinte vínculos de obra. Policy de
+`perfil` errada é ninguém entrando no sistema.
+
+**Advisor de desempenho: `auth_rls_initplan` foi de 3 para 0.**
+
+### O que ficou, e por quê
+
+`multiple_permissive_policies` segue em 44. A correção acima resolveu o que ele
+escondia — o furo da exclusão suave — mas as tabelas continuam com duas
+policies permissivas para SELECT, e é isso que o advisor conta.
+
+Colapsar exigiria trocar cada `for all` por **três policies separadas**
+(INSERT, UPDATE, DELETE), porque o Postgres não aceita várias operações numa
+policy só: vinte e sete policies novas em nove tabelas, mexendo em RLS de
+produção. O ganho seria uma avaliação de predicado a menos em tabelas de dezenas
+de linhas. Não compensa.
+
 ### Migrations
 
 - `0091_write_policy_esconde_apagados.sql` — corrige as nove por `alter policy`,
@@ -82,6 +111,8 @@ para a frente.
   diferentes, e é transcrevendo que se perde um `is_member_of_obra` no caminho).
   Aborta se sobrar alguma.
 - `0092_indice_da_fk_do_certificado.sql` — o índice por `unidade_id`.
+- `0093_initplan_nas_tres_ultimas.sql` — as três policies, com conferência que
+  aborta se alguma seguir com a chamada solta.
 
 ## [0.82.3] — 2026-09-07
 
