@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.90.2";
+export const APP_VERSION = "0.90.3";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,17 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.90.3",
+    data: "2026-09-09",
+    titulo: "O aviso de fechamento não promete mais o que não vai acontecer",
+    mudancas: [
+      { tipo: "correcao", texto: "Com o modo de teste de e-mail ligado, o painel de fechamento do recebimento continuava anunciando o endereço do fornecedor — enquanto o e-mail ia, na verdade, para a caixa de teste. Agora ele mostra o destino real e diz quem não vai receber." },
+      { tipo: "correcao", texto: "Se o modo de teste estiver ligado sem caixa de destino, o painel avisa antes que nenhum e-mail vai sair. O recebimento fecha igual, e isso não volta atrás — dava para confirmar contando com um aviso que nunca chegaria ao fornecedor." },
+      { tipo: "correcao", texto: "O mesmo conserto no fechamento da devolução, que tinha a frase e o defeito idênticos." },
+      { tipo: "melhoria", texto: "A tela do contrato usa a largura da tela. A tabela de itens locados pede cerca de 1.420 px e a página estava limitada a 1.024 px: numa tela de 1.920 px sobravam ~400 px vazios de cada lado e a tabela rolava na horizontal, com as colunas Devolver e a de excluir fora de alcance. Em telas menores a rolagem volta, porque ali o conteúdo realmente não cabe." },
+    ],
+  },
   {
     versao: "0.90.2",
     data: "2026-09-07",

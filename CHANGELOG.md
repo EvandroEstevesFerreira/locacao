@@ -7,6 +7,50 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.90.3] — 2026-09-09
+
+O aviso de fechamento não promete mais o que não vai acontecer.
+
+### O defeito
+
+A trava de teste de e-mail (`EMAIL_MODO_TESTE`) vive no transporte, em
+`enviarEmail`, justamente porque é o único ponto por onde todo envio passa. O
+efeito colateral é que a TELA não sabia dela: `fechar-recebimento.tsx` anunciava
+"um e-mail com o romaneio em PDF sai para <fornecedor>" enquanto o envio ia para
+a caixa de teste. Um aviso de ação irreversível que descreve errado a
+consequência é pior que nenhum aviso — a pessoa confirma contando com um efeito
+que não vai existir. Pior no estado `bloqueado` (trava ligada sem
+`EMAIL_TESTE_DESTINO`): ali o envio *lança*, o fornecedor não recebe nada, e o
+painel prometia o e-mail do mesmo jeito.
+
+### Adicionado
+
+- `avisoEnvio(destinatarios, estado)` em `src/lib/emails/modo-teste.ts`: função
+  pura que devolve o que a tela deve dizer sobre o destino, nos quatro estados
+  (`sem-destinatario`, `normal`, `teste`, `bloqueado`). `sem-destinatario` vem
+  antes de `bloqueado` de propósito: sem endereço o call site nem chama
+  `enviarEmail`, então nada falha e nada sai.
+
+### Corrigido
+
+- Os painéis de fechamento de **recebimento** e de **devolução** passam a
+  receber `avisoEmail: AvisoEnvio` do servidor, em vez do endereço do
+  fornecedor, e dizem o destino real. A devolução tinha a frase e o defeito
+  idênticos; consertar só um dos dois deixaria o outro mentindo.
+- `src/app/(app)/contratos/[id]/page.tsx` sai de `max-w-5xl` (1024 px) para
+  `max-w-[1536px]`. A tabela de itens locados tem 10 colunas, todo `TableCell` é
+  `whitespace-nowrap` e a célula "Devolver" carrega um formulário com
+  `min-w-[300px]` — o conjunto pede ~1420 px, medidos na própria barra de
+  rolagem (975 px visíveis, polegar de 668 px). `max-w-7xl` não resolveria:
+  faltariam ~190 px. Tailwind v4 não tem `max-w-screen-2xl`, daí o literal.
+
+### Sabido, não consertado
+
+- `avisarFornecedor` engole o motivo específico da trava: o `catch` troca
+  "EMAIL_MODO_TESTE está ligado, mas EMAIL_TESTE_DESTINO não tem nenhum
+  endereço válido" por um genérico "O envio do e-mail falhou.". O painel agora
+  avisa antes, mas o diagnóstico depois do fato continua cego.
+
 ## [0.90.2] — 2026-09-07
 
 O e-mail deduzido que bloqueava o dono verdadeiro.

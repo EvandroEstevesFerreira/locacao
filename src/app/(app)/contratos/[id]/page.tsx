@@ -77,7 +77,17 @@ export default async function ContratoDetalhePage({
   const retirada = contrato.vistoria_retirada as unknown as VistoriaDeRetirada | null;
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-6">
+    /* 1536px, e não `max-w-5xl`, por causa da tabela de itens locados.
+       Ela tem 10 colunas e todo TableCell é `whitespace-nowrap` (ui/table.tsx),
+       então pede cerca de 1420px — medidos na própria barra de rolagem: 975px
+       visíveis com o polegar cobrindo 668px. Dentro de 1024px ela rolava na
+       horizontal numa tela de 1920, deixando "Devolver" e a coluna de ações
+       inalcançáveis, com ~400px de tela vazia de cada lado do card.
+       `max-w-7xl` (1280px) NÃO resolveria: ainda faltariam ~190px.
+       Tailwind v4 não tem `max-w-screen-2xl`, daí o valor literal.
+       Abaixo de ~1540px a barra volta, e aí ela está certa: o conteúdo
+       realmente não cabe. O que a tirava era a tela sobrando sem uso. */
+    <div className="mx-auto flex max-w-[1536px] flex-col gap-6">
       <PageHeader
         titulo={`Contrato ${contrato.numero}`}
         descricao={obra ? `${obra.codigo} — ${obra.nome}` : undefined}

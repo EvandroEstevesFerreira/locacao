@@ -3,6 +3,7 @@ import {
   aplicarModoTeste,
   emTeste,
   estadoEnvio,
+  avisoEnvio,
   lerDestinoTeste,
   type EstadoEnvio,
 } from "./modo-teste";
@@ -120,5 +121,39 @@ describe("emTeste", () => {
     expect(emTeste({ modo: "normal" })).toBe(false);
     expect(emTeste({ modo: "teste", destino: TESTE })).toBe(true);
     expect(emTeste({ modo: "bloqueado", motivo: "x" })).toBe(true);
+  });
+});
+
+describe("avisoEnvio", () => {
+  const normal: EstadoEnvio = { modo: "normal" };
+  const teste: EstadoEnvio = { modo: "teste", destino: TESTE };
+  const bloqueado: EstadoEnvio = { modo: "bloqueado", motivo: "sem destino" };
+
+  it("sem destinatário, nada sai — e a trava não muda isso", () => {
+    expect(avisoEnvio([], normal)).toEqual({ situacao: "sem-destinatario" });
+    expect(avisoEnvio([], teste)).toEqual({ situacao: "sem-destinatario" });
+    expect(avisoEnvio([], bloqueado)).toEqual({ situacao: "sem-destinatario" });
+  });
+
+  it("desligada, o aviso anuncia o destinatário real", () => {
+    expect(avisoEnvio(REAIS, normal)).toEqual({
+      situacao: "normal",
+      destino: REAIS,
+    });
+  });
+
+  it("ligada, o aviso anuncia a caixa de teste e guarda quem NÃO vai receber", () => {
+    expect(avisoEnvio(REAIS, teste)).toEqual({
+      situacao: "teste",
+      destino: TESTE,
+      noLugarDe: REAIS,
+    });
+  });
+
+  it("bloqueada, o aviso não promete envio nenhum", () => {
+    expect(avisoEnvio(REAIS, bloqueado)).toEqual({
+      situacao: "bloqueado",
+      motivo: "sem destino",
+    });
   });
 });
