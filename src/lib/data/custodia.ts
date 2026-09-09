@@ -1,4 +1,10 @@
 import "server-only";
+import {
+  donoDaPeca,
+  linhasElegiveis,
+  type DonoDaPeca,
+  type LinhaEmAberto,
+} from "@/lib/frota";
 
 import { createClient } from "@/lib/supabase/server";
 import type { Posse, TipoDetentor } from "@/lib/custodia";
@@ -193,4 +199,123 @@ export async function listarObrasEFornecedores(): Promise<{
     ),
     fornecedores: (fornecedores ?? []) as unknown as { id: string; nome: string }[],
   };
+}
+
+/**
+ * A empresa responsável pela peça, derivada do contrato.
+ *
+ * Função própria em vez de campos novos no select de `obterPeca`: as linhas em
+ * aberto vêm de `item_locado`, outra tabela, e o AGENTS.md é explícito sobre
+ * mexer em string de select — `!inner` e `count` mudam cardinalidade em
+ * silêncio. Duas consultas em paralelo custam menos que um join que ninguém
+ * confere.
+ *
+ * Devolve o tipo PLANO de `donoDaPeca`, e não as linhas cruas: a página não
+ * precisa saber que "em aberto" é `status = 'em_aberto'` em `item_locado`.
+ *
+ * Devolve TAMBÉM o id do provisório, ao lado do `dono`. A função pura recebe e
+ * expõe o NOME, que é o que a tela mostra; o formulário precisa do id para abrir
+ * no valor atual. Buscar o id numa segunda leitura, ou fazer `donoDaPeca` levar
+ * um objeto só para carregar o id até a tela, seriam os dois piores.
+ */
+export async function obterDonoDaPeca(
+  pecaId: string,
+): Promise<{ dono: DonoDaPeca; provisorioId: string | null }> {
+  const supabase = await createClient();
+  const [linhasRes, pecaRes] = await Promise.all([
+    supabase
+      .from("item_locado")
+      .select("id, contrato:contrato_id(id, numero, fornecedor:fornecedor_id(nome))")
+      .eq("unidade_id", pecaId)
+      .eq("status", "em_aberto"),
+    supabase
+      .from("equipamento_unidade")
+      .select("fornecedor_provisorio_id, fornecedor_provisorio:fornecedor_provisorio_id(nome)")
+      .eq("id", pecaId)
+      .maybeSingle(),
+  ]);
+
+  type LinhaBruta = {
+    id: string;
+    contrato: {
+      id: string;
+      numero: string;
+      fornecedor: { nome: string } | null;
+    } | null;
+  };
+  const brutas = (linhasRes.data ?? []) as unknown as LinhaBruta[];
+
+  const linhasEmAberto: LinhaEmAberto[] = brutas
+    // Linha sem contrato não existe no modelo (a FK é obrigatória), mas o
+    // PostgREST devolve `null` quando a RLS esconde o contrato — e nesse caso o
+    // usuário não pode saber de quem é a peça por aquele caminho.
+    .filter((l) => l.contrato !== null)
+    .map((l) => ({
+      itemLocadoId: l.id,
+      contratoId: l.contrato!.id,
+      contratoNumero: l.contrato!.numero,
+      fornecedorNome: l.contrato!.fornecedor?.nome ?? null,
+    }));
+
+  const prov = pecaRes.data as unknown as {
+    fornecedor_provisorio_id: string | null;
+    fornecedor_provisorio: { nome: string } | null;
+  } | null;
+
+  return {
+    dono: donoDaPeca({
+      linhasEmAberto,
+      fornecedorProvisorio: prov?.fornecedor_provisorio?.nome ?? null,
+    }),
+    provisorioId: prov?.fornecedor_provisorio_id ?? null,
+  };
+}
+
+/**
+ * Os contratos a que esta peça pode ser amarrada, com a linha de destino.
+ *
+ * Só oferece contrato que TENHA linha elegível — as quatro condições de
+ * `linhasElegiveis`. Um seletor que listasse todos os contratos e falhasse na
+ * hora de salvar faria a pessoa tentar três antes de entender o critério.
+ */
+export async function listarContratosParaAmarrar(peca: {
+  id: string;
+  itemId: string;
+}): Promise<{ itemLocadoId: string; contratoNumero: string; obra: string | null }[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("item_locado")
+    .select(
+      "id, contrato_id, item_id, status, unidade_id, " +
+        "contrato:contrato_id(numero, obra:obra_id(codigo))",
+    )
+    .eq("item_id", peca.itemId);
+
+  type Bruta = {
+    id: string;
+    contrato_id: string;
+    item_id: string;
+    status: "em_aberto" | "devolvido";
+    unidade_id: string | null;
+    contrato: { numero: string; obra: { codigo: string } | null } | null;
+  };
+  const linhas = (data ?? []) as unknown as Bruta[];
+
+  return linhasElegiveis(
+    linhas.map((l) => ({
+      id: l.id,
+      contratoId: l.contrato_id,
+      itemId: l.item_id,
+      status: l.status,
+      unidadeId: l.unidade_id,
+    })),
+    peca,
+  ).map((elegivel) => {
+    const bruta = linhas.find((l) => l.id === elegivel.id)!;
+    return {
+      itemLocadoId: elegivel.id,
+      contratoNumero: bruta.contrato?.numero ?? "—",
+      obra: bruta.contrato?.obra?.codigo ?? null,
+    };
+  });
 }

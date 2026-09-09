@@ -7,6 +7,91 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.95.0] — 2026-09-09
+
+De quem é a peça locada.
+Spec: `docs/superpowers/specs/2026-09-09-dono-da-peca-locada-design.md`.
+
+### O achado que encolheu o trabalho
+
+A relação peça↔contrato **já existia** e é deliberada (migration 0049):
+`item_catalogo.controle` diz se o item é rastreado por patrimônio,
+`item_locado.unidade_id` liga a linha do contrato à peça física, e
+`contrato_locacao.fornecedor_id` aponta a locadora. A empresa dona é, portanto,
+**derivada** — não há campo de fornecedor na peça que possa divergir do
+contrato.
+
+Faltava tela, não modelo.
+
+### Adicionado
+
+- `donoDaPeca()` em `src/lib/frota.ts`: cinco estados — `contrato`,
+  `contrato-sem-fornecedor`, `provisorio`, `ambiguo`, `nenhum`. O contrato manda
+  sobre o provisório, sempre.
+- `linhasElegiveis()`: as quatro condições que fazem uma linha de contrato
+  receber esta peça (mesmo item de catálogo, em aberto, sem peça vinculada — ou
+  já apontando para ela, porque reamarrar não é erro).
+- `equipamento_unidade.fornecedor_provisorio_id` (migration 0099), com
+  `comment on column` dizendo para não usá-lo em relatório de custo.
+- Seção "Locação" na peça, só para `propriedade = 'locada'`, com o formulário de
+  amarração.
+- `obterDonoDaPeca` e `listarContratosParaAmarrar` em `src/lib/data/custodia.ts`.
+
+### Segurança: uma peça, um contrato em aberto
+
+Migration 0100: índice **único** parcial
+`(unidade_id) where unidade_id is not null and status = 'em_aberto'`.
+
+O spec deixou este índice de fora, porque migration que falha ao aplicar é pior
+que o defeito que previne e não se sabia se produção já violava a regra. Medido
+antes de aplicar: **`linhas_amarradas = 0`, `pecas_em_dois_contratos = 0`** —
+nenhuma peça está amarrada a contrato ainda. Este é o momento mais barato que o
+índice jamais terá; depois do mutirão das 27 peças locadas, qualquer violação
+criada no caminho viraria limpeza antes de poder aplicá-lo.
+
+`donoDaPeca()` mantém o caso `ambiguo` mesmo assim. Ele fica inalcançável por
+construção, e é isso que se quer: a tela continua sabendo dizer a verdade se o
+dado aparecer por um caminho que ninguém previu — importação, script, ou este
+índice sendo removido no futuro.
+
+### Dois desvios do spec, deliberados
+
+1. **Os campos de amarração ficaram em seção própria, não dentro de
+   `peca-editar`.** A escrita é outra action e toca outra tabela
+   (`item_locado`); enfiá-la no `editarPeca` faria uma action escrever em duas
+   tabelas com duas histórias de permissão.
+2. **`obterDonoDaPeca` devolve `{ dono, provisorioId }`.** A função pura recebe
+   e expõe o NOME, que é o que a tela mostra, mas o formulário precisa do id para
+   abrir no valor atual. As alternativas — segunda leitura só para o id, ou fazer
+   `donoDaPeca` carregar o id até a tela — eram as duas piores.
+
+### Um defeito meu, pego antes de subir
+
+O passo que solta a peça do contrato anterior usava `erroDeEscrita`, que trata
+"zero linhas afetadas" como falha — correto para update dirigido por `id`, e
+errado aqui, onde zero é o caso **normal** (peça que nunca foi amarrada). Com
+ele, a amarração falharia justamente na primeira vez de cada peça. Trocado por
+checagem direta de `error`.
+
+### Testes
+
+11 casos por TDD, vistos falhando antes da implementação. Os que valem citar:
+
+- **duas linhas em aberto dão `ambiguo`, não a primeira** — escolher produziria
+  tela plausível e errada;
+- **contrato sem fornecedor não vira "nenhum"** — a peça ESTÁ amarrada, e cair
+  em travessão mandaria a pessoa procurar no lugar errado;
+- **a linha que já aponta para esta peça continua elegível** — sem isso o seletor
+  não ofereceria a opção já escolhida.
+
+E a varredura `schemas-varredura` pegou o `amarrarPecaSchema` não declarado,
+como deveria.
+
+### Medido em produção
+
+27 peças com `propriedade = 'locada'` — não 128, que é a frota inteira. O
+mutirão de amarração é bem menor do que o levantamento inicial sugeria.
+
 ## [0.94.0] — 2026-09-09
 
 O protocolo do fornecedor na vistoria.

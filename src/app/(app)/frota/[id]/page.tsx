@@ -26,6 +26,7 @@ import { PecaMover } from "./_components/peca-mover";
 import { PecaEditar } from "./_components/peca-editar";
 import { PecaSituacao } from "./_components/peca-situacao";
 import { PecaReparos } from "./_components/peca-reparos";
+import { PecaLocacao } from "./_components/peca-locacao";
 import { PecaApontamentos } from "./_components/peca-apontamentos";
 import { PecaCertificados } from "./_components/peca-certificados";
 import { listarApontamentosDaPeca } from "@/lib/data/apontamentos";
@@ -218,6 +219,18 @@ export default async function PecaDetalhePage({
           certificados={certificados}
           urls={urls}
           podeEditar={podeMover}
+        />
+      ) : null}
+
+      {/* Locação antes de Manutenção: de quem é o equipamento vem antes do que
+          aconteceu com ele. Só para peça de terceiro — numa peça própria a
+          pergunta não existe. */}
+      {peca.propriedade === "locada" ? (
+        <PecaLocacao
+          pecaId={peca.id}
+          itemId={peca.itemId}
+          fornecedores={destinos.fornecedores}
+          podeEditar={podeEditarCadastros(perfil?.papel)}
         />
       ) : null}
 
