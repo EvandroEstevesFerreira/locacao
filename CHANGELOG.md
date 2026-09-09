@@ -7,6 +7,37 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.99.0] — 2026-09-09
+
+A Frota abre recolhida.
+
+### Alterado
+
+`<details open>` vira `<details open={procurando}>` em `frota/page.tsx`.
+
+- **Recolhido por padrao.** Com 96 notebooks num grupo, a tela abria numa parede
+  de linhas e o segundo grupo ficava fora da primeira dobra. O cabecalho ja traz
+  a contagem, que e o que se le primeiro.
+- **Busca e filtro abrem sozinho.** Recolhido com busca ativa esconderia
+  exatamente o que a pessoa procurou — pior que o estado anterior.
+- **Categoria NAO conta como busca.** Escolher "TI" no menu e navegar, nao
+  procurar: abrir os tres grupos de 128 pecas ali daria a mesma parede.
+- O estado aberto vem do **servidor**, entao nao pisca. O `<details>` nativo
+  continua funcionando sem JavaScript, no primeiro render e na tela offline.
+
+### Adicionado
+
+Seta no cabecalho do grupo, girando com o `open` via variante arbitraria
+`[details[open]_&]:rotate-90`. Sem ela, um cabecalho recolhido parece linha
+morta e ninguem descobre que clica.
+
+Conferida no CSS **de producao**, porque o Tailwind descarta variante que nao
+parseia em silencio:
+
+```
+details[open] .\[details\[open\]_\&\]\:rotate-90{rotate:90deg}
+```
+
 ## [0.98.1] — 2026-09-09
 
 Tres consertos no mutirao, e a limpeza dos duplicados.

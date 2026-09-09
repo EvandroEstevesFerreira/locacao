@@ -1,5 +1,11 @@
 import Link from "next/link";
-import { Boxes, TriangleAlert, ArrowRight, X } from "lucide-react";
+import {
+  Boxes,
+  TriangleAlert,
+  ArrowRight,
+  ChevronRight,
+  X,
+} from "lucide-react";
 
 import {
   listarFrota,
@@ -158,6 +164,19 @@ export default async function FrotaPage({
   const totalPecas = trilho.reduce((n, c) => n + c.pecas, 0);
   const atual = trilho.find((c) => (c.id ?? "sem") === categoriaSel);
   const perfil = atual?.perfil ?? "geral";
+  // OS GRUPOS ABREM SOZINHOS QUANDO HÁ BUSCA OU FILTRO — e a categoria NÃO
+  // conta. Escolher "TI" no menu é navegar, não procurar: abrir os três grupos
+  // de 128 peças ali daria a mesma parede que a tela tinha antes. Já quem digita
+  // "Dell" no campo precisa ver o resultado, e grupo recolhido esconderia
+  // exatamente o que a pessoa procurou.
+  const procurando =
+    Boolean(filtros.q) ||
+    Boolean(filtros.situacao) ||
+    Boolean(filtros.propriedade) ||
+    Boolean(filtros.obra) ||
+    certificado !== "" ||
+    pendencia !== "";
+
   const temFiltro =
     Object.values(filtros).some((v) => v && v !== "") ||
     certificado !== "" ||
@@ -319,10 +338,23 @@ export default async function FrotaPage({
               {grupos.map((g) => (
                 <Card key={g.chave} className="overflow-hidden">
                   {/* `<details>` nativo: abre e fecha sem JavaScript, então
-                      funciona no primeiro render e na tela offline. */}
-                  <details open>
+                      funciona no primeiro render e na tela offline — e o estado
+                      aberto vem do SERVIDOR, sem piscar.
+
+                      Recolhido por padrão: com 96 notebooks num grupo, a tela
+                      abria numa parede de linhas e o segundo grupo ficava fora
+                      da primeira dobra. O cabeçalho já traz a contagem, que é o
+                      que se lê primeiro. */}
+                  <details open={procurando}>
                     <summary className="cursor-pointer list-none px-4 py-3 marker:content-none [&::-webkit-details-marker]:hidden">
                       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                        {/* A seta gira com o `open` do <details>. Sem ela, um
+                            cabeçalho recolhido parece linha morta e ninguém
+                            descobre que clica. */}
+                        <ChevronRight
+                          className="size-4 self-center transition-transform [details[open]_&]:rotate-90"
+                          aria-hidden
+                        />
                         <span className="font-medium">{g.rotulo}</span>
                         <span className="text-sm text-muted-foreground">
                           {g.pecas.length}{" "}
