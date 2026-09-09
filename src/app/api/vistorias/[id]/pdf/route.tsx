@@ -30,7 +30,7 @@ export async function GET(
   const { data: vistoria } = await supabase
     .from("vistoria")
     .select(
-      "id, tipo, data, responsavel, observacoes, assinatura_empresa_nome, assinatura_empresa_img, assinatura_empresa_em, assinatura_retirante_nome, assinatura_retirante_img, assinatura_retirante_em, contrato:contrato_id(numero, obra:obra_id(codigo,nome))",
+      "id, tipo, data, responsavel, observacoes, assinatura_empresa_nome, assinatura_empresa_img, assinatura_empresa_em, assinatura_retirante_nome, assinatura_retirante_img, assinatura_retirante_em, contrato:contrato_id(numero, obra:obra_id(codigo,nome), fornecedor:fornecedor_id(nome))",
     )
     .eq("id", id)
     .single();
@@ -41,6 +41,8 @@ export async function GET(
   const contrato = vistoria.contrato as unknown as {
     numero: string;
     obra: { codigo: string; nome: string } | null;
+    // Para-um, como `obra`: acrescentar não muda a cardinalidade do select.
+    fornecedor: { nome: string } | null;
   } | null;
 
   // Avarias
@@ -103,6 +105,7 @@ export async function GET(
     contratoLinha: contrato
       ? `Contrato ${contrato.numero}${contrato.obra ? ` · ${contrato.obra.codigo}` : ""}`
       : undefined,
+    fornecedor: contrato?.fornecedor?.nome ?? undefined,
     tipoLabel: TIPO_VISTORIA[vistoria.tipo as TipoVistoria].label,
     data: formatarData(vistoria.data),
     responsavel: vistoria.responsavel ?? "—",
