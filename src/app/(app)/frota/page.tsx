@@ -163,7 +163,10 @@ export default async function FrotaPage({
   const resumo = resumirFrota(visiveis);
   const totalPecas = trilho.reduce((n, c) => n + c.pecas, 0);
   const atual = trilho.find((c) => (c.id ?? "sem") === categoriaSel);
-  const perfil = atual?.perfil ?? "geral";
+  // O `perfil` da categoria saiu daqui: a linha não muda mais de significado
+  // conforme a categoria selecionada. "Com quem está" e "onde está" viraram duas
+  // colunas fixas — antes eram uma só, alternando, e por isso "Todas" e "TI"
+  // mostravam o mesmo conjunto com informação diferente.
   // OS GRUPOS ABREM SOZINHOS QUANDO HÁ BUSCA OU FILTRO — e a categoria NÃO
   // conta. Escolher "TI" no menu é navegar, não procurar: abrir os três grupos
   // de 128 peças ali daria a mesma parede que a tela tinha antes. Já quem digita
@@ -398,42 +401,37 @@ export default async function FrotaPage({
                               {p.identificador}
                             </Link>
 
-                            <span className="min-w-48 flex-1 text-muted-foreground">
+                            <span className="min-w-48 text-muted-foreground">
                               {p.itemDescricao}
                               {p.ano ? ` · ${p.ano}` : ""}
                             </span>
 
-                            {/* A COLUNA QUE MUDA DE PERFIL. Em TI e em veículo a
-                                pergunta é quem está com a peça; em obra, onde
-                                ela está.
+                            {/* COM QUEM ESTÁ — colado no modelo, que é como se
+                                lê a linha: "este patrimônio, deste modelo, está
+                                com fulano".
 
-                                Esta coluna já existia reservada para o nome e
-                                mostrava "sem responsável" porque não havia
-                                custódia — 2 de 95 peças em uso. O mutirão de
-                                /frota/custodia preencheu, e agora ela mostra
-                                QUEM está com a máquina. Nome aqui, e NÃO numa
-                                quarta coluna: a linha já tem patrimônio,
-                                modelo, local e até três selos, e a 0.93.0
-                                acabou de padronizar as larguras para matar a
-                                barra de rolagem horizontal. */}
-                            <span className="min-w-40 text-muted-foreground">
-                              {/* O NOME VEM PRIMEIRO, e independe do perfil da
-                                  categoria. A regra anterior só mostrava o
-                                  detentor quando havia categoria selecionada
-                                  (`perfil !== "geral"`): em "Todas" o perfil cai
-                                  em "geral" e a coluna mostrava a obra. Com as
-                                  128 peças em TI, "Todas" e "TI" trazem o mesmo
-                                  conjunto com informação diferente, o que é
-                                  indefensável.
-
-                                  Detentor de OBRA tem `detentor_rotulo` igual ao
-                                  rótulo da obra, então nada se perde no perfil
-                                  de obra: mostrar o detentor é sempre igual ou
-                                  mais informativo. */}
+                                O `flex-1` mora AQUI e não no modelo. Antes o
+                                modelo esticava e abria um vazio no meio da
+                                linha, com o nome jogado na ponta direita, longe
+                                do equipamento a que se refere. Agora a folga
+                                fica depois do nome, e nenhuma coluna nova foi
+                                criada: o espaço já existia. */}
+                            <span className="min-w-48 flex-1 text-foreground">
                               {nomeDoDetentor ??
-                                (semTermo && perfil !== "geral"
-                                  ? "sem responsável"
-                                  : (p.obraRotulo ?? "Almoxarifado central"))}
+                                (semTermo ? (
+                                  <span className="text-muted-foreground">
+                                    sem responsável
+                                  </span>
+                                ) : null)}
+                            </span>
+
+                            {/* ONDE ESTÁ. Voltou a ser só isto: o nome saiu
+                                daqui e foi para junto do modelo, onde ele
+                                responde à pergunta que a linha faz. Aqui fica a
+                                obra — que continua sendo informação própria,
+                                porque o notebook está COM a pessoa E NA obra. */}
+                            <span className="min-w-40 text-right text-muted-foreground">
+                              {p.obraRotulo ?? "Almoxarifado central"}
                             </span>
 
                             <span className="flex flex-wrap items-center gap-1">
