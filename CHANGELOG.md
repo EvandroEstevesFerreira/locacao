@@ -7,6 +7,29 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.99.1] — 2026-09-09
+
+O nome de quem esta com a peca, ao lado do modelo.
+
+### O que estava errado
+
+A 0.98.1 pos o nome na coluna reservada da PONTA DIREITA, e nao ao lado do
+modelo. A leitura da linha ficava quebrada: o nome aparecia a meia tela de
+distancia do equipamento a que se refere.
+
+### Alterado
+
+- O `flex-1` saiu do modelo e foi para a coluna do detentor. Antes o modelo
+  esticava e abria um vazio no meio da linha; agora a folga fica DEPOIS do nome.
+  **Nenhuma coluna nova foi criada** — o espaco ja existia, mal distribuido.
+- "Com quem esta" e "onde esta" viraram duas colunas FIXAS. Eram a mesma coluna
+  alternando conforme o `perfil` da categoria, e foi essa alternancia que fez
+  "Todas" e "TI" mostrarem o mesmo conjunto com informacao diferente.
+- `perfil` saiu de `frota/page.tsx`: nao havia mais consumidor.
+
+A linha agora le como a pergunta: **patrimonio · modelo · com quem esta ·
+onde esta · situacao**.
+
 ## [0.99.0] — 2026-09-09
 
 A Frota abre recolhida.

@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.99.0";
+export const APP_VERSION = "0.99.1";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,15 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.99.1",
+    data: "2026-09-09",
+    titulo: "O nome de quem está com a peça, ao lado do modelo",
+    mudancas: [
+      { tipo: "melhoria", texto: "O nome de quem está com o equipamento saiu da ponta direita e foi para junto do modelo — que é como se lê a linha: este patrimônio, deste modelo, está com fulano. Antes o modelo esticava, abria um vazio no meio e jogava o nome longe do equipamento a que se refere." },
+      { tipo: "melhoria", texto: "Com quem está e onde está viraram duas colunas fixas. Antes eram a mesma coluna alternando conforme a categoria, e por isso Todas e TI mostravam o mesmo conjunto com informações diferentes." },
+    ],
+  },
   {
     versao: "0.99.0",
     data: "2026-09-09",
