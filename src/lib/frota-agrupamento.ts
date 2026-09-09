@@ -90,6 +90,12 @@ export type PendenciaFrota = {
   chave: string;
   texto: string;
   href: string;
+  /**
+   * Ação de CONSERTO, quando existe uma. O `href` mostra o problema (filtra a
+   * lista); isto resolve. Sem ela, a faixa anuncia 93 peças sem responsável e
+   * deixa a pessoa procurando onde arrumar.
+   */
+  acao?: { texto: string; href: string };
 };
 
 /**
@@ -106,7 +112,12 @@ export type PendenciaFrota = {
  */
 export function pendenciasDaLista(
   pecas: { id: string; situacao: string }[],
-  comResponsavel: Set<string> | null,
+  /**
+   * Peças com custódia aberta. `Map` porque quem chama também usa o VALOR (o
+   * nome do detentor) na coluna da lista; aqui só o `.has()` importa, e por isso
+   * o tipo aceita qualquer coisa que responda essa pergunta.
+   */
+  comResponsavel: { has(id: string): boolean } | null,
   certificado: Map<string, "ausente" | "vencido" | "proximo" | "em_dia">,
   base: string,
   comPessoaDesligada: Set<string> | null = null,
@@ -149,6 +160,7 @@ export function pendenciasDaLista(
           ? "1 peça está em uso sem termo assinado"
           : `${semTermo} peças estão em uso sem termo assinado`,
       href: `${base}pendencia=sem_responsavel`,
+      acao: { texto: "Regularizar", href: "/frota/custodia" },
     });
   }
 

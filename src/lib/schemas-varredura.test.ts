@@ -137,6 +137,9 @@ const AMOSTRAS: Record<string, unknown> = {
   fechamentoSchema: { obra_id: UUID, competencia: "2026-09" },
   unidadeSchema: { item_id: UUID, identificador: "PAT-0431" },
   amarrarPecaSchema: { peca_id: UUID },
+  mutiraoCustodiaSchema: {
+    pares: [{ unidade_id: UUID, funcionario_id: UUID }],
+  },
   // Qualificadas por módulo: `catalogo.ts` também exporta `categoriaSchema`.
   "frota.categoriaSchema": { nome: "Concretagem" },
   moverPecaSchema: {

@@ -7,6 +7,85 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.97.0] — 2026-09-09
+
+Com quem está cada máquina.
+
+### A pergunta era "é possível?" e a resposta mudou o trabalho
+
+A coluna era meia hora. O problema é que ela sairia vazia: medido em produção,
+**128 peças, 95 em uso, 2 com custódia ativa**. A importação criou as peças já
+em uso e nunca criou o vínculo com a pessoa — o próprio `pecasComResponsavel`
+registrava isso: *"a tela afirma que a máquina está com alguém e não sabe dizer
+com quem"*.
+
+E o nome existia: **95 peças** com `Com: <nome> (conforme planilha)` no texto das
+observações. Então o trabalho era o backfill, não a coluna.
+
+### A coluna já existia reservada
+
+`frota/page.tsx` tinha um comentário descrevendo exatamente isto: *"A COLUNA QUE
+MUDA DE PERFIL. Em TI e em veículo a pergunta é quem está com a peça; em obra,
+onde ela está. Hoje ninguém tem custódia aberta, e a tela diz isso em vez de
+fingir."*
+
+Não houve coluna nova, nem mudança de largura — o que a 0.93.0 acabou de
+padronizar segue intacto. `pecasComResponsavel` passou de `Set<string>` para
+`Map<string, string>` (id → rótulo do detentor): uma consulta responde as duas
+perguntas, e a troca não mexeu em nenhum call site, porque todos usavam `.has()`.
+
+### O casamento de nomes, e as duas recusas que custam acerto de propósito
+
+`custodia-mutirao.ts`, 14 casos por TDD. O resultado medido sobre o inventário
+real, com a mesma função que roda em produção:
+
+| | Peças |
+|---|---|
+| Nome idêntico | 20 |
+| Nome curto → completo | 69 |
+| **Automático** | **89 de 95 (94%)** |
+| Ambíguo | 5 |
+| Não casou | 1 |
+
+- **`detentorNoTexto` lê só o que vem depois de `Com:`.** Metade das observações
+  traz também `usuário anterior <nome>`: uma busca no texto inteiro casaria com
+  quem já devolveu o equipamento.
+- **Token inteiro, nunca prefixo.** "Lui" não casa com "Luis". Com prefixo,
+  "Ana" casaria com meia empresa.
+- **Um token só nunca casa**, nem com candidato único. Num cadastro de 509
+  pessoas, primeiro nome é identificação fraca — e a contratação da segunda
+  "Juliana" tornaria retroativamente errado um vínculo que ninguém revisa. O
+  único caso que não casou foi exatamente esse: `Lourival`.
+
+### Escreve pelo escritor compartilhado
+
+`confirmarMutiraoCustodia` grava por `abrirCustodia`
+(`src/lib/custodia-servidor.ts`), e não com insert próprio. É o AGENTS.md ao pé
+da letra — ele nomeia este arquivo como o caso em que a divergência "aparece
+como equipamento que consta com duas pessoas". `origem: "manual"`, porque não há
+termo por trás: o mutirão registra o fato; o documento, se vier, vem depois.
+
+**Parcial é resultado válido.** Com 89 peças, "tudo ou nada" faria uma linha
+problemática desfazer 88 confirmações certas.
+
+### Um problema de dado que apareceu no caminho
+
+**8 nomes duplicados no cadastro de funcionários, 16 fichas.** O padrão diz a
+causa: uma ficha com CPF e sem e-mail, a outra com e-mail e sem CPF — duas
+origens (a planilha e a sincronização do People) criando registros separados
+para a mesma pessoa. Um dos 5 "ambíguos" era isso, não ambiguidade real.
+
+O mutirão mostra CPF e e-mail ao escolher, para dar para distinguir. **Não
+consertei a duplicação** — é outro assunto, afeta a integração do People e o
+e-mail do termo (uma pessoa com duas fichas: qual recebe?), e merece decisão
+própria.
+
+### Descoberta
+
+O aviso "93 peças em uso sem termo assinado" ganhou um botão **Regularizar**.
+Antes a faixa inteira era link para o filtro: mostrava o problema e deixava a
+pessoa procurando o conserto. Agora o texto mostra e o botão resolve.
+
 ## [0.96.0] — 2026-09-09
 
 Emitir agora, assinar depois.
