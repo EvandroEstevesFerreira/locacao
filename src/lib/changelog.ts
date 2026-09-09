@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.97.0";
+export const APP_VERSION = "0.97.1";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,16 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.97.1",
+    data: "2026-09-09",
+    titulo: "A tela de custódia parou de prometer o que não fazia",
+    mudancas: [
+      { tipo: "correcao", texto: "O botão “Registrar custódias” falhava em todas as peças, com uma mensagem que não dizia por quê. O motivo é de projeto: quem está com o equipamento se registra emitindo o termo de responsabilidade, porque é o termo que responde por quem recebeu a máquina." },
+      { tipo: "melhoria", texto: "A tela passa a ser de conferência e diz isso com clareza. A lista de casamentos entre a planilha e o cadastro continua ali — é ela que a emissão dos termos vai usar." },
+      { tipo: "seguranca", texto: "Um teste passa a impedir que qualquer tela volte a tentar registrar posse de funcionário sem termo. O banco já recusava; agora a reprovação acontece antes de publicar, e não na frente do usuário." },
+    ],
+  },
   {
     versao: "0.97.0",
     data: "2026-09-09",
