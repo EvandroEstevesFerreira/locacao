@@ -7,6 +7,47 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.100.0] — 2026-09-09
+
+A planilha de coleta volta para dentro do sistema.
+
+`scripts/db/importar-coleta-locacoes.mjs` le a planilha "Coleta de Locacoes"
+preenchida e grava contrato, itens locados e o PDF do contrato no bucket
+`contratos`. Idempotente: contrato por (organizacao, numero), item por
+(contrato, item do catalogo, data de retirada).
+
+**Por que.** `gerar-planilha-coleta.mjs` existe desde a 0.94.0 e produz a
+planilha em branco. Faltava o caminho de volta — e sem ele a planilha
+preenchida virava digitacao a mao na tela de contrato, uma linha por vez.
+
+**O que ele recusa, e por que recusar e o servico.**
+`item_locado.valor_unitario_periodo` e `not null` com DEFAULT 0: celula de valor
+vazia nao da erro, grava a locacao custando R$ 0,00 e o relatorio de custo da
+obra fecha certo com o numero errado. Retirada no futuro faz constar como nao
+entregue um equipamento que esta em campo sendo faturado. Nos dois casos nada e
+gravado e o script sai com codigo 1.
+
+A primeira planilha devolvida (contrato 1726, 5I Climatizacao) tinha o segundo
+caso: a retirada veio com a data de FIM do contrato nas duas linhas. Nao e
+desatencao de quem preencheu — e o que acontece quando a coluna ao lado tem uma
+data e a mao desce.
+
+**Deriva de centavos, dita em voz alta.** A 5I cobra o split de 12000 a
+R$ 156,667 a unidade e fatura a linha arredondada (2 x 156,667 = R$ 313,33).
+`numeric(14,2)` guarda 156,67, e o Loca calcula R$ 313,34. Um centavo por linha,
+todo mes. Nao e motivo para recusar; e motivo para o aviso dizer o numero, com a
+previa mostrando o total que sera GRAVADO e nao o da fatura.
+
+**Dados carregados.** Contrato 1726 — obra 691 (Racional Garoa), 5I Servicos de
+Manutencao, mensal, 13/07/2026 a 01/03/2028: 2 splits de 12000 BTU e 7 de 18000,
+R$ 2.038,56 por mes, com o PDF do contrato anexado.
+
+A planilha como recebida fica intacta em `Referencias/Importacao/Daniela-moura/`;
+a correcao da retirada mora na copia `(conferida)`. Divergencia em aberto: o
+contrato preve fim em 01/03/2028 e a fatura 042.824.002 informa periodo
+contratado ate 24/10/2027 — anotado nas observacoes do contrato, para conferir
+com o fornecedor.
+
 ## [0.99.2] — 2026-09-09
 
 Saber qual versao esta no ar.
