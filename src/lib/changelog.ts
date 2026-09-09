@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.98.1";
+export const APP_VERSION = "0.99.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,16 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.99.0",
+    data: "2026-09-09",
+    titulo: "A Frota abre recolhida",
+    mudancas: [
+      { tipo: "melhoria", texto: "Os grupos de equipamento na Frota abrem recolhidos, mostrando só o cabeçalho com as contagens. Com 96 notebooks num grupo, a tela abria numa parede de linhas e o segundo grupo ficava fora da primeira dobra." },
+      { tipo: "melhoria", texto: "Buscar ou filtrar abre os grupos sozinho. Recolhido com busca ativa esconderia justamente o que se procurou. Escolher uma categoria no menu não abre — ali é navegação, não busca." },
+      { tipo: "melhoria", texto: "Uma seta no cabeçalho mostra que o grupo abre e fecha. Sem ela, cabeçalho recolhido parece linha morta." },
+    ],
+  },
   {
     versao: "0.98.1",
     data: "2026-09-09",
