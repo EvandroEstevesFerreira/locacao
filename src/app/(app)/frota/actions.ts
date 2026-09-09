@@ -4,11 +4,17 @@ import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeOperar, podeEditarCadastros } from "@/lib/auth";
-import { falha, primeiroErro, type ActionResult } from "@/lib/acoes";
+import {
+  erroDeEscrita,
+  falha,
+  primeiroErro,
+  type ActionResult,
+} from "@/lib/acoes";
 import { camposFichaSchema, validarFicha } from "@/lib/catalogo";
 import { moverPecaSchema, editarPecaSchema } from "@/lib/custodia";
 import { abrirCustodia } from "@/lib/custodia-servidor";
 import {
+  amarrarPecaSchema,
   podeTransicionar,
   motivoBloqueio,
   SITUACOES,
@@ -236,4 +242,103 @@ export async function mudarSituacao(formData: FormData): Promise<ActionResult> {
   revalidatePath("/frota");
   revalidatePath(`/frota/${id}`);
   return { ok: true };
+}
+
+/**
+ * Amarra a peça a uma linha de contrato, ou registra o dono provisório.
+ *
+ * `unidade_id` mora em `item_locado`, não em `equipamento_unidade`: amarrar é
+ * gravar a peça NA LINHA do contrato, e não o contrato na peça. Por isso a
+ * action recebe `item_locado_id` e não `contrato_id` — quem escolhe a linha é a
+ * leitura `listarContratosParaAmarrar`, que já aplicou as quatro condições de
+ * elegibilidade.
+ *
+ * O PROVISÓRIO É LIMPO ao amarrar, e a mensagem diz se ele divergia. Mantê-lo
+ * vivo ao lado do contrato criaria duas fontes sobre quem é o dono de um
+ * equipamento; limpá-lo calado seria decidir por quem cadastrou.
+ */
+export async function amarrarPecaAoContrato(raw: unknown): Promise<ActionResult> {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id) return falha("Sessão inválida. Entre novamente.");
+  if (!podeEditarCadastros(perfil.papel)) {
+    return falha("Você não tem permissão para editar o cadastro da peça.");
+  }
+
+  const parsed = amarrarPecaSchema.safeParse(raw);
+  if (!parsed.success) return falha(primeiroErro(parsed.error.issues));
+  const { peca_id, item_locado_id, fornecedor_provisorio_id } = parsed.data;
+
+  const supabase = await createClient();
+
+  // O provisório de ANTES, para poder nomeá-lo na mensagem ao removê-lo.
+  const { data: antes } = await supabase
+    .from("equipamento_unidade")
+    .select("fornecedor_provisorio:fornecedor_provisorio_id(nome)")
+    .eq("id", peca_id)
+    .maybeSingle();
+  const provisorioAntes =
+    (antes as unknown as { fornecedor_provisorio: { nome: string } | null } | null)
+      ?.fornecedor_provisorio?.nome ?? null;
+
+  // ── Desamarrar: solta a linha que hoje aponta para esta peça ─────────────
+  // Roda sempre, inclusive quando vai amarrar em outra linha: sem isto, trocar
+  // de contrato deixaria a peça em DUAS linhas em aberto — exatamente o estado
+  // `ambiguo` que `donoDaPeca` existe para denunciar.
+  //
+  // NÃO usa `erroDeEscrita` aqui de propósito: ele trata "zero linhas afetadas"
+  // como falha — o que está certo para um update dirigido por `id`, e errado
+  // aqui, onde zero é o caso NORMAL (peça que não estava amarrada a nada). Com
+  // ele, a amarração falharia justamente na primeira vez de cada peça.
+  const { error: erroSolta } = await supabase
+    .from("item_locado")
+    .update({ unidade_id: null })
+    .eq("unidade_id", peca_id)
+    .eq("status", "em_aberto");
+  if (erroSolta) {
+    console.error("amarrarPeca/soltar", erroSolta);
+    return falha("Não foi possível soltar a peça do contrato atual.");
+  }
+
+  let mensagem: string | undefined;
+
+  if (item_locado_id) {
+    const erro = erroDeEscrita(
+      await supabase
+        .from("item_locado")
+        .update({ unidade_id: peca_id })
+        .eq("id", item_locado_id)
+        // Corrida: a linha pode ter recebido outra peça entre a leitura do
+        // formulário e este clique. Sem esta condição, a peça nova sobrescreve
+        // a anterior em silêncio.
+        .is("unidade_id", null)
+        .select("id"),
+      { registro: "item do contrato", contexto: "amarrarPeca", acao: "salvar" },
+    );
+    if (erro) {
+      return falha(
+        "Esta linha do contrato já recebeu outra peça. Recarregue a tela e escolha outra.",
+      );
+    }
+    if (provisorioAntes) {
+      mensagem = `Dono provisório "${provisorioAntes}" removido: agora quem manda é o contrato.`;
+    }
+  }
+
+  // Amarrada a um contrato, o provisório não tem mais função. Sem contrato, ele
+  // é o que o formulário mandou (podendo ser nulo, que é "não sei ainda").
+  const erroProv = erroDeEscrita(
+    await supabase
+      .from("equipamento_unidade")
+      .update({
+        fornecedor_provisorio_id: item_locado_id ? null : fornecedor_provisorio_id,
+      })
+      .eq("id", peca_id)
+      .select("id"),
+    { registro: "peça", contexto: "amarrarPeca/provisorio", acao: "salvar" },
+  );
+  if (erroProv) return falha(erroProv);
+
+  revalidatePath(`/frota/${peca_id}`);
+  revalidatePath("/frota");
+  return { ok: true, aviso: mensagem };
 }

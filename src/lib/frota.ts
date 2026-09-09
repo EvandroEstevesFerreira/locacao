@@ -196,3 +196,134 @@ export const categoriaSchema = z.object({
 
 export type CategoriaInput = z.input<typeof categoriaSchema>;
 export type CategoriaDados = z.output<typeof categoriaSchema>;
+
+// ── Quem é o dono da peça locada ─────────────────────────────────────────────
+//
+// A relação peça↔contrato já existia (migration 0049): `item_locado.unidade_id`
+// aponta para a peça física, e o contrato aponta para o fornecedor. Então a
+// empresa dona é DERIVADA, não guardada — não há campo de fornecedor na peça
+// que possa divergir do contrato.
+//
+// A exceção é o `fornecedor_provisorio_id`, para a peça que entrou pela planilha
+// e cujo contrato ainda não existe no Loca. O nome da coluna diz que aquilo não
+// é a verdade: quem ler o schema em seis meses precisa saber pelo nome, senão
+// alguém constrói relatório em cima.
+
+export type LinhaEmAberto = {
+  itemLocadoId: string;
+  contratoId: string;
+  contratoNumero: string;
+  fornecedorNome: string | null;
+};
+
+export type DonoDaPeca =
+  | { origem: "nenhum" }
+  | { origem: "provisorio"; nome: string }
+  | { origem: "contrato"; nome: string; contratoId: string; contratoNumero: string }
+  | { origem: "contrato-sem-fornecedor"; contratoId: string; contratoNumero: string }
+  | { origem: "ambiguo"; contratos: { contratoId: string; contratoNumero: string }[] };
+
+/**
+ * A empresa responsável pela peça, e de onde essa informação veio.
+ *
+ * O contrato MANDA sobre o provisório, sempre. Sem essa precedência haveria duas
+ * fontes sobre quem é o dono de um equipamento, divergindo em silêncio — e
+ * divergência sobre isso aparece como cobrança errada.
+ *
+ * `ambiguo` existe porque NÃO HÁ TRAVA no banco impedindo a mesma peça de estar
+ * em duas linhas em aberto: a 0049 criou índice comum, não único. Escolher a
+ * primeira produziria uma tela plausível e errada sobre de quem é o equipamento;
+ * dizer "consta em dois contratos" manda a pessoa consertar o dado.
+ *
+ * `contrato-sem-fornecedor` também é estado próprio, e não `nenhum`: a peça ESTÁ
+ * amarrada, e o que falta é fornecedor no contrato. Cair em `nenhum` esconderia
+ * a amarração e mandaria a pessoa procurar no lugar errado.
+ */
+export function donoDaPeca({
+  linhasEmAberto,
+  fornecedorProvisorio,
+}: {
+  linhasEmAberto: LinhaEmAberto[];
+  fornecedorProvisorio: string | null;
+}): DonoDaPeca {
+  if (linhasEmAberto.length > 1) {
+    return {
+      origem: "ambiguo",
+      contratos: linhasEmAberto.map((l) => ({
+        contratoId: l.contratoId,
+        contratoNumero: l.contratoNumero,
+      })),
+    };
+  }
+
+  const linha = linhasEmAberto[0];
+  if (linha) {
+    const nome = (linha.fornecedorNome ?? "").trim();
+    if (!nome) {
+      return {
+        origem: "contrato-sem-fornecedor",
+        contratoId: linha.contratoId,
+        contratoNumero: linha.contratoNumero,
+      };
+    }
+    return {
+      origem: "contrato",
+      nome,
+      contratoId: linha.contratoId,
+      contratoNumero: linha.contratoNumero,
+    };
+  }
+
+  const provisorio = (fornecedorProvisorio ?? "").trim();
+  return provisorio ? { origem: "provisorio", nome: provisorio } : { origem: "nenhum" };
+}
+
+export type LinhaDeContrato = {
+  id: string;
+  contratoId: string;
+  itemId: string;
+  status: "em_aberto" | "devolvido";
+  unidadeId: string | null;
+};
+
+/**
+ * As linhas de contrato a que ESTA peça pode ser amarrada.
+ *
+ * `unidade_id` mora em `item_locado`, e não em `equipamento_unidade`: "escolher
+ * o contrato desta peça" é, na verdade, anexá-la a uma linha daquele contrato.
+ * As quatro condições abaixo são o critério — e é aqui que um erro silencioso
+ * moraria, porque amarrar na linha errada faz o contrato cobrar uma coisa e a
+ * frota mostrar outra.
+ *
+ * A linha que JÁ aponta para esta peça continua elegível: reamarrar a mesma
+ * peça à mesma linha não é erro, e excluí-la faria o seletor não oferecer a
+ * opção que já está escolhida.
+ */
+export function linhasElegiveis(
+  linhas: LinhaDeContrato[],
+  peca: { itemId: string; id?: string },
+): LinhaDeContrato[] {
+  return linhas.filter(
+    (l) =>
+      l.itemId === peca.itemId &&
+      l.status === "em_aberto" &&
+      (l.unidadeId === null || (peca.id !== undefined && l.unidadeId === peca.id)),
+  );
+}
+
+/**
+ * A amarração da peça: a LINHA do contrato, ou o dono provisório.
+ *
+ * Os dois campos são opcionais e mutuamente exclusivos na prática — com linha,
+ * o provisório é ignorado e limpo pela action. Não são exclusivos no schema
+ * porque o formulário envia os dois e a decisão de qual vale é da action, com
+ * a precedência de `donoDaPeca` como regra única.
+ */
+export const amarrarPecaSchema = z.object({
+  peca_id: z.string().uuid(),
+  /** Linha de `item_locado`. Vazio = desamarrar. */
+  item_locado_id: uuidOpcional,
+  fornecedor_provisorio_id: uuidOpcional,
+});
+
+export type AmarrarPecaInput = z.input<typeof amarrarPecaSchema>;

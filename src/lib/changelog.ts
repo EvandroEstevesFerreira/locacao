@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.94.0";
+export const APP_VERSION = "0.95.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,18 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.95.0",
+    data: "2026-09-09",
+    titulo: "De quem é a peça locada",
+    mudancas: [
+      { tipo: "novo", texto: "A peça de terceiro ganhou a seção Locação: mostra a empresa responsável e o contrato sob o qual ela está na obra, com link. Antes o dono vivia em texto livre nas observações." },
+      { tipo: "novo", texto: "Dá para amarrar a peça ao contrato pela tela dela. O seletor só oferece contrato que tenha linha em aberto do mesmo item sem peça vinculada — e, quando não houver nenhuma, diz o que falta em vez de mostrar lista vazia." },
+      { tipo: "novo", texto: "Enquanto o contrato não existir no Loca, você informa a empresa à mão e a tela mostra “(informado no cadastro, sem contrato)”. Ao amarrar o contrato, essa informação é substituída — e o aviso diz de quem era, se divergia." },
+      { tipo: "seguranca", texto: "A mesma peça não pode mais constar em dois contratos em aberto ao mesmo tempo. O banco permitia, e o sistema passaria a ter duas respostas para “de quem é este equipamento”, as duas plausíveis." },
+      { tipo: "melhoria", texto: "Se o contrato amarrado não tiver fornecedor cadastrado, a tela diz isso e aponta onde se corrige — em vez de mostrar um travessão que manda procurar no lugar errado." },
+    ],
+  },
   {
     versao: "0.94.0",
     data: "2026-09-09",
