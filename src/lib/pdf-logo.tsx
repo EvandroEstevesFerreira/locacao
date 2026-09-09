@@ -4,17 +4,27 @@
 // de texto (pdf.tsx) e os formulários do alojamento (pdf-form.tsx). Ficar em
 // pdf.tsx transformaria aquele arquivo em hub de importação.
 //
-// Os paths são byte a byte os do "Versão Fundo Claro.svg" oficial do Manual de
-// Identidade Visual 2026. Não editar à mão.
+// A GEOMETRIA (5 paths + 5 polygons) é byte a byte a do "Versão Fundo Claro.svg"
+// oficial. Não editar à mão.
+//
+// As CORES, porém, NÃO vêm daquele arquivo, e isso é deliberado: o SVG exportado
+// desenha o ícone em #cf2927 e o wordmark em #1c1c1c, enquanto a página "Cores"
+// do Manual de Identidade Visual 2026 especifica a paleta em três valores —
+// #BE3A31, #000000 e #FFFFFF. Quando o arquivo e o manual divergem, o manual
+// manda: ele é a especificação, o SVG é uma exportação.
+//
+// Fica registrado porque a divergência convida ao conserto errado: quem abrir o
+// SVG oficial ao lado deste arquivo vai achar que as cores estão erradas aqui e
+// "corrigir" a marca para um vermelho que não é o da empresa.
 
 import { Svg, Path, Polygon } from "@react-pdf/renderer";
-import { MARCA_VERMELHO, SLATE_900 } from "@/lib/brand-colors";
+import { MARCA_PRETO, MARCA_VERMELHO } from "@/lib/brand-colors";
 
 const LOGO_VIEWBOX = "0 0 1920 392.19";
 const LOGO_RATIO = 392.19 / 1920;
 // Unico vermelho do documento: o simbolo da marca.
 const ICONE_VERMELHO = MARCA_VERMELHO;
-const WORDMARK_COR = SLATE_900;
+const WORDMARK_COR = MARCA_PRETO;
 
 /**
  * Largura mínima em pt. O Manual de Identidade Visual exige 3 cm de largura em

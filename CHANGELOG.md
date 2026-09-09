@@ -7,6 +7,56 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.91.0] — 2026-09-09
+
+A marca em todo documento.
+
+### O levantamento
+
+Varredura dos quatro primitivos de documento do app — `Documento` (pdf-form,
+que serve os doze formulários e termos), `DocumentoTexto`, `DocumentoRelatorio`
+e `DocumentoVistoria`. Só o último não desenhava a marca, e é dos que mais saem
+da empresa: o relatório de vistoria vira anexo de contrato e prova de estado do
+equipamento. `inspecionar.tsx` e `registro.tsx` aparecem sem logo na varredura e
+está correto — um lê texto para teste, o outro é um mapa de tipo para
+componente.
+
+### Adicionado
+
+- `LogoSistenge` em `DocumentoVistoria`, na mesma disposição do `DocumentoTexto`
+  (marca acima do eyebrow, 110pt), para que os dois cheguem iguais na mão de
+  quem recebe. 110pt está acima do mínimo de 85pt (= 3cm, exigência do manual).
+- `temLogo()` em `src/lib/documentos/inspecionar.tsx` e o teste-guarda
+  `logo-em-todo-documento.test.tsx`. Casa por nome de componente, não por
+  identidade de referência: `inspecionar` é utilitário de leitura e não deve
+  puxar `pdf-logo`, que arrasta as primitivas SVG do renderer. Desce nos filhos
+  sempre, e não apenas no retorno da execução do componente — primitiva do
+  @react-pdf que lança fora do renderer cairia no ramo de props, que ignora
+  `children`, e a marca dentro de um `<Page>` ficaria invisível.
+- `MARCA_PRETO = "#000000"` em `brand-colors.ts`.
+
+### Corrigido
+
+- O wordmark do logotipo passa de `SLATE_900` (#0F172A, azulado) para
+  `MARCA_PRETO`. A página "Cores" do Manual de Identidade Visual 2026 especifica
+  a paleta em três valores — #BE3A31, #000000 e #FFFFFF — e a página "Usos
+  incorretos" lista "foram usadas cores não institucionais" entre as
+  reprovações.
+
+### A divergência que fica registrada
+
+O `Versão Fundo Claro.svg` oficial desenha o ícone em **#cf2927** e o wordmark
+em **#1c1c1c**; o manual especifica **#BE3A31** e **#000000**. Quando o arquivo
+e o manual divergem, o manual manda — ele é a especificação, o SVG é uma
+exportação. Está anotado no topo de `pdf-logo.tsx` porque a divergência convida
+ao conserto errado: quem abrir o SVG ao lado do código vai achar que a cor está
+errada no código e "corrigir" a marca para um vermelho que não é o da empresa.
+
+### Não alterado, de propósito
+
+- `MARCA_VERMELHO` (#BE3A31) já estava correto conforme o manual.
+- `LOGO_LARGURA_MINIMA = 85` (pt) já equivale aos 3 cm exigidos para impressão.
+
 ## [0.90.3] — 2026-09-09
 
 O aviso de fechamento não promete mais o que não vai acontecer.

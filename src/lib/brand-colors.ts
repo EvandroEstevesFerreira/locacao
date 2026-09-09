@@ -38,6 +38,21 @@ export const WARNING_BORDA = "#B45309";
  */
 export const MARCA_VERMELHO = "#BE3A31";
 
+/**
+ * Preto institucional — a cor do wordmark do logotipo.
+ *
+ * A paleta do Manual de Identidade Visual 2026 (página "Cores") tem TRÊS cores
+ * e só três: #BE3A31, #000000 e #FFFFFF. O wordmark vinha sendo desenhado em
+ * SLATE_900 (#0F172A), que é azulado e não está na paleta — e a página "Usos
+ * incorretos" do mesmo manual lista "foram usadas cores não institucionais"
+ * entre as reprovações.
+ *
+ * NÃO trocar por SLATE_900 "para casar com o texto da tela": o wordmark é
+ * marca, não tipografia de interface. Que ele fique 1 tom diferente do corpo do
+ * documento é correto.
+ */
+export const MARCA_PRETO = "#000000";
+
 /** Superfícies do tema escuro (usadas só onde há media query manual). */
 export const DARK_FUNDO = "#070A13";
 export const DARK_CARD = "#0B111E";
