@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.95.0";
+export const APP_VERSION = "0.96.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,20 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.96.0",
+    data: "2026-09-09",
+    titulo: "Emitir agora, assinar depois",
+    mudancas: [
+      { tipo: "novo", texto: "A assinatura do funcionário passou a ser opcional na emissão. O equipamento sai hoje e o traço vem depois — antes era impossível emitir sem a assinatura na tela." },
+      { tipo: "novo", texto: "Emitindo sem assinatura, o funcionário recebe a via em PDF com o link para assinar pelo celular no mesmo e-mail. E o e-mail muda de tom: em vez de “guarde a sua cópia”, ele pede a assinatura." },
+      { tipo: "novo", texto: "O sistema cobra a cada 3 dias até assinar, com um link novo em cada aviso — e revogando o anterior, para nunca haver dois links válidos e a dúvida de qual usar." },
+      { tipo: "novo", texto: "Um resumo periódico lista todos os termos sem assinatura, dizendo em cada linha se a cobrança saiu ou o que falta no cadastro (e-mail não conferido, CPF ausente). É a lista de quem você precisa cobrar pessoalmente." },
+      { tipo: "novo", texto: "Termo emitido sem assinatura aparece com o selo “Sem assinatura” na lista, e o PDF sai com tarja dizendo que a assinatura do funcionário ainda não foi colhida." },
+      { tipo: "seguranca", texto: "Um termo não pode mais receber duas assinaturas da mesma pessoa no mesmo momento. Sem isso, dois links usados ao mesmo tempo deixariam o PDF com duas linhas para uma pessoa, e quem confere não saberia qual traço vale." },
+      { tipo: "melhoria", texto: "Emitir sem assinatura avisa antes, na tela, o que vai acontecer: o termo vale, as peças passam para “em uso”, e a cobrança começa." },
+    ],
+  },
   {
     versao: "0.95.0",
     data: "2026-09-09",

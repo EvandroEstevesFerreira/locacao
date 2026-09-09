@@ -5,6 +5,8 @@
 // eles não moram no actions.ts.
 
 import { z } from "zod";
+import { differenceInCalendarDays } from "date-fns";
+import { dataDeISO } from "./locacao";
 import {
   opcional,
   textoOpcional,
@@ -237,4 +239,52 @@ export function precisaConferencia(f: {
   if (!f.email || f.email_confirmado) return false;
   const derivado = emailDerivado(f.nome);
   return derivado !== null && derivado.toLowerCase() === f.email.toLowerCase();
+}
+
+// ── Cobrança da assinatura pendente ─────────────────────────────────────────
+
+/**
+ * De quantos em quantos dias cobrar o funcionário que não assinou.
+ *
+ * TRÊS, e não sete, foi decisão de quem usa. A consequência: o link de
+ * assinatura vale 7 dias (`DIAS_DE_VALIDADE`), então a cada cobrança há um link
+ * anterior ainda vivo. Por isso a cobrança REVOGA o link antigo antes de gerar o
+ * novo — dois links válidos ao mesmo tempo produzem a pergunta "qual eu uso?" e
+ * um deles vai para o lixo eletrônico do outro.
+ */
+export const INTERVALO_COBRANCA_DIAS = 3;
+
+/**
+ * Se este termo deve receber cobrança de assinatura hoje.
+ *
+ * `emitidoEm` nulo devolve `false`: antes de emitir, o link é mandado pela tela
+ * por quem opera, e cobrar rascunho encheria a caixa do funcionário por um
+ * documento que talvez nem seja emitido.
+ *
+ * Data de aviso no FUTURO também devolve `false`. Sem essa guarda — relógio
+ * errado, dado importado — a diferença sairia negativa, passaria pelo `>=` e o
+ * termo seria cobrado todo dia.
+ */
+export function deveCobrarAssinatura(
+  termo: {
+    emitidoEm: string | null;
+    canceladoEm: string | null;
+    temAssinaturaFuncionario: boolean;
+    /** Data (yyyy-mm-dd) do último aviso enviado, de `notificacao_log`. */
+    ultimoAvisoEm: string | null;
+  },
+  hojeISO: string,
+  intervaloDias: number = INTERVALO_COBRANCA_DIAS,
+): boolean {
+  if (!termo.emitidoEm) return false;
+  if (termo.canceladoEm) return false;
+  if (termo.temAssinaturaFuncionario) return false;
+  if (!termo.ultimoAvisoEm) return true;
+
+  const dias = differenceInCalendarDays(
+    dataDeISO(hojeISO),
+    dataDeISO(termo.ultimoAvisoEm),
+  );
+  if (dias < 0) return false;
+  return dias >= intervaloDias;
 }

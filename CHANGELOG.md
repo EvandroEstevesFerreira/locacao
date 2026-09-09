@@ -7,6 +7,87 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.96.0] — 2026-09-09
+
+Emitir agora, assinar depois.
+Spec: `docs/superpowers/specs/2026-09-09-assinatura-pos-emissao-design.md`.
+
+### A trava não estava no formulário
+
+A regra "assina antes de emitir" vivia no BANCO. A migration 0077 tem
+`if v_termo.emitido_em is not null` nas **duas** funções de assinatura à
+distância — `termo_do_link` (que abre a página) e `assinar_termo_por_link` (que
+grava) — e ambas são `security definer` com `revoke all from public`.
+
+Migration 0101 estreita a guarda: `cancelado_em` continua barrando **sempre**;
+`emitido_em` passa a barrar só quando a assinatura do funcionário **já existe**.
+Termo emitido *e* assinado volta a ser intocável, que é o estado final desejado.
+
+Recusadas: "termo emitido é editável" (abriria caminho para alterar assinatura
+já colhida) e um `momento = 'ratificacao'` novo (desnecessário —
+`termo_assinatura` já grava `assinado_em` e `assinado_ip` por linha, então a
+data em que a assinatura veio depois da emissão já fica registrada).
+
+### A corrida que o recorte abriu, e como foi fechada
+
+A guarda nova é um `exists`: dois links válidos usados ao mesmo tempo passariam
+os dois antes de qualquer insert, e o termo ficaria com **duas** assinaturas do
+mesmo funcionário — o PDF mostraria duas linhas para uma pessoa. O `for update`
+da 0077 protege um link, não dois.
+
+Índice único `(termo_id, momento, papel)` fecha isso por construção. Medido
+antes de aplicar: `duplicadas = 0` sobre 4 assinaturas em 2 termos.
+
+### Adicionado
+
+- `deveCobrarAssinatura()` e `INTERVALO_COBRANCA_DIAS = 3` em `src/lib/termo.ts`.
+- `/api/cron/termos-sem-assinatura`, diário às 08:40, decidindo **por termo** —
+  "a cada 3 dias" é do termo, não do calendário: dois termos emitidos em dias
+  diferentes têm ciclos diferentes.
+- `termosSemAssinatura()` em `templates.ts`: o resumo para a administração, com
+  o MOTIVO na coluna de situação quando a cobrança automática não saiu. É o que
+  transforma o resumo de relatório em lista de trabalho.
+- Tarja "PENDENTE DE ASSINATURA DO FUNCIONÁRIO" no PDF, só para termo emitido —
+  o rascunho sai em branco de propósito, para colher assinatura à caneta.
+- Selo "Sem assinatura" na lista, como **segundo** selo e não como situação
+  nova: a pendência é ortogonal ao ciclo do termo (um termo em uso, vencido ou
+  encerrado pode estar sem assinatura).
+- `EMAIL_RESUMO_TERMOS` no `.env.example`.
+
+### O detalhe que quase passou
+
+`assinaturaSchema` **já** aceitava `imagem` nula — o bloqueio era só do cliente.
+Removê-lo sem mais nada faria `emitirTermo` gravar uma linha de
+`termo_assinatura` com `imagem: null`: o banco passaria a dizer que o
+funcionário assinou, e o PDF desenharia a linha dele sobre um traço que não
+existe. Agora, sem traço, **a linha não é gravada** — e é a ausência dela que
+torna a pendência detectável pela tela, pelo PDF e pela cobrança.
+
+O template do e-mail tinha o mesmo problema: dizia "assinado em {data}" e "não é
+preciso responder nem devolver nada", falsos num termo sem assinatura. Anexar um
+botão àquela frase produziria um e-mail que se contradiz. O corpo, o assunto e a
+nota do anexo mudam quando há pendência.
+
+### Duas varreduras do próprio repositório pegaram coisas
+
+- `admin-client.test.ts` exigiu declarar o cron em `PERMITIDOS` **com motivo**.
+  E recusou minha entrada "defensiva" `termo_assinatura`: a lista não aceita
+  tabela que ninguém toca, porque não listar já é o que fecha a porta. Assinar é
+  ato de pessoa, com conferência de CPF na função de banco, e não de cron.
+- `schemas-varredura` pegou o `amarrarPecaSchema` da versão anterior.
+
+### Não alterado, de propósito
+
+A assinatura de **encerramento/devolução** (`termo-devolucao.tsx`) mantém o
+bloqueio. É outro momento e outro pedido.
+
+### Medido em produção antes de aplicar
+
+`emitidos_sem_assinatura_func = 0` — nenhum termo emitido hoje está sem a
+assinatura do funcionário. O risco que o spec listou ("a tarja muda documento já
+emitido") **não se materializa**: não há documento existente que passe a receber
+a tarja.
+
 ## [0.95.0] — 2026-09-09
 
 De quem é a peça locada.

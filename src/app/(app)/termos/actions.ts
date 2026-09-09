@@ -49,6 +49,53 @@ import { appUrl } from "@/lib/emails/contexto";
  *   e-mail por conferir   o endereço foi DEDUZIDO do nome; pode ser de outra pessoa
  *   sem CPF               não há com o que conferir quem assinou — hoje, os 118
  */
+/** `true` se o funcionário já assinou a ENTREGA deste termo. */
+function funcionarioAssinou(assinaturas: { momento: string; papel: string }[]): boolean {
+  return assinaturas.some((a) => a.momento === "entrega" && a.papel === "funcionario");
+}
+
+/**
+ * Gera um link de assinatura, revogando os anteriores.
+ *
+ * REVOGA ANTES DE GERAR de propósito. O link vale 7 dias e a cobrança é a cada
+ * 3: sem revogar, o funcionário acumularia links válidos e teria de decidir qual
+ * usar — e o mais antigo, que é o que está no topo da caixa de entrada, seria o
+ * escolhido justamente por estar mais visível. Um link válido por vez, sempre o
+ * mais recente.
+ *
+ * Devolve `null` quando falta pré-requisito. Não lança: quem chama está no meio
+ * de uma emissão que JÁ aconteceu, e o link é a conveniência, não o ato.
+ */
+async function gerarLinkDeAssinatura(
+  termoId: string,
+  orgId: string,
+  perfilId: string,
+): Promise<string | null> {
+  const supabase = await createClient();
+  await supabase
+    .from("termo_link")
+    .update({ revogado_em: new Date().toISOString() })
+    .eq("termo_id", termoId)
+    .is("usado_em", null)
+    .is("revogado_em", null);
+
+  const token = novoToken();
+  const { error } = await supabase.from("termo_link").insert({
+    org_id: orgId,
+    termo_id: termoId,
+    token_hash: hashDoToken(token),
+    expira_em: new Date(
+      Date.now() + DIAS_DE_VALIDADE * 24 * 60 * 60 * 1000,
+    ).toISOString(),
+    criado_por: perfilId,
+  });
+  if (error) {
+    console.error("gerarLinkDeAssinatura", error);
+    return null;
+  }
+  return `${appUrl()}/assinar/${token}`;
+}
+
 export async function enviarLinkDeAssinatura(raw: unknown): Promise<ActionResult> {
   const perfil = await getCurrentPerfil();
   if (!perfil?.org_id || !podeOperar(perfil.papel)) {
@@ -63,8 +110,14 @@ export async function enviarLinkDeAssinatura(raw: unknown): Promise<ActionResult
 
   const termo = await obterTermo(id);
   if (!termo) return falha("Termo não encontrado.");
-  if (termo.emitido_em) return falha("Este termo já foi emitido.");
   if (termo.cancelado_em) return falha("Este termo foi cancelado.");
+  // Termo EMITIDO aceita link, desde que falte a assinatura do funcionário — é
+  // o caminho de "emite agora, assina depois". Emitido E assinado não: ali não
+  // há o que colher, e um link vivo seria convite a uma segunda assinatura da
+  // mesma pessoa. Mesmo recorte das funções de banco na migration 0101.
+  if (termo.emitido_em && funcionarioAssinou(termo.assinaturas)) {
+    return falha("Este termo já foi assinado pelo funcionário.");
+  }
   if (termo.itens.length === 0) {
     return falha("Um termo sem itens não tem o que assinar.");
   }
@@ -84,21 +137,10 @@ export async function enviarLinkDeAssinatura(raw: unknown): Promise<ActionResult
     );
   }
 
-  const supabase = await createClient();
-  const token = novoToken();
-  const expira = new Date(Date.now() + DIAS_DE_VALIDADE * 24 * 60 * 60 * 1000);
+  const url = await gerarLinkDeAssinatura(id, perfil.org_id, perfil.id);
+  if (!url) return falha("Não foi possível gerar o link de assinatura.");
 
-  const { error: erroLink } = await supabase.from("termo_link").insert({
-    org_id: perfil.org_id,
-    termo_id: id,
-    token_hash: hashDoToken(token),
-    expira_em: expira.toISOString(),
-    criado_por: perfil.id,
-  });
-  if (erroLink) {
-    console.error("enviarLinkDeAssinatura/insert", erroLink);
-    return falha("Não foi possível gerar o link de assinatura.");
-  }
+  const supabase = await createClient();
 
   const { data: org } = await supabase
     .from("organizacao")
@@ -117,7 +159,7 @@ export async function enviarLinkDeAssinatura(raw: unknown): Promise<ActionResult
         quantidade: `${i.quantidade}${i.unidade_medida ? ` ${i.unidade_medida}` : ""}`,
         estado: estadoLabel(i.estado_entrega),
       })),
-      url: `${appUrl()}/assinar/${token}`,
+      url,
       validade: `${DIAS_DE_VALIDADE} dias`,
     },
     montarContexto((org as LinhaOrganizacaoEmail | null) ?? null),
@@ -225,6 +267,22 @@ async function enviarViaDoFuncionario(
     // O MESMO gerador da rota de download. Duas montagens fariam a via
     // recebida por e-mail divergir da baixada na tela, num papel com valor de
     // prova.
+    // O link SÓ quando falta a assinatura. Num termo já assinado ele seria
+    // convite a uma segunda assinatura da mesma pessoa, e o PDF passaria a
+    // mostrar duas linhas para quem confere.
+    const perfilAtual = await getCurrentPerfil();
+    const pendente =
+      !funcionarioAssinou(termo.assinaturas) && perfilAtual?.org_id
+        ? await (async () => {
+            const url = await gerarLinkDeAssinatura(
+              termoId,
+              perfilAtual.org_id!,
+              perfilAtual.id,
+            );
+            return url ? { url, validade: `${DIAS_DE_VALIDADE} dias` } : null;
+          })()
+        : null;
+
     const doc = await gerarTermoEquipamentoPdf(termoId);
     if (!doc) return { enviado: false, motivo: "Não foi possível gerar o PDF do termo." };
 
@@ -253,6 +311,10 @@ async function enviarViaDoFuncionario(
         })),
         anexo: doc.arquivo,
         observacoes: termo.observacoes ?? undefined,
+        // Falta a assinatura? O e-mail muda de "guarde a sua cópia" para
+        // "assine", e leva o link. Sem isto, o e-mail diria "assinado em
+        // {data}" e "não é preciso responder" sobre um termo sem assinatura.
+        assinaturaPendente: pendente ?? undefined,
       },
       montarContexto((org as LinhaOrganizacaoEmail | null) ?? null),
     );
@@ -667,10 +729,19 @@ export async function emitirTermo(
     .maybeSingle();
   const assinouADistancia = Boolean(jaAssinada);
 
-  // A assinatura do funcionário só é EXIGIDA quando ele não assinou à
-  // distância. Exigi-la nos dois casos obrigaria o operador a colher de novo o
-  // traço de quem já assinou no celular.
-  const func = assinouADistancia ? null : assinaturaSchema.safeParse(assinaturas.funcionario);
+  // A ASSINATURA DO FUNCIONÁRIO É OPCIONAL na emissão. Emitir agora e colher
+  // depois pelo link é o fluxo pedido: o equipamento sai hoje, a assinatura
+  // chega quando a pessoa abrir o celular.
+  //
+  // Sem traço, NÃO SE GRAVA A LINHA. Gravar `imagem: null` seria pior que não
+  // gravar: o banco passaria a dizer que o funcionário assinou, e o PDF
+  // desenharia a linha dele sobre um traço que não existe. A AUSÊNCIA da linha é
+  // o que torna a pendência detectável — pela tela, pelo PDF e pela cobrança.
+  const temTraco = Boolean((assinaturas.funcionario.imagem ?? "").trim());
+  const func =
+    assinouADistancia || !temTraco
+      ? null
+      : assinaturaSchema.safeParse(assinaturas.funcionario);
   if (func && !func.success) return falha(primeiroErro(func.error.issues));
 
   const { data: atual, error: erroLeitura } = await supabase

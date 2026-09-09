@@ -129,6 +129,12 @@ export async function gerarTermoEquipamentoPdf(
       paragrafos={corpoParaParagrafos(renderTemplate(tpl.corpo, variaveis))}
       localData={localData}
       assinantes={assinantes}
+      // Só para termo EMITIDO: o rascunho sai em branco de propósito, para
+      // colher assinatura à caneta.
+      assinaturaPendente={
+        Boolean(termo.emitido_em) &&
+        !daEntrega.some((a) => a.papel === "funcionario" && a.imagem)
+      }
       versao={tpl.versao}
       publicadoEm={tpl.publicadoEm}
     />,

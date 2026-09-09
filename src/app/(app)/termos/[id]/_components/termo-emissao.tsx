@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, FileSignature } from "lucide-react";
+import { Loader2, FileSignature, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 
 import { FormError } from "@/components/shared/form-error";
@@ -46,9 +46,6 @@ export function TermoEmissao({
 
   function emitir() {
     setErro(null);
-    if (!jaAssinou && !assinaturaFunc) {
-      return setErro("O funcionário precisa assinar para o termo ser emitido.");
-    }
 
     iniciar(async () => {
       const r = await emitirTermo(termoId, {
@@ -91,6 +88,20 @@ export function TermoEmissao({
           onChange={setAssinaturaEmpresa}
         />
       </div>
+      {!jaAssinou && !assinaturaFunc ? (
+        /* Emitir sem assinatura é permitido, e por isso mesmo tem de ser
+           ANUNCIADO. O termo vale e as peças passam para "em uso"; o que falta é
+           o traço, e o sistema passa a cobrá-lo. */
+        <p className="flex items-start gap-2 rounded-md border border-dashed p-3 text-sm">
+          <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+          <span>
+            <strong>O funcionário ainda não assinou.</strong> Emitindo assim, ele
+            recebe a via por e-mail com o link para assinar pelo celular, e o
+            sistema cobra a cada 3 dias até assinar. Até lá o termo aparece como
+            pendente na lista e no PDF.
+          </span>
+        </p>
+      ) : null}
       <FormError>{erro}</FormError>
       <div className="flex justify-end">
         <Button type="button" disabled={pendente} onClick={emitir}>

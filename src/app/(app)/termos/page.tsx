@@ -157,6 +157,20 @@ export default async function TermosPage({
                         >
                           {SITUACAO_TERMO_INFO[t.situacao].label}
                         </Badge>
+                        {t.semAssinaturaFuncionario ? (
+                          /* Segundo selo, e não uma situação nova: a pendência
+                             de assinatura é ortogonal ao ciclo do termo — um
+                             termo em uso, vencido ou encerrado pode estar sem
+                             assinatura. Virar situação faria as duas
+                             informações competirem pelo mesmo espaço. */
+                          <Badge
+                            variant="outline"
+                            className="ml-1"
+                            title="Termo emitido sem a assinatura do funcionário. O sistema cobra a cada 3 dias."
+                          >
+                            Sem assinatura
+                          </Badge>
+                        ) : null}
                       </TableCell>
                     </TableRow>
                   ))
