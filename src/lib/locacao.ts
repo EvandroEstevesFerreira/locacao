@@ -290,3 +290,69 @@ export const itemLocadoSchema = z
 
 export type ItemLocadoInput = z.input<typeof itemLocadoSchema>;
 export type ItemLocadoDados = z.output<typeof itemLocadoSchema>;
+
+export const itemLocadoEdicaoSchema = itemLocadoSchema.and(
+  z.object({ id: z.string().uuid() }),
+);
+
+export type ItemLocadoEdicaoInput = z.input<typeof itemLocadoEdicaoSchema>;
+
+export type EfeitoDaEdicao =
+  | { ok: false; erro: string }
+  | {
+      ok: true;
+      status: "em_aberto" | "devolvido";
+      data_devolucao: string | null;
+    };
+
+/**
+ * O que uma edição de item locado faz com o saldo, o status e a devolução.
+ *
+ * Existe porque gravar só os campos do formulário produz contradição. O
+ * `status` do item hoje é escrito num único lugar — quando uma devolução zera o
+ * saldo (`registrarDevolucao`) — e nunca é reavaliado depois. Subir a
+ * quantidade de 1 para 2 num item já marcado "devolvido" o deixaria DEVOLVIDO
+ * COM SALDO 1: devolvido e em uso ao mesmo tempo, e com o custo estimado
+ * correndo. É o defeito da 0.78.0 em outra tela, e ele voltaria por esta porta.
+ *
+ * Descer a quantidade abaixo do que já foi devolvido é recusado em vez de
+ * aparado: aparar em silêncio esconderia do usuário que o número que ele
+ * digitou não é o que ficou gravado, num campo que multiplica o custo.
+ */
+export function efeitoDaEdicao({
+  quantidade,
+  jaDevolvido,
+  dataUltimaDevolucao,
+}: {
+  quantidade: number;
+  jaDevolvido: number;
+  /** Data da devolução mais recente, para reaproveitar quando o saldo zera. */
+  dataUltimaDevolucao: string | null;
+}): EfeitoDaEdicao {
+  const qtd = Number(quantidade);
+  const devolvido = Number(jaDevolvido);
+
+  if (qtd < devolvido) {
+    return {
+      ok: false,
+      erro: `Este item já teve ${devolvido} devolvido. A quantidade não pode ficar abaixo disso.`,
+    };
+  }
+
+  if (devolvido >= qtd) {
+    return { ok: true, status: "devolvido", data_devolucao: dataUltimaDevolucao };
+  }
+  return { ok: true, status: "em_aberto", data_devolucao: null };
+}
+
+/**
+ * `true` quando ainda se pode trocar QUAL equipamento é este item locado.
+ *
+ * Escolher o item errado no combo é o erro mais comum do cadastro, e sem isto
+ * só se conserta excluindo a linha. Mas a devolução gravou uma `movimentacao` e
+ * uma `vistoria` fotográfica daquele equipamento: trocar o item depois faria
+ * aquelas fotos e aquele registro se referirem a outra coisa.
+ */
+export function podeTrocarItem(jaDevolvido: number): boolean {
+  return Number(jaDevolvido) === 0;
+}

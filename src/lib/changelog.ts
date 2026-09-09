@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.91.0";
+export const APP_VERSION = "0.92.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,19 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.92.0",
+    data: "2026-09-09",
+    titulo: "Editar o item locado",
+    mudancas: [
+      { tipo: "novo", texto: "O item locado agora se edita. Botão de lápis na linha, ao lado do excluir: abre os mesmos campos do cadastro, já preenchidos. Antes, corrigir um valor ou um número de série significava excluir a linha e cadastrar de novo." },
+      { tipo: "novo", texto: "Mudar a data de retirada avisa que o custo estimado é refeito desde o início, porque é dela que sai a contagem de períodos. E lembra que, se o equipamento entrou por um recebimento fechado, a data de lá é a que vale como fato." },
+      { tipo: "novo", texto: "Quantidade não desce abaixo do que já foi devolvido — o formulário mostra o mínimo em vez de deixar o saldo negativo." },
+      { tipo: "novo", texto: "Item que já teve devolução não troca de equipamento: a devolução guardou fotos e movimentação daquele equipamento. Os outros campos seguem editáveis, inclusive o número de série." },
+      { tipo: "correcao", texto: "Aumentar a quantidade de um item marcado como devolvido reabre o item. Sem isso ele ficaria devolvido com saldo em aberto — devolvido e em uso ao mesmo tempo, com o custo correndo." },
+      { tipo: "melhoria", texto: "Toda edição de item fica registrada em Configurações → Auditoria, com o antes e o depois." },
+    ],
+  },
   {
     versao: "0.91.0",
     data: "2026-09-09",

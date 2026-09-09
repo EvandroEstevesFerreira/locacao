@@ -15,7 +15,13 @@ import {
   primeiroErro,
   type ActionResult,
 } from "@/lib/acoes";
-import { contratoSchema, itemLocadoSchema } from "@/lib/locacao";
+import {
+  contratoSchema,
+  efeitoDaEdicao,
+  itemLocadoEdicaoSchema,
+  itemLocadoSchema,
+  podeTrocarItem,
+} from "@/lib/locacao";
 
 
 export async function salvarContrato(raw: unknown): Promise<ActionResult> {
@@ -95,6 +101,75 @@ export async function adicionarItemLocado(
   if (error) return falha("Não foi possível adicionar o item.");
 
   revalidatePath(`/contratos/${parsed.data.contrato_id}`);
+  return { ok: true };
+}
+
+export async function editarItemLocado(raw: unknown): Promise<ActionResult> {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id) return falha("Sessão inválida. Entre novamente.");
+  if (!podeOperar(perfil.papel)) {
+    return falha("Você não tem permissão para editar itens.");
+  }
+
+  const parsed = itemLocadoEdicaoSchema.safeParse(raw);
+  if (!parsed.success) return falha(primeiroErro(parsed.error.issues));
+  const { id, ...campos } = parsed.data;
+
+  const supabase = await createClient();
+
+  // O item ANTES da edição: precisamos do `item_id` atual para saber se houve
+  // troca de equipamento, e não confiar no que o cliente mandou.
+  const { data: atual } = await supabase
+    .from("item_locado")
+    .select("item_id")
+    .eq("id", id)
+    .single();
+  if (!atual) return falha("Item não encontrado.");
+
+  // Quanto já voltou, e quando foi a última vez. A mesma consulta de
+  // `registrarDevolucao`: o saldo do Loca é sempre quantidade menos
+  // movimentações de devolução, nunca uma coluna guardada.
+  const { data: movs } = await supabase
+    .from("movimentacao")
+    .select("quantidade, data")
+    .eq("item_locado_id", id)
+    .eq("tipo", "devolucao");
+  const jaDevolvido = (movs ?? []).reduce((s, m) => s + Number(m.quantidade), 0);
+  const dataUltimaDevolucao =
+    (movs ?? [])
+      .map((m) => String(m.data))
+      .sort()
+      .at(-1) ?? null;
+
+  if (campos.item_id !== atual.item_id && !podeTrocarItem(jaDevolvido)) {
+    return falha(
+      "Este item já teve devolução registrada, com fotos e movimentação do equipamento atual. Para trocar o equipamento, exclua a linha e cadastre outra.",
+    );
+  }
+
+  const efeito = efeitoDaEdicao({
+    quantidade: campos.quantidade,
+    jaDevolvido,
+    dataUltimaDevolucao,
+  });
+  if (!efeito.ok) return falha(efeito.erro);
+
+  const erro = erroDeEscrita(
+    await supabase
+      .from("item_locado")
+      .update({
+        ...campos,
+        // Derivados, e não vindos do formulário: ver `efeitoDaEdicao`.
+        status: efeito.status,
+        data_devolucao: efeito.data_devolucao,
+      })
+      .eq("id", id)
+      .select("id"),
+    { registro: "item do contrato", contexto: "editarItemLocado", acao: "salvar" },
+  );
+  if (erro) return falha(erro);
+
+  revalidatePath(`/contratos/${campos.contrato_id}`);
   return { ok: true };
 }
 

@@ -7,6 +7,69 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.92.0] — 2026-09-09
+
+Editar o item locado.
+
+### O que faltava
+
+A linha de `item_locado` tinha adicionar, devolver e excluir — não tinha editar.
+Corrigir um valor por período digitado errado, ou preencher o número de série
+que faltou, significava excluir a linha e cadastrar de novo, perdendo o
+`created_at` e a trilha de auditoria daquele registro.
+
+### Adicionado
+
+- `EditarItemLocadoForm`: os mesmos sete campos do cadastro, pré-preenchidos, em
+  **diálogo**. Não formulário na linha — a linha já carrega o form de "Devolver"
+  com `min-w-[300px]`, e a tabela só passou a caber sem barra horizontal na
+  0.90.3; um segundo form embutido reabriria a barra que acabou de ser fechada.
+  O botão de lápis divide a célula com a lixeira pelo mesmo motivo: uma 11ª
+  coluna custaria ~40px.
+- `editarItemLocado` em `contratos/actions.ts`, no molde das vizinhas
+  (`podeOperar`, `ActionResult`, `revalidatePath`).
+- `itemLocadoEdicaoSchema`, `efeitoDaEdicao` e `podeTrocarItem` em
+  `src/lib/locacao.ts` — o schema fora do `actions.ts` porque arquivo
+  `"use server"` não pode ser importado por componente cliente.
+- `item_id` e `frente_id` em `ItemLocadoCalculado`, para pré-preencher os dois
+  `<select>`. Escalares da própria linha: não mudam a cardinalidade do select.
+
+### O defeito que não nasceu
+
+`efeitoDaEdicao` recalcula `status` e `data_devolucao` a partir do novo saldo, em
+vez de gravar só os campos do formulário. O `status` do item é escrito num único
+lugar — quando uma devolução zera o saldo, em `registrarDevolucao` — e nunca
+reavaliado depois. Subir a quantidade de 1 para 2 num item marcado "devolvido" o
+deixaria **devolvido com saldo 1**: devolvido e em uso ao mesmo tempo, com o
+custo estimado correndo. É a contradição da 0.78.0 em outra tela, e ela voltaria
+por esta porta.
+
+Descer a quantidade abaixo do já devolvido é **recusado**, com o mínimo na
+mensagem, em vez de aparado em silêncio: aparar esconderia do usuário que o
+número digitado não é o que ficou gravado, num campo que multiplica o custo.
+
+### Decisões de escopo
+
+- **`data_retirada` é editável, com aviso.** Ela alimenta o cálculo de custo e é
+  carimbada pelo fechamento do recebimento — mas corrigir data digitada errada é
+  caso real, e sem isso só se resolve excluindo a linha. O aviso aparece apenas
+  quando o campo muda de fato.
+- **`item_id` é editável só sem devolução.** Escolher o equipamento errado no
+  combo é o erro mais comum do cadastro; mas a devolução gravou `movimentacao` e
+  uma `vistoria` fotográfica, e trocar o item depois faria aquelas fotos se
+  referirem a outra coisa.
+- **Auditoria sem código novo:** o trigger `trg_audit` da migration 0031 já
+  cobre `item_locado`.
+
+### Testes
+
+`efeitoDaEdicao` e `podeTrocarItem` foram escritas por TDD — oito testes vistos
+falhando antes da implementação, incluindo o caso de comparação numérica (`"10"
+< "9"` em ordem alfabética aceitaria quantidade 9 com 10 devolvidos). Os três
+testes de `itemLocadoEdicaoSchema` foram escritos DEPOIS do schema, para provar
+que a intersecção `.and()` não engole o `.refine()` do schema base — o risco não
+se confirmou, e agora está guardado.
+
 ## [0.91.0] — 2026-09-09
 
 A marca em todo documento.

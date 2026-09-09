@@ -31,6 +31,14 @@ export type ItemLocadoCalculado = {
   data_devolucao: string | null;
   status: "em_aberto" | "devolvido";
   identificacao: string | null;
+  /**
+   * Chaves cruas, para PRÉ-PREENCHER o formulário de edição.
+   *
+   * `item` traz a descrição para a tela; o `<select>` do formulário precisa do
+   * id. Escalares da própria linha: não mudam cardinalidade do select.
+   */
+  item_id: string;
+  frente_id: string | null;
   item: { descricao: string; unidade: string | null } | null;
   movimentacao: MovimentacaoDaLinha[];
   /** Quantidade ainda em poder da obra (quantidade − devoluções). */
@@ -62,7 +70,7 @@ export const obterItensLocadosCalculados = cache(
     const { data } = await supabase
       .from("item_locado")
       .select(
-        "id, quantidade, valor_unitario_periodo, data_retirada, data_devolucao_prevista, data_devolucao, status, identificacao, item:item_id(descricao,unidade), movimentacao(id, quantidade, tipo, data, vistoria_id, vistoria:vistoria_id(vistoria_foto(count)))",
+        "id, quantidade, valor_unitario_periodo, data_retirada, data_devolucao_prevista, data_devolucao, status, identificacao, item_id, frente_id, item:item_id(descricao,unidade), movimentacao(id, quantidade, tipo, data, vistoria_id, vistoria:vistoria_id(vistoria_foto(count)))",
       )
       .eq("contrato_id", contratoId)
       .order("created_at");
