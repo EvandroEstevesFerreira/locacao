@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Plus, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, Plus, X, ChevronLeft, ChevronRight, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 
 import { ESTADOS, ESTADO_INFO } from "@/lib/frota";
@@ -194,9 +194,6 @@ export function TermoWizard({
   function emitir() {
     setErro(null);
     if (!termoId) return setErro("O rascunho não foi salvo. Volte e tente de novo.");
-    if (!assinaturaFunc) {
-      return setErro("O funcionário precisa assinar para o termo valer.");
-    }
 
     iniciar(async () => {
       const r = await emitirTermo(termoId, {
@@ -461,6 +458,21 @@ export function TermoWizard({
             O rascunho já está salvo. Assinar é o que numera o termo e passa as
             peças para “em uso”.
           </p>
+
+          {!assinaturaFunc ? (
+            /* Emitir sem assinatura é permitido, e por isso mesmo tem de ser
+               ANUNCIADO. O termo vale, sai numerado e as peças passam para "em
+               uso" — o que falta é o traço, e o sistema passa a cobrá-lo. */
+            <p className="flex items-start gap-2 rounded-md border border-dashed p-3 text-sm">
+              <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+              <span>
+                <strong>O funcionário ainda não assinou.</strong> Você pode emitir
+                assim mesmo: ele recebe a via por e-mail com o link para assinar
+                pelo celular, e o sistema cobra a cada 3 dias até assinar. Até lá
+                o termo aparece como pendente na lista e no PDF.
+              </span>
+            </p>
+          ) : null}
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">

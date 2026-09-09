@@ -55,6 +55,17 @@ const PERMITIDOS: Record<string, { tabelas: string[] | "*"; motivo: string }> = 
     tabelas: "*",
     motivo: "cron roda sem sessão de usuário; não há RLS a respeitar",
   },
+  "app/api/cron/termos-sem-assinatura/route.ts": {
+    // Tabelas NOMEADAS, e não "*": este cron gera link de assinatura, que é
+    // credencial. `termo_assinatura` fica DE FORA de propósito — assinar é ato
+    // de pessoa, com conferência de CPF na função de banco, e não de cron. Não
+    // listar é o que faz esta varredura reclamar no dia em que alguém tentar
+    // gravar assinatura aqui.
+    tabelas: ["termo_equipamento", "termo_link", "notificacao_log", "organizacao"],
+    motivo:
+      "cron roda sem sessão de usuário; lê termos e grava link e log de aviso. " +
+      "NÃO grava assinatura nem emite termo",
+  },
   "app/api/cron/people/route.ts": {
     // Duas tabelas nomeadas, e não "*", de propósito: a gravação em
     // `funcionario` NAO acontece aqui. Ela mora em `lib/people/servidor.ts`,

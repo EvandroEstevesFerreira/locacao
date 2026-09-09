@@ -30,6 +30,8 @@ export type TermoLinha = {
   previsao_devolucao: string | null;
   situacao: SituacaoTermo;
   itens: number;
+  /** Emitido, e sem a assinatura do funcionário na entrega. */
+  semAssinaturaFuncionario: boolean;
 };
 
 export type TermoItemLinha = {
@@ -145,7 +147,12 @@ export async function listarTermos(opts: {
     .select(
       "id, numero_registro, data_entrega, previsao_devolucao, " +
         "funcionario:funcionario_id(nome), obra:obra_id(codigo), " +
-        "termo_equipamento_item(count), situacao:termo_equipamento_situacao(situacao)",
+        "termo_equipamento_item(count), situacao:termo_equipamento_situacao(situacao), " +
+        // Embed para-muitos, como o `(count)` acima: vem aninhado e NÃO duplica
+        // linha. Derivar aqui evita mexer na view `termo_equipamento_situacao`,
+        // onde `security_invoker` é a armadilha que causou o incidente da
+        // 0.49.1.
+        "termo_assinatura(momento, papel, imagem)",
       { count: "exact" },
     );
   if (opts.obraId) q = q.eq("obra_id", opts.obraId);
@@ -166,6 +173,11 @@ export async function listarTermos(opts: {
     const o = t.obra as { codigo: string } | { codigo: string }[] | null;
     const s = t.situacao as { situacao: string } | { situacao: string }[] | null;
     const c = t.termo_equipamento_item as { count: number }[] | null;
+    const ass = (t.termo_assinatura ?? []) as {
+      momento: string;
+      papel: string;
+      imagem: string | null;
+    }[];
     return {
       id: t.id as string,
       numero_registro: t.numero_registro as string | null,
@@ -175,6 +187,16 @@ export async function listarTermos(opts: {
       previsao_devolucao: t.previsao_devolucao as string | null,
       situacao: (Array.isArray(s) ? s[0]?.situacao : s?.situacao) as SituacaoTermo,
       itens: c?.[0]?.count ?? 0,
+      /**
+       * Termo EMITIDO em que falta a assinatura do funcionário.
+       *
+       * `numero_registro` é o que distingue emitido de rascunho — rascunho não
+       * tem assinatura por definição, e marcá-lo como pendente encheria a lista
+       * de selos que não pedem ação.
+       */
+      semAssinaturaFuncionario:
+        Boolean(t.numero_registro) &&
+        !ass.some((a) => a.momento === "entrega" && a.papel === "funcionario" && a.imagem),
     };
   });
 

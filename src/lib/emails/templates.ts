@@ -877,6 +877,15 @@ export type DadosTermoFuncionario = {
   itens: ItemTermoEmail[];
   anexo: string;
   observacoes?: string;
+  /**
+   * Presente quando o termo saiu SEM a assinatura do funcionário.
+   *
+   * Muda o texto do e-mail, e não só acrescenta um botão: o corpo padrão diz
+   * "assinado em {data}" e "não é preciso responder nem devolver nada", que são
+   * falsos num termo sem assinatura. Anexar um link a essa frase produziria um
+   * e-mail que se contradiz.
+   */
+  assinaturaPendente?: { url: string; validade: string };
 };
 
 /**
@@ -892,11 +901,16 @@ export function termoFuncionario(
   d: DadosTermoFuncionario,
   ctx: Contexto,
 ): EmailPronto {
+  const pendente = d.assinaturaPendente;
   const corpo =
     L.p(
-      `Segue a sua via do termo de responsabilidade <strong>${esc(d.numero)}</strong>, ` +
-        `assinado em ${esc(d.dataEntrega)}. <strong>Não é preciso responder nem devolver nada</strong> — ` +
-        "é a sua cópia, para guardar.",
+      pendente
+        ? `Segue a sua via do termo de responsabilidade <strong>${esc(d.numero)}</strong>, ` +
+            `da entrega de ${esc(d.dataEntrega)}. <strong>Falta a sua assinatura</strong> — ` +
+            "o equipamento já está sob sua responsabilidade, e assinar é o que fecha o registro."
+        : `Segue a sua via do termo de responsabilidade <strong>${esc(d.numero)}</strong>, ` +
+            `assinado em ${esc(d.dataEntrega)}. <strong>Não é preciso responder nem devolver nada</strong> — ` +
+            "é a sua cópia, para guardar.",
     ) +
     L.dados([
       ["Registro", esc(d.numero)],
@@ -925,7 +939,19 @@ export function termoFuncionario(
       ),
     ) +
     (d.observacoes ? L.nota(esc(d.observacoes)) : "") +
-    L.nota(`Termo assinado em PDF anexo: <strong>${esc(d.anexo)}</strong>.`) +
+    (pendente
+      ? L.botao(pendente.url, "Assinar agora") +
+        L.nota(
+          `O link vale por <strong>${esc(pendente.validade)}</strong> e serve ` +
+            "<strong>uma vez só</strong>. Enquanto não assinar, este pedido será " +
+            "reenviado a cada 3 dias.",
+        )
+      : "") +
+    L.nota(
+      pendente
+        ? `Termo em PDF anexo: <strong>${esc(d.anexo)}</strong>. A via com a sua assinatura fica disponível depois que você assinar.`
+        : `Termo assinado em PDF anexo: <strong>${esc(d.anexo)}</strong>.`,
+    ) +
     // O aviso de perda/dano fecha o e-mail porque é a obrigação que o termo
     // cria. Enterrá-lo no meio faria a cópia parecer um comprovante e não um
     // compromisso.
@@ -936,7 +962,9 @@ export function termoFuncionario(
     );
 
   return pronto(
-    `Seu termo de responsabilidade ${d.numero}`,
+    pendente
+      ? `Assine o seu termo de responsabilidade ${d.numero}`
+      : `Seu termo de responsabilidade ${d.numero}`,
     L.pagina(
       {
         titulo: "Termo de responsabilidade",
@@ -1027,6 +1055,87 @@ export function conviteAssinatura(
         subtitulo: `Assinatura de ${d.funcionario}`,
         metricas: [
           { valor: String(d.itens.length), rotulo: d.itens.length === 1 ? "item" : "itens" },
+        ],
+      },
+      corpo,
+      ctx,
+    ),
+  );
+}
+
+export type DadosTermosSemAssinatura = {
+  linhas: {
+    numero: string;
+    funcionario: string;
+    obra: string;
+    desde: string;
+    /** "cobrança enviada", ou o motivo de ela não ter saído. */
+    situacao: string;
+  }[];
+  intervalo: string;
+};
+
+/**
+ * O resumo dos termos emitidos que ainda não foram assinados.
+ *
+ * UM e-mail com a lista, e não um por termo: quem cobra pessoalmente precisa da
+ * lista inteira numa tela. Dez avisos separados obrigariam a juntá-los à mão, e
+ * é aí que um deles se perde.
+ *
+ * A coluna "situação" carrega o MOTIVO quando a cobrança automática não saiu —
+ * funcionário sem e-mail conferido, sem CPF. É o que transforma este resumo de
+ * relatório em lista de trabalho: sem o motivo, a linha diz que há pendência e
+ * não diz o que fazer com ela.
+ */
+export function termosSemAssinatura(
+  d: DadosTermosSemAssinatura,
+  ctx: Contexto,
+): EmailPronto {
+  const corpo =
+    L.p(
+      `Há <strong>${d.linhas.length}</strong> ${
+        d.linhas.length === 1 ? "termo emitido" : "termos emitidos"
+      } sem a assinatura do funcionário. ` +
+        `Quem tem e-mail conferido e CPF no cadastro recebe cobrança automática a cada ${esc(
+          d.intervalo,
+        )}; os demais dependem de você.`,
+    ) +
+    L.tabela(
+      [
+        { label: "Termo" },
+        { label: "Funcionário" },
+        { label: "Obra" },
+        { label: "Entrega" },
+        { label: "Situação" },
+      ],
+      linhasSimples(
+        d.linhas.map((l) => [
+          esc(l.numero),
+          esc(l.funcionario),
+          esc(l.obra),
+          esc(l.desde),
+          esc(l.situacao),
+        ]),
+      ),
+    ) +
+    L.aviso(
+      "O termo vale desde a emissão e o equipamento já está sob responsabilidade " +
+        "do funcionário. O que falta é o traço — e é ele que sustenta a cobrança " +
+        "em caso de perda ou dano.",
+      "atencao",
+    );
+
+  return pronto(
+    `${d.linhas.length} ${d.linhas.length === 1 ? "termo" : "termos"} sem assinatura`,
+    L.pagina(
+      {
+        titulo: "Termos sem assinatura",
+        subtitulo: "Pendências de assinatura do funcionário",
+        metricas: [
+          {
+            valor: String(d.linhas.length),
+            rotulo: d.linhas.length === 1 ? "termo" : "termos",
+          },
         ],
       },
       corpo,

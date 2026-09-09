@@ -9,6 +9,12 @@
 // que estado a peça saiu e em que estado voltou. Dois papéis obrigariam a
 // comparar duas folhas, que é onde a divergência se perde.
 
+import { View, Text, StyleSheet } from "@react-pdf/renderer";
+import {
+  WARNING_BORDA,
+  WARNING_FUNDO,
+  WARNING_TEXTO,
+} from "@/lib/brand-colors";
 import { Narrativa } from "./blocos";
 import {
   Documento,
@@ -40,6 +46,16 @@ export type ItemTermoDoc = {
   estadoDevolucao?: string | null;
 };
 
+const { tarja, tarjaTexto } = StyleSheet.create({
+  tarja: {
+    borderLeft: `3 solid ${WARNING_BORDA}`,
+    backgroundColor: WARNING_FUNDO,
+    padding: 8,
+    marginBottom: 10,
+  },
+  tarjaTexto: { fontSize: 9, color: WARNING_TEXTO },
+});
+
 export function TermoEquipamento({
   orgNome,
   numero,
@@ -50,6 +66,7 @@ export function TermoEquipamento({
   assinantes,
   versao,
   publicadoEm,
+  assinaturaPendente = false,
 }: {
   orgNome: string;
   /** `TRM-2026-0001`. Ausente enquanto for rascunho. */
@@ -61,6 +78,18 @@ export function TermoEquipamento({
   assinantes: Assinante[];
   versao?: string;
   publicadoEm?: string;
+  /**
+   * Termo EMITIDO em que falta a assinatura do funcionário.
+   *
+   * Vale só para emitido: o rascunho sai em branco de propósito, para colher
+   * assinatura à caneta, e a tarja ali seria ruído sobre um documento que
+   * ninguém disse que valia.
+   *
+   * Um termo de responsabilidade sem assinatura que não se anuncia como tal é um
+   * papel que parece valer e não vale — mesma regra que fez o painel de
+   * fechamento do recebimento parar de mentir na 0.90.3.
+   */
+  assinaturaPendente?: boolean;
 }) {
   const linhas: LinhaTabela[] = itens.map((i) => ({
     celulas: [
@@ -84,6 +113,16 @@ export function TermoEquipamento({
       titulo="Termo de Responsabilidade por Uso de Equipamento"
       subtitulo={numero ? `${orgNome} — ${numero}` : `${orgNome} — rascunho`}
     >
+      {assinaturaPendente ? (
+        <View style={tarja}>
+          <Text style={tarjaTexto}>
+            PENDENTE DE ASSINATURA DO FUNCIONÁRIO — este termo foi emitido e o
+            equipamento está sob responsabilidade do funcionário, mas a
+            assinatura dele ainda não foi colhida.
+          </Text>
+        </View>
+      ) : null}
+
       <Secao n={1} titulo="Identificação">
         <CampoGrid colunas={2} campos={campos} />
       </Secao>
