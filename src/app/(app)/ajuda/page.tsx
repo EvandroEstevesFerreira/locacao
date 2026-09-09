@@ -37,7 +37,7 @@ export default async function AjudaPage({
   });
 
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-6">
+    <div className="pagina-leitura flex flex-col gap-6">
       <PageHeader
         titulo="Ajuda"
         descricao="O que cada tela faz, indexado por tela. É o mesmo conteúdo do treinamento, na ordem de quem já sabe e travou."

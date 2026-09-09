@@ -35,7 +35,7 @@ export default async function EditarTemplatePage({
   const tpl = resolverTemplate(doc.tipo, data);
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="pagina-leitura space-y-6">
       <PageHeader titulo={doc.label} descricao={doc.descricao} />
       <Card>
         <CardContent className="pt-6">

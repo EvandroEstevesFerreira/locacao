@@ -40,7 +40,7 @@ export default async function FluxoCaixaPage({
   const prox3 = fluxo.meses.slice(0, 3).reduce((s, m) => s + m.total, 0);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="pagina-lista space-y-6">
       <PageHeader
         titulo="Fluxo de caixa"
         descricao="Projeção de desembolsos por mês: lançamentos + contratos de equipamento e imóveis."

@@ -90,7 +90,7 @@ export default async function FinanceiroPage({
   const hojeStr = hojeISOSaoPaulo();
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    <div className="pagina-lista space-y-6">
       <PageHeader
         titulo="Financeiro"
         descricao="Contas a pagar das locações, por obra e vencimento."

@@ -54,7 +54,7 @@ export default async function ContratosPage({
   const buscando = q.length > 0 || Boolean(obra);
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    <div className="pagina-lista space-y-6">
       <PageHeader
         titulo="Contratos"
         descricao={`Contratos de locação por obra e fornecedor. · ${contagem(total, "contrato", "contratos")} no filtro`}

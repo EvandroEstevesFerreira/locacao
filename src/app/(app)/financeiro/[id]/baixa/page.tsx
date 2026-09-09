@@ -42,7 +42,7 @@ export default async function BaixaPage({
   });
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="pagina-form space-y-6">
       <PageHeader titulo="Dar baixa" descricao="Conciliação: valor efetivo, encargos e comprovante." />
       <Card>
         <CardContent className="pt-6">

@@ -18,7 +18,7 @@ export default async function CatalogoPage() {
   const tipos = categorias.reduce((s, c) => s + c.tipos.length, 0);
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="pagina-leitura space-y-6">
       <PageHeader
         titulo="Categorias e tipos"
         descricao={`A família de cada item, dentro de cada categoria. ${categorias.length} categorias, ${tipos} tipos.`}

@@ -36,7 +36,7 @@ export default async function ConciliarPage() {
   const cfg = configPeople();
   if (!cfg) {
     return (
-      <div className="space-y-6">
+      <div className="pagina-lista space-y-6">
         <PageHeader
           titulo="Conciliar com o Sistenge People"
           descricao="Ligar cada funcionário do Loca à pessoa correspondente no People"
@@ -79,7 +79,7 @@ export default async function ConciliarPage() {
   const automaticos = new Set(inequivocas(sugestoes).map((s) => s.funcionarioId));
 
   return (
-    <div className="space-y-6">
+    <div className="pagina-lista space-y-6">
       <PageHeader
         titulo="Conciliar com o Sistenge People"
         descricao="Ligar cada funcionário do Loca à pessoa correspondente no People"

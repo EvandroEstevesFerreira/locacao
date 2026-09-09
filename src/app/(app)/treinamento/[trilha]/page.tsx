@@ -54,7 +54,7 @@ export default async function TrilhaPage({
   const aulaTitulo = Object.fromEntries(trilha.aulas.map((a) => [a.id, a.titulo]));
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6">
+    <div className="pagina-leitura flex flex-col gap-6">
       <PageHeader
         titulo={trilha.titulo}
         descricao={trilha.resumo}

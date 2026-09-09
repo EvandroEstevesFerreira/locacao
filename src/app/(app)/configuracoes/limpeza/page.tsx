@@ -30,7 +30,7 @@ export default async function LimpezaPage() {
   const podeEditar = podeEditarCadastros(perfil.papel);
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="pagina-leitura space-y-6">
       <PageHeader
         titulo="Catálogo de limpeza"
         descricao="As tarefas que compõem a folha do FRM-RH-005, por ambiente e frequência. Diárias e semanais saem na folha da semana; as mensais, em folha própria."

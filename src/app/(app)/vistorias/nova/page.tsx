@@ -35,7 +35,7 @@ export default async function NovaVistoriaPage({
   }));
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="pagina-form space-y-6">
       <PageHeader
         titulo="Nova vistoria"
         descricao="Registre a vistoria; depois adicione fotos e avarias."

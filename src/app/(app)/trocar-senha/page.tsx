@@ -6,7 +6,7 @@ export const metadata = { title: "Trocar senha — Loca" };
 
 export default function TrocarSenhaPage() {
   return (
-    <div className="mx-auto max-w-md space-y-6 py-8">
+    <div className="pagina-form space-y-6 py-8">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">

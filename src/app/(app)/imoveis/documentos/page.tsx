@@ -53,7 +53,7 @@ export default async function DocumentosPage() {
   const url = await assinarUrls("imoveis", docs.map((d) => d.path));
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="pagina-leitura space-y-6">
       <PageHeader
         titulo="Documentos do alojamento"
         descricao="Normativos, formulários e placas padronizadas — para consultar, baixar e imprimir."

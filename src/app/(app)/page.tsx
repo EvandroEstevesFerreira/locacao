@@ -165,7 +165,7 @@ export default async function HomePage({
   ];
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="pagina-lista space-y-6">
       <PageHeader
         titulo="Início"
         descricao={`Visão geral das locações ativas, custos e devoluções · ${formatarData(hojeStr)}`}

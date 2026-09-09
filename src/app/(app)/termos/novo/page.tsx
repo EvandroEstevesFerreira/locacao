@@ -117,7 +117,7 @@ export default async function NovoTermoPage({
     : null;
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="pagina-form space-y-6">
       <PageHeader
         titulo="Novo termo de responsabilidade"
         descricao="Quem recebe, o que sai, em que estado e com assinatura"

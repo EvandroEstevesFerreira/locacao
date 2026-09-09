@@ -68,7 +68,7 @@ export default async function RecebimentosPage({
   const rascunhos = linhas.filter((r) => r.status === "rascunho").length;
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    <div className="pagina-lista space-y-6">
       <PageHeader
         titulo="Recebimentos"
         descricao={`Conferência do que chega do fornecedor. · ${contagem(total, "recebimento", "recebimentos")} no filtro${

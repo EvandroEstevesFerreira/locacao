@@ -36,7 +36,7 @@ export default async function EditarFornecedorPage({
   if (!fornecedor) notFound();
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="pagina-form space-y-6">
       <PageHeader titulo="Editar fornecedor" descricao={fornecedor.nome} />
       <Card>
         <CardContent className="pt-6">

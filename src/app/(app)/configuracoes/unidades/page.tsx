@@ -17,7 +17,7 @@ export default async function UnidadesPage() {
   const unidades = await listarUnidades(true);
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="pagina-leitura space-y-6">
       <PageHeader
         titulo="Unidades de medida"
         descricao="A lista que o cadastro de item oferece."

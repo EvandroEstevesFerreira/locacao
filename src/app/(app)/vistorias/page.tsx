@@ -49,7 +49,7 @@ export default async function VistoriasPage({
   const buscando = Boolean(obra);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="pagina-lista space-y-6">
       <PageHeader
         titulo="Vistorias"
         descricao={`Registros de retirada e devolução com fotos e avarias. · ${contagem(total, "vistoria", "vistorias")} no filtro`}

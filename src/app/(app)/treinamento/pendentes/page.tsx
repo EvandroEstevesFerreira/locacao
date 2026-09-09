@@ -40,7 +40,7 @@ export default async function PendentesPage() {
   const emDia = linhas.filter((l) => l.pendentes.length === 0).length;
 
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-6">
+    <div className="pagina-lista flex flex-col gap-6">
       <PageHeader
         titulo="Quem treinou"
         descricao={`${emDia} de ${linhas.length} em dia com o treinamento`}

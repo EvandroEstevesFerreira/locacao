@@ -100,7 +100,7 @@ export default async function RecorrentesPage({
     (c.seguro_fianca_mensal ? Number(c.seguro_fianca ?? 0) : 0);
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="pagina-leitura space-y-6">
       <PageHeader
         titulo="Gerar contas a pagar recorrentes"
         descricao="Materializa uma conta por mês (aluguel/locação) para dar baixa individual. Não duplica meses já gerados."

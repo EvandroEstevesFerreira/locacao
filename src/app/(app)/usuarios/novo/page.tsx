@@ -14,7 +14,7 @@ export default async function NovoUsuarioPage() {
   const obras = await listarObrasParaFiltro();
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="pagina-form space-y-6">
       <PageHeader
         titulo="Novo usuário"
         descricao="Crie o acesso com nome, e-mail, perfil e senha temporária."

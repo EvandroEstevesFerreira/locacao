@@ -32,7 +32,7 @@ export default async function EditarLancamentoPage({
   if (!lancamento) notFound();
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="pagina-form space-y-6">
       <PageHeader titulo="Editar lançamento" descricao={lancamento.descricao} />
       <Card>
         <CardContent className="pt-6">

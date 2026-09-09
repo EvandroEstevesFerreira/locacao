@@ -49,7 +49,7 @@ export default async function ObrasPage({
   const buscando = q.length > 0;
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="pagina-lista space-y-6">
       <PageHeader
         titulo="Obras"
         descricao={`Obras e contratos da organização. · ${contagem(total, "obra", "obras")} no filtro`}

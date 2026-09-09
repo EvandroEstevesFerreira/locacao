@@ -57,7 +57,7 @@ export default async function FornecedoresPage({
   const filtrando = Boolean(q || obra);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="pagina-lista space-y-6">
       <PageHeader
         titulo="Fornecedores"
         descricao={`Locadoras e fornecedores de quem a organização aluga. · ${contagem(total, "fornecedor", "fornecedores")} no filtro${
