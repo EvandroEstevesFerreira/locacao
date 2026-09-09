@@ -17,21 +17,22 @@ import { toast } from "sonner";
 import { fecharDevolucao } from "../contratos/devolucao-actions";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import type { AvisoEnvio } from "@/lib/emails/modo-teste";
 
 export function FecharDevolucao({
   devolucaoId,
   totalItens,
   comRessalva,
   comAvaria,
-  emailFornecedor,
+  avisoEmail,
 }: {
   devolucaoId: string;
   totalItens: number;
   comRessalva: number;
   /** Só os de condição "avaria" — os que viram registro de avaria ao fechar. */
   comAvaria: number;
-  /** Nulo quando o fornecedor não tem e-mail — muda o texto do aviso. */
-  emailFornecedor: string | null;
+  /** O que dizer sobre o e-mail, decidido no servidor. Ver FecharRecebimento. */
+  avisoEmail: AvisoEnvio;
 }) {
   const router = useRouter();
   const [aberto, setAberto] = useState(false);
@@ -94,17 +95,33 @@ export function FecharDevolucao({
           metade.
         </li>
         <li>
-          {emailFornecedor ? (
+          {avisoEmail.situacao === "normal" ? (
             <>
               Um e-mail com o termo em PDF sai para{" "}
-              <strong>{emailFornecedor}</strong>.
+              <strong>{avisoEmail.destino.join(", ")}</strong>.
             </>
-          ) : (
+          ) : null}
+          {avisoEmail.situacao === "teste" ? (
+            <>
+              <strong>Modo de teste ligado:</strong> o e-mail com o termo vai
+              para <strong>{avisoEmail.destino.join(", ")}</strong>. O fornecedor{" "}
+              <strong>{avisoEmail.noLugarDe.join(", ")}</strong> não recebe nada.
+            </>
+          ) : null}
+          {avisoEmail.situacao === "bloqueado" ? (
+            <>
+              <strong>Nenhum e-mail vai sair.</strong> O modo de teste está
+              ligado sem caixa de destino, então o envio falha e o fornecedor
+              fica sem aviso — mas a devolução fecha do mesmo jeito, e isso não
+              volta atrás.
+            </>
+          ) : null}
+          {avisoEmail.situacao === "sem-destinatario" ? (
             <>
               O fornecedor <strong>não tem e-mail cadastrado</strong> e não será
               avisado. A devolução fecha do mesmo jeito.
             </>
-          )}
+          ) : null}
         </li>
         {comRessalva > 0 ? (
           <li>

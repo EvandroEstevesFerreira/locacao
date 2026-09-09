@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/card";
 import { DevolucaoCabecalhoForm } from "../devolucao-forms";
 import { DevolucaoItens } from "../devolucao-itens";
+import { avisoEnvio } from "@/lib/emails/modo-teste";
 import { FecharDevolucao } from "../fechar-devolucao";
 import { DevolucaoFechada } from "../devolucao-fechada";
 
@@ -236,7 +237,11 @@ export default async function DevolucaoPage({
               totalItens={dev.itens.length}
               comRessalva={comRessalva.length}
               comAvaria={comAvaria}
-              emailFornecedor={dev.fornecedor?.contato_email ?? null}
+              avisoEmail={avisoEnvio(
+                dev.fornecedor?.contato_email
+                  ? [dev.fornecedor.contato_email]
+                  : [],
+              )}
             />
           </CardContent>
         </Card>

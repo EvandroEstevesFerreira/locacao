@@ -105,3 +105,39 @@ export function aplicarModoTeste(
 export function emTeste(estado: EstadoEnvio = estadoEnvio()): boolean {
   return estado.modo !== "normal";
 }
+
+export type AvisoEnvio =
+  | { situacao: "sem-destinatario" }
+  | { situacao: "normal"; destino: string[] }
+  | { situacao: "teste"; destino: string[]; noLugarDe: string[] }
+  | { situacao: "bloqueado"; motivo: string };
+
+/**
+ * O que um aviso de ação irreversível deve dizer sobre o destino do e-mail.
+ *
+ * Existe porque a trava fica no transporte, e a TELA não sabia dela: o painel
+ * de fechamento do recebimento anunciava o e-mail do fornecedor enquanto o
+ * envio ia, na verdade, para a caixa de teste. Prometer uma consequência que
+ * não acontece, num aviso que diz "isto é irreversível", é pior que não avisar
+ * nada — a pessoa confirma contando com um efeito que não vai existir.
+ *
+ * `sem-destinatario` vem ANTES de tudo, inclusive de `bloqueado`: sem endereço
+ * o call site nem chega a chamar `enviarEmail`, então nada falha e nada sai.
+ */
+export function avisoEnvio(
+  destinatarios: string[],
+  estado: EstadoEnvio = estadoEnvio(),
+): AvisoEnvio {
+  if (destinatarios.length === 0) return { situacao: "sem-destinatario" };
+  if (estado.modo === "bloqueado") {
+    return { situacao: "bloqueado", motivo: estado.motivo };
+  }
+  if (estado.modo === "teste") {
+    return {
+      situacao: "teste",
+      destino: estado.destino,
+      noLugarDe: destinatarios,
+    };
+  }
+  return { situacao: "normal", destino: destinatarios };
+}

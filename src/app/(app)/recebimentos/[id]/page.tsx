@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/card";
 import { RecebimentoCabecalhoForm } from "../recebimento-forms";
 import { RecebimentoItens } from "../recebimento-itens";
+import { avisoEnvio } from "@/lib/emails/modo-teste";
 import { FecharRecebimento } from "../fechar-recebimento";
 import { RecebimentoFechado } from "../recebimento-fechado";
 
@@ -216,7 +217,11 @@ export default async function RecebimentoPage({
               recebimentoId={rec.id}
               totalItens={rec.itens.length}
               comRessalva={comProblema.length}
-              emailFornecedor={rec.fornecedor?.contato_email ?? null}
+              avisoEmail={avisoEnvio(
+                rec.fornecedor?.contato_email
+                  ? [rec.fornecedor.contato_email]
+                  : [],
+              )}
             />
           </CardContent>
         </Card>

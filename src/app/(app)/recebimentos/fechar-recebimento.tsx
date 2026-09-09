@@ -18,18 +18,26 @@ import { toast } from "sonner";
 import { fecharRecebimento } from "../contratos/recebimento-actions";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import type { AvisoEnvio } from "@/lib/emails/modo-teste";
 
 export function FecharRecebimento({
   recebimentoId,
   totalItens,
   comRessalva,
-  emailFornecedor,
+  avisoEmail,
 }: {
   recebimentoId: string;
   totalItens: number;
   comRessalva: number;
-  /** Nulo quando o fornecedor não tem e-mail — muda o texto do aviso. */
-  emailFornecedor: string | null;
+  /**
+   * O que dizer sobre o e-mail, decidido no servidor.
+   *
+   * Antes esta prop era o endereço do fornecedor, e o painel anunciava esse
+   * endereço sempre. Com EMAIL_MODO_TESTE ligado o envio vai para a caixa de
+   * teste, e o aviso passava a prometer uma consequência que não acontece —
+   * num texto que diz, na linha de cima, que a ação é irreversível.
+   */
+  avisoEmail: AvisoEnvio;
 }) {
   const router = useRouter();
   const [aberto, setAberto] = useState(false);
@@ -83,17 +91,33 @@ export function FecharRecebimento({
           retirada no contrato, que alimenta o cálculo de custo.
         </li>
         <li>
-          {emailFornecedor ? (
+          {avisoEmail.situacao === "normal" ? (
             <>
               Um e-mail com o romaneio em PDF sai para{" "}
-              <strong>{emailFornecedor}</strong>.
+              <strong>{avisoEmail.destino.join(", ")}</strong>.
             </>
-          ) : (
+          ) : null}
+          {avisoEmail.situacao === "teste" ? (
+            <>
+              <strong>Modo de teste ligado:</strong> o e-mail com o romaneio vai
+              para <strong>{avisoEmail.destino.join(", ")}</strong>. O fornecedor{" "}
+              <strong>{avisoEmail.noLugarDe.join(", ")}</strong> não recebe nada.
+            </>
+          ) : null}
+          {avisoEmail.situacao === "bloqueado" ? (
+            <>
+              <strong>Nenhum e-mail vai sair.</strong> O modo de teste está
+              ligado sem caixa de destino, então o envio falha e o fornecedor
+              fica sem aviso — mas o recebimento fecha do mesmo jeito, e isso não
+              volta atrás.
+            </>
+          ) : null}
+          {avisoEmail.situacao === "sem-destinatario" ? (
             <>
               O fornecedor <strong>não tem e-mail cadastrado</strong> e não será
               avisado. O recebimento fecha do mesmo jeito.
             </>
-          )}
+          ) : null}
         </li>
         {comRessalva > 0 ? (
           <li>
