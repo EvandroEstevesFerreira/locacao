@@ -385,13 +385,23 @@ export default async function FrotaPage({
                                 acabou de padronizar as larguras para matar a
                                 barra de rolagem horizontal. */}
                             <span className="min-w-40 text-muted-foreground">
-                              {perfil === "geral"
-                                ? (p.obraRotulo ?? "Almoxarifado central")
-                                : semTermo
+                              {/* O NOME VEM PRIMEIRO, e independe do perfil da
+                                  categoria. A regra anterior só mostrava o
+                                  detentor quando havia categoria selecionada
+                                  (`perfil !== "geral"`): em "Todas" o perfil cai
+                                  em "geral" e a coluna mostrava a obra. Com as
+                                  128 peças em TI, "Todas" e "TI" trazem o mesmo
+                                  conjunto com informação diferente, o que é
+                                  indefensável.
+
+                                  Detentor de OBRA tem `detentor_rotulo` igual ao
+                                  rótulo da obra, então nada se perde no perfil
+                                  de obra: mostrar o detentor é sempre igual ou
+                                  mais informativo. */}
+                              {nomeDoDetentor ??
+                                (semTermo && perfil !== "geral"
                                   ? "sem responsável"
-                                  : (nomeDoDetentor ??
-                                    p.obraRotulo ??
-                                    "Almoxarifado central")}
+                                  : (p.obraRotulo ?? "Almoxarifado central"))}
                             </span>
 
                             <span className="flex flex-wrap items-center gap-1">

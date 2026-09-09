@@ -90,6 +90,15 @@ export function MutiraoForm({
     iniciar(async () => {
       const r = await emitirTermosDoMutirao({ pares });
       if (!r.ok) return setErro(r.erro);
+      // LIMPA O QUE FOI EMITIDO. Sem isto, o `useState` guarda a seleção entre
+      // rodadas — o `router.refresh()` recarrega as propostas, mas o mapa
+      // antigo continua aqui, e o clique seguinte pega as MESMAS 12 peças.
+      // Foi o que emitiu 48 termos duplicados, uma peça com quatro.
+      setEscolha((atual) => {
+        const proximo = { ...atual };
+        for (const par of pares) delete proximo[par.unidade_id];
+        return proximo;
+      });
       toast.success(r.aviso ?? "Termos emitidos.");
       router.refresh();
     });
