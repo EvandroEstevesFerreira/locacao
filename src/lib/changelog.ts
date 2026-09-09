@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.90.3";
+export const APP_VERSION = "0.91.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,16 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.91.0",
+    data: "2026-09-09",
+    titulo: "A marca em todo documento",
+    mudancas: [
+      { tipo: "novo", texto: "O relatório de vistoria sai com o logotipo da Sistenge. Era o único documento do sistema sem ele — e é dos que mais saem da empresa, porque vira anexo de contrato e prova do estado do equipamento." },
+      { tipo: "correcao", texto: "O logotipo dos PDFs passa a usar o preto institucional. O wordmark vinha num tom azulado que não está na paleta de três cores do Manual de Identidade Visual, e o próprio manual reprova cor não institucional na marca." },
+      { tipo: "melhoria", texto: "Documento novo não nasce mais sem a marca: um teste confere os quatro modelos de documento do sistema e falha se algum sair sem logotipo. Antes isso dependia de alguém abrir o PDF e notar." },
+    ],
+  },
   {
     versao: "0.90.3",
     data: "2026-09-09",

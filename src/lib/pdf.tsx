@@ -165,6 +165,7 @@ const ACENTO = SLATE_900;
 
 const vStyles = StyleSheet.create({
   page: { padding: 32, fontSize: 10, fontFamily: "Helvetica", color: SLATE_900 },
+  marca: { marginBottom: 10 },
   eyebrow: { fontSize: 8, color: ACENTO, letterSpacing: 1, marginBottom: 3 },
   titulo: { fontSize: 20, marginBottom: 2 },
   sub: { fontSize: 10, color: SLATE_500, marginBottom: 16 },
@@ -226,6 +227,14 @@ export function DocumentoVistoria({ v }: { v: VistoriaPdf }) {
   return (
     <Document>
       <Page size="A4" style={vStyles.page}>
+        {/* A marca vinha faltando SÓ aqui, entre os quatro primitivos de
+            documento — e este é o que mais sai da empresa: o relatório de
+            vistoria vira anexo de contrato e prova de estado do equipamento.
+            Mesma disposição do DocumentoTexto (marca acima do eyebrow), para
+            que os dois cheguem iguais na mão de quem recebe. */}
+        <View style={vStyles.marca}>
+          <LogoSistenge width={110} />
+        </View>
         <Text style={vStyles.eyebrow}>SISTENGE · LOCAÇÕES DE OBRA</Text>
         <Text style={vStyles.titulo}>Relatório de vistoria</Text>
         <Text style={vStyles.sub}>

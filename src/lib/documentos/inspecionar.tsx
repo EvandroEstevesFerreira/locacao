@@ -123,3 +123,57 @@ function normalizar(s: string): string {
     .replace(/\s+/g, " ")
     .trim();
 }
+
+/**
+ * `true` se a árvore desenha o logotipo da Sistenge em algum ponto.
+ *
+ * Existe para o teste-guarda de `logo-em-todo-documento.test.tsx`. A varredura
+ * manual de "quais documentos têm logo" responde a pergunta HOJE; o documento
+ * que alguém criar no mês que vem nasce sem ela e ninguém olha de novo. O
+ * Manual de Identidade Visual 2026 é explícito sobre reproduzir a marca em toda
+ * comunicação, e um relatório que sai para fornecedor é comunicação.
+ *
+ * Casa por NOME e não por identidade de referência de propósito: `inspecionar`
+ * é utilitário de leitura e não deve puxar `pdf-logo` — que arrasta as
+ * primitivas SVG do renderer — só para ter o ponteiro da função.
+ *
+ * Desce nos filhos SEMPRE, e não apenas no retorno da execução do componente:
+ * as primitivas do @react-pdf que lançam ao serem chamadas fora do renderer
+ * cairiam no ramo de props, que ignora `children` — e o logo dentro de um
+ * `<Page>` ficaria invisível.
+ */
+export function temLogo(no: ReactNode): boolean {
+  function visitar(n: ReactNode): boolean {
+    if (n === null || n === undefined || typeof n === "boolean") return false;
+    if (typeof n === "string" || typeof n === "number") return false;
+    if (Array.isArray(n)) return n.some(visitar);
+    if (!isValidElement(n)) return false;
+
+    const el = n as ReactElement<Record<string, unknown>>;
+    if (typeof el.type === "function" && el.type.name === "LogoSistenge") {
+      return true;
+    }
+
+    const props = el.props ?? {};
+    if (typeof el.type === "function") {
+      try {
+        const fn = el.type as (p: unknown) => ReactNode;
+        if (visitar(fn(props))) return true;
+      } catch {
+        // Primitiva que só roda dentro do renderer. Segue pelos filhos.
+      }
+    }
+
+    for (const [chave, valor] of Object.entries(props)) {
+      if (chave === "style" || chave === "key" || typeof valor === "function") {
+        continue;
+      }
+      if (chave === "children" || Array.isArray(valor) || isValidElement(valor)) {
+        if (visitar(valor as ReactNode)) return true;
+      }
+    }
+    return false;
+  }
+
+  return visitar(no);
+}
