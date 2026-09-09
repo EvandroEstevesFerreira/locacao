@@ -327,3 +327,23 @@ export const amarrarPecaSchema = z.object({
 });
 
 export type AmarrarPecaInput = z.input<typeof amarrarPecaSchema>;
+
+/**
+ * O mutirão: pares peça↔funcionário confirmados, para EMITIR os termos.
+ *
+ * `max(12)` de propósito, e não é limite de digitação: cada termo emitido gera
+ * um PDF e um e-mail. Cinquenta numa requisição estouraria o tempo da função, e
+ * o estouro deixaria metade emitida sem ninguém saber quais. Doze por rodada
+ * cabe com folga, e a tela diz quantos faltam.
+ */
+export const mutiraoTermosSchema = z.object({
+  pares: z
+    .array(
+      z.object({
+        unidade_id: z.string().uuid(),
+        funcionario_id: z.string().uuid(),
+      }),
+    )
+    .min(1, "Nada foi selecionado.")
+    .max(12, "Doze peças por rodada. Confirme e clique de novo."),
+});

@@ -1,32 +1,40 @@
 "use client";
 
-// Conferência do mutirão de custódia: o que a planilha diz, e quem é essa
-// pessoa no cadastro.
+// O mutirão de custódia: o que a planilha diz, quem é essa pessoa no cadastro,
+// e o termo que registra a posse.
 //
-// POR QUE ESTA TELA NÃO GRAVA, e a razão é do banco.
-//
-// A primeira versão tinha "Registrar 88 custódias" e falhava em todas. O check
+// POR QUE EMITE TERMO EM VEZ DE GRAVAR CUSTÓDIA. A primeira versão desta tela
+// tinha "Registrar 88 custódias" e falhava em todas: o check
 // `custodia_funcionario_exige_termo` (migration 0059) recusa posse de
-// funcionário sem termo:
-//
-//   check (tipo <> 'funcionario' or (origem = 'termo' and termo_id is not null))
-//
-// com o motivo escrito ao lado: "posse de funcionário só nasce por termo
-// assinado. No BANCO, e não só na tela: a tela pode estar velha, e o valor do
-// termo é justamente ser a única fonte de verdade sobre quem respondeu pelo
-// equipamento". `moverPeca` sempre respeitou — `custodia.ts` registra que
+// funcionário sem termo, com o motivo escrito ao lado — "o valor do termo é
+// justamente ser a única fonte de verdade sobre quem respondeu pelo
+// equipamento". `moverPeca` sempre respeitou isso; `custodia.ts` registra que
 // "funcionario NÃO está entre os destinos".
 //
-// A invariante está certa e o mutirão estava errado. Botão que promete gravar e
-// não grava é pior que nenhum botão, então aqui se CONFERE. O casamento de
-// nomes, que é o trabalho difícil, já está feito — e é ele que a emissão dos
-// termos vai consumir.
+// A invariante está certa, e o caminho é o termo. Emitir sem colher assinatura
+// na hora só ficou possível na 0.96.0 — antes dela, regularizar 95 peças
+// exigiria 95 pessoas assinando na tela.
+//
+// A REGRA DA TELA: nada é emitido sem eu ter visto. As propostas automáticas vêm
+// marcadas, as ambíguas vêm com um seletor e DESMARCADAS, e as que não casaram
+// vêm com o cadastro inteiro. Marcar o ambíguo por padrão seria pedir
+// confirmação de algo que a pessoa não leu.
 
-import { useMemo, useState } from "react";
-import { TriangleAlert } from "lucide-react";
+import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { FileSignature, Loader2, TriangleAlert } from "lucide-react";
+import { toast } from "sonner";
 import type { PropostaMutirao } from "@/lib/data/custodia";
+import { emitirTermosDoMutirao } from "../actions";
+import { FormError } from "@/components/shared/form-error";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { NativeSelect } from "@/components/ui/native-select";
+
+/** Peças por rodada. Espelha o `max` de `mutiraoTermosSchema`: cada termo gera
+ *  um PDF e um e-mail, e cinquenta numa requisição estouraria o tempo da
+ *  função — deixando metade emitida sem ninguém saber quais. */
+const POR_RODADA = 12;
 
 type Funcionario = { id: string; nome: string; cpf: string | null; email: string | null };
 
@@ -66,6 +74,26 @@ export function MutiraoForm({
     () => new Map(funcionarios.map((f) => [f.id, f])),
     [funcionarios],
   );
+
+  const router = useRouter();
+  const [erro, setErro] = useState<string | null>(null);
+  const [pendente, iniciar] = useTransition();
+
+  function emitir() {
+    setErro(null);
+    const pares = Object.entries(escolha)
+      .filter(([, funcionarioId]) => funcionarioId !== "")
+      .slice(0, POR_RODADA)
+      .map(([unidade_id, funcionario_id]) => ({ unidade_id, funcionario_id }));
+    if (pares.length === 0) return setErro("Nenhuma peça com pessoa definida.");
+
+    iniciar(async () => {
+      const r = await emitirTermosDoMutirao({ pares });
+      if (!r.ok) return setErro(r.erro);
+      toast.success(r.aviso ?? "Termos emitidos.");
+      router.refresh();
+    });
+  }
 
   return (
     <div className="space-y-4">
@@ -141,12 +169,50 @@ export function MutiraoForm({
       <div className="flex items-start gap-2 rounded-md border border-dashed p-3 text-sm">
         <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
         <span>
-          <strong>Esta tela ainda não grava.</strong> Quem está com a peça se
-          registra <strong>emitindo o termo de responsabilidade</strong> — é o
-          termo que cria a posse, por decisão de projeto: ele é a única fonte de
-          verdade sobre quem respondeu pelo equipamento. Use a lista para
-          conferir os <strong>{definidas}</strong> casamentos antes de emitir.
+          Registrar quem está com a peça é <strong>emitir o termo de
+          responsabilidade</strong> — é ele que cria a posse, por decisão de
+          projeto: o termo é a única fonte de verdade sobre quem respondeu pelo
+          equipamento. Cada funcionário recebe um termo com as peças dele, a via
+          em PDF e o link para assinar; sem assinatura, o sistema cobra a cada 3
+          dias.
+          <strong className="mt-1 block">
+            Só funciona com o modo de teste de e-mail ligado. Com ele, as vias
+            vão todas para a caixa de teste em vez de para os funcionários — e o
+            servidor recusa a emissão se ele estiver desligado.
+          </strong>
         </span>
+      </div>
+
+      <FormError>{erro}</FormError>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <Button
+          type="button"
+          disabled={pendente || definidas === 0}
+          onClick={emitir}
+        >
+          {pendente ? (
+            <>
+              <Loader2 className="size-4 animate-spin" aria-hidden />
+              Emitindo…
+            </>
+          ) : (
+            <>
+              <FileSignature className="size-4" aria-hidden />
+              Emitir {Math.min(definidas, POR_RODADA)}{" "}
+              {Math.min(definidas, POR_RODADA) === 1 ? "termo" : "termos"}
+            </>
+          )}
+        </Button>
+        <p className="text-xs text-muted-foreground">
+          {definidas} com pessoa definida
+          {definidas > POR_RODADA
+            ? ` · ${POR_RODADA} por rodada, clique de novo até zerar`
+            : ""}
+          {propostas.length - definidas > 0
+            ? ` · ${propostas.length - definidas} sem pessoa, ficam de fora`
+            : ""}
+        </p>
       </div>
     </div>
   );
