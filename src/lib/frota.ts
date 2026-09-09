@@ -327,23 +327,3 @@ export const amarrarPecaSchema = z.object({
 });
 
 export type AmarrarPecaInput = z.input<typeof amarrarPecaSchema>;
-
-/**
- * O mutirão de custódia: pares peça↔funcionário confirmados na tela.
- *
- * Lote, e não uma action por linha: 89 confirmações em 89 requisições fariam a
- * tela levar minutos e deixariam metade gravada se a conexão da obra caísse no
- * meio. `max(200)` porque o inventário tem 95 e o dobro é folga suficiente —
- * lote sem limite é convite a estouro de tempo de função.
- */
-export const mutiraoCustodiaSchema = z.object({
-  pares: z
-    .array(
-      z.object({
-        unidade_id: z.string().uuid(),
-        funcionario_id: z.string().uuid(),
-      }),
-    )
-    .min(1, "Nada foi selecionado.")
-    .max(200, "Muitas peças de uma vez. Confirme em partes."),
-});

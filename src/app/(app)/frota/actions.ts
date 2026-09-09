@@ -11,12 +11,10 @@ import {
   type ActionResult,
 } from "@/lib/acoes";
 import { camposFichaSchema, validarFicha } from "@/lib/catalogo";
-import { hojeISOSaoPaulo } from "@/lib/locacao";
 import { moverPecaSchema, editarPecaSchema } from "@/lib/custodia";
 import { abrirCustodia } from "@/lib/custodia-servidor";
 import {
   amarrarPecaSchema,
-  mutiraoCustodiaSchema,
   podeTransicionar,
   motivoBloqueio,
   SITUACOES,
@@ -346,69 +344,24 @@ export async function amarrarPecaAoContrato(raw: unknown): Promise<ActionResult>
 }
 
 /**
- * Grava a custódia das peças confirmadas no mutirão.
+ * O mutirão NÃO grava custódia. Ficou registrado aqui por que não.
  *
- * Escreve por `abrirCustodia` (src/lib/custodia-servidor.ts), e não com insert
- * próprio: é o escritor compartilhado que fecha a posse anterior antes de abrir
- * a nova, resolve o rótulo do detentor e atualiza `equipamento_unidade.obra_id`.
- * Duplicar isso aqui seria a segunda cópia da regra — e o AGENTS.md nomeia
- * justamente este arquivo como o caso em que a divergência "aparece como
- * equipamento que consta com duas pessoas".
+ * A primeira versão desta action chamava `abrirCustodia` com
+ * `tipo: "funcionario"` e `origem: "manual"`. Typecheck, lint, 1255 testes e
+ * build passaram — e as 88 confirmações falharam uma a uma em produção, porque
+ * a recusa vive no `check` do Postgres:
  *
- * `origem: "manual"` porque não há termo por trás. O mutirão registra o FATO de
- * quem está com a peça; o documento, se vier, vem depois — e agora vem barato,
- * porque a emissão não exige mais colher assinatura na hora.
+ *   custodia_funcionario_exige_termo (migration 0059)
+ *   check (tipo <> 'funcionario' or (origem = 'termo' and termo_id is not null))
  *
- * PARCIAL É RESULTADO VÁLIDO. Com 89 peças, insistir em "tudo ou nada"
- * significaria que uma linha problemática desfaz 88 confirmações certas. Grava o
- * que dá, devolve quantas falharam e por quê.
+ * com o motivo escrito ao lado: "posse de funcionário só nasce por termo
+ * assinado. No BANCO, e não só na tela: a tela pode estar velha, e o valor do
+ * termo é justamente ser a única fonte de verdade sobre quem respondeu pelo
+ * equipamento". `moverPeca` sempre respeitou isso — `custodia.ts` registra que
+ * "funcionario NÃO está entre os destinos".
+ *
+ * A invariante está CERTA e o mutirão estava errado. Quem está com a peça se
+ * registra emitindo o TERMO, que cria a posse por `moverPecasDoTermo` com
+ * `origem: 'termo'`. `custodia-invariante.test.ts` impede a volta desta classe
+ * de erro.
  */
-export async function confirmarMutiraoCustodia(
-  raw: unknown,
-): Promise<ActionResult> {
-  const perfil = await getCurrentPerfil();
-  if (!perfil?.org_id) return falha("Sessão inválida. Entre novamente.");
-  if (!podeEditarCadastros(perfil.papel)) {
-    return falha("Você não tem permissão para registrar custódia.");
-  }
-
-  const parsed = mutiraoCustodiaSchema.safeParse(raw);
-  if (!parsed.success) return falha(primeiroErro(parsed.error.issues));
-
-  const supabase = await createClient();
-  const hoje = hojeISOSaoPaulo();
-  const falhas: string[] = [];
-  let gravadas = 0;
-
-  for (const par of parsed.data.pares) {
-    const r = await abrirCustodia(supabase, {
-      orgId: perfil.org_id,
-      unidadeId: par.unidade_id,
-      tipo: "funcionario",
-      funcionarioId: par.funcionario_id,
-      inicio: hoje,
-      origem: "manual",
-      observacoes:
-        "Custódia registrada no mutirão de regularização do inventário, a partir do nome na planilha de coleta.",
-    });
-    if (!r.ok) {
-      falhas.push(r.erro);
-      continue;
-    }
-    gravadas += 1;
-  }
-
-  revalidatePath("/frota");
-  revalidatePath("/frota/custodia");
-
-  if (gravadas === 0) {
-    return falha(falhas[0] ?? "Nenhuma custódia foi registrada.");
-  }
-  return {
-    ok: true,
-    aviso:
-      falhas.length > 0
-        ? `${gravadas} de ${parsed.data.pares.length} registradas. ${falhas.length} falharam: ${falhas[0]}`
-        : `${gravadas} ${gravadas === 1 ? "peça" : "peças"} com dono registrado.`,
-  };
-}

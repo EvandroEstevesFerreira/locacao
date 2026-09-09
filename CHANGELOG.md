@@ -7,6 +7,59 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.97.1] — 2026-09-09
+
+A tela de custódia parou de prometer o que não fazia.
+
+### O defeito, e ele era meu
+
+O mutirão da 0.97.0 falhou em produção: 88 confirmações, 88 falhas, com
+"Não foi possível registrar a posse da peça" e nenhuma explicação.
+
+Causa-raiz, uma só, encontrada em `pg_constraint` e confirmada em produção:
+
+```
+custodia_funcionario_exige_termo  (migration 0059)
+CHECK (tipo <> 'funcionario' OR (origem = 'termo' AND termo_id IS NOT NULL))
+```
+
+`confirmarMutiraoCustodia` chamava `abrirCustodia` com `tipo: "funcionario"`,
+`origem: "manual"` e `termo_id: null`. Viola em toda linha.
+
+**E a invariante está certa.** O motivo está escrito ao lado dela na migration:
+*"posse de funcionário só nasce por termo assinado. No BANCO, e não só na tela:
+a tela pode estar velha, e o valor do termo é justamente ser a única fonte de
+verdade sobre quem respondeu pelo equipamento."* `moverPeca` sempre respeitou —
+`custodia.ts` registra que *"funcionario NÃO está entre os destinos"*. O mutirão
+era o único fora do padrão.
+
+### Por que os testes não pegaram
+
+Typecheck, lint, 1255 testes e build passaram todos. O tipo `AberturaCustodia`
+aceita a combinação — `tipo`, `origem` e `termoId` são campos independentes — e a
+recusa só existe no `check` do Postgres. Nenhum teste do projeto exercita
+`abrirCustodia` contra um banco real.
+
+### Corrigido
+
+- `confirmarMutiraoCustodia` e `mutiraoCustodiaSchema` **removidos**. No lugar da
+  action ficou o comentário explicando por que ela não pode existir.
+- A tela vira **conferência**: sem botão que promete gravar, e com o motivo à
+  vista. Botão que falha em 100% dos casos é pior que nenhum botão.
+- O casamento de nomes (`custodia-mutirao.ts`, 14 casos, 89 de 95 automáticos)
+  **fica**: é o trabalho difícil, está conferido, e é o que a emissão dos termos
+  vai consumir.
+
+### O teste que teria pegado
+
+`custodia-invariante.test.ts` varre o `src` procurando chamada de
+`abrirCustodia` que junte `tipo: "funcionario"` com `origem: "manual"`. Escrito
+antes da correção e visto acusando o arquivo certo — `frota/actions.ts` — que é o
+que uma varredura tem de fazer para valer algo.
+
+Move a reprovação do banco em produção para o teste antes do deploy. Não
+substitui o `check`: o banco continua sendo a última palavra.
+
 ## [0.97.0] — 2026-09-09
 
 Com quem está cada máquina.
