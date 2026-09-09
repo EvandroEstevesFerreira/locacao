@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.99.2";
+export const APP_VERSION = "0.100.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,17 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.100.0",
+    data: "2026-09-09",
+    titulo: "A planilha de coleta volta para dentro do sistema",
+    mudancas: [
+      { tipo: "novo", texto: "A planilha de coleta preenchida pela obra ou por Suprimentos agora entra no sistema de uma vez: contrato, equipamentos, valores e o PDF do contrato anexado ao registro. Antes a planilha voltava preenchida e alguem digitava contrato por contrato na tela." },
+      { tipo: "novo", texto: "A locação de ar-condicionado da obra 691 — Racional Garoa entrou pelo caminho novo: contrato 1726 da 5I, 9 aparelhos, R$ 2.038,56 por mês, com o contrato em PDF anexado." },
+      { tipo: "seguranca", texto: "A importação recusa a planilha inteira quando o valor da locação está em branco ou a data de retirada está no futuro, em vez de gravar o que pode. Valor em branco entraria como locação de graça e a obra fecharia o custo com o número errado; retirada no futuro faria constar como não entregue um equipamento que está em campo. A primeira planilha recebida tinha o segundo caso nas duas linhas." },
+      { tipo: "melhoria", texto: "Quando o fornecedor cobra com mais casas decimais do que o sistema guarda, a importação avisa quanto a linha vai divergir da fatura. No contrato 1726 são três centavos por mês — pequenos, mas quem conferisse o relatório contra a fatura iria procurar o erro no lugar errado." },
+    ],
+  },
   {
     versao: "0.99.2",
     data: "2026-09-09",
