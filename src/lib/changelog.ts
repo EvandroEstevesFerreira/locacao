@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.93.0";
+export const APP_VERSION = "0.94.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,19 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.94.0",
+    data: "2026-09-09",
+    titulo: "O protocolo do fornecedor na vistoria",
+    mudancas: [
+      { tipo: "novo", texto: "A vistoria tem onde guardar o documento que a contraparte traz: protocolo de retirada, ordem de serviço. Aceita PDF e foto — protocolo fotografado no celular na obra é o caso comum." },
+      { tipo: "novo", texto: "Cada documento anexado é classificado como protocolo, ordem de serviço ou outro, com um campo para o número. Protocolo e OS que chegam no mesmo dia continuam distinguíveis seis meses depois." },
+      { tipo: "melhoria", texto: "O relatório de vistoria traz o logotipo no alto à direita, como o relatório gerencial já fazia. Os dois documentos do sistema passam a ter o mesmo cabeçalho." },
+      { tipo: "melhoria", texto: "O cabeçalho do relatório passa a dizer “SISTENGE · LOCAÇÕES”." },
+      { tipo: "novo", texto: "O relatório de vistoria mostra a empresa locadora do equipamento, em linha própria — razão social não cabe em coluna estreita." },
+      { tipo: "correcao", texto: "Excluir uma vistoria agora apaga também os documentos anexados do armazenamento. Antes só as fotos eram removidas, e o protocolo ficava ocupando espaço sem aparecer em lugar nenhum." },
+    ],
+  },
   {
     versao: "0.93.0",
     data: "2026-09-09",

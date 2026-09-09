@@ -19,6 +19,7 @@ import { ConfirmDelete } from "@/components/confirm-delete";
 import { excluirVistoria } from "../actions";
 import { VistoriaFotos, contarFotos } from "./_components/vistoria-fotos";
 import { VistoriaAvarias, somarAvarias } from "./_components/vistoria-avarias";
+import { VistoriaAnexos } from "./_components/vistoria-anexos";
 import { VistoriaAssinaturas } from "./_components/vistoria-assinaturas";
 
 export const metadata = { title: "Vistoria — Loca" };
@@ -154,6 +155,14 @@ export default async function VistoriaDetalhePage({
 
       <Suspense fallback={<SecaoSkeleton linhas={4} />}>
         <VistoriaFotos
+          vistoriaId={id}
+          orgId={perfil?.org_id ?? ""}
+          podeEditar={podeEditar}
+        />
+      </Suspense>
+
+      <Suspense fallback={<SecaoSkeleton linhas={3} />}>
+        <VistoriaAnexos
           vistoriaId={id}
           orgId={perfil?.org_id ?? ""}
           podeEditar={podeEditar}

@@ -7,6 +7,73 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.94.0] — 2026-09-09
+
+O protocolo do fornecedor na vistoria.
+
+### Adicionado
+
+- `vistoria_anexo` (migration 0098): documentos da contraparte na vistoria, com
+  `tipo` (`protocolo` | `os` | `outro`), `descricao`, `path` e `data`.
+  Espelha `contrato_anexo` (0035), que resolveu o mesmo problema no contrato.
+- Seção "Protocolos e OS" na tela da vistoria, em qualquer tipo de vistoria.
+  Aceita PDF e imagem.
+- `TIPO_ANEXO_VISTORIA` e `tipoAnexoValido()` em `src/lib/vistoria.ts` — as
+  chaves do mapa são exatamente os valores do `check` da coluna.
+- Campo "Empresa locadora" no relatório de vistoria, em linha de largura cheia:
+  "SJUSTINO CONSTRUCOES LOCACOES E SERVICOS LTDA" tem 45 caracteres e não cabe
+  em 25% de linha. Vem de `contrato_locacao.fornecedor_id` — relação para-um,
+  que não muda a cardinalidade do select.
+
+### Três decisões de modelagem
+
+- **Tabela, e não coluna `protocolo_path` na vistoria.** Protocolo e OS são dois
+  papéis distintos e chegam separados; com uma coluna, o segundo substituiria o
+  primeiro em silêncio.
+- **Não reaproveitar `vistoria_foto`.** O relatório em PDF desenha *toda* linha
+  de `vistoria_foto` como imagem: um PDF de protocolo ali quebraria a
+  renderização, e a falha apareceria só ao gerar o relatório de uma vistoria
+  específica.
+- **RLS espelhando a forma ATUAL do irmão `vistoria_foto`,** que é a da
+  migration 0011 e não a da 0007. Na 0007 o mesmo par de policies foi escrito
+  com `current_papel() in ('admin','gestor','operacional')` — nomes de papel que
+  a 0011 substituiu por `pode_operar()`. Copiar a 0007 daria uma policy
+  referenciando valor de enum extinto.
+
+### Alterado
+
+- `DocumentoVistoria` passa a usar a linha `topo` com `justifyContent:
+  space-between`, como o `DocumentoRelatorio` já fazia: marca à direita, texto à
+  esquerda com `flex: 1` para que um subtítulo longo quebre na coluna em vez de
+  empurrar a marca fora da página.
+- Eyebrow: "SISTENGE · LOCAÇÕES DE OBRA" → "SISTENGE · LOCAÇÕES".
+
+### Corrigido
+
+- `excluirVistoria` limpava do Storage apenas os paths de `vistoria_foto`. Fotos
+  e anexos dividem a bucket `vistorias`: o protocolo ficava **órfão** — arquivo
+  sem dono, ocupando armazenamento e invisível na interface, porque a linha que
+  o apontava foi apagada em cascata com a vistoria. Agora as duas consultas
+  correm em paralelo e os dois conjuntos de path são removidos juntos.
+
+### Testes
+
+- `tipoAnexoValido` por TDD, quatro casos vistos falhando antes da
+  implementação. Ela cai em `outro` em vez de lançar: o arquivo **já** subiu ao
+  Storage quando ela roda, e recusar o registro por causa do rótulo deixaria o
+  documento órfão.
+- `relatorio-vistoria.test.tsx` confere o TEXTO do relatório com `contemTexto`.
+  Inclui o caso negativo "não diz mais DE OBRA" — sem ele, a asserção do texto
+  novo passaria com o texto velho, porque o antigo **contém** o novo.
+- Estes últimos foram escritos depois do código; a lógica pura foi TDD.
+
+### Verificado
+
+Migration aplicada no remoto e conferida por consulta, não por ausência de erro:
+`to_regclass` devolve a tabela, `relrowsecurity` é `true`, `pg_policies` conta 2.
+Registrada com `migration repair --status applied 0098`. E o PDF foi gerado e
+olhado — marca à direita, cabeçalho novo, empresa locadora em linha própria.
+
 ## [0.93.0] — 2026-09-09
 
 Toda tela com a largura do seu tipo.

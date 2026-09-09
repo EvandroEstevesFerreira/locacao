@@ -165,13 +165,22 @@ const ACENTO = SLATE_900;
 
 const vStyles = StyleSheet.create({
   page: { padding: 32, fontSize: 10, fontFamily: "Helvetica", color: SLATE_900 },
-  marca: { marginBottom: 10 },
+  /* Marca À DIREITA, como no DocumentoRelatorio: os dois relatórios do sistema
+     passam a ter o mesmo cabeçalho. `topoTexto` leva o `flex: 1` para que um
+     subtítulo longo (contrato + obra + "Devolução de 1 un. de ...") quebre na
+     coluna da esquerda em vez de empurrar a marca para fora da página. */
+  topo: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
+  topoTexto: { flex: 1, paddingRight: 12 },
   eyebrow: { fontSize: 8, color: ACENTO, letterSpacing: 1, marginBottom: 3 },
   titulo: { fontSize: 20, marginBottom: 2 },
   sub: { fontSize: 10, color: SLATE_500, marginBottom: 16 },
   frame: { border: `1 solid ${SLATE_200}`, padding: 12, marginBottom: 12 },
   infoRow: { flexDirection: "row", flexWrap: "wrap" },
   infoCell: { width: "25%", marginBottom: 8 },
+  /* Largura cheia porque razão social não cabe em 25%: "SJUSTINO CONSTRUCOES
+     LOCACOES E SERVICOS LTDA" tem 45 caracteres. Em quarto de linha o nome
+     quebraria em três linhas ou sairia cortado. */
+  infoCellLarga: { width: "100%", marginBottom: 8 },
   infoLabel: { fontSize: 7, color: SLATE_400, textTransform: "uppercase", marginBottom: 2 },
   infoValor: { fontSize: 11 },
   h3: { fontSize: 13, marginBottom: 6 },
@@ -205,6 +214,15 @@ const vStyles = StyleSheet.create({
 
 export type VistoriaPdf = {
   contratoLinha?: string;
+  /**
+   * A empresa de quem o equipamento é locado.
+   *
+   * Vem do contrato (`contrato_locacao.fornecedor_id`), não da vistoria: quem é
+   * o dono do equipamento é fato do contrato. Opcional porque contrato sem
+   * fornecedor cadastrado existe, e o relatório não deve deixar de sair por
+   * isso.
+   */
+  fornecedor?: string;
   tipoLabel: string;
   data: string;
   responsavel: string;
@@ -227,20 +245,17 @@ export function DocumentoVistoria({ v }: { v: VistoriaPdf }) {
   return (
     <Document>
       <Page size="A4" style={vStyles.page}>
-        {/* A marca vinha faltando SÓ aqui, entre os quatro primitivos de
-            documento — e este é o que mais sai da empresa: o relatório de
-            vistoria vira anexo de contrato e prova de estado do equipamento.
-            Mesma disposição do DocumentoTexto (marca acima do eyebrow), para
-            que os dois cheguem iguais na mão de quem recebe. */}
-        <View style={vStyles.marca}>
+        <View style={vStyles.topo}>
+          <View style={vStyles.topoTexto}>
+            <Text style={vStyles.eyebrow}>SISTENGE · LOCAÇÕES</Text>
+            <Text style={vStyles.titulo}>Relatório de vistoria</Text>
+            <Text style={vStyles.sub}>
+              {v.contratoLinha ?? "—"}
+              {v.contexto ? ` · ${v.contexto}` : ""}
+            </Text>
+          </View>
           <LogoSistenge width={110} />
         </View>
-        <Text style={vStyles.eyebrow}>SISTENGE · LOCAÇÕES DE OBRA</Text>
-        <Text style={vStyles.titulo}>Relatório de vistoria</Text>
-        <Text style={vStyles.sub}>
-          {v.contratoLinha ?? "—"}
-          {v.contexto ? ` · ${v.contexto}` : ""}
-        </Text>
 
         {!v.empresaAssinado ? (
           <Text style={vStyles.aviso}>
@@ -267,6 +282,12 @@ export function DocumentoVistoria({ v }: { v: VistoriaPdf }) {
               <Text style={vStyles.infoLabel}>Avarias (custo est.)</Text>
               <Text style={vStyles.infoValor}>{v.avariasCusto}</Text>
             </View>
+            {v.fornecedor ? (
+              <View style={vStyles.infoCellLarga}>
+                <Text style={vStyles.infoLabel}>Empresa locadora</Text>
+                <Text style={vStyles.infoValor}>{v.fornecedor}</Text>
+              </View>
+            ) : null}
           </View>
           {v.observacoes ? (
             <Text style={{ fontSize: 10, color: SLATE_500, marginTop: 4 }}>

@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeOperar, podeGerenciarFinanceiro } from "@/lib/auth";
 import { hojeSaoPaulo } from "@/lib/locacao";
+import { tipoAnexoValido } from "@/lib/vistoria";
 import { erroDeEscrita } from "@/lib/acoes";
 
 export type VistoriaFormState = { error?: string; ok?: boolean };
@@ -78,13 +79,20 @@ export async function excluirVistoria(formData: FormData) {
   const id = (formData.get("id") as string | null)?.trim();
   if (!id) return;
   const supabase = await createClient();
-  // Remove as fotos do storage antes de apagar a vistoria.
-  const { data: fotos } = await supabase
-    .from("vistoria_foto")
-    .select("path")
-    .eq("vistoria_id", id);
-  if (fotos?.length) {
-    await supabase.storage.from("vistorias").remove(fotos.map((f) => f.path));
+  // Remove os ARQUIVOS do storage antes de apagar a vistoria. Fotos e anexos
+  // vivem na mesma bucket: limpar só as fotos deixaria o protocolo órfão —
+  // arquivo sem dono, ocupando armazenamento e invisível na interface, porque a
+  // linha que o apontava foi apagada em cascata com a vistoria.
+  const [{ data: fotos }, { data: anexos }] = await Promise.all([
+    supabase.from("vistoria_foto").select("path").eq("vistoria_id", id),
+    supabase.from("vistoria_anexo").select("path").eq("vistoria_id", id),
+  ]);
+  const paths = [
+    ...(fotos ?? []).map((f) => f.path as string),
+    ...(anexos ?? []).map((a) => a.path as string),
+  ];
+  if (paths.length) {
+    await supabase.storage.from("vistorias").remove(paths);
   }
   const erro = erroDeEscrita(
     await supabase.from("vistoria").delete().eq("id", id).select("id"),
@@ -113,6 +121,60 @@ export async function registrarFoto(vistoriaId: string, path: string) {
     return { error: "A foto foi enviada, mas não ficou registrada na vistoria." };
   }
   revalidatePath(`/vistorias/${vistoriaId}`);
+}
+
+/**
+ * Registra no banco um anexo já enviado ao storage pelo cliente.
+ *
+ * Espelha `registrarFoto`, e pela mesma razão de ordem: o arquivo sobe primeiro
+ * e a linha vem depois, então falhar aqui deixa arquivo órfão. Dizer isso é
+ * melhor que o uploader anunciar sucesso sobre um documento que a vistoria não
+ * tem.
+ */
+export async function registrarAnexo(
+  vistoriaId: string,
+  path: string,
+  tipo: string,
+  descricao: string | null,
+) {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) return;
+  const supabase = await createClient();
+  const { error } = await supabase.from("vistoria_anexo").insert({
+    org_id: perfil.org_id,
+    vistoria_id: vistoriaId,
+    // Valor de fora não entra cru numa coluna com `check`: o banco recusaria a
+    // linha e o usuário veria "não ficou registrado" sem saber por quê.
+    tipo: tipoAnexoValido(tipo),
+    descricao: descricao?.trim() || null,
+    path,
+  });
+  if (error) {
+    console.error("registrarAnexo", error);
+    return {
+      error: "O arquivo foi enviado, mas não ficou registrado na vistoria.",
+    };
+  }
+  revalidatePath(`/vistorias/${vistoriaId}`);
+}
+
+export async function excluirAnexo(formData: FormData) {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id || !podeOperar(perfil.papel)) {
+    return { error: "Você não tem permissão para excluir anexos." };
+  }
+  const id = (formData.get("id") as string | null)?.trim();
+  const path = (formData.get("path") as string | null)?.trim();
+  const vistoriaId = (formData.get("vistoria_id") as string | null)?.trim();
+  if (!id || !path) return;
+  const supabase = await createClient();
+  await supabase.storage.from("vistorias").remove([path]);
+  const erro = erroDeEscrita(
+    await supabase.from("vistoria_anexo").delete().eq("id", id).select("id"),
+    { registro: "anexo", contexto: "excluirAnexo" },
+  );
+  if (erro) return { error: erro };
+  if (vistoriaId) revalidatePath(`/vistorias/${vistoriaId}`);
 }
 
 export async function excluirFoto(formData: FormData) {
