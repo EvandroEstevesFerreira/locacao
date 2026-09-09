@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.98.0";
+export const APP_VERSION = "0.98.1";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,17 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.98.1",
+    data: "2026-09-09",
+    titulo: "Tres consertos no mutirao, e a limpeza dos duplicados",
+    mudancas: [
+      { tipo: "correcao", texto: "O mutirão reemitia as mesmas peças a cada clique, porque a tela não limpava a seleção entre rodadas. Isso gerou 48 termos duplicados — uma peça chegou a ter quatro. Os 48 foram cancelados, com o motivo registrado, e a custódia das 95 peças ficou intacta." },
+      { tipo: "correcao", texto: "A tela dizia que os e-mails foram para a caixa de teste sem ter base para isso. Agora ela conta o que aconteceu: quantos termos saíram, quantas peças foram ignoradas por já terem dono, e o motivo exato quando a via por e-mail não sai." },
+      { tipo: "correcao", texto: "O nome de quem está com a peça aparece na lista da Frota em qualquer categoria, inclusive em Todas. Antes ele só surgia depois de clicar numa categoria — e como todas as peças são de TI, as duas telas mostravam o mesmo conjunto com informações diferentes." },
+      { tipo: "seguranca", texto: "Peça que já tem dono registrado não entra numa nova emissão, agora conferido no servidor. É a segunda barreira contra o duplicado: a primeira é a tela limpar a seleção." },
+    ],
+  },
   {
     versao: "0.98.0",
     data: "2026-09-09",

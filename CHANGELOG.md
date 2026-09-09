@@ -7,6 +7,81 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.98.1] — 2026-09-09
+
+Tres consertos no mutirao, e a limpeza dos duplicados.
+
+### O que aconteceu em producao
+
+Primeira execucao real: **142 termos emitidos para 95 pecas**, 24 pecas em mais
+de um termo (pior caso: quatro), e **zero e-mails enviados** — com a tela
+afirmando que as vias foram para a caixa de teste.
+
+A custodia final estava **correta**: 95 posses abertas, nas pessoas certas.
+
+### Defeito 1 — a selecao nao era limpa entre rodadas
+
+`useState` so inicializa na montagem. O `router.refresh()` recarregava as
+propostas, mas o mapa de escolhas continuava com as pecas ja emitidas — e o
+clique seguinte pegava as **mesmas** 12.
+
+Reemitir nao estoura nada: `abrirCustodia` fecha a posse anterior e abre outra.
+Por isso o defeito passou silencioso — so sobraram documentos numerados a mais,
+sem ninguem saber qual valia.
+
+Duas barreiras agora: a tela remove do mapa o que foi emitido, e o servidor
+recusa peca que ja tenha custodia aberta.
+
+### Defeito 2 — eu descartava o motivo
+
+`emitirTermo` devolve em `aviso` o motivo exato quando a via nao sai. A action so
+olhava `ok` e montava a mensagem a partir de `emitidos.length > 0`.
+
+**Emitir um termo nao tem relacao com a via ter saido.** Trata-los como a mesma
+coisa produziu uma tela afirmando o que nao sabia — o mesmo defeito que a 0.90.3
+consertou no painel de fechamento do recebimento.
+
+`resumoDoMutirao()` em `src/lib/frota.ts`, seis casos por TDD. O que fixa a
+regressao: **a frase sobre envio so aparece quando nao houve aviso de envio.**
+
+### Defeito 3 — a coluna nao aparecia em "Todas"
+
+O nome do detentor so era mostrado quando `perfil !== "geral"`, isto e, com uma
+categoria selecionada. Em "Todas" o perfil cai em "geral" e a coluna exibia a
+obra. Com as 128 pecas em TI, "Todas" e "TI" mostravam o mesmo conjunto com
+informacao diferente.
+
+Agora o nome vem primeiro, independente do perfil. Nada se perde no perfil de
+obra: ali o `detentor_rotulo` e o proprio rotulo da obra.
+
+### A limpeza
+
+48 termos cancelados, com `motivo_cancelamento` registrado.
+
+**Feita em SQL de proposito, sem passar por `cancelarTermo`.** Aquela action
+chama `moverPecasDoTermo(id, "devolucao")`, que devolve as pecas para
+`disponivel` e **fecha a custodia** — inclusive a atual, que pertence a outro
+termo. Cancelar por ali teria destruido exatamente o que o mutirao acertou nas
+24 pecas repetidas.
+
+Recorte, medido antes: manter todo termo referenciado por
+`custodia_peca.termo_id` de posse aberta (95); cancelar o resto (48).
+`custodia_sem_termo = 0`, entao nada ficou orfao. Conferido depois: 95 posses
+abertas, 95 pecas em uso, 95 termos validos, **0 pecas em mais de um termo
+valido**.
+
+### Ainda em aberto
+
+**Por que nenhum e-mail saiu.** O modo de teste esta correto — a rota
+`/api/dev/emails` disparou 15 e-mails de galeria para a caixa configurada. E
+`termo_link` nao tem nenhuma linha de hoje, o que indica que
+`enviarViaDoFuncionario` parou antes do ponto onde o link e gerado. Dos 142
+termos, 65 sao de funcionarios **sem e-mail nenhum** no cadastro; 76 tinham
+e-mail conferido e mesmo assim nao receberam.
+
+O diagnostico agora e de um clique: `reenviarTermo` devolve `envio.motivo`
+direto na tela. Basta abrir um dos 95 termos e clicar em reenviar.
+
 ## [0.98.0] — 2026-09-09
 
 Regularizar a custódia emitindo os termos.

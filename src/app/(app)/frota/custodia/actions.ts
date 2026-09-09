@@ -21,7 +21,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeEditarCadastros } from "@/lib/auth";
 import { falha, primeiroErro, type ActionResult } from "@/lib/acoes";
-import { mutiraoTermosSchema } from "@/lib/frota";
+import { mutiraoTermosSchema, resumoDoMutirao } from "@/lib/frota";
 import { emTeste } from "@/lib/emails/modo-teste";
 import { hojeISOSaoPaulo } from "@/lib/locacao";
 import { salvarTermo, emitirTermo } from "../../termos/actions";
@@ -68,19 +68,46 @@ export async function emitirTermosDoMutirao(raw: unknown): Promise<ActionResult>
     ((pecas ?? []) as unknown as PecaBruta[]).map((p) => [p.id, p]),
   );
 
+  // PEÇA QUE JÁ TEM DONO NÃO ENTRA. Cinto e suspensório contra o defeito que
+  // custou 48 termos duplicados: a tela mantinha a seleção entre rodadas e cada
+  // clique reemitia as mesmas peças. Reemitir "funciona" — `abrirCustodia`
+  // fecha a posse anterior e abre outra —, então nada estoura: só sobram
+  // documentos numerados a mais, e ninguém sabe qual vale.
+  const { data: jaComDono } = await supabase
+    .from("custodia_peca")
+    .select("unidade_id")
+    .is("fim", null)
+    .in("unidade_id", unidadeIds);
+  const comDono = new Set(
+    ((jaComDono ?? []) as { unidade_id: string }[]).map((c) => c.unidade_id),
+  );
+
   // Um termo POR PESSOA, com todas as peças dela nesta rodada. Um termo por
   // peça daria três documentos para quem levou três máquinas no mesmo dia, e
   // três e-mails para assinar.
   const porFuncionario = new Map<string, string[]>();
+  let jaTinhamDono = 0;
   for (const par of parsed.data.pares) {
+    if (comDono.has(par.unidade_id)) {
+      jaTinhamDono += 1;
+      continue;
+    }
     const atual = porFuncionario.get(par.funcionario_id) ?? [];
     atual.push(par.unidade_id);
     porFuncionario.set(par.funcionario_id, atual);
+  }
+  if (porFuncionario.size === 0) {
+    return falha(
+      jaTinhamDono > 0
+        ? `Todas as ${jaTinhamDono} peças enviadas já têm dono registrado. Recarregue a tela.`
+        : "Nenhuma peça válida na seleção.",
+    );
   }
 
   const hoje = hojeISOSaoPaulo();
   const emitidos: string[] = [];
   const falhas: string[] = [];
+  const avisos: string[] = [];
 
   for (const [funcionarioId, ids] of porFuncionario) {
     const daPessoa = ids.map((id) => porId.get(id)).filter(Boolean) as PecaBruta[];
@@ -134,6 +161,13 @@ export async function emitirTermosDoMutirao(raw: unknown): Promise<ActionResult>
       falhas.push(emitido.erro);
       continue;
     }
+    // NÃO DESCARTAR O AVISO. `emitirTermo` devolve aqui o motivo exato quando a
+    // via por e-mail não sai — "sem e-mail cadastrado", "e-mail deduzido não
+    // conferido", "o envio falhou". A primeira versão desta action só olhava
+    // `ok` e anunciava "os e-mails foram para a caixa de teste" sem ter base:
+    // 142 termos emitidos, ZERO e-mails enviados, e nenhuma pista de por quê,
+    // porque a informação existia e era jogada fora aqui.
+    if (emitido.aviso) avisos.push(emitido.aviso);
     emitidos.push(termoId);
   }
 
@@ -144,11 +178,16 @@ export async function emitirTermosDoMutirao(raw: unknown): Promise<ActionResult>
   if (emitidos.length === 0) {
     return falha(falhas[0] ?? "Nenhum termo foi emitido.");
   }
+  // A mensagem é montada por `resumoDoMutirao`, que tem teste: a versão
+  // anterior afirmava "os e-mails foram para a caixa de teste" a partir de
+  // `emitidos.length > 0`, e emitir termo não tem relação com a via ter saído.
   return {
     ok: true,
-    aviso:
-      falhas.length > 0
-        ? `${emitidos.length} ${emitidos.length === 1 ? "termo" : "termos"} emitidos. ${falhas.length} falharam: ${falhas[0]}`
-        : `${emitidos.length} ${emitidos.length === 1 ? "termo emitido" : "termos emitidos"}. Os e-mails foram para a caixa de teste.`,
+    aviso: resumoDoMutirao({
+      emitidos: emitidos.length,
+      jaTinhamDono,
+      falhas,
+      avisos,
+    }),
   };
 }

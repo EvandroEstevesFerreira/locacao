@@ -347,3 +347,41 @@ export const mutiraoTermosSchema = z.object({
     .min(1, "Nada foi selecionado.")
     .max(12, "Doze peças por rodada. Confirme e clique de novo."),
 });
+
+/**
+ * A mensagem do mutirão, dizendo o que ACONTECEU.
+ *
+ * Existe porque a versão anterior mentia. Ela montava
+ * "N termos emitidos. Os e-mails foram para a caixa de teste" a partir de
+ * `emitidos.length > 0` — e emitir um termo não tem relação nenhuma com a via
+ * ter saído. Em 09/09/2026 isso produziu 142 termos emitidos, ZERO e-mails
+ * enviados, e a tela afirmando que as vias estavam na caixa de teste.
+ *
+ * Aqui a afirmação sobre envio só aparece quando NÃO houve aviso de envio. É a
+ * mesma regra do painel de fechamento do recebimento (0.90.3): não dizer o que
+ * não se sabe.
+ */
+export function resumoDoMutirao({
+  emitidos,
+  jaTinhamDono,
+  falhas,
+  avisos,
+}: {
+  emitidos: number;
+  jaTinhamDono: number;
+  falhas: string[];
+  /** Motivos devolvidos por `emitirTermo` quando a via não saiu. */
+  avisos: string[];
+}): string {
+  const partes = [`${emitidos} ${emitidos === 1 ? "termo emitido" : "termos emitidos"}`];
+  if (jaTinhamDono > 0) {
+    partes.push(`${jaTinhamDono} já tinham dono e foram ignoradas`);
+  }
+  if (falhas.length > 0) partes.push(`${falhas.length} falharam: ${falhas[0]}`);
+  if (avisos.length > 0) {
+    partes.push(`${avisos.length} sem e-mail: ${avisos[0]}`);
+  } else if (emitidos > 0) {
+    partes.push("vias enviadas para a caixa de teste");
+  }
+  return `${partes.join(" · ")}.`;
+}
