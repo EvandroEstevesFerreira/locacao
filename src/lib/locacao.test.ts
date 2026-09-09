@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
+  efeitoDaEdicao,
+  itemLocadoEdicaoSchema,
+  podeTrocarItem,
   periodosEntre,
   periodosPorMes,
   custoLinhaLocado,
@@ -239,5 +242,93 @@ describe("rotuloMes", () => {
   it("devolve vazio para mês inválido, em vez de 'undefined/NaN'", () => {
     expect(rotuloMes("2026-13")).toBe("");
     expect(rotuloMes(undefined)).toBe("");
+  });
+});
+
+describe("efeitoDaEdicao", () => {
+  it("sem devolução, a quantidade é livre e o item fica em aberto", () => {
+    expect(efeitoDaEdicao({ quantidade: 5, jaDevolvido: 0, dataUltimaDevolucao: null }))
+      .toEqual({ ok: true, status: "em_aberto", data_devolucao: null });
+  });
+
+  it("quantidade abaixo do já devolvido é recusada, dizendo o mínimo", () => {
+    const r = efeitoDaEdicao({ quantidade: 1, jaDevolvido: 3, dataUltimaDevolucao: "2026-09-01" });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.erro).toContain("3");
+  });
+
+  it("quantidade igual ao já devolvido zera o saldo e marca devolvido", () => {
+    expect(efeitoDaEdicao({ quantidade: 3, jaDevolvido: 3, dataUltimaDevolucao: "2026-09-01" }))
+      .toEqual({ ok: true, status: "devolvido", data_devolucao: "2026-09-01" });
+  });
+
+  it("subir a quantidade REABRE o item que estava devolvido", () => {
+    // O defeito que esta função existe para impedir: gravar só os campos
+    // deixaria o item "devolvido" com saldo 1 — devolvido e em uso ao mesmo
+    // tempo, que foi o defeito da 0.78.0 em outra tela.
+    expect(efeitoDaEdicao({ quantidade: 4, jaDevolvido: 3, dataUltimaDevolucao: "2026-09-01" }))
+      .toEqual({ ok: true, status: "em_aberto", data_devolucao: null });
+  });
+
+  it("devolvido sem data de devolução conhecida não inventa data", () => {
+    expect(efeitoDaEdicao({ quantidade: 2, jaDevolvido: 2, dataUltimaDevolucao: null }))
+      .toEqual({ ok: true, status: "devolvido", data_devolucao: null });
+  });
+
+  it("quantidade fracionada é comparada como número, não como texto", () => {
+    // "10" < "9" em ordem alfabética. Se a comparação vazasse para string, um
+    // item com 10 devolvidos aceitaria quantidade 9.
+    const r = efeitoDaEdicao({ quantidade: 9, jaDevolvido: 10, dataUltimaDevolucao: null });
+    expect(r.ok).toBe(false);
+  });
+});
+
+describe("podeTrocarItem", () => {
+  it("sem devolução registrada, pode trocar o equipamento", () => {
+    expect(podeTrocarItem(0)).toBe(true);
+  });
+
+  it("com devolução registrada, não pode — a devolução aponta para o equipamento antigo", () => {
+    expect(podeTrocarItem(1)).toBe(false);
+  });
+});
+
+describe("itemLocadoEdicaoSchema", () => {
+  const base = {
+    id: "11111111-1111-4111-8111-111111111111",
+    contrato_id: "22222222-2222-4222-8222-222222222222",
+    item_id: "33333333-3333-4333-8333-333333333333",
+    quantidade: "2",
+    valor_unitario_periodo: "650",
+    data_retirada: "2026-10-06",
+    data_devolucao_prevista: "",
+    identificacao: "CPU2017468",
+    frente_id: "",
+  };
+
+  it("aceita uma edição válida e coage os números", () => {
+    const r = itemLocadoEdicaoSchema.safeParse(base);
+    expect(r.success).toBe(true);
+    if (r.success) {
+      expect(r.data.quantidade).toBe(2);
+      expect(r.data.valor_unitario_periodo).toBe(650);
+      expect(r.data.id).toBe(base.id);
+    }
+  });
+
+  it("exige o id — sem ele não se sabe QUAL item editar", () => {
+    const semId: Record<string, unknown> = { ...base };
+    delete semId.id;
+    expect(itemLocadoEdicaoSchema.safeParse(semId).success).toBe(false);
+  });
+
+  it("mantém a regra cruzada do schema base: devolver antes de retirar", () => {
+    // A intersecção `.and()` não pode engolir o `.refine()` do schema original.
+    // Se engolisse, este caso passaria e o custo por período sairia negativo.
+    const r = itemLocadoEdicaoSchema.safeParse({
+      ...base,
+      data_devolucao_prevista: "2026-10-01",
+    });
+    expect(r.success).toBe(false);
   });
 });

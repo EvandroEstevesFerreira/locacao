@@ -141,6 +141,16 @@ const VAZIOS: Record<string, unknown> = {
     data_devolucao_prevista: "",
     identificacao: "",
   },
+  itemLocadoEdicaoSchema: {
+    id: "",
+    contrato_id: "",
+    item_id: "",
+    quantidade: "",
+    valor_unitario_periodo: "",
+    data_retirada: "",
+    data_devolucao_prevista: "",
+    identificacao: "",
+  },
   itemSchema: { tipo: "equipamento", descricao: "", unidade: "", ativo: true },
   configRelatorioSchema: {
     ativo: false,

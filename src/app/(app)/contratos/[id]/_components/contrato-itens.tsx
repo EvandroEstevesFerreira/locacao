@@ -4,7 +4,12 @@ import { listarFrentesDoContrato } from "@/lib/data/frentes";
 
 import { createClient } from "@/lib/supabase/server";
 import { obterItensLocadosCalculados } from "@/lib/data/contratos";
-import { CADENCIA, formatarBRL, formatarData, type Cadencia } from "@/lib/locacao";
+import {
+  CADENCIA,
+  formatarBRL,
+  formatarData,
+  type Cadencia,
+} from "@/lib/locacao";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -24,6 +29,7 @@ import {
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { AddItemLocadoForm } from "../../add-item-locado-form";
 import { DevolucaoForm } from "../../devolucao-form";
+import { EditarItemLocadoForm } from "../../editar-item-locado-form";
 import { excluirItemLocado } from "../../actions";
 
 export async function ContratoItens({
@@ -73,9 +79,9 @@ export async function ContratoItens({
         <CardHeader>
           <CardTitle className="text-base">Itens locados</CardTitle>
           <CardDescription>
-            Custo estimado = quantidade × valor por período × períodos decorridos
-            (cadência {CADENCIA[cadencia].label.toLowerCase()}). A devolução pode
-            ser parcial, até zerar o saldo.
+            Custo estimado = quantidade × valor por período × períodos
+            decorridos (cadência {CADENCIA[cadencia].label.toLowerCase()}). A
+            devolução pode ser parcial, até zerar o saldo.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -126,7 +132,9 @@ export async function ContratoItens({
                     </TableCell>
                     <TableCell>
                       <Badge
-                        variant={l.status === "devolvido" ? "secondary" : "default"}
+                        variant={
+                          l.status === "devolvido" ? "secondary" : "default"
+                        }
                       >
                         {l.status === "devolvido" ? "Devolvido" : "Em aberto"}
                       </Badge>
@@ -141,18 +149,47 @@ export async function ContratoItens({
                             saldo={l.saldo}
                           />
                         ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
+                          <span className="text-xs text-muted-foreground">
+                            —
+                          </span>
                         )}
                       </TableCell>
                     ) : null}
                     {podeEditar ? (
                       <TableCell>
-                        <ConfirmDelete
-                          action={excluirItemLocado}
-                          id={l.id}
-                          hidden={{ contrato_id: contratoId }}
-                          mensagem="Remover este item do contrato?"
-                        />
+                        {/* Editar e excluir na MESMA célula, e não em colunas
+                            separadas: a tabela tem dez colunas e só passou a
+                            caber sem barra horizontal na 0.90.3. Uma coluna a
+                            mais reabriria a barra por ~40px. */}
+                        <div className="flex items-center gap-1">
+                          <EditarItemLocadoForm
+                            contratoId={contratoId}
+                            itens={catalogo}
+                            frentes={frentes}
+                            cadencia={cadencia}
+                            prorata={prorata}
+                            item={{
+                              id: l.id,
+                              item_id: l.item_id,
+                              frente_id: l.frente_id,
+                              quantidade: l.quantidade,
+                              valor_unitario_periodo: l.valor_unitario_periodo,
+                              data_retirada: l.data_retirada,
+                              data_devolucao_prevista:
+                                l.data_devolucao_prevista,
+                              identificacao: l.identificacao,
+                              descricao: l.item?.descricao ?? "Item",
+                              // Sem consulta nova: o saldo já vem calculado.
+                              jaDevolvido: l.quantidade - l.saldo,
+                            }}
+                          />
+                          <ConfirmDelete
+                            action={excluirItemLocado}
+                            id={l.id}
+                            hidden={{ contrato_id: contratoId }}
+                            mensagem="Remover este item do contrato?"
+                          />
+                        </div>
                       </TableCell>
                     ) : null}
                   </TableRow>

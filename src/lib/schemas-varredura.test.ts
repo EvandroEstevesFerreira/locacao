@@ -169,6 +169,14 @@ const AMOSTRAS: Record<string, unknown> = {
     valor_unitario_periodo: "100",
     data_retirada: "2026-08-01",
   },
+  itemLocadoEdicaoSchema: {
+    id: UUID,
+    contrato_id: UUID,
+    item_id: UUID,
+    quantidade: "2",
+    valor_unitario_periodo: "100",
+    data_retirada: "2026-08-01",
+  },
   itemSchema: { natureza: "equipamento", descricao: "Betoneira 400L", ativo: true },
   configRelatorioSchema: {
     ativo: false,
