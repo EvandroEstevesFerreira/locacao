@@ -7,6 +7,59 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.98.0] — 2026-09-09
+
+Regularizar a custódia emitindo os termos.
+
+### O caminho certo, e por que só hoje ficou barato
+
+A 0.97.1 estabeleceu que posse de funcionário nasce do TERMO — o check
+`custodia_funcionario_exige_termo` (0059) não é obstáculo a contornar, é a
+regra. Então o mutirão emite termos, e a custódia nasce por `moverPecasDoTermo`
+com `origem: 'termo'`.
+
+Isso era inviável até esta manhã: regularizar 95 peças exigiria 95 pessoas
+assinando na tela. A **0.96.0** tornou a assinatura opcional na emissão — cada
+pessoa recebe a via com o link e o sistema cobra a cada 3 dias.
+
+### A trava, que é a decisão mais importante do arquivo
+
+`emitirTermosDoMutirao` **recusa rodar se `EMAIL_MODO_TESTE` estiver
+desligado**, no servidor:
+
+```ts
+if (!emTeste()) {
+  return falha("O modo de teste de e-mail está DESLIGADO. …");
+}
+```
+
+Emitir 50 termos manda 50 e-mails a 50 pessoas, com link de assinatura e
+cobrança a cada 3 dias. O acidente não tem desfazer — e-mail enviado não volta.
+A trava fica no servidor porque a tela pode estar velha, e não depende de
+alguém ter conferido a variável na Vercel antes de clicar.
+
+### Três decisões de lote
+
+- **Um termo por PESSOA**, não por peça: quem levou três máquinas no mesmo dia
+  recebe um documento, não três — e um pedido de assinatura, não três.
+- **Doze peças por rodada** (`mutiraoTermosSchema`). Não é limite de digitação:
+  cada termo gera um PDF e um e-mail, e cinquenta numa requisição estouraria o
+  tempo da função — deixando metade emitida sem ninguém saber quais. A tela diz
+  quantas faltam.
+- **`obra_id` só quando todas as peças da pessoa estão na mesma obra.** Escolher
+  uma das duas poria no documento uma obra que não vale para metade dos itens.
+
+### Detalhes que não são óbvios
+
+- Os dados do termo (`item_id`, `controle`) são lidos do BANCO, não do que o
+  cliente mandou: eles decidem se o termo aceita a linha, e confiar no
+  formulário deixaria uma requisição forjada montar termo inconsistente.
+- `estado_entrega` cai em `bom` quando a peça não tem estado no cadastro. O
+  termo exige um valor, e `com_avaria` acusaria dano que ninguém viu.
+- O comentário do topo de `mutirao-form.tsx` foi reescrito. Ele dizia "POR QUE
+  ESTA TELA NÃO GRAVA", da 0.97.1, e agora ela grava — comentário desatualizado
+  é pior que nenhum.
+
 ## [0.97.1] — 2026-09-09
 
 A tela de custódia parou de prometer o que não fazia.

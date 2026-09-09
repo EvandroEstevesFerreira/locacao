@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.97.1";
+export const APP_VERSION = "0.98.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,18 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.98.0",
+    data: "2026-09-09",
+    titulo: "Regularizar a custódia emitindo os termos",
+    mudancas: [
+      { tipo: "novo", texto: "O mutirão de custódia passa a emitir os termos de responsabilidade. Cada funcionário recebe um termo com as peças dele, a via em PDF e o link para assinar — e é a emissão que registra quem está com cada máquina." },
+      { tipo: "novo", texto: "Um termo por pessoa, não por peça. Quem levou três máquinas no mesmo dia recebe um documento, não três." },
+      { tipo: "seguranca", texto: "A emissão em lote só funciona com o modo de teste de e-mail ligado, e o servidor recusa se estiver desligado. Emitir 50 termos manda 50 e-mails a 50 pessoas, e e-mail enviado não volta — a trava não depende de alguém ter conferido a configuração antes de clicar." },
+      { tipo: "melhoria", texto: "Doze peças por rodada, com o contador de quantas faltam. Cada termo gera um PDF, e cinquenta de uma vez estourariam o tempo do servidor deixando metade emitida sem ninguém saber quais." },
+      { tipo: "melhoria", texto: "A obra só entra no termo quando todas as peças da pessoa estão na mesma obra. Escolher uma das duas poria no documento uma obra que não vale para metade dos itens." },
+    ],
+  },
   {
     versao: "0.97.1",
     data: "2026-09-09",

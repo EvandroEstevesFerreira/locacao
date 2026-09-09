@@ -330,6 +330,11 @@ export type PropostaMutirao = {
   identificador: string;
   itemDescricao: string;
   obraRotulo: string | null;
+  /** Campos que o TERMO exige — é ele que cria a custódia. */
+  itemId: string;
+  controle: "peca" | "quantidade";
+  obraId: string | null;
+  estado: "novo" | "bom" | "regular" | "com_avaria" | null;
   /** O nome como está escrito nas observações. */
   nomeNoTexto: string;
   casamento: Casamento;
@@ -357,7 +362,8 @@ export async function listarMutiraoDeCustodia(): Promise<{
     supabase
       .from("equipamento_unidade")
       .select(
-        "id, identificador, observacoes, item:item_id(descricao), obra:obra_id(codigo, nome)",
+        "id, identificador, observacoes, item_id, obra_id, estado, " +
+          "item:item_id(descricao, controle), obra:obra_id(codigo, nome)",
       )
       .eq("situacao", "em_uso")
       .order("identificador"),
@@ -379,7 +385,10 @@ export async function listarMutiraoDeCustodia(): Promise<{
     id: string;
     identificador: string;
     observacoes: string | null;
-    item: { descricao: string } | null;
+    item_id: string;
+    obra_id: string | null;
+    estado: "novo" | "bom" | "regular" | "com_avaria" | null;
+    item: { descricao: string; controle: "peca" | "quantidade" } | null;
     obra: { codigo: string; nome: string } | null;
   };
 
@@ -393,6 +402,13 @@ export async function listarMutiraoDeCustodia(): Promise<{
       identificador: p.identificador,
       itemDescricao: p.item?.descricao ?? "—",
       obraRotulo: p.obra ? `${p.obra.codigo} — ${p.obra.nome}` : null,
+      itemId: p.item_id,
+      // `quantidade` por segurança: `controle = 'peca'` exige patrimônio no
+      // termo, e o `unidade_id` sempre vai — mas se o catálogo disser
+      // quantidade, o schema do termo recusaria a exigência.
+      controle: p.item?.controle ?? "quantidade",
+      obraId: p.obra_id,
+      estado: p.estado,
       nomeNoTexto,
       casamento: casarFuncionario(nomeNoTexto, funcionarios),
     });
