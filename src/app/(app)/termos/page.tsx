@@ -62,7 +62,7 @@ export default async function TermosPage({
   const temFiltro = Boolean(um(sp.q) || um(sp.obra) || um(sp.situacao));
 
   return (
-    <div className="space-y-6">
+    <div className="pagina-lista space-y-6">
       <PageHeader
         titulo="Termos de responsabilidade"
         descricao={`${total} ${total === 1 ? "termo" : "termos"} · quem está com cada equipamento`}

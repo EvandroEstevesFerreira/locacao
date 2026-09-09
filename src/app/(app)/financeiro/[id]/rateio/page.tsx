@@ -24,7 +24,7 @@ export default async function RateioPage({
   if (!ctx) notFound();
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="pagina-form space-y-6">
       <PageHeader
         titulo="Ratear por item"
         descricao={`${ctx.descricao} · atribua o custo às linhas do contrato`}

@@ -14,7 +14,7 @@ export default async function NovoImovelPage() {
   const obras = await listarObrasParaFiltro();
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="pagina-form space-y-6">
       <PageHeader titulo="Novo imóvel" descricao="Cadastre um imóvel locado." />
       <Card>
         <CardContent className="pt-6">

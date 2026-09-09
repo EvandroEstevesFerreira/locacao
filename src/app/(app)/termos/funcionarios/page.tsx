@@ -130,7 +130,7 @@ export default async function FuncionariosPage({
     : null;
 
   return (
-    <div className="space-y-6">
+    <div className="pagina-lista space-y-6">
       <PageHeader
         titulo="Funcionários"
         descricao="Quem recebe equipamento e assina o termo de responsabilidade"

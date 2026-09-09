@@ -306,6 +306,45 @@ table tbody td .font-mono {
   background: color-mix(in oklab, var(--muted-foreground) 50%, transparent);
 }
 
+/* ── Largura da página, por PAPEL de tela ────────────────────────────
+   O app chegou a oito larguras de container — md, 2xl, 3xl, 4xl, 5xl, 6xl,
+   1536px e "sem cap nenhum" — em 67 telas. Cada uma foi escolhida na hora de
+   acomodar a tabela do dia, e o resultado é barra de rolagem horizontal onde
+   há tela sobrando: /contratos capada em 1152px mostrava barra numa janela de
+   1920px, com ~400px vazios de cada lado, enquanto /frota, sem cap, exibia
+   uma lista mais larga sem barra.
+
+   Três papéis, três larguras. Incluem o `margin-inline: auto` de propósito:
+   isto É o container da página, não um `max-width` que alguém combina com um
+   `mx-auto` e às vezes esquece.
+
+   Mudar a largura de todas as listas do app é uma linha aqui, não vinte
+   arquivos. `src/lib/largura-de-pagina.test.ts` impede que a próxima tela
+   invente o nono cap. */
+@utility pagina-form {
+  /* Formulário e registro único: 672px. Acima disso o campo fica largo demais
+     para o dado que recebe, e o olho perde a linha entre rótulo e valor. */
+  margin-inline: auto;
+  max-width: 42rem;
+}
+
+@utility pagina-leitura {
+  /* Detalhe e texto corrido: 896px. Linha de leitura confortável. */
+  margin-inline: auto;
+  max-width: 56rem;
+}
+
+@utility pagina-lista {
+  /* Tabela: 1536px. A de itens locados do contrato pede ~1420px, e é a mais
+     larga do app — o cap é ela mais folga, não um número redondo qualquer.
+
+     `max-width` NÃO força largura: em janela estreita a página encolhe junto e
+     a tabela rola DENTRO do card (`overflow-x-auto` do ui/table), sem nunca
+     empurrar o menu nem o cabeçalho para fora. */
+  margin-inline: auto;
+  max-width: 96rem;
+}
+
 /* ── scrollbar-sutil: quase invisível, aparece no hover do pai.
       Usar em painéis estreitos (sidebar, listas internas), onde a barra
       cinza de 10px do default fica intrusiva. ────────────────────────── */

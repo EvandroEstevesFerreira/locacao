@@ -25,7 +25,7 @@ export default async function EditarImovelPage({
   if (!imovel) notFound();
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="pagina-form space-y-6">
       <PageHeader titulo="Editar imóvel" descricao={imovel.apelido} />
       <Card>
         <CardContent className="pt-6">

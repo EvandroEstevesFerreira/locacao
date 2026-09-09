@@ -49,7 +49,7 @@ export default async function ConferirEmailsPage() {
     }));
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="pagina-leitura space-y-6">
       <PageHeader
         titulo="Conferir e-mails"
         descricao={

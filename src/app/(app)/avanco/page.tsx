@@ -22,7 +22,7 @@ export default async function AvancoPage() {
   const pendentes = obras.filter((o) => o.semanaAtual === null).length;
 
   return (
-    <div className="space-y-6">
+    <div className="pagina-lista space-y-6">
       <PageHeader
         titulo="Avanço das obras"
         descricao={

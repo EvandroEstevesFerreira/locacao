@@ -71,7 +71,7 @@ export default async function RelatoriosPage({
   const grafico = dadosGrafico(relatorio);
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    <div className="pagina-lista space-y-6">
       <PageHeader
         titulo="Relatórios"
         descricao="Gere relatórios com filtros e exporte em PDF ou Excel."

@@ -87,7 +87,7 @@ export default async function ContratoDetalhePage({
        Tailwind v4 não tem `max-w-screen-2xl`, daí o valor literal.
        Abaixo de ~1540px a barra volta, e aí ela está certa: o conteúdo
        realmente não cabe. O que a tirava era a tela sobrando sem uso. */
-    <div className="mx-auto flex max-w-[1536px] flex-col gap-6">
+    <div className="pagina-lista flex flex-col gap-6">
       <PageHeader
         titulo={`Contrato ${contrato.numero}`}
         descricao={obra ? `${obra.codigo} — ${obra.nome}` : undefined}

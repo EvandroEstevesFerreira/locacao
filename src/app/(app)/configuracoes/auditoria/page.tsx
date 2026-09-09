@@ -79,7 +79,7 @@ export default async function AuditoriaPage() {
   };
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="pagina-lista space-y-6">
       <PageHeader
         titulo="Auditoria"
         descricao="Quem criou, alterou ou excluiu registros — 200 eventos mais recentes."

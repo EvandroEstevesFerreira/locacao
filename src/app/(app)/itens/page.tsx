@@ -87,7 +87,7 @@ export default async function ItensPage({
   // "o filtro não achou nada", que precisa do trilho para a pessoa sair de lá.
   if (totalDeModelos === 0 && !buscando) {
     return (
-      <div className="mx-auto max-w-5xl space-y-6">
+      <div className="pagina-lista space-y-6">
         <PageHeader
           titulo="Itens"
           descricao="Catálogo de equipamentos e materiais — próprios e locados."
@@ -111,7 +111,7 @@ export default async function ItensPage({
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    <div className="pagina-lista space-y-6">
       <PageHeader
         titulo={categoriaAtual ? categoriaAtual.nome : "Itens"}
         descricao={

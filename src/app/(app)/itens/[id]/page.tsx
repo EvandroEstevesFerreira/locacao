@@ -66,7 +66,7 @@ export default async function EditarItemPage({
   const obras = tipo === "equipamento" ? await listarObrasParaFiltro() : [];
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="pagina-form space-y-6">
       <PageHeader titulo="Editar item" descricao={item.descricao} />
 
       <Card>

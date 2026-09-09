@@ -19,7 +19,7 @@ export default async function EmpresaPage() {
     .single();
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="pagina-leitura space-y-6">
       <PageHeader
         titulo="Dados da empresa"
         descricao="Cadastro completo da organização — usado nos contratos e documentos."

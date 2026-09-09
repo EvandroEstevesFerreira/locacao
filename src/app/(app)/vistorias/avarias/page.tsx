@@ -78,7 +78,7 @@ export default async function AvariasPage({
   const aApurar = linhas.filter((a) => a.responsabilidade === "indefinida").length;
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    <div className="pagina-lista space-y-6">
       <PageHeader
         titulo="Avarias"
         descricao={`Danos constatados em equipamento, e a apuração de quem responde. · ${contagem(total, "avaria", "avarias")} no filtro${

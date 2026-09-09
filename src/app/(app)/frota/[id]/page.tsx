@@ -95,7 +95,7 @@ export default async function PecaDetalhePage({
   const info = SITUACAO_INFO[peca.situacao];
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-6">
+    <div className="pagina-lista flex flex-col gap-6">
       <PageHeader
         titulo={peca.identificador}
         descricao={peca.itemDescricao}

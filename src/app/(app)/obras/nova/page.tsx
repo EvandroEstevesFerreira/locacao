@@ -11,7 +11,7 @@ export default async function NovaObraPage() {
   if (!podeEditarCadastros(perfil?.papel)) redirect("/obras");
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="pagina-form space-y-6">
       <PageHeader titulo="Nova obra" descricao="Cadastre uma obra da organização." />
       <Card>
         <CardContent className="pt-6">

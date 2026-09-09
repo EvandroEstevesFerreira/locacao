@@ -7,6 +7,84 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.93.0] — 2026-09-09
+
+Toda tela com a largura do seu tipo.
+
+### O levantamento
+
+Oito larguras de container em 67 telas: `md` (448), `2xl` (672), `3xl` (768),
+`4xl` (896), `5xl` (1024), `6xl` (1152), `[1536px]` e **sem cap nenhum** (6
+telas). Não foi desleixo de uma pessoa — cada um escolheu um cap na hora de
+acomodar a tabela do dia, porque não havia regra a seguir.
+
+E a inconsistência não estava espalhada: os 18 formulários em `2xl` já estavam
+alinhados. O caos estava **inteiro** nas 20 telas com tabela, distribuídas por
+`4xl`, `5xl`, `6xl`, `1536px` e sem cap. O sintoma que se vê é barra horizontal
+onde há tela sobrando: `/contratos` em 1152px mostrava barra numa janela de
+1920px com ~400px vazios de cada lado, enquanto `/frota`, sem cap, exibia uma
+lista mais larga sem barra alguma.
+
+### Adicionado
+
+- Três utilitários em `globals.css`, no mecanismo `@utility` que o projeto já
+  usava para `scrollbar-sutil`:
+
+  | Utilitário | Largura | Papel |
+  |---|---|---|
+  | `pagina-form` | 42rem (672px) | formulário e registro único |
+  | `pagina-leitura` | 56rem (896px) | detalhe e texto corrido |
+  | `pagina-lista` | 96rem (1536px) | tabela |
+
+  Incluem `margin-inline: auto` de propósito: isto **é** o container da página,
+  não um `max-width` que alguém combina com um `mx-auto` e às vezes esquece.
+  Mudar a largura de todas as listas passa a ser uma linha, não 20 arquivos.
+
+- `src/lib/largura-de-pagina.test.ts`: varredura sem lista de rotas a manter.
+  Exige que toda página declare um papel, que nenhuma volte ao `mx-auto max-w-*`
+  cru, e que nenhuma use dois papéis (o caso do retorno antecipado que fica com
+  o cap antigo). É o que impede o nono cap.
+
+### Alterado
+
+67 telas: 27 `pagina-lista`, 23 `pagina-form`, 17 `pagina-leitura`.
+
+O mapeamento partiu do cap antigo, mas o **papel manda** onde os dois
+divergiam — e divergiam nos dois sentidos:
+
+- quatro telas com tabela estavam em `4xl` (`/usuarios`,
+  `/configuracoes/auditoria`, `/imoveis/[id]`, `/treinamento/pendentes`) →
+  `pagina-lista`;
+- três formulários estavam em `3xl`/`4xl` (`/imoveis/novo`,
+  `/frota/reparos/nova`, `/imoveis/[id]/editar`, `/termos/novo`) →
+  `pagina-form`.
+
+Deixar essas sete como estavam manteria exatamente o defeito que a regra existe
+para resolver: duas telas do mesmo tipo com larguras diferentes.
+
+### O que isto NÃO faz
+
+A barra horizontal **continua aparecendo em janela estreita**, por decisão
+explícita: `ui/table.tsx` segue com `whitespace-nowrap` em toda célula, e
+"SJUSTINO CONSTRUCOES LOCACOES E SERVICOS LTDA" ocupa ~330px numa linha só. O
+que o `max-width` garante é que a página nunca fica mais larga que a janela e
+que a rolagem acontece **dentro do card** (`overflow-x-auto` do primitivo), sem
+empurrar menu, cabeçalho ou busca para fora. Degradação elegante, não ausência
+de barra. Liberar a quebra nas colunas de texto longo é o próximo passo, se e
+quando incomodar.
+
+### Verificado
+
+Os três utilitários conferidos no CSS **de produção** — o Tailwind v4 descarta
+declaração inválida em silêncio, e uma `@utility` que não compilasse tiraria a
+largura de todas as 67 telas sem erro nenhum:
+
+```
+.pagina-form{max-width:42rem;margin-inline:auto}
+.pagina-leitura{max-width:56rem;margin-inline:auto}
+.pagina-lista{max-width:96rem;margin-inline:auto}
+```
+
 ## [0.92.0] — 2026-09-09
 
 Editar o item locado.

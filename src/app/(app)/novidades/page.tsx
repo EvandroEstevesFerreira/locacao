@@ -8,7 +8,7 @@ export const metadata = { title: "Novidades — Loca" };
 
 export default function NovidadesPage() {
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="pagina-leitura space-y-6">
       <PageHeader
         titulo="Novidades"
         descricao="Histórico de versões e melhorias do Loca, da mais recente para a mais antiga."

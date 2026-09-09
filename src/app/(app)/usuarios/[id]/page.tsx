@@ -37,7 +37,7 @@ export default async function EditarUsuarioPage({
   if (!usuario) notFound();
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="pagina-form space-y-6">
       <PageHeader
         titulo="Editar usuário"
         descricao={usuario.nome ?? usuario.email ?? ""}

@@ -57,7 +57,7 @@ export default async function ImoveisPage({
   ]);
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    <div className="pagina-lista space-y-6">
       <PageHeader
         titulo="Imóveis"
         descricao="Kitnets, apartamentos, casas, galpões e escritórios locados pela Sistenge."

@@ -14,7 +14,7 @@ export default async function NovoFornecedorPage() {
   const obras = await listarObrasParaFiltro();
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="pagina-form space-y-6">
       <PageHeader
         titulo="Novo fornecedor"
         descricao="Cadastre uma locadora ou fornecedor."

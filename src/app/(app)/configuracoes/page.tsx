@@ -58,7 +58,7 @@ export default async function ConfiguracoesPage() {
   };
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8">
+    <div className="pagina-form space-y-8">
       <PageHeader
         titulo="Configurações"
         descricao="Cadastros da organização, documentos e automações de e-mail."

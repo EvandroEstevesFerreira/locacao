@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.92.0";
+export const APP_VERSION = "0.93.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,17 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.93.0",
+    data: "2026-09-09",
+    titulo: "Toda tela com a largura do seu tipo",
+    mudancas: [
+      { tipo: "melhoria", texto: "As telas de lista usam a largura da tela. A de contratos estava limitada a 1.152 px e mostrava barra de rolagem horizontal numa janela de 1.920 px, com espaço vazio dos dois lados — e o mesmo valia para financeiro, imóveis, recebimentos, devoluções, reparos, vistorias, obras, fornecedores, itens e relatórios." },
+      { tipo: "melhoria", texto: "Larguras iguais para telas do mesmo tipo. O sistema tinha oito larguras diferentes espalhadas por 67 telas: duas listas do mesmo tipo saíam com tamanhos distintos, e dois formulários de cadastro também. Agora são três, uma por tipo de tela: cadastro, leitura e lista." },
+      { tipo: "melhoria", texto: "Tela nova não inventa mais uma nona largura: um teste confere as 67 telas e reprova quem não declarar de que tipo é." },
+      { tipo: "correcao", texto: "Quatro telas com tabela estavam com largura de tela de leitura — usuários, auditoria, imóvel e treinamentos pendentes — e três cadastros estavam com largura de leitura. Cada uma foi para a largura do seu tipo." },
+    ],
+  },
   {
     versao: "0.92.0",
     data: "2026-09-09",

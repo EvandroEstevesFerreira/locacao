@@ -29,7 +29,7 @@ export default async function PerfilPage() {
   const info = PAPEL_INFO[perfil.papel];
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="pagina-form space-y-6">
       <PageHeader
         titulo="Meu perfil"
         descricao="Seus dados de acesso ao sistema."

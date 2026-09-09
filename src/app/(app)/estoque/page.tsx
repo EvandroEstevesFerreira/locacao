@@ -113,7 +113,7 @@ export default async function EstoquePage({
   const negativos = saldoNegativo(linhas);
 
   return (
-    <div className="space-y-6">
+    <div className="pagina-lista space-y-6">
       <PageHeader
         titulo="Estoque"
         descricao={`Saldo dos itens controlados por quantidade · consumo dos últimos 90 dias`}

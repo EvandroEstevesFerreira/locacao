@@ -60,7 +60,7 @@ export default async function OrdemReparoPage({
     reparo.previsto_para < hoje;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="pagina-leitura space-y-6">
       <PageHeader
         titulo={`Ordem ${formatarNumero(reparo.numero_registro)}`}
         descricao={`${reparo.unidadeIdentificador ?? "Peça"} · ${

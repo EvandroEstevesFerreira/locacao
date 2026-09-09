@@ -76,7 +76,7 @@ export default async function ReparosPage({
   ).length;
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    <div className="pagina-lista space-y-6">
       <PageHeader
         titulo="Ordens de reparo"
         descricao={`Equipamento em conserto: onde está, desde quando e quanto custa. · ${contagem(total, "ordem", "ordens")} no filtro${

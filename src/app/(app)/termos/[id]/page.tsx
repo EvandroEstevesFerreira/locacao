@@ -82,7 +82,7 @@ export default async function TermoDetalhePage({
     termo.assinaturas.some((a) => a.momento === "entrega" && a.papel === "funcionario");
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-6">
+    <div className="pagina-lista flex flex-col gap-6">
       <PageHeader
         titulo={rascunho ? "Termo em rascunho" : formatarNumero(termo.numero_registro)}
         descricao={`${termo.funcionario_nome}${

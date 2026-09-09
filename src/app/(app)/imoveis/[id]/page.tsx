@@ -61,7 +61,7 @@ export default async function ImovelDetalhePage({
   if (!imovel) notFound();
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="pagina-lista space-y-6">
       <PageHeader
         titulo={imovel.apelido}
         descricao={tipoImovelLabel(imovel.tipo)}

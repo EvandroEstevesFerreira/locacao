@@ -34,7 +34,7 @@ export default async function EditarContratoPage({
   if (!contrato) notFound();
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="pagina-form space-y-6">
       <PageHeader titulo={`Editar contrato ${contrato.numero}`} />
       <Card>
         <CardContent className="pt-6">

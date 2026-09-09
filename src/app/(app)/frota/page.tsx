@@ -167,7 +167,7 @@ export default async function FrotaPage({
   // nenhuma não há trilho a mostrar.
   if (todas.length === 0 && !temFiltro) {
     return (
-      <div className="space-y-6">
+      <div className="pagina-lista space-y-6">
         <PageHeader titulo="Frota" descricao="As peças individuais do parque." />
         <EmptyState
           icon={<Boxes className="size-6" />}
@@ -180,7 +180,7 @@ export default async function FrotaPage({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="pagina-lista space-y-6">
       <PageHeader
         titulo={atual ? atual.nome : "Frota"}
         descricao={

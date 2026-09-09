@@ -69,7 +69,7 @@ export default async function DevolucoesPage({
   ).length;
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    <div className="pagina-lista space-y-6">
       <PageHeader
         titulo="Devoluções"
         descricao={`Conferência do que volta ao fornecedor. · ${contagem(total, "devolução", "devoluções")} no filtro${

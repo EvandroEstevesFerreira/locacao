@@ -29,7 +29,7 @@ export default async function NovaOrdemPage({
   const [pecas] = await Promise.all([listarPecasParaReparo()]);
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="pagina-form space-y-6">
       <PageHeader
         titulo="Abrir ordem de reparo"
         descricao="A ordem autoriza a peça a sair da obra. Ela nasce numerada — não há rascunho, porque um rascunho de autorização não autoriza nada."

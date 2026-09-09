@@ -30,7 +30,7 @@ export default async function NovoContratoPage() {
   const numeroSugerido = `CT-${ano}-${String(maxSeq + 1).padStart(3, "0")}`;
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="pagina-form space-y-6">
       <PageHeader
         titulo="Novo contrato"
         descricao="Vincule uma obra e um fornecedor e defina a cadência de cobrança."
