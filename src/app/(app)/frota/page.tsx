@@ -30,6 +30,7 @@ import {
 } from "@/lib/certificado";
 import { TrilhoFrota } from "./_components/trilho-frota";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
 export const metadata = { title: "Frota — Loca" };
@@ -279,15 +280,32 @@ export default async function FrotaPage({
           {/* A FAIXA. Some sozinha quando `avisos` está vazio — não existe
               versão "tudo em ordem" dela. */}
           {avisos.map((a) => (
-            <Link
+            <div
               key={a.chave}
-              href={a.href}
-              className="flex items-center gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive hover:bg-destructive/15"
+              className="flex flex-wrap items-center gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
             >
               <TriangleAlert className="size-4 shrink-0" aria-hidden />
-              <span className="min-w-0 flex-1 font-medium">{a.texto}</span>
+              <Link
+                href={a.href}
+                className="min-w-0 flex-1 font-medium hover:underline"
+              >
+                {a.texto}
+              </Link>
+              {/* Duas ações separadas de propósito: o texto MOSTRA o problema
+                  (filtra a lista), o botão RESOLVE. Antes a faixa inteira era um
+                  link para o filtro, e quem lia "93 peças sem responsável"
+                  ficava procurando onde arrumar. */}
+              {a.acao ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  render={<Link href={a.acao.href} />}
+                >
+                  {a.acao.texto}
+                </Button>
+              ) : null}
               <ArrowRight className="size-4 shrink-0" aria-hidden />
-            </Link>
+            </div>
           ))}
 
           {grupos.length === 0 ? (
@@ -329,6 +347,13 @@ export default async function FrotaPage({
                           p.situacao === "em_uso" &&
                           comResponsavel !== null &&
                           !comResponsavel.has(p.id);
+                        // Só para peça EM USO: a peça no almoxarifado pode ter
+                        // custódia de obra aberta, e ali "onde está" é a
+                        // resposta certa, não o nome de uma pessoa.
+                        const nomeDoDetentor =
+                          p.situacao === "em_uso"
+                            ? (comResponsavel?.get(p.id) ?? null)
+                            : null;
                         return (
                           <div
                             key={p.id}
@@ -348,14 +373,25 @@ export default async function FrotaPage({
 
                             {/* A COLUNA QUE MUDA DE PERFIL. Em TI e em veículo a
                                 pergunta é quem está com a peça; em obra, onde
-                                ela está. Hoje ninguém tem custódia aberta, e a
-                                tela diz isso em vez de fingir. */}
+                                ela está.
+
+                                Esta coluna já existia reservada para o nome e
+                                mostrava "sem responsável" porque não havia
+                                custódia — 2 de 95 peças em uso. O mutirão de
+                                /frota/custodia preencheu, e agora ela mostra
+                                QUEM está com a máquina. Nome aqui, e NÃO numa
+                                quarta coluna: a linha já tem patrimônio,
+                                modelo, local e até três selos, e a 0.93.0
+                                acabou de padronizar as larguras para matar a
+                                barra de rolagem horizontal. */}
                             <span className="min-w-40 text-muted-foreground">
                               {perfil === "geral"
                                 ? (p.obraRotulo ?? "Almoxarifado central")
                                 : semTermo
                                   ? "sem responsável"
-                                  : (p.obraRotulo ?? "Almoxarifado central")}
+                                  : (nomeDoDetentor ??
+                                    p.obraRotulo ??
+                                    "Almoxarifado central")}
                             </span>
 
                             <span className="flex flex-wrap items-center gap-1">

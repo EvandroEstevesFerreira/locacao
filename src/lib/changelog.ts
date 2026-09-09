@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.96.0";
+export const APP_VERSION = "0.97.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,19 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.97.0",
+    data: "2026-09-09",
+    titulo: "Com quem está cada máquina",
+    mudancas: [
+      { tipo: "novo", texto: "A lista da Frota mostra o nome de quem está com o equipamento, ao lado do modelo. A coluna já existia reservada para isso e dizia “sem responsável” porque o sistema não sabia: 2 das 95 peças em uso tinham dono registrado." },
+      { tipo: "novo", texto: "Nova tela “Regularizar custódia” lê o nome que ficou na planilha de coleta, propõe o funcionário do cadastro e espera sua confirmação. Das 95 peças, 89 casam automaticamente, 5 têm mais de um candidato e 1 precisa ser escolhida à mão." },
+      { tipo: "seguranca", texto: "O casamento de nomes nunca adivinha. “Lui” não casa com “Luis”, e primeiro nome sozinho não casa com ninguém — num cadastro de 509 pessoas, atribuir equipamento por palpite é cobrar alguém por algo que nunca recebeu." },
+      { tipo: "melhoria", texto: "A proposta automática vem marcada; a ambígua e a que não casou vêm em branco. Confirmar o que não se leu é o mesmo que adivinhar." },
+      { tipo: "melhoria", texto: "O aviso “peças em uso sem termo assinado” ganhou o botão Regularizar. Antes ele mostrava o problema e deixava você procurando onde arrumar." },
+      { tipo: "correcao", texto: "Duas fichas do mesmo funcionário aparecem com CPF e e-mail ao escolher, para dar para distinguir uma da outra. Há 8 nomes duplicados no cadastro, com 16 fichas." },
+    ],
+  },
   {
     versao: "0.96.0",
     data: "2026-09-09",

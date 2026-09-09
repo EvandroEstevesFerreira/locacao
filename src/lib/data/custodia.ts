@@ -1,5 +1,10 @@
 import "server-only";
 import {
+  casarFuncionario,
+  detentorNoTexto,
+  type Casamento,
+} from "@/lib/custodia-mutirao";
+import {
   donoDaPeca,
   linhasElegiveis,
   type DonoDaPeca,
@@ -318,4 +323,80 @@ export async function listarContratosParaAmarrar(peca: {
       obra: bruta.contrato?.obra?.codigo ?? null,
     };
   });
+}
+
+export type PropostaMutirao = {
+  unidadeId: string;
+  identificador: string;
+  itemDescricao: string;
+  obraRotulo: string | null;
+  /** O nome como está escrito nas observações. */
+  nomeNoTexto: string;
+  casamento: Casamento;
+};
+
+/**
+ * As peças em uso SEM custódia, com o detentor proposto a partir das observações.
+ *
+ * Existe para o mutirão: a importação criou as peças já em uso e nunca criou o
+ * vínculo com a pessoa, então `custodia_peca` conhece 2 de 95. O nome está no
+ * texto — e este levantamento propõe o casamento SEM gravar nada.
+ *
+ * A proposta nunca é gravada sozinha. `casarFuncionario` é conservador de
+ * propósito (token inteiro, nunca prefixo; primeiro nome sozinho não casa), e o
+ * que sobra vai para conferência humana. Medido no inventário real: 89 de 95
+ * casam, 5 ficam ambíguos, 1 não casa.
+ */
+export async function listarMutiraoDeCustodia(): Promise<{
+  propostas: PropostaMutirao[];
+  funcionarios: { id: string; nome: string; cpf: string | null; email: string | null }[];
+}> {
+  const supabase = await createClient();
+
+  const [pecasRes, custodiaRes, funcRes] = await Promise.all([
+    supabase
+      .from("equipamento_unidade")
+      .select(
+        "id, identificador, observacoes, item:item_id(descricao), obra:obra_id(codigo, nome)",
+      )
+      .eq("situacao", "em_uso")
+      .order("identificador"),
+    supabase.from("custodia_peca").select("unidade_id").is("fim", null),
+    supabase.from("funcionario").select("id, nome, cpf, email").order("nome"),
+  ]);
+
+  const jaTemDono = new Set(
+    ((custodiaRes.data ?? []) as { unidade_id: string }[]).map((c) => c.unidade_id),
+  );
+  const funcionarios = (funcRes.data ?? []) as unknown as {
+    id: string;
+    nome: string;
+    cpf: string | null;
+    email: string | null;
+  }[];
+
+  type PecaBruta = {
+    id: string;
+    identificador: string;
+    observacoes: string | null;
+    item: { descricao: string } | null;
+    obra: { codigo: string; nome: string } | null;
+  };
+
+  const propostas: PropostaMutirao[] = [];
+  for (const p of (pecasRes.data ?? []) as unknown as PecaBruta[]) {
+    if (jaTemDono.has(p.id)) continue;
+    const nomeNoTexto = detentorNoTexto(p.observacoes);
+    if (!nomeNoTexto) continue;
+    propostas.push({
+      unidadeId: p.id,
+      identificador: p.identificador,
+      itemDescricao: p.item?.descricao ?? "—",
+      obraRotulo: p.obra ? `${p.obra.codigo} — ${p.obra.nome}` : null,
+      nomeNoTexto,
+      casamento: casarFuncionario(nomeNoTexto, funcionarios),
+    });
+  }
+
+  return { propostas, funcionarios };
 }

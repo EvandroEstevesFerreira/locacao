@@ -234,27 +234,39 @@ export async function listarTrilhoDaFrota(): Promise<CategoriaTrilhoFrota[]> {
  * devolvesse o conjunto oposto seria exatamente o tipo de nome mentiroso que
  * esta sessão passou o dia consertando.
  *
- * Hoje o conjunto está VAZIO: a importação do inventário criou as 128 peças já
- * em uso e nunca criou o vínculo com a pessoa. A tela afirma que a máquina está
- * com alguém e não sabe dizer com quem.
+ * Até a 0.97.0 o conjunto estava praticamente VAZIO — 2 de 95 peças em uso —
+ * porque a importação do inventário criou as peças já em uso e nunca criou o
+ * vínculo com a pessoa. O mutirão de `/frota/custodia` é o que preenche isso, a
+ * partir do nome que ficou no texto das observações.
  *
  * `null` em caso de erro, e não um conjunto vazio: vazio significaria “ninguém
  * assinou nada” e marcaria a frota inteira como pendência — alarme falso numa
  * faixa que precisa ser levada a sério. Nulo faz a tela omitir a pendência, que
  * é honesto: ela não sabe.
  */
-export async function pecasComResponsavel(): Promise<Set<string> | null> {
+export async function pecasComResponsavel(): Promise<Map<string, string> | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("custodia_peca")
-    .select("unidade_id")
+    // `detentor_rotulo` vem junto porque a lista da Frota tem uma coluna
+    // reservada para o NOME de quem está com a peça — ela mostrava "sem
+    // responsável" só porque não havia custódia. Uma consulta responde as duas
+    // perguntas: quem tem responsável, e quem é.
+    .select("unidade_id, detentor_rotulo")
     .is("fim", null);
 
   if (error) {
     console.error("pecasComResponsavel", error);
     return null;
   }
-  return new Set((data ?? []).map((c) => c.unidade_id as string));
+  // Map, e não Set: `.has()` continua servindo a quem só pergunta se existe, e
+  // o valor serve a quem precisa do nome. Trocar o tipo aqui não mexeu em
+  // nenhum call site, porque os dois usavam `.has()`.
+  return new Map(
+    ((data ?? []) as { unidade_id: string; detentor_rotulo: string | null }[]).map(
+      (c) => [c.unidade_id, c.detentor_rotulo ?? "Responsável não identificado"],
+    ),
+  );
 }
 
 /**
