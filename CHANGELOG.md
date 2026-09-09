@@ -7,6 +7,25 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.99.2] — 2026-09-09
+
+Saber qual versao esta no ar.
+
+`GET /api/versao`, atras do `CRON_SECRET`, devolve `versao`, `commit`
+(`VERCEL_GIT_COMMIT_SHA`) e `ambiente`.
+
+**Por que.** Tres investigacoes se perderam hoje na mesma pergunta: "o conserto
+nao funciona" era, nas tres vezes, deploy ainda nao propagado. A unica forma de
+saber era pedir a alguem que olhasse o rodape da tela — e diagnostico que depende
+de outra pessoa olhar nao e diagnostico.
+
+O commit vai junto porque "0.99.1" nao distingue o build que subiu do que ficou
+pela metade.
+
+Atras do segredo, como as demais rotas de servico: a versao nao e segredo, mas
+rota publica anunciando o que roda e uma linha a menos de trabalho para quem
+procura versao vulneravel conhecida.
+
 ## [0.99.1] — 2026-09-09
 
 O nome de quem esta com a peca, ao lado do modelo.

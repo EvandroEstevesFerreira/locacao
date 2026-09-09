@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.99.1";
+export const APP_VERSION = "0.99.2";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,14 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.99.2",
+    data: "2026-09-09",
+    titulo: "Saber qual versao esta no ar",
+    mudancas: [
+      { tipo: "melhoria", texto: "Uma consulta de serviço passa a responder qual versão e qual commit estão rodando em produção. Três investigações se perderam hoje na mesma pergunta — o conserto não aparecia porque o deploy ainda não tinha propagado, e descobrir isso dependia de alguém olhar o rodapé da tela." },
+    ],
+  },
   {
     versao: "0.99.1",
     data: "2026-09-09",
