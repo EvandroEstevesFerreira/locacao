@@ -2,6 +2,13 @@ import "server-only";
 import { cache } from "react";
 
 import { createClient } from "@/lib/supabase/server";
+import { hojeISOSaoPaulo } from "@/lib/locacao";
+import {
+  situacaoDoTitulo,
+  vencimentoEfetivo,
+  foiProrrogado,
+  type SituacaoTitulo,
+} from "@/lib/mega/vencimento";
 
 /**
  * Leitura do espelho do Mega.
@@ -22,6 +29,10 @@ export type TituloEspelhado = {
   tipoDocumento: string | null;
   numeroDocumento: string | null;
   dataVencimento: string;
+  /** A data de PAGAR: a prorrogada quando houve renegociação. */
+  vencimentoEfetivo: string;
+  prorrogado: boolean;
+  situacao: SituacaoTitulo;
   valorParcela: number;
   saldoAtual: number;
   quitado: boolean;
@@ -32,6 +43,8 @@ export type EspelhoDoFornecedor = {
   titulos: TituloEspelhado[];
   pago: number;
   emAberto: number;
+  /** Em aberto com a data de pagar já vencida. */
+  atrasado: number;
   /** Quando o cron rodou pela última vez. `null` = nunca rodou. */
   sincronizadoEm: string | null;
   ultimoErro: string | null;
@@ -50,7 +63,7 @@ export const obterEspelhoDoFornecedor = cache(
     const { data, error } = await supabase
       .from("mega_titulo")
       .select(
-        "id, numero_ap, numero_parcela, tipo_documento, numero_documento, data_vencimento, valor_parcela, saldo_atual, quitacao_vista_em",
+        "id, numero_ap, numero_parcela, tipo_documento, numero_documento, data_vencimento, data_prorrogado, valor_parcela, saldo_atual, quitacao_vista_em",
       )
       .eq("fornecedor_id", fornecedorId)
       .order("data_vencimento", { ascending: true });
@@ -64,18 +77,32 @@ export const obterEspelhoDoFornecedor = cache(
     }
     if (!data || data.length === 0) return null;
 
-    const titulos: TituloEspelhado[] = data.map((l) => ({
+    const hoje = hojeISOSaoPaulo();
+
+    const titulos: TituloEspelhado[] = data.map((l) => {
+      const datas = {
+        dataVencimento: l.data_vencimento as string,
+        dataProrrogado: (l.data_prorrogado as string | null) ?? null,
+      };
+      return {
       id: l.id as string,
       numeroAp: l.numero_ap as string,
       numeroParcela: l.numero_parcela as string,
       tipoDocumento: (l.tipo_documento as string) || null,
       numeroDocumento: (l.numero_documento as string) || null,
-      dataVencimento: l.data_vencimento as string,
+      dataVencimento: datas.dataVencimento,
+      vencimentoEfetivo: vencimentoEfetivo(datas),
+      prorrogado: foiProrrogado(datas),
+      situacao: situacaoDoTitulo({ ...datas, saldoAtual: Number(l.saldo_atual), hojeISO: hoje }),
       valorParcela: Number(l.valor_parcela),
       saldoAtual: Number(l.saldo_atual),
       quitado: Number(l.saldo_atual) === 0,
       quitacaoVistaEm: (l.quitacao_vista_em as string | null) ?? null,
-    }));
+      };
+    })
+      // Pela data de PAGAR, não pela do documento: numa lista ordenada pelo
+      // vencimento original, o título prorrogado para março aparece em dezembro.
+      .sort((a, b) => a.vencimentoEfetivo.localeCompare(b.vencimentoEfetivo));
 
     const { data: sync } = await supabase
       .from("mega_sync")
@@ -87,6 +114,9 @@ export const obterEspelhoDoFornecedor = cache(
       // O pago é o VALOR DA PARCELA das quitadas, não o saldo (que é zero).
       pago: titulos.filter((t) => t.quitado).reduce((s, t) => s + t.valorParcela, 0),
       emAberto: titulos.reduce((s, t) => s + t.saldoAtual, 0),
+      atrasado: titulos
+        .filter((t) => t.situacao === "atrasado")
+        .reduce((s, t) => s + t.saldoAtual, 0),
       sincronizadoEm: (sync?.ultima_rodada_em as string | null) ?? null,
       ultimoErro: (sync?.ultimo_erro as string | null) ?? null,
     };

@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.106.1";
+export const APP_VERSION = "0.107.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,23 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.107.0",
+    data: "2026-09-10",
+    titulo: "A data de pagar é a prorrogada",
+    mudancas: [
+      {
+        tipo: "melhoria",
+        texto:
+          "Na seção “No Mega”, cada título mostra a data em que deve ser pago — a prorrogada, quando o financeiro renegociou. A data original aparece embaixo, só quando houve adiamento.",
+      },
+      {
+        tipo: "novo",
+        texto:
+          "O total atrasado ganhou destaque próprio, e cada título diz se está pago, a vencer, vencendo hoje ou atrasado.",
+      },
+    ],
+  },
   {
     versao: "0.106.1",
     data: "2026-09-10",

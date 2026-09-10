@@ -7,6 +7,25 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.107.0] - 2026-09-10
+
+A data de pagar e a prorrogada.
+
+`DataVencimento` e a data original do documento. Quando o financeiro renegocia,
+o Mega grava a nova data em `DataProrrogado` -- e e ela que vale para pagar.
+
+Medido sobre 5.372 parcelas reais: **866 (16,1%) tem prorrogacao**, e ela e
+SEMPRE para depois, nem uma unica vez para antes. As vezes por meses
+(vencimento 03/12/2024, prorrogado para 31/03/2025).
+
+Ler o vencimento original nesses 16% faria a tela acusar atraso em titulo que
+esta em dia -- e mandar alguem cobrar uma renegociacao que a propria casa fez.
+
+A lista agora ordena e exibe pela data de pagar; a original so aparece, em
+letra menor, quando houve adiamento. Cada titulo diz se esta pago, a vencer,
+vencendo hoje ou atrasado, e o total atrasado tem celula propria: e o unico dos
+tres numeros que pede acao hoje.
+
 ## [0.106.1] - 2026-09-10
 
 A primeira rodada em producao voltou 37 consultas recusadas.

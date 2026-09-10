@@ -10,7 +10,8 @@
 // lado é seguro mesmo quando o vínculo ainda é do fornecedor inteiro, e não
 // deste contrato.
 
-import { CircleCheck, CircleAlert, TriangleAlert } from "lucide-react";
+import { CircleCheck, CircleAlert, TriangleAlert, CalendarClock } from "lucide-react";
+import { SITUACAO_TITULO_INFO } from "@/lib/mega/vencimento";
 import { obterEspelhoDoFornecedor } from "@/lib/data/mega";
 import { formatarBRL, formatarData, formatarDataHora } from "@/lib/locacao";
 import {
@@ -30,7 +31,7 @@ export async function ContratoMega({ fornecedorId }: { fornecedorId: string }) {
   // rodado, ou que o fornecedor esteja sem código do Mega no cadastro.
   if (!espelho) return null;
 
-  const { titulos, pago, emAberto, sincronizadoEm, ultimoErro } = espelho;
+  const { titulos, pago, emAberto, atrasado, sincronizadoEm, ultimoErro } = espelho;
 
   return (
     <Card>
@@ -59,7 +60,7 @@ export async function ContratoMega({ fornecedorId }: { fornecedorId: string }) {
           </p>
         ) : null}
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-3">
           <div>
             <p className="text-xs text-muted-foreground">Pago</p>
             <p className="mt-1 text-lg font-semibold">{formatarBRL(pago)}</p>
@@ -67,6 +68,14 @@ export async function ContratoMega({ fornecedorId }: { fornecedorId: string }) {
           <div>
             <p className="text-xs text-muted-foreground">Em aberto</p>
             <p className="mt-1 text-lg font-semibold">{formatarBRL(emAberto)}</p>
+          </div>
+          {/* O atraso ganha célula própria porque é a única destas três que pede
+              uma ação hoje. Diluído dentro de "em aberto", passa. */}
+          <div>
+            <p className="text-xs text-muted-foreground">Atrasado</p>
+            <p className="mt-1 text-lg font-semibold">
+              {atrasado > 0 ? formatarBRL(atrasado) : "—"}
+            </p>
           </div>
         </div>
 
@@ -84,12 +93,23 @@ export async function ContratoMega({ fornecedorId }: { fornecedorId: string }) {
                 </span>
                 <span className="text-muted-foreground">
                   {" "}
-                  · parcela {t.numeroParcela} · vence {formatarData(t.dataVencimento)}
+                  · parcela {t.numeroParcela} · pagar em{" "}
+                  {formatarData(t.vencimentoEfetivo)}
                 </span>
+                {/* A DATA ORIGINAL SÓ APARECE QUANDO FOI ADIADA, e nunca no
+                    lugar da de pagar. Sem esta linha, o título prorrogado
+                    parece divergir da nota; com ela no lugar errado, alguém
+                    paga na data velha. */}
+                {t.prorrogado ? (
+                  <span className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+                    <CalendarClock className="size-3 shrink-0" aria-hidden />
+                    Prorrogado — vencia em {formatarData(t.dataVencimento)}
+                  </span>
+                ) : null}
               </span>
               <span className="shrink-0 tabular-nums">{formatarBRL(t.valorParcela)}</span>
-              <Badge variant={t.quitado ? "secondary" : "outline"} className="shrink-0">
-                {t.quitado ? "Pago" : "Em aberto"}
+              <Badge variant={SITUACAO_TITULO_INFO[t.situacao].variant} className="shrink-0">
+                {SITUACAO_TITULO_INFO[t.situacao].label}
               </Badge>
             </li>
           ))}
@@ -100,8 +120,9 @@ export async function ContratoMega({ fornecedorId }: { fornecedorId: string }) {
             de comprovantes. Sem esta linha, alguém leria "Pago" como se o Loca
             soubesse o dia em que o dinheiro saiu. */}
         <p className="text-xs text-muted-foreground">
-          O Mega informa se o título foi quitado, mas não a data do pagamento.
-          Os títulos são do fornecedor inteiro, não só deste contrato.
+          A data de pagar é a prorrogada, quando o financeiro renegociou. O Mega
+          informa se o título foi quitado, mas não a data do pagamento. Os
+          títulos são do fornecedor inteiro, não só deste contrato.
         </p>
       </CardContent>
     </Card>
