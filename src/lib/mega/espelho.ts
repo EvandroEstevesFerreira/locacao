@@ -1,0 +1,125 @@
+import type { TituloMega } from "./contrato";
+
+/**
+ * A decisão do que gravar no espelho, separada de quem grava.
+ *
+ * Puro de propósito: a regra da data de quitação é a única coisa aqui que o
+ * Mega não nos dá pronta, e regra inventada por nós precisa de teste. Sem
+ * Supabase neste arquivo, ela se testa em memória.
+ */
+
+/** A linha como vai para `mega_titulo`. */
+export type LinhaEspelho = {
+  org_id: string;
+  fornecedor_id: string | null;
+  codigo_mega: string;
+  agente_cnpj: string | null;
+  agente_nome: string | null;
+  numero_ap: string;
+  numero_parcela: string;
+  filial: string | null;
+  tipo_documento: string;
+  numero_documento: string;
+  data_vencimento: string;
+  data_prorrogado: string | null;
+  valor_parcela: number;
+  saldo_atual: number;
+  quitacao_vista_em: string | null;
+  sincronizado_em: string;
+};
+
+export type LinhaExistente = {
+  chave: string;
+  quitacao_vista_em: string | null;
+};
+
+/**
+ * A identidade de um título, igual à do índice único do banco.
+ *
+ * LARGA PORQUE PRECISA SER. `AP + parcela` não é único no Mega: retenções
+ * (ISS, INSS, IR) reaproveitam o número da AP com outro tipo de documento.
+ * Chavear estreito faria uma linha sobrescrever a outra, e o total do
+ * fornecedor sairia menor que o real — do jeito silencioso, que ninguém nota.
+ */
+export function chaveDoTitulo(
+  t: Pick<
+    TituloMega,
+    | "codigoAgente"
+    | "numeroAp"
+    | "numeroParcela"
+    | "tipoDocumento"
+    | "numeroDocumento"
+    | "dataVencimento"
+    | "valorParcela"
+  >,
+): string {
+  return [
+    t.codigoAgente,
+    t.numeroAp,
+    t.numeroParcela,
+    t.tipoDocumento ?? "",
+    t.numeroDocumento ?? "",
+    t.dataVencimento,
+    t.valorParcela.toFixed(2),
+  ].join("|");
+}
+
+export function linhasParaEspelho({
+  orgId,
+  titulos,
+  existentes,
+  fornecedorPorCodigo,
+  hojeISO,
+}: {
+  orgId: string;
+  titulos: TituloMega[];
+  existentes: LinhaExistente[];
+  /** `codigo_mega` → `fornecedor.id`, do cadastro do Loca. */
+  fornecedorPorCodigo: Map<string, string>;
+  /** Sempre `hojeISOSaoPaulo()`: a Vercel roda em UTC. */
+  hojeISO: string;
+}): LinhaEspelho[] {
+  const antes = new Map(existentes.map((e) => [e.chave, e.quitacao_vista_em]));
+  const agora = new Date().toISOString();
+
+  return titulos.map((t) => {
+    const quitado = t.saldoAtual === 0;
+    const jaVisto = antes.get(chaveDoTitulo(t)) ?? null;
+
+    // A DATA MAIS HONESTA QUE DÁ PARA TER. O Mega não devolve data de
+    // pagamento, então guardamos quando o Loca VIU o saldo zerar — e, uma vez
+    // visto, não se mexe mais: reescrever a cada rodada faria a data virar
+    // "ontem" para sempre. Se o título é estornado e volta a ter saldo, a data
+    // some junto, porque o espelho segue o Mega e não a nossa memória.
+    const quitacao = quitado ? (jaVisto ?? hojeISO) : null;
+
+    return {
+      org_id: orgId,
+      fornecedor_id: fornecedorPorCodigo.get(t.codigoAgente) ?? null,
+      codigo_mega: t.codigoAgente,
+      agente_cnpj: t.agenteCnpj,
+      agente_nome: t.agenteNome,
+      numero_ap: t.numeroAp,
+      numero_parcela: t.numeroParcela,
+      filial: t.filial,
+      // A chave do banco usa estas duas colunas, e coluna anulável em índice
+      // único deixa dois NULLs conviverem — duplicando o título a cada rodada.
+      tipo_documento: t.tipoDocumento ?? "",
+      numero_documento: t.numeroDocumento ?? "",
+      data_vencimento: t.dataVencimento,
+      data_prorrogado: t.dataProrrogado,
+      valor_parcela: t.valorParcela,
+      saldo_atual: t.saldoAtual,
+      quitacao_vista_em: quitacao,
+      sincronizado_em: agora,
+    };
+  });
+}
+
+/** O resumo de uma rodada, para o log e para `mega_sync`. */
+export type ResumoRodada = {
+  fornecedoresLidos: number;
+  titulosVistos: number;
+  recusados: number;
+  falhas: { codigo: string; motivo: string }[];
+};

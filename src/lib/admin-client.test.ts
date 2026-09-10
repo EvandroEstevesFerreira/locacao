@@ -66,6 +66,20 @@ const PERMITIDOS: Record<string, { tabelas: string[] | "*"; motivo: string }> = 
       "cron roda sem sessão de usuário; lê termos e grava link e log de aviso. " +
       "NÃO grava assinatura nem emite termo",
   },
+  "app/api/cron/mega/route.ts": {
+    // UMA TABELA NOMEADA, e não "*". Esta rota só lê quem está ativo em
+    // `mega_sync` e grava o resultado da rodada. O espelho em si é escrito por
+    // `lib/mega/servidor.ts`, que recebe o client de quem chama.
+    //
+    // `lancamento_financeiro` fica de fora POR DECISÃO, não por esquecimento:
+    // o Mega não devolve data de pagamento, então dar baixa automática ainda
+    // não tem como ser honesto. No dia em que alguém tentar, esta lista
+    // reclama — junto com `lib/mega/espelho-nao-da-baixa.test.ts`.
+    tabelas: ["mega_sync"],
+    motivo:
+      "cron roda sem sessão de usuário; lê as organizações ativas e registra a rodada. " +
+      "NÃO dá baixa em conta a pagar",
+  },
   "app/api/cron/people/route.ts": {
     // Duas tabelas nomeadas, e não "*", de propósito: a gravação em
     // `funcionario` NAO acontece aqui. Ela mora em `lib/people/servidor.ts`,

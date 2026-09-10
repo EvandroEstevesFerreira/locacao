@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { FileText, Pencil } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeOperar, podeExcluirCritico } from "@/lib/auth";
+import { podeGerenciarFinanceiro } from "@/lib/permissoes";
 import {
   CADENCIA,
   STATUS_CONTRATO,
@@ -30,6 +31,7 @@ import { ContratoDocumentos } from "./_components/contrato-documentos";
 import { ContratoDevolucoes } from "./_components/contrato-devolucoes";
 import { ContratoDevolucoesDoc } from "./_components/contrato-devolucoes-doc";
 import { ContratoRecebimentos } from "./_components/contrato-recebimentos";
+import { ContratoMega } from "./_components/contrato-mega";
 
 export const metadata = { title: "Contrato — Loca" };
 
@@ -55,6 +57,10 @@ export default async function ContratoDetalhePage({
   // excluir o contrato inteiro é exclusivo do master.
   const podeEditar = podeOperar(perfil?.papel);
   const podeExcluir = podeExcluirCritico(perfil?.papel);
+  // O espelho do Mega é dinheiro: a mesma régua do financeiro. A RLS já barra
+  // quem não pode, mas desenhar a seção para depois vir vazia daria a impressão
+  // de que o ERP não tem nada — que é afirmação, e errada.
+  const podeVerFinanceiro = podeGerenciarFinanceiro(perfil?.papel);
 
   const { id } = await params;
   const supabase = await createClient();
@@ -62,7 +68,7 @@ export default async function ContratoDetalhePage({
   const { data: contrato } = await supabase
     .from("contrato_locacao")
     .select(
-      "id, numero, cadencia, cobranca_prorata, anexo_path, valor_total_contratado, data_inicio, data_fim_prevista, status, observacoes, obra:obra_id(codigo,nome), fornecedor:fornecedor_id(nome), vistoria_retirada:vistoria_retirada_id(id, vistoria_foto(count))",
+      "id, numero, cadencia, cobranca_prorata, anexo_path, valor_total_contratado, fornecedor_id, data_inicio, data_fim_prevista, status, observacoes, obra:obra_id(codigo,nome), fornecedor:fornecedor_id(nome), vistoria_retirada:vistoria_retirada_id(id, vistoria_foto(count))",
     )
     .eq("id", id)
     .single();
@@ -202,6 +208,12 @@ export default async function ContratoDetalhePage({
           podeEditar={podeEditar}
         />
       </Suspense>
+
+      {podeVerFinanceiro && contrato.fornecedor_id ? (
+        <Suspense fallback={null}>
+          <ContratoMega fornecedorId={contrato.fornecedor_id as string} />
+        </Suspense>
+      ) : null}
 
       <Suspense fallback={null}>
         <ContratoDevolucoes

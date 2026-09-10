@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.105.2";
+export const APP_VERSION = "0.106.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,23 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.106.0",
+    data: "2026-09-10",
+    titulo: "O Loca passa a ver os pagamentos do Mega",
+    mudancas: [
+      {
+        tipo: "novo",
+        texto:
+          "Na tela do contrato, a seção “No Mega” mostra os títulos a pagar do fornecedor no ERP: o que já foi pago, o que segue em aberto e quando o dado foi copiado.",
+      },
+      {
+        tipo: "novo",
+        texto:
+          "Os dados do Mega são atualizados sozinhos todo dia às 7h30.",
+      },
+    ],
+  },
   {
     versao: "0.105.2",
     data: "2026-09-10",

@@ -7,6 +7,35 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.106.0] - 2026-09-10
+
+O Loca passa a ver os pagamentos do Mega.
+
+### O que mudou
+
+A tela do contrato ganhou a secao "No Mega": os titulos a pagar do fornecedor no
+ERP, com o total pago, o total em aberto e a data em que o dado foi copiado. Um
+cron diario as 7h30 de Brasilia (`30 10 * * *` -- a Vercel roda em UTC) enche o
+espelho em `mega_titulo`.
+
+### O que esta versao NAO faz
+
+**Nao da baixa em nada.** Nenhum arquivo desta onda escreve em
+`lancamento_financeiro`, e ha varredura cobrando isso
+(`src/lib/mega/espelho-nao-da-baixa.test.ts`). O motivo e concreto: a API do
+Mega nao devolve data de pagamento -- a rota tem 10 campos e nenhum e isso. No
+projeto Financeiro essa data saia da pasta de comprovantes no OneDrive.
+
+O espelho guarda `quitacao_vista_em`: o dia em que o Loca VIU o saldo zerar.
+Com cron diario erra no maximo um dia, e o nome diz o que e.
+
+### Seguranca
+
+`mega_titulo` e `mega_sync` nascem com policy de SELECT e mais nenhuma: ninguem
+edita o espelho pela aplicacao. Quem escreve e o cron, com service role.
+A sincronizacao e fail-closed em dois pontos -- sem as tres variaveis de
+ambiente nao roda, e so toca organizacao com linha ativa em `mega_sync`.
+
 ## [0.105.2] - 2026-09-10
 
 Consulta de pagamentos no Mega.
