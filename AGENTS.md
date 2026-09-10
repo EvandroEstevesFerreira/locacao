@@ -227,12 +227,39 @@ Duas coisas foram medidas aqui e divergem dele:
 - Rodar pelo **PowerShell do Windows**, não pelo shell Linux: o container não
   alcança os arquivos de credencial.
 
-## O que ainda NÃO existe
+## A sincronização automática
 
-Não há integração automática: o Loca **não** consulta o Mega sozinho, e
-`lancamento_financeiro` está praticamente vazia (2 lançamentos, nenhum ligado a
-contrato). A consulta acima é manual, por sessão.
+O cron `/api/cron/mega` roda **todo dia às 07:30 de Brasília** e copia o contas
+a pagar de cada fornecedor com `codigo_mega` para a tabela `mega_titulo`. A tela
+do contrato lê esse espelho na seção "No Mega".
 
-Se um dia virar sincronização, ela deve ser **cron**, e não consulta ao vivo por
-requisição: vários usuários abrindo a tela do contrato autenticariam em paralelo
-e derrubariam a conta de API.
+- **`30 10 * * *` no `vercel.json` — a Vercel roda cron em UTC.** Quem
+  "corrigir" para `30 7` move a rodada para as 04:30 da manhã, e nada na tela
+  denuncia. Há teste cobrando o horário.
+- **Fail-closed em dois pontos:** sem `MEGA_TENANT`/`MEGA_USER`/`MEGA_PASSWORD`
+  a rota devolve 503, e só sincroniza organização com linha **ativa** em
+  `mega_sync`. Subir código, sozinho, não faz o Loca chamar o ERP.
+- **`mega_titulo` só tem policy de SELECT**, e é de propósito. Editar o espelho
+  não mudaria o Mega — só faria o Loca mentir até a rodada seguinte. Quem
+  escreve é o cron, com service role.
+- **Nunca chame a API em `Promise.all`.** As 37 consultas são sequenciais e
+  reaproveitam uma autenticação só. A conta é compartilhada com o projeto
+  Financeiro e já foi bloqueada por encadeamento.
+
+## O que ainda NÃO existe: a BAIXA
+
+O espelho **não escreve em `lancamento_financeiro`**, e há varredura cobrando
+isso (`src/lib/mega/espelho-nao-da-baixa.test.ts`). Não é escopo cortado por
+pressa; é decisão, e o motivo é concreto:
+
+**a API do Mega não devolve data de pagamento.** A rota tem 10 campos e nenhum
+é isso — no projeto Financeiro essa data saía da pasta de comprovantes no
+OneDrive. Sem ela, baixa automática só poderia inventar a data, e conta marcada
+como paga errada ninguém percebe olhando a tela.
+
+O que existe é `mega_titulo.quitacao_vista_em`: o dia em que o Loca **viu** o
+saldo zerar. Com cron diário erra no máximo um dia, e o nome diz o que é.
+
+Antes da baixa existir, faltam duas decisões: **de onde vem a data de pagamento**
+e **se o fornecedor fatura por mês ou por bloco** — no contrato 1726 uma única
+fatura cobre o período inteiro, então o casamento não é 1↔1.
