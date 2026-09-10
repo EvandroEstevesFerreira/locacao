@@ -7,6 +7,8 @@ import {
   gerarRelatorio,
   type TipoRelatorio,
 } from "@/lib/relatorios";
+import { exigirModulo } from "@/lib/modulos";
+import { getCurrentPerfil } from "@/lib/auth";
 import { DocumentoRelatorio } from "@/lib/pdf";
 
 export const runtime = "nodejs";
@@ -21,8 +23,20 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const tipo = url.searchParams.get("tipo") as TipoRelatorio | null;
-  if (!tipo || !TIPOS_RELATORIO.some((t) => t.valor === tipo)) {
+  const meta = tipo ? TIPOS_RELATORIO.find((t) => t.valor === tipo) : undefined;
+  if (!tipo || !meta) {
     return NextResponse.json({ error: "Relatório inválido." }, { status: 400 });
+  }
+
+  // A MESMA TRAVA DA TELA, aqui também. Esta rota aceita `?tipo=` de quem
+  // souber montar o endereço, e três relatórios listam patrimônio da frota
+  // com identificador de peça. Filtrar só a lista da tela protegeria a porta e
+  // deixaria a janela aberta.
+  if (meta.modulo) {
+    const semModulo = exigirModulo(await getCurrentPerfil(), meta.modulo);
+    if (semModulo) {
+      return NextResponse.json({ error: semModulo }, { status: 403 });
+    }
   }
 
   const inicio = url.searchParams.get("inicio") ?? undefined;

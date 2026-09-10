@@ -7,6 +7,74 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.101.0] — 2026-09-10
+
+Quem vê o parque de máquinas.
+
+### O que já existia
+
+`perfil.modulos` libera módulos **por usuário**, marcados no cadastro, e o
+middleware redireciona quem digita `/frota` sem ter o módulo. Isso continua
+como estava: **esta versão não muda o acesso de ninguém**, só fecha por onde
+ele vazava.
+
+### O middleware só barra GET
+
+Server action é `POST` e nunca passou por ele. As doze actions da Frota
+conferiam **papel**, e papel não sabe nada de módulo: um operador com a Frota
+desmarcada, numa aba aberta antes da mudança, seguia movimentando peça,
+lançando certificado e excluindo ordem de reparo.
+
+Uma delas — `excluirReparo` — não lia o perfil de jeito nenhum; a proteção era
+só o RPC e o RLS.
+
+Agora todas chamam `exigirModulo`. E uma **varredura** reprova qualquer action
+nova de frota que nasça sem a guarda — conferida reintroduzindo o defeito de
+propósito, que a fez apontar `frota/actions.ts: moverPeca` pelo nome.
+
+### A janela ao lado da porta
+
+`/relatorios` é módulo próprio. Três relatórios — **Equipamento em conserto**,
+**Custo de manutenção** e **Uso do equipamento** — listam identificador de
+peça. Quem tivesse Relatórios e não tivesse Frota extraía por PDF exatamente
+o que a tela de Frota lhe negava.
+
+Os três passaram a declarar o módulo que exigem, e a trava vale nos **três
+caminhos**: a lista da tela, `/api/relatorios/pdf` e `/api/relatorios/excel`.
+As duas rotas aceitavam `?tipo=` de quem soubesse montar o endereço.
+
+### Fail-closed, só na Frota
+
+O sistema é fail-open de propósito: um soluço na leitura do perfil não pode
+trancar quem está trabalhando. Para um módulo que existe **para ser restrito**,
+esse padrão está invertido — "não consegui conferir" não pode significar
+"entra", ou a proteção vale até a primeira instabilidade de banco.
+
+`MODULOS_FECHADOS` tem um nome só, e um teste exige que continue curta: cada
+entrada ali é um lugar onde uma falha de banco vira gente impedida de
+trabalhar.
+
+### O cadastro agrupa, sem acoplar
+
+Os módulos passaram a aparecer agrupados por assunto, com marcar e desmarcar o
+grupo num clique. Frota, Itens e Termos ficam juntos em **Equipamento** — são
+onde a peça está, o catálogo dela e quem assinou por ela; liberar um sem os
+outros deixa o controle pela metade.
+
+**Agrupar não é acoplar.** Cada módulo continua gravado e auditável sozinho.
+Fazer o código apagar Termos quando alguém desmarca Frota produziria permissão
+que ninguém consegue explicar depois.
+
+### O que isto NÃO protege
+
+As policies do banco **não conhecem módulo** — elas usam organização, papel e
+obra. Quem tiver sessão válida e conhecimento técnico ainda consegue ler
+`equipamento_unidade` direto pela API.
+
+Contra distração e curiosidade, esta versão protege. Contra má-fé técnica, não.
+Foi escolha consciente: descer ao RLS mexeria em policies de várias tabelas, e
+fica para quando for necessário.
+
 ## [0.100.0] — 2026-09-09
 
 A planilha de coleta volta para dentro do sistema.

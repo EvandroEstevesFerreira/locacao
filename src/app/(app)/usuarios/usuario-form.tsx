@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -15,7 +15,7 @@ import {
   type EditarUsuarioInput,
   type Papel,
 } from "@/lib/permissoes";
-import { MODULOS } from "@/lib/modulos";
+import { MODULOS, GRUPOS_MODULO, type ModuloKey } from "@/lib/modulos";
 import { FormError } from "@/components/shared/form-error";
 import { aoInvalidar } from "@/lib/validacao-form";
 import { Button } from "@/components/ui/button";
@@ -47,6 +47,8 @@ export function UsuarioForm({
   const {
     register,
     handleSubmit,
+    setValue,
+    control,
     formState: { errors },
     // Três parâmetros: `nova_senha` transforma "" em null, então a entrada e a
     // saída do schema divergem.
@@ -62,6 +64,9 @@ export function UsuarioForm({
       nova_senha: "",
     },
   });
+
+  // O que está marcado agora, para o botão do grupo saber se marca ou desmarca.
+  const marcados = useWatch({ control, name: "modulos" }) ?? [];
 
   function onSubmit(values: EditarUsuarioDados) {
     setErroServidor(null);
@@ -146,19 +151,53 @@ export function UsuarioForm({
           Marque os módulos que este usuário pode acessar. Se nenhum for marcado,
           ele terá acesso a todos. O Master sempre acessa tudo.
         </p>
-        <div className="grid gap-2 rounded-md border p-3 sm:grid-cols-2">
-          {MODULOS.map((m) => (
-            <label key={m.chave} className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                value={m.chave}
-                disabled={pendente}
-                className="size-4"
-                {...register("modulos")}
-              />
-              <span className="font-medium">{m.label}</span>
-            </label>
-          ))}
+        <div className="space-y-3 rounded-md border p-3">
+          {GRUPOS_MODULO.map((grupo) => {
+            const doGrupo = MODULOS.filter((m) => m.grupo === grupo);
+            const chaves = doGrupo.map((m) => m.chave);
+            const todosMarcados = chaves.every((c) => marcados.includes(c));
+            return (
+              <div key={grupo}>
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    {grupo}
+                  </span>
+                  {/* O grupo é um ATALHO DE QUEM MARCA, não um vínculo entre os
+                      módulos. Cada um continua gravado e auditável sozinho. */}
+                  <button
+                    type="button"
+                    disabled={pendente}
+                    onClick={() =>
+                      setValue(
+                        "modulos",
+                        todosMarcados
+                          ? marcados.filter((c) => !chaves.includes(c as ModuloKey))
+                          : [...new Set([...marcados, ...chaves])],
+                        { shouldDirty: true },
+                      )
+                    }
+                    className="text-xs text-primary underline underline-offset-4"
+                  >
+                    {todosMarcados ? "Desmarcar grupo" : "Marcar grupo"}
+                  </button>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {doGrupo.map((m) => (
+                    <label key={m.chave} className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        value={m.chave}
+                        disabled={pendente}
+                        className="size-4"
+                        {...register("modulos")}
+                      />
+                      <span className="font-medium">{m.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 

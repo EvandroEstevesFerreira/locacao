@@ -1,3 +1,4 @@
+import type { ModuloKey } from "@/lib/modulos";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { differenceInCalendarDays } from "date-fns";
 import {
@@ -50,6 +51,19 @@ export const TIPOS_RELATORIO: {
   label: string;
   descricao: string;
   usaPeriodo: boolean;
+  /**
+   * Módulo que o relatório exige, quando exige algum.
+   *
+   * `/relatorios` é módulo próprio, e quem o tem passava a extrair dados de
+   * qualquer área — inclusive de uma cujo módulo estivesse desmarcado para
+   * ele. Três relatórios listam PATRIMÔNIO da frota, com identificador de
+   * peça: restringir a tela de Frota e deixar a mesma informação sair por um
+   * PDF seria proteger a porta e esquecer a janela.
+   *
+   * Ausente = disponível para quem tem Relatórios, como sempre foi. Só marque
+   * o que realmente expõe dado de outro módulo.
+   */
+  modulo?: ModuloKey;
 }[] = [
   {
     valor: "itens_abertos",
@@ -101,6 +115,7 @@ export const TIPOS_RELATORIO: {
     descricao:
       "Peças fora da obra em ordem de reparo, com dias fora e prazo prometido.",
     usaPeriodo: false,
+    modulo: "frota",
   },
   {
     valor: "manutencao_custo",
@@ -108,6 +123,7 @@ export const TIPOS_RELATORIO: {
     descricao:
       "Quanto cada peça já consumiu em conserto, e quantas vezes. É o número que decide entre consertar de novo e substituir.",
     usaPeriodo: true,
+    modulo: "frota",
   },
   {
     valor: "uso_equipamento",
@@ -115,6 +131,7 @@ export const TIPOS_RELATORIO: {
     descricao:
       "Horas trabalhadas por peça com horímetro, e quanto falta para a revisão. É o único relatório que enxerga a máquina parada dentro da obra — o de ociosidade mede calendário.",
     usaPeriodo: true,
+    modulo: "frota",
   },
   {
     valor: "custo_por_frente",

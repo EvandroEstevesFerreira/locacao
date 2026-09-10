@@ -21,6 +21,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeEditarCadastros } from "@/lib/auth";
 import { falha, primeiroErro, type ActionResult } from "@/lib/acoes";
+import { exigirModulo } from "@/lib/modulos";
 import { mutiraoTermosSchema, resumoDoMutirao } from "@/lib/frota";
 import { emTeste } from "@/lib/emails/modo-teste";
 import { hojeISOSaoPaulo } from "@/lib/locacao";
@@ -28,6 +29,8 @@ import { salvarTermo, emitirTermo } from "../../termos/actions";
 
 export async function emitirTermosDoMutirao(raw: unknown): Promise<ActionResult> {
   const perfil = await getCurrentPerfil();
+  const semModulo = exigirModulo(perfil, "frota");
+  if (semModulo) return falha(semModulo);
   if (!perfil?.org_id) return falha("Sessão inválida. Entre novamente.");
   if (!podeEditarCadastros(perfil.papel)) {
     return falha("Você não tem permissão para emitir termos do mutirão.");

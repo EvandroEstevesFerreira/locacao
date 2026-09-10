@@ -13,9 +13,12 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeOperar } from "@/lib/auth";
 import { apontamentoSchema } from "@/lib/apontamento";
 import { falha, primeiroErro, type ActionResult } from "@/lib/acoes";
+import { exigirModulo } from "@/lib/modulos";
 
 export async function salvarApontamento(raw: unknown): Promise<ActionResult> {
   const perfil = await getCurrentPerfil();
+  const semModulo = exigirModulo(perfil, "frota");
+  if (semModulo) return falha(semModulo);
   if (!perfil?.org_id || !podeOperar(perfil.papel)) {
     return falha("Você não tem permissão para lançar apontamentos.");
   }
@@ -63,6 +66,8 @@ export async function excluirApontamento(
   formData: FormData,
 ): Promise<{ error?: string } | void> {
   const perfil = await getCurrentPerfil();
+  const semModulo = exigirModulo(perfil, "frota");
+  if (semModulo) return { error: semModulo };
   if (!perfil?.org_id || !podeOperar(perfil.papel)) {
     return { error: "Você não tem permissão para excluir apontamentos." };
   }

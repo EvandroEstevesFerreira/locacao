@@ -1,5 +1,7 @@
 import { FileSpreadsheet, FileText } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentPerfil } from "@/lib/auth";
+import { exigirModulo } from "@/lib/modulos";
 import {
   TIPOS_RELATORIO,
   gerarRelatorio,
@@ -40,10 +42,23 @@ export default async function RelatoriosPage({
   }>;
 }) {
   const sp = await searchParams;
+
+  // OS RELATÓRIOS QUE O USUÁRIO PODE TIRAR, e não todos.
+  //
+  // Três deles listam patrimônio da frota, com identificador de peça. Sem este
+  // recorte, quem tivesse Relatórios e não tivesse Frota extrairia por PDF
+  // exatamente a informação que a tela de Frota lhe nega.
+  const perfil = await getCurrentPerfil();
+  const disponiveis = TIPOS_RELATORIO.filter(
+    (t) => !t.modulo || exigirModulo(perfil, t.modulo) === null,
+  );
+
+  // `?tipo=` é digitável: cair no padrão quando o pedido não está disponível
+  // é o que impede pedir pelo endereço o que a lista não oferece.
   const tipo = (
-    TIPOS_RELATORIO.some((t) => t.valor === sp.tipo) ? sp.tipo : "itens_abertos"
+    disponiveis.some((t) => t.valor === sp.tipo) ? sp.tipo : "itens_abertos"
   ) as TipoRelatorio;
-  const meta = TIPOS_RELATORIO.find((t) => t.valor === tipo)!;
+  const meta = disponiveis.find((t) => t.valor === tipo)!;
 
   const supabase = await createClient();
   const [obras, { data: fornecedores }] = await Promise.all([
@@ -84,7 +99,7 @@ export default async function RelatoriosPage({
             <div className="flex flex-col gap-1">
               <label htmlFor="f-tipo" className="text-xs text-muted-foreground">Relatório</label>
               <NativeSelect className="w-auto" id="f-tipo" name="tipo" defaultValue={tipo}>
-                {TIPOS_RELATORIO.map((t) => (
+                {disponiveis.map((t) => (
                   <option key={t.valor} value={t.valor}>
                     {t.label}
                   </option>

@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { moduloDaRota, moduloLiberado } from "@/lib/modulos";
+import { moduloDaRota, moduloLiberado, moduloFechado } from "@/lib/modulos";
 
 /**
  * Renova a sessão do usuário a cada requisição e protege rotas.
@@ -78,6 +78,19 @@ export async function updateSession(request: NextRequest) {
         const url = request.nextUrl.clone();
         url.pathname = "/trocar-senha";
         url.search = "";
+        return NextResponse.redirect(url);
+      }
+
+      // MÓDULO FECHADO NEGA QUANDO NÃO DÁ PARA CONFERIR.
+      //
+      // O fail-open acima é deliberado para o sistema todo: um soluço na
+      // leitura do perfil não pode trancar quem está trabalhando. Mas para um
+      // módulo que existe PARA SER RESTRITO, "não consegui conferir" não pode
+      // significar "entra" — senão a proteção vale exatamente até a primeira
+      // instabilidade de banco.
+      if (!perfil && modulo && moduloFechado(modulo)) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/";
         return NextResponse.redirect(url);
       }
 

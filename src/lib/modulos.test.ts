@@ -7,6 +7,11 @@ import {
   moduloDaRota,
   moduloLiberado,
   normalizarModulos,
+  exigirModulo,
+  moduloFechado,
+  MODULOS_FECHADOS,
+  GRUPOS_MODULO,
+  modulosDoGrupo,
 } from "./modulos";
 
 describe("moduloDaRota", () => {
@@ -150,5 +155,78 @@ describe("varredura de rotas contra módulos", () => {
       "Módulo no menu apontando para rota sem página: o usuário clica e " +
         `recebe 404.\n  ${semPagina.join("\n  ")}`,
     ).toEqual([]);
+  });
+});
+
+describe("exigirModulo — a guarda das server actions", () => {
+  const operador = (modulos: string[] | null) => ({ papel: "operador", modulos });
+
+  it("libera quem tem o módulo na lista", () => {
+    expect(exigirModulo(operador(["frota", "itens"]), "frota")).toBeNull();
+  });
+
+  it("RECUSA quem não tem, com o rótulo do módulo na mensagem", () => {
+    // O middleware só barra GET. Sem esta guarda, um operador com a Frota
+    // desmarcada continuava movimentando peça por uma aba que ficou aberta.
+    const r = exigirModulo(operador(["itens"]), "frota");
+    expect(r).toContain("Frota");
+  });
+
+  it("`modulos` nulo continua liberando tudo", () => {
+    // Retrocompatível: é o estado de quem nunca teve módulos definidos, e
+    // mudar isso trancaria a base inteira num deploy.
+    expect(exigirModulo(operador(null), "frota")).toBeNull();
+  });
+
+  it("master passa mesmo com a lista vazia", () => {
+    expect(exigirModulo({ papel: "master", modulos: [] }, "frota")).toBeNull();
+  });
+
+  it("sem perfil, recusa", () => {
+    expect(exigirModulo(null, "frota")).toBeTruthy();
+    expect(exigirModulo(undefined, "frota")).toBeTruthy();
+  });
+});
+
+describe("MODULOS_FECHADOS", () => {
+  it("a Frota nega quando não dá para conferir", () => {
+    expect(moduloFechado("frota")).toBe(true);
+  });
+
+  it("o resto do sistema continua fail-open", () => {
+    // A lista tem de continuar curta: cada nome nela é um lugar onde uma
+    // instabilidade de banco vira gente impedida de trabalhar.
+    expect(moduloFechado("obras")).toBe(false);
+    expect(moduloFechado("financeiro")).toBe(false);
+    expect(MODULOS_FECHADOS.length).toBeLessThanOrEqual(3);
+  });
+});
+
+describe("grupos de módulo", () => {
+  it("todo módulo pertence a um grupo conhecido", () => {
+    // Vacuity: sem isto, um módulo novo sem grupo sumiria do cadastro de
+    // usuário — e sumir do cadastro é ficar liberado para sempre.
+    for (const m of MODULOS) {
+      expect(GRUPOS_MODULO).toContain(m.grupo);
+    }
+  });
+
+  it("todo grupo tem ao menos um módulo", () => {
+    for (const g of GRUPOS_MODULO) {
+      expect(modulosDoGrupo(g).length).toBeGreaterThan(0);
+    }
+  });
+
+  it("os grupos cobrem os 14 módulos, sem sobra nem repetição", () => {
+    const somados = GRUPOS_MODULO.flatMap(modulosDoGrupo);
+    expect(somados.sort()).toEqual(MODULOS.map((m) => m.chave).sort());
+  });
+
+  it("Frota, Itens e Termos ficam no mesmo grupo", () => {
+    // O atalho que resolve "não quero lembrar de desmarcar os três": eles
+    // controlam o mesmo assunto — onde a peça está, o catálogo dela e quem
+    // assinou por ela.
+    const equipamento = modulosDoGrupo("Equipamento");
+    expect(equipamento).toEqual(expect.arrayContaining(["frota", "itens", "termos"]));
   });
 });

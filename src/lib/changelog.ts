@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.100.0";
+export const APP_VERSION = "0.101.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,17 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.101.0",
+    data: "2026-09-10",
+    titulo: "Quem vê o parque de máquinas",
+    mudancas: [
+      { tipo: "seguranca", texto: "O módulo Frota passou a ser conferido também na hora de GRAVAR. Antes só a navegação era barrada: quem tivesse a Frota desmarcada e uma aba aberta continuava movimentando peça, lançando certificado e excluindo ordem de reparo." },
+      { tipo: "seguranca", texto: "Três relatórios listam patrimônio da frota, com o número da peça. Eles somem para quem não tem o módulo — na tela, no PDF e no Excel. Restringir a tela e deixar a mesma informação sair por um arquivo seria proteger a porta e esquecer a janela." },
+      { tipo: "seguranca", texto: "A Frota nega quando não consegue conferir. O resto do sistema continua deixando passar em caso de falha de leitura — para não trancar ninguém à toa —, mas um módulo que existe para ser restrito não pode abrir por um soluço de rede." },
+      { tipo: "melhoria", texto: "No cadastro do usuário, os módulos agora vêm agrupados por assunto, com marcar e desmarcar o grupo inteiro num clique. Frota, Itens e Termos ficam juntos: são onde a peça está, o catálogo dela e quem assinou por ela." },
+    ],
+  },
   {
     versao: "0.100.0",
     data: "2026-09-09",
