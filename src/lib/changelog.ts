@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.102.1";
+export const APP_VERSION = "0.103.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,16 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.103.0",
+    data: "2026-09-10",
+    titulo: "O código do fornecedor no Mega",
+    mudancas: [
+      { tipo: "novo", texto: "O cadastro de fornecedor ganhou o campo Código no Mega. É por ele que a nota daqui encontra o título de lá — o nome da empresa não serve, porque muda de grafia entre os dois sistemas." },
+      { tipo: "novo", texto: "34 dos 38 fornecedores já estão com o código preenchido, buscado no próprio Mega pelo CNPJ. A lista mostra a coluna e a busca aceita o número." },
+      { tipo: "seguranca", texto: "Dois cadastros não podem apontar para o mesmo código do Mega: seriam a mesma empresa duas vezes, e a conciliação somaria dois fornecedores num título só. Ao contrário do CNPJ, que apenas avisa, aqui o sistema recusa e explica o que fazer." },
+    ],
+  },
   {
     versao: "0.102.1",
     data: "2026-09-10",

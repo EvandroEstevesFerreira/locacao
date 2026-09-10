@@ -39,7 +39,7 @@ export default async function FornecedoresPage({
   const sp = await searchParams;
   const obra = sp.obra ?? "";
   const { q, sort, ascending, from, to, page } = parseListParams(sp, {
-    sortCols: ["nome", "cnpj", "ativo"],
+    sortCols: ["nome", "cnpj", "codigo_mega", "ativo"],
     defaultSort: "nome",
   });
   const perfil = await getCurrentPerfil();
@@ -88,6 +88,7 @@ export default async function FornecedoresPage({
                     <SortHeader column="nome" label="Nome" />
                   </TableHead>
                   <TableHead><SortHeader column="cnpj" label="CNPJ" /></TableHead>
+                  <TableHead><SortHeader column="codigo_mega" label="Mega" /></TableHead>
                   <TableHead>E-mail</TableHead>
                   <TableHead>Obras</TableHead>
                   <TableHead><SortHeader column="ativo" label="Status" /></TableHead>
@@ -106,6 +107,12 @@ export default async function FornecedoresPage({
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {f.cnpj ?? "—"}
+                      </TableCell>
+                      {/* O código do Mega em fonte tabular: numa coluna de
+                          números, alinhamento é o que deixa a ausência
+                          visível de relance. */}
+                      <TableCell className="tabular-nums text-muted-foreground">
+                        {f.codigo_mega ?? "—"}
                       </TableCell>
                       {/* A coluna "Contato" mostrava o nome de quem atende,
                           e estava vazia em 36 das 37 linhas. O e-mail ocupa o

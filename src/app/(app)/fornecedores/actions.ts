@@ -19,6 +19,17 @@ import { fornecedorSchema } from "@/lib/fornecedor";
  * "salvar mesmo assim": CNPJ repetido não é erro de validação, é uma decisão do
  * usuário — pode haver matriz e filial com o mesmo raiz.
  */
+/**
+ * O índice único do código do Mega, dito em português.
+ *
+ * Repetir a mensagem crua do Postgres não ajuda: a saída aqui não é "tente de
+ * novo", é descobrir qual das duas linhas é a empresa de verdade. O `ARMASA`
+ * está duas vezes no Loca com o mesmo CNPJ, e as duas casam com o código 4114.
+ */
+function erroDeCodigoRepetido(error: { code?: string; message?: string }): boolean {
+  return error.code === "23505" && Boolean(error.message?.includes("codigo_mega"));
+}
+
 export async function salvarFornecedor(
   raw: unknown,
 ): Promise<ActionResult & { duplicado?: boolean }> {
@@ -56,6 +67,11 @@ export async function salvarFornecedor(
   let fornecedorId = id ?? null;
   if (id) {
     const { error } = await supabase.from("fornecedor").update(dados).eq("id", id);
+    if (error && erroDeCodigoRepetido(error)) {
+      return falha(
+        "Já existe outro fornecedor com este código do Mega. Dois cadastros apontando para o mesmo agente são a mesma empresa duas vezes — desative o que sobra antes de gravar o código aqui.",
+      );
+    }
     if (error) return falha("Não foi possível salvar. Tente novamente.");
   } else {
     const { data: criado, error } = await supabase
@@ -63,6 +79,11 @@ export async function salvarFornecedor(
       .insert({ org_id: perfil.org_id, ...dados })
       .select("id")
       .single();
+    if (error && erroDeCodigoRepetido(error)) {
+      return falha(
+        "Já existe outro fornecedor com este código do Mega. Dois cadastros apontando para o mesmo agente são a mesma empresa duas vezes — desative o que sobra antes de gravar o código aqui.",
+      );
+    }
     if (error || !criado) return falha("Não foi possível salvar. Tente novamente.");
     fornecedorId = criado.id;
   }

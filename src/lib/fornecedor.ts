@@ -20,6 +20,18 @@ export const fornecedorSchema = z.object({
     })
     // Um CNPJ que normaliza para vazio (só máscara digitada) é "não informado".
     .transform((v) => (v !== null && normalizarCnpj(v) !== "" ? v : null)),
+  /**
+   * O código do fornecedor no Mega, o ERP do contas a pagar.
+   *
+   * É por ele que se concilia uma nota do Loca com o título de lá. Antes disso
+   * a ligação era pelo nome, e nome de empresa é o pior identificador que
+   * existe: muda de razão social, vem abreviado, vem com acento de um lado e
+   * sem do outro.
+   *
+   * É opcional porque nem todo fornecedor do Loca existe no Mega — medido em
+   * 10/09/2026: 36 dos 38.
+   */
+  codigo_mega: textoOpcional(30),
   contato_nome: textoOpcional(200),
   contato_telefone: textoOpcional(40),
   contato_email: emailOpcional(200),

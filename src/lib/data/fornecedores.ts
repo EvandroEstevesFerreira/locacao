@@ -9,6 +9,7 @@ export type FornecedorListItem = {
   id: string;
   nome: string;
   cnpj: string | null;
+  codigo_mega: string | null;
   contato_nome: string | null;
   contato_telefone: string | null;
   /**
@@ -47,11 +48,14 @@ export async function listarFornecedores(
   let query = supabase
     .from("fornecedor")
     .select(
-      `id, nome, cnpj, contato_nome, contato_telefone, contato_email, ativo, ${embed}`,
+      `id, nome, cnpj, codigo_mega, contato_nome, contato_telefone, contato_email, ativo, ${embed}`,
       { count: "exact" },
     );
   if (p.obraId) query = query.eq("fornecedor_obra.obra_id", p.obraId);
-  if (p.q) query = query.or(termoOr(["nome", "cnpj"], p.q));
+  // O código entra na busca porque quem está conciliando com o Mega tem o
+  // número na mão, e não o nome — que é justamente o que muda de grafia entre
+  // os dois sistemas.
+  if (p.q) query = query.or(termoOr(["nome", "cnpj", "codigo_mega"], p.q));
 
   const { data, count, error } = await query
     .order(p.sort, { ascending: p.ascending })

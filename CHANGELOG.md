@@ -7,6 +7,61 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.103.0] — 2026-09-10
+
+O código do fornecedor no Mega.
+
+### Por que um código, e não o nome
+
+O Mega é o ERP onde o contas a pagar vive, e cada fornecedor tem lá um código
+numérico — `5I SERVICOS DE MANUTENCAO LTDA` é o **2630**. Conciliar pelo nome é
+o pior identificador possível: muda de razão social, vem abreviado, vem com
+acento de um lado e sem do outro.
+
+`codigo_mega` e não `codigo`, pelo mesmo motivo de `obra.codigo_people`: quem
+ler o schema daqui a um ano precisa saber **pelo nome** de onde o número veio e
+quem manda nele. O Loca não o gera — lê de outro sistema, e um dia pode
+divergir.
+
+**Texto, não inteiro.** Ninguém soma código de fornecedor, e um dia o Mega pode
+emitir código com zero à esquerda. Guardar como número transformaria `0042` em
+`42` no primeiro salvamento, em silêncio.
+
+### Buscado no próprio Mega
+
+Os 38 fornecedores foram cruzados por CNPJ em `GET
+/api/globalagente/Agente/GetAgenteCnpj/{cnpj}`, um a um.
+
+| Resultado | Quantos |
+|---|---|
+| Encontrados no Mega | **36** |
+| Nome divergente entre os dois sistemas | **nenhum** |
+| Não existem no Mega (HTTP 204) | 2 |
+| Preenchidos | **34** |
+
+Os dois que não existem lá são **A2 WORKS** e **Voke SA** — resposta limpa da
+API, não erro. Os outros dois que ficaram sem código são o par duplicado
+descrito abaixo.
+
+O CNPJ é gravado **formatado** no Loca (`18.376.396/0001-31`), e a barra quebra
+a rota do Mega. A consulta usa só os dígitos.
+
+### O índice já nasce apontando um problema
+
+Único por organização. **Ao contrário do CNPJ**, que desde a 0043 apenas AVISA e
+deixa salvar: ali o duplicado era decisão de quem cadastra. Aqui não há caso —
+duas linhas apontando para o mesmo agente do Mega são a mesma empresa cadastrada
+duas vezes, e a conciliação somaria dois fornecedores num título só.
+
+`ARMASA COMERCIO E SERVICOS PARA PERFURACAO LTDA` está **duas vezes** no Loca,
+com o mesmo CNPJ, e as duas casam com o código **4114**. As duas ficaram sem
+código até alguém decidir qual linha vale — que é exatamente o trabalho que este
+índice existe para provocar.
+
+### Migrations
+
+- `0103_codigo_mega_do_fornecedor.sql` — a coluna e o índice único parcial.
+
 ## [0.102.1] — 2026-09-10
 
 O histórico de custódia volta a caber numa tela.
