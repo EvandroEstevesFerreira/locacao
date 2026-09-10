@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { podeReceberTermo, ehRegularizacao, resolverPecaPedida } from "./custodia";
+import {
+  podeReceberTermo,
+  ehRegularizacao,
+  resolverPecaPedida,
+  podeEncerrarDevolucao,
+  lembreteValido,
+  MOTIVO_SEM_ASSINATURA_MINIMO,
+} from "./custodia";
 
 const peca = (situacao: string, temPosseAberta = false) => ({
   situacao,
@@ -102,5 +109,67 @@ describe("resolverPecaPedida", () => {
     const r = resolverPecaPedida("13RK564", livres);
     expect(r.peca).toBeNull();
     expect(r.foraDaLista).toBe(true);
+  });
+});
+
+describe("podeEncerrarDevolucao", () => {
+  it("com assinatura, passa — motivo nem é olhado", () => {
+    expect(podeEncerrarDevolucao({ assinou: true, motivo: null }).ok).toBe(true);
+  });
+
+  it("sem assinatura e sem motivo, RECUSA", () => {
+    const r = podeEncerrarDevolucao({ assinou: false, motivo: null });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.erro).toContain("motivo");
+  });
+
+  it("sem assinatura, com motivo suficiente, passa", () => {
+    // O caso que motivou existir: quem foi desligado e não volta para assinar.
+    const r = podeEncerrarDevolucao({
+      assinou: false,
+      motivo: "Desligado em 12/08, equipamento recolhido pelo RH.",
+    });
+    expect(r.ok).toBe(true);
+  });
+
+  it("motivo curto demais não vale", () => {
+    // Dez caracteres não são burocracia: são a diferença entre uma explicação
+    // e um espaço em branco que ninguém entende daqui a um ano.
+    const r = podeEncerrarDevolucao({ assinou: false, motivo: "sumiu" });
+    expect(r.ok).toBe(false);
+  });
+
+  it("espaço em branco não é motivo", () => {
+    expect(podeEncerrarDevolucao({ assinou: false, motivo: "              " }).ok)
+      .toBe(false);
+  });
+
+  it("o mínimo bate com o `check` da migration 0102", () => {
+    // Se divergirem, a tela aceita e o banco recusa — erro cru de Postgres na
+    // cara de quem está com o funcionário na frente.
+    expect(MOTIVO_SEM_ASSINATURA_MINIMO).toBe(10);
+  });
+});
+
+describe("lembreteValido", () => {
+  const base = { destinatarioId: "f1", situacao: "disponivel", temPosseAberta: false };
+
+  it("peça livre e destinatário anotado: o lembrete vale", () => {
+    expect(lembreteValido(base)).toBe(true);
+  });
+
+  it("sem destinatário, não há lembrete", () => {
+    expect(lembreteValido({ ...base, destinatarioId: null })).toBe(false);
+  });
+
+  it("ALGUÉM LEVOU ANTES: o lembrete deixa de valer", () => {
+    // Não impede, lembra. Insistir transformaria uma intenção anotada num
+    // impedimento real — e a decisão foi de quem estava lá.
+    expect(lembreteValido({ ...base, temPosseAberta: true })).toBe(false);
+    expect(lembreteValido({ ...base, situacao: "em_uso" })).toBe(false);
+  });
+
+  it("peça em manutenção também não lembra", () => {
+    expect(lembreteValido({ ...base, situacao: "manutencao" })).toBe(false);
   });
 });

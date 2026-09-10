@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { FileSignature, Pencil } from "lucide-react";
+import { ArrowRightLeft, FileSignature, Pencil } from "lucide-react";
 
 import { getCurrentPerfil, podeOperar, podeEditarCadastros } from "@/lib/auth";
 import {
@@ -13,9 +13,10 @@ import {
   ehRegularizacao,
   montarLinhaDoTempo,
   podeReceberTermo,
+  lembreteValido,
 } from "@/lib/custodia";
 import { SITUACAO_INFO, PROPRIEDADE_INFO, ESTADO_INFO } from "@/lib/frota";
-import { hojeISOSaoPaulo } from "@/lib/locacao";
+import { hojeISOSaoPaulo, formatarData } from "@/lib/locacao";
 import { PageHeader } from "@/components/shared/page-header";
 import { Campo } from "@/components/shared/campo";
 import { Badge } from "@/components/ui/badge";
@@ -91,6 +92,17 @@ export default async function PecaDetalhePage({
   // pergunta "tem posse aberta?" tenha uma resposta so nesta pagina.
   const posseDaPeca = { situacao: peca.situacao, temPosseAberta: atual !== null };
 
+  // O LEMBRETE DA TRANSFERÊNCIA INTERROMPIDA. Entre a devolução e a entrega a
+  // peça fica disponível de verdade — este aviso não a reserva, só lembra de
+  // onde parou. Se alguém levou antes, ele deixa de valer sozinho.
+  const lembrete = lembreteValido({
+    destinatarioId: peca.entregaPendente?.id ?? null,
+    situacao: peca.situacao,
+    temPosseAberta: atual !== null,
+  })
+    ? peca.entregaPendente
+    : null;
+
   const podeMover = podeOperar(perfil?.papel);
   const podeEditar = podeEditarCadastros(perfil?.papel);
   const info = SITUACAO_INFO[peca.situacao];
@@ -117,6 +129,19 @@ export default async function PecaDetalhePage({
                 A condição certa nunca foi a SITUAÇÃO, e sim a POSSE: peça sem
                 custódia aberta não está com ninguém, diga a coluna o que
                 disser. */}
+            {/* TRANSFERIR é o caminho de quem JÁ TEM dono: encerra o termo de
+                quem está com ela e leva ao termo de quem recebe. Antes disso a
+                pessoa tinha de caçar o termo ativo na lista de Termos, e nada
+                nesta página dizia que era esse o caminho. */}
+            {podeMover && atual !== null && atual.tipo === "funcionario" ? (
+              <Button
+                variant="outline"
+                render={<Link href={`/frota/${peca.id}/transferir`} />}
+              >
+                <ArrowRightLeft className="size-4" aria-hidden />
+                Transferir custódia
+              </Button>
+            ) : null}
             {podeMover && podeReceberTermo(posseDaPeca) ? (
               // `?peca=` LEVA A ESCOLHA JUNTO. Sem ele o termo abria pedindo o
               // equipamento de novo, no passo 2, depois de a pessoa ter aberto
@@ -155,6 +180,21 @@ export default async function PecaDetalhePage({
           </>
         }
       />
+
+      {lembrete ? (
+        <div className="flex flex-wrap items-center gap-3 rounded-md border border-primary/40 bg-primary/10 px-3 py-2 text-sm">
+          <span>
+            Entrega pendente para <strong>{lembrete.nome}</strong>
+            {peca.entregaPendenteEm
+              ? ` desde ${formatarData(peca.entregaPendenteEm.slice(0, 10))}`
+              : ""}
+            .
+          </span>
+          <Button size="sm" render={<Link href={`/termos/novo?peca=${peca.id}&funcionario=${lembrete.id}`} />}>
+            Emitir o termo
+          </Button>
+        </div>
+      ) : null}
 
       <Card>
         <CardContent className="grid gap-4 pt-6 sm:grid-cols-2 lg:grid-cols-4">

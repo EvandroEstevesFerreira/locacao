@@ -57,6 +57,7 @@ export function TermoWizard({
   nomeEmpresa,
   pecaInicial = null,
   obraInicial = "",
+  funcionarioInicial = "",
   avisoPeca = null,
 }: {
   funcionarios: OpcaoFuncionario[];
@@ -72,6 +73,8 @@ export function TermoWizard({
    */
   pecaInicial?: OpcaoPeca | null;
   obraInicial?: string;
+  /** Quem recebe, quando o termo nasce de uma transferência de custódia. */
+  funcionarioInicial?: string;
   avisoPeca?: string | null;
 }) {
   const router = useRouter();
@@ -80,7 +83,7 @@ export function TermoWizard({
   const [pendente, iniciar] = useTransition();
 
   // Passo 1
-  const [funcionarioId, setFuncionarioId] = useState("");
+  const [funcionarioId, setFuncionarioId] = useState(funcionarioInicial);
   const [obraId, setObraId] = useState(obraInicial);
   const [dataEntrega, setDataEntrega] = useState(hojeISOSaoPaulo());
   const [previsao, setPrevisao] = useState("");

@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.101.0";
+export const APP_VERSION = "0.102.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,17 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.102.0",
+    data: "2026-09-10",
+    titulo: "Transferir custódia de uma pessoa para outra",
+    mudancas: [
+      { tipo: "novo", texto: "Novo botão “Transferir custódia” na página da peça, quando ela está com alguém. Ele registra a devolução de quem entrega e leva direto ao termo de quem recebe, já preenchido. Antes era preciso caçar o termo ativo na lista de Termos." },
+      { tipo: "novo", texto: "A devolução pode ser registrada sem assinatura, com o motivo escrito — quem foi desligado não volta para assinar, e era justamente esse o caso que ficava sem registro. O documento mostra que não foi assinado." },
+      { tipo: "novo", texto: "Ao informar para quem a peça vai, ela guarda o lembrete “entrega pendente” com um botão que retoma de onde parou. Não é reserva: se outra pessoa levar antes, o lembrete some sozinho." },
+      { tipo: "melhoria", texto: "O número do termo no histórico de custódia virou link. Quem precisava do termo tinha de ir procurá-lo na lista com o número na cabeça." },
+    ],
+  },
   {
     versao: "0.101.0",
     data: "2026-09-10",

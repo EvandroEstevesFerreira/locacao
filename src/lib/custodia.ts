@@ -341,3 +341,103 @@ export function resolverPecaPedida<T extends { id: string }>(
   const peca = livres.find((p) => p.id === pedida) ?? null;
   return { peca, foraDaLista: peca === null };
 }
+
+/** Mínimo de caracteres do motivo, espelhando o `check` da migration 0102. */
+export const MOTIVO_SEM_ASSINATURA_MINIMO = 10;
+
+/**
+ * A devolução pode ser encerrada?
+ *
+ * Ou quem entrega assinou, ou há um motivo escrito para não ter assinado. Nunca
+ * nenhum dos dois.
+ *
+ * ┌─ POR QUE PERMITIR SEM ASSINATURA ────────────────────────────────────────┐
+ * │ 211 pessoas da base estão desligadas, e uma delas que saiu com um         │
+ * │ notebook não vai assinar devolução nenhuma. Exigir a assinatura ali não   │
+ * │ protege o patrimônio — só impede que o fato seja registrado, e o          │
+ * │ equipamento fica para sempre "com" quem não trabalha mais aqui.           │
+ * │                                                                          │
+ * │ O motivo obrigatório é o que impede o caminho sem assinatura de virar o   │
+ * │ caminho mais curto. Dez caracteres não são burocracia: são a diferença    │
+ * │ entre "recolhido pelo RH em 12/08" e um espaço em branco.                 │
+ * └──────────────────────────────────────────────────────────────────────────┘
+ */
+export function podeEncerrarDevolucao(p: {
+  assinou: boolean;
+  motivo: string | null;
+}): { ok: true } | { ok: false; erro: string } {
+  if (p.assinou) return { ok: true };
+
+  const motivo = (p.motivo ?? "").trim();
+  if (motivo.length === 0) {
+    return {
+      ok: false,
+      erro: "Sem a assinatura de quem devolve, escreva o motivo — por exemplo, que a pessoa foi desligada e o equipamento foi recolhido.",
+    };
+  }
+  if (motivo.length < MOTIVO_SEM_ASSINATURA_MINIMO) {
+    return {
+      ok: false,
+      erro: `O motivo precisa de ao menos ${MOTIVO_SEM_ASSINATURA_MINIMO} caracteres — o suficiente para alguém entender daqui a um ano.`,
+    };
+  }
+  return { ok: true };
+}
+
+/**
+ * O lembrete de entrega pendente ainda vale?
+ *
+ * Entre a devolução e a entrega a peça fica DISPONÍVEL, e não num estado
+ * próprio. O lembrete não impede ninguém: se outra pessoa levou a peça no meio
+ * do caminho, ele deixa de valer — foi decisão de quem estava lá, e insistir
+ * transformaria uma intenção anotada num impedimento real.
+ */
+export function lembreteValido(p: {
+  destinatarioId: string | null;
+  situacao: string;
+  temPosseAberta: boolean;
+}): boolean {
+  if (!p.destinatarioId) return false;
+  if (p.temPosseAberta) return false;
+  return p.situacao === "disponivel";
+}
+
+/**
+ * A transferência de custódia, de uma pessoa para outra.
+ *
+ * Um formulário só, dois documentos. Ele encerra o termo de quem está com a
+ * peça e — quando o destinatário é informado — deixa anotado para quem ela vai,
+ * de modo que o segundo passo saiba de onde retomar.
+ *
+ * O DESTINATÁRIO É OPCIONAL de propósito. "Devolveu e ainda não sei para quem
+ * vai" é caso tão real quanto "vou herdar a máquina do André", e obrigar um
+ * nome ali faria quem não sabe inventar um.
+ */
+export const transferirCustodiaSchema = z
+  .object({
+    unidade_id: z.string().uuid(),
+    data_devolucao: z.string().min(1, "Informe a data da devolução."),
+    estado_devolucao: z.enum(ESTADOS),
+    observacoes: textoOpcional(300),
+    /** Nome de quem devolve, como sai no documento. */
+    assinante: z.string().trim().min(1, "Informe o nome de quem devolve."),
+    /** A imagem da assinatura, quando houve assinatura. */
+    assinatura: opcional,
+    motivo_sem_assinatura: textoOpcional(300),
+    destinatario_id: z.string().uuid().nullable().optional().default(null),
+  })
+  .refine(
+    (v) =>
+      podeEncerrarDevolucao({
+        assinou: Boolean(v.assinatura),
+        motivo: v.motivo_sem_assinatura,
+      }).ok,
+    {
+      path: ["motivo_sem_assinatura"],
+      message:
+        "Sem a assinatura de quem devolve, escreva o motivo com ao menos 10 caracteres.",
+    },
+  );
+
+export type TransferirCustodiaInput = z.input<typeof transferirCustodiaSchema>;
+export type TransferirCustodiaDados = z.output<typeof transferirCustodiaSchema>;

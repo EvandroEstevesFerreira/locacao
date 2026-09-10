@@ -29,7 +29,7 @@ export default async function NovoTermoPage({
   const perfil = await getCurrentPerfil();
   if (!podeOperar(perfil?.papel)) redirect("/termos");
 
-  const { peca: pecaPedida } = await searchParams;
+  const { peca: pecaPedida, funcionario: funcionarioPedido } = await searchParams;
 
   const supabase = await createClient();
 
@@ -174,6 +174,16 @@ export default async function NovoTermoPage({
                 pecaEscolhida?.obra_id &&
                 obras.some((o) => o.id === pecaEscolhida.obra_id)
                   ? pecaEscolhida.obra_id
+                  : ""
+              }
+              // Vem da transferência de custódia, que já perguntou para quem a
+              // peça vai. Só vale se a pessoa estiver na lista — `?funcionario=`
+              // é digitável, e um id solto deixaria o seletor em branco sem
+              // ninguém entender por quê.
+              funcionarioInicial={
+                funcionarioPedido &&
+                listaFuncionarios.some((f) => f.id === funcionarioPedido)
+                  ? funcionarioPedido
                   : ""
               }
               avisoPeca={avisoPeca}

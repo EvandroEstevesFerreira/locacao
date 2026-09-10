@@ -19,6 +19,7 @@ import { hojeISOSaoPaulo } from "@/lib/locacao";
 // A matriz de transição da PEÇA é fonte única em frota.ts. O termo só a CHAMA.
 import { podeTransicionar, type Situacao as SituacaoPeca } from "@/lib/frota";
 import { abrirCustodia } from "@/lib/custodia-servidor";
+import { podeEncerrarDevolucao } from "@/lib/custodia";
 import { emailConfigurado, enviarEmail } from "@/lib/email";
 import { montarContexto, type LinhaOrganizacaoEmail } from "@/lib/emails/contexto";
 import { termoFuncionario } from "@/lib/emails/templates";
@@ -992,6 +993,15 @@ export async function encerrarTermo(
     funcionario: { nome: string; cpf: string | null; imagem: string | null };
     empresa: { nome: string; imagem: string | null };
   },
+  /**
+   * Por que a devolução não foi assinada.
+   *
+   * 211 pessoas da base estão desligadas, e uma delas que saiu com um notebook
+   * não vai voltar para assinar. Exigir a assinatura ali não protege o
+   * patrimônio — só impede que o fato seja registrado, e o equipamento fica
+   * para sempre "com" quem não trabalha mais aqui.
+   */
+  motivoSemAssinatura?: string | null,
 ): Promise<ActionResult> {
   const perfil = await getCurrentPerfil();
   if (!perfil?.org_id || !podeOperar(perfil.papel)) {
@@ -999,6 +1009,15 @@ export async function encerrarTermo(
   }
   const func = assinaturaSchema.safeParse(assinaturas.funcionario);
   if (!func.success) return falha(primeiroErro(func.error.issues));
+
+  // A REGRA MORA NO SERVIDOR. A tela até hoje exigia a imagem antes de chamar,
+  // mas `assinaturaSchema` sempre a aceitou nula — quem chamasse a action por
+  // fora encerrava sem assinatura e sem explicação nenhuma.
+  const pode = podeEncerrarDevolucao({
+    assinou: Boolean(func.data.imagem),
+    motivo: motivoSemAssinatura ?? null,
+  });
+  if (!pode.ok) return falha(pode.erro);
 
   const supabase = await createClient();
   const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
@@ -1036,7 +1055,15 @@ export async function encerrarTermo(
 
   const { error } = await supabase
     .from("termo_equipamento")
-    .update({ encerrado_em: new Date().toISOString() })
+    .update({
+      encerrado_em: new Date().toISOString(),
+      // Só grava o motivo quando ele é o que sustenta o encerramento. Guardá-lo
+      // ao lado de uma assinatura válida faria o documento parecer ressalvado
+      // sem ter ressalva.
+      devolucao_sem_assinatura_motivo: func.data.imagem
+        ? null
+        : (motivoSemAssinatura ?? "").trim(),
+    })
     .eq("id", termoId);
   if (error) {
     console.error("encerrarTermo/update", error);

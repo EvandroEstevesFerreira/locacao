@@ -148,6 +148,15 @@ const AMOSTRAS: Record<string, unknown> = {
     data: "2026-09-02",
   },
   editarPecaSchema: { id: UUID, identificador: "PAT-0431" },
+  // MÍNIMO: sem assinatura o motivo é obrigatório, e o refine do schema recusa
+  // a amostra sem ele — é a própria regra que a varredura exercita.
+  transferirCustodiaSchema: {
+    unidade_id: UUID,
+    data_devolucao: "2026-09-10",
+    estado_devolucao: "bom",
+    assinante: "Andre Piva Correa",
+    motivo_sem_assinatura: "Desligado em 12/08, recolhido pelo RH.",
+  },
   movimentoSchema: { item_id: UUID, tipo: "entrada", quantidade: "10", data: "2026-09-02" },
   parcelaItemSchema: { item_locado_id: UUID, valor: "100" },
   empresaSchema: { nome: "Sistenge Engenharia" },
