@@ -9,6 +9,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatarCnpj } from "@/lib/cnpj";
 import {
+  type ContatoFornecedorInput,
   fornecedorSchema,
   type FornecedorDados,
   type FornecedorInput,
@@ -20,14 +21,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { salvarFornecedor } from "./actions";
+import { ContatosDoFornecedor } from "./contatos-do-fornecedor";
 
 type Fornecedor = {
   id: string;
   nome: string;
   cnpj: string | null;
   codigo_mega: string | null;
-  contato_nome: string | null;
-  contato_telefone: string | null;
   contato_email: string | null;
   observacoes: string | null;
   ativo: boolean;
@@ -35,11 +35,14 @@ type Fornecedor = {
 
 export function FornecedorForm({
   fornecedor,
+  contatos = [],
   obras = [],
   obrasDoFornecedor = [],
   obrasComContrato = [],
 }: {
   fornecedor?: Fornecedor;
+  /** Contatos gravados, de `fornecedor_contato` (migration 0104). */
+  contatos?: ContatoFornecedorInput[];
   obras?: { id: string; codigo: string; nome: string }[];
   obrasDoFornecedor?: string[];
   /** Derivadas dos contratos. Somente leitura — o contrato é a fonte. */
@@ -63,9 +66,8 @@ export function FornecedorForm({
       nome: fornecedor?.nome ?? "",
       cnpj: fornecedor?.cnpj ?? "",
       codigo_mega: fornecedor?.codigo_mega ?? "",
-      contato_nome: fornecedor?.contato_nome ?? "",
-      contato_telefone: fornecedor?.contato_telefone ?? "",
       contato_email: fornecedor?.contato_email ?? "",
+      contatos,
       observacoes: fornecedor?.observacoes ?? "",
       ativo: fornecedor?.ativo ?? true,
       obras: obrasDoFornecedor,
@@ -210,26 +212,12 @@ export function FornecedorForm({
         )}
       </div>
 
-      <div className="grid gap-5 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <Label htmlFor="contato_nome">
-            Contato{" "}
-            <span className="font-normal text-muted-foreground">(opcional)</span>
-          </Label>
-          <Input id="contato_nome" disabled={pendente} {...register("contato_nome")} />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="contato_telefone">
-            Telefone{" "}
-            <span className="font-normal text-muted-foreground">(opcional)</span>
-          </Label>
-          <Input
-            id="contato_telefone"
-            disabled={pendente}
-            {...register("contato_telefone")}
-          />
-        </div>
-      </div>
+      <ContatosDoFornecedor
+        control={control}
+        register={register}
+        setValue={setValue}
+        pendente={pendente}
+      />
 
       {/* AS OBRAS COM CONTRATO APARECEM SOZINHAS — o sistema já sabe onde o
           fornecedor atua, e manter uma segunda lista à mão é como as duas

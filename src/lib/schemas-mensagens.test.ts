@@ -114,13 +114,18 @@ const VAZIOS: Record<string, unknown> = {
   fornecedorSchema: {
     nome: "",
     cnpj: "",
-    contato_nome: "",
-    contato_telefone: "",
     contato_email: "",
     observacoes: "",
     ativo: true,
     obras: [],
+    contatos: [],
     confirmar_duplicado: false,
+  },
+  contatoFornecedorSchema: {
+    nome: "",
+    cargo: "",
+    telefone: "",
+    principal: false,
   },
   contratoSchema: {
     obra_id: "",

@@ -7,6 +7,85 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.104.0] - 2026-09-10
+
+Varios contatos por fornecedor.
+
+### Adicionado
+
+- Tabela `fornecedor_contato` (migration 0104): `nome`, `cargo`, `telefone`,
+  `principal`. **Um principal por fornecedor garantido no banco**, por indice
+  unico PARCIAL `unique (fornecedor_id) where principal` -- o mesmo recurso do
+  `idx_custodia_aberta` (0059) e do "um orcamento vigente por obra" (0051). Ele
+  permite N contatos comuns convivendo com um principal, e permite ZERO, que e
+  estado legitimo.
+- `src/lib/telefone.ts`: `normalizarTelefone` e `formatarTelefone`, 10 casos por
+  TDD. Guarda digitos com DDI, formata na exibicao.
+- `ContatosDoFornecedor`, com `useFieldArray` -- ja o padrao em `ficha-campos` e
+  `orcamento-form`.
+
+### A ordem de escrita, que nao e obvia
+
+O PostgREST nao tem transacao. A action **apaga e reinsere** os contatos, em vez
+de casar linha por linha: nada aponta para `fornecedor_contato` (nao ha FK a
+preservar), e inserir o lote de uma vez com um so `principal: true` faz o estado
+intermediario de "duas principais" -- que o indice unico recusaria -- nao
+existir.
+
+O erro das DUAS escritas e conferido, seguindo a licao ja registrada na
+sincronia de obras: la o `delete` limpava, o `insert` falhava, e o resultado era
+um fornecedor sem vinculo nenhum anunciado como "atualizado". Os dois avisos
+(obras e contatos) sao devolvidos juntos, porque falham por caminhos
+independentes.
+
+### O que NAO mudou, e e a decisao mais importante
+
+`fornecedor.contato_email` **fica onde esta**. E a caixa da EMPRESA -- no
+cadastro real, `contato@nautika.com.br` -- e o destinatario do romaneio de
+recebimento e do termo de devolucao, com seis pontos do codigo dependendo dele.
+Amarrar o documento ao e-mail de uma PESSOA faria o romaneio parar de chegar no
+dia em que ela saisse da empresa.
+
+O nome da coluna passa a mentir um pouco: `contato_email` nao e o e-mail do
+contato, e o da empresa. Renomear custaria seis call sites sem ganho, entao ficou
+o `comment on column` em vez do rename.
+
+### Expandir e contrair
+
+`contato_nome` e `contato_telefone` **continuam no banco**, marcadas como
+superadas por `comment on column`. Derruba-las na mesma migration quebraria a
+producao na janela entre aplicar o SQL e publicar o codigo -- quatro telas as
+liam.
+
+O risco dessa fase e a coluna que existe, tem dado e nao e mais atualizada:
+quem a ler recebe o valor congelado no dia da migracao.
+`src/lib/fornecedor-contato.test.ts` e a varredura que segura isso ate a
+migration que as derruba.
+
+**A varredura foi verificada com isca**: um arquivo temporario com
+`f.contato_nome` a fez falhar, e sem ele ela passa. Sem essa checagem ela teria
+passado por vacuidade -- a primeira versao tinha um caractere BACKSPACE invisivel
+(``) no meio da regex, vindo do escape de `` em Python, e nao casava com
+nada.
+
+### Alterado
+
+- A listagem devolve `contatoPrincipal` ja achatado, por embed para-MUITOS --
+  mesma forma do embed de obras ao lado, que nao multiplica linhas nem afeta o
+  `count`. So `!inner` faria isso.
+- `PageHeader` da tela de edicao: nome do fornecedor no titulo, "Editar
+  fornecedor" na descricao.
+- O telefone e formatado na CARGA do formulario, e nao so no `onBlur`: o banco
+  guarda digitos e o campo abriria com "5511980765016" em todo cadastro
+  existente.
+
+### Verificado
+
+Migration aplicada e conferida por consulta, nao por ausencia de erro:
+`to_regclass` devolve a tabela, `relrowsecurity` e true, `pg_policies` conta 2,
+o indice parcial existe, e os 3 contatos migraram com o telefone normalizado --
+inclusive "11 95914-0002", que virou `5511959140002`.
+
 ## [0.103.1] — 2026-09-10
 
 Os 37 fornecedores com código do Mega — e duas razões sociais corrigidas.

@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.103.1";
+export const APP_VERSION = "0.104.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,18 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.104.0",
+    data: "2026-09-10",
+    titulo: "Vários contatos por fornecedor",
+    mudancas: [
+      { tipo: "novo", texto: "O fornecedor passa a ter quantos contatos precisar, cada um com cargo e telefone, e um marcado como principal. Fornecedor de verdade tem o comercial, o do faturamento e o do galpão — e quem liga precisa saber para qual dos três." },
+      { tipo: "novo", texto: "O telefone aparece sempre no mesmo formato: +55 (11) 94707-1104. O que estava gravado foi convertido, inclusive os que vieram sem o código do país." },
+      { tipo: "melhoria", texto: "A tela de edição mostra o nome do fornecedor no título, com “Editar fornecedor” embaixo. Quem abre a tela já sabe que veio editar; o que precisa confirmar é de quem é o cadastro." },
+      { tipo: "melhoria", texto: "O contato que já estava cadastrado virou o primeiro da lista, marcado como principal. Ninguém precisa redigitar nada." },
+      { tipo: "seguranca", texto: "O e-mail que recebe romaneio e termo de devolução continua sendo o da empresa, e não o de uma pessoa. Amarrá-lo a um contato faria o documento parar de chegar no dia em que essa pessoa saísse." },
+    ],
+  },
   {
     versao: "0.103.1",
     data: "2026-09-10",

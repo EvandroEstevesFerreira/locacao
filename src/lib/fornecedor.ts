@@ -10,6 +10,25 @@
 import { z } from "zod";
 import { cnpjValido, normalizarCnpj } from "@/lib/cnpj";
 import { idOpcional, opcional, textoOpcional, emailOpcional } from "@/lib/campos";
+import { normalizarTelefone } from "@/lib/telefone";
+
+/**
+ * Um contato do fornecedor: quem se liga, e para quê.
+ *
+ * O telefone é normalizado AQUI, no schema, e não no formulário: assim vale
+ * para qualquer caminho de escrita, inclusive uma importação futura. Guarda-se
+ * dígitos com DDI; a máscara é da exibição.
+ */
+export const contatoFornecedorSchema = z.object({
+  id: idOpcional,
+  nome: z.string().trim().min(1, "Informe o nome do contato.").max(200),
+  cargo: textoOpcional(120),
+  telefone: opcional.transform((v) => normalizarTelefone(v)),
+  principal: z.boolean(),
+});
+
+export type ContatoFornecedorInput = z.input<typeof contatoFornecedorSchema>;
+export type ContatoFornecedorDados = z.output<typeof contatoFornecedorSchema>;
 
 export const fornecedorSchema = z.object({
   id: idOpcional,
@@ -32,9 +51,28 @@ export const fornecedorSchema = z.object({
    * 10/09/2026: 36 dos 38.
    */
   codigo_mega: textoOpcional(30),
-  contato_nome: textoOpcional(200),
-  contato_telefone: textoOpcional(40),
+  /**
+   * A caixa da EMPRESA — destinatário do romaneio e do termo de devolução.
+   *
+   * O nome do campo é histórico: não é o e-mail de um contato. Amarrar o
+   * documento ao e-mail de uma pessoa faria o romaneio parar de chegar no dia
+   * em que ela saísse da empresa.
+   */
   contato_email: emailOpcional(200),
+  /**
+   * Os contatos, em tabela própria (`fornecedor_contato`, migration 0104).
+   *
+   * `contato_nome` e `contato_telefone` saíram deste schema: eram UM contato em
+   * coluna plana, e o cadastro real tem o comercial, o do faturamento e o do
+   * galpão. As colunas continuam no banco até a migration que as derruba, mas
+   * ninguém mais escreve nelas — ver `fornecedor-contato.test.ts`.
+   */
+  contatos: z
+    .array(contatoFornecedorSchema)
+    .max(20, "Vinte contatos por fornecedor é o limite.")
+    .refine((cs) => cs.filter((c) => c.principal).length <= 1, {
+      message: "Marque apenas um contato como principal.",
+    }),
   observacoes: textoOpcional(1000),
   ativo: z.boolean(),
   /** IDs das obras vinculadas (relação N:N com fornecedor_obra). */

@@ -10,8 +10,14 @@ export type FornecedorListItem = {
   nome: string;
   cnpj: string | null;
   codigo_mega: string | null;
-  contato_nome: string | null;
-  contato_telefone: string | null;
+  /**
+   * O contato PRINCIPAL, já achatado (`fornecedor_contato`, migration 0104).
+   *
+   * Achatado aqui, e não devolvido como lista, porque a listagem só mostra um.
+   * Quem precisa dos outros abre a ficha — trazer todos para 37 linhas seria
+   * carregar o que ninguém lê.
+   */
+  contatoPrincipal: { nome: string; cargo: string | null; telefone: string | null } | null;
   /**
    * O campo que faz o sistema funcionar: é por ele que saem o romaneio de
    * recebimento e o termo de devolução. Vem para a LISTAGEM, e não só para o
@@ -48,7 +54,10 @@ export async function listarFornecedores(
   let query = supabase
     .from("fornecedor")
     .select(
-      `id, nome, cnpj, codigo_mega, contato_nome, contato_telefone, contato_email, ativo, ${embed}`,
+      // Embed para-MUITOS, como o de obras logo ao lado: não multiplica linhas e
+      // não afeta o `count`. Só `!inner` faria isso, e é por isso que o filtro
+      // por obra acima precisa dele.
+      `id, nome, cnpj, codigo_mega, contato_email, ativo, fornecedor_contato(nome, cargo, telefone, principal), ${embed}`,
       { count: "exact" },
     );
   if (p.obraId) query = query.eq("fornecedor_obra.obra_id", p.obraId);
@@ -62,8 +71,14 @@ export async function listarFornecedores(
     .range(p.from, p.to);
   if (error) console.error("listarFornecedores", error.message);
 
-  type Bruto = Omit<FornecedorListItem, "obras"> & {
+  type Bruto = Omit<FornecedorListItem, "obras" | "contatoPrincipal"> & {
     fornecedor_obra: { obra: { id: string; codigo: string } | null }[];
+    fornecedor_contato: {
+      nome: string;
+      cargo: string | null;
+      telefone: string | null;
+      principal: boolean;
+    }[];
   };
   const brutos = (data ?? []) as unknown as Bruto[];
 
@@ -97,14 +112,26 @@ export async function listarFornecedores(
   }
 
   return {
-    itens: brutos.map(({ fornecedor_obra, ...f }) => {
+    itens: brutos.map(({ fornecedor_obra, fornecedor_contato, ...f }) => {
       // Map por id para não repetir a obra que está nos dois conjuntos.
       const juntas = new Map(porContrato.get(f.id) ?? []);
       for (const v of fornecedor_obra ?? []) {
         if (v.obra) juntas.set(v.obra.id, v.obra);
       }
+      // O principal, ou o primeiro que houver. Um fornecedor pode ter contatos
+      // e nenhum eleito — o índice único do banco aceita zero de propósito —, e
+      // nesse caso mostrar o primeiro é melhor que mostrar nada.
+      const contatos = fornecedor_contato ?? [];
+      const escolhido = contatos.find((c) => c.principal) ?? contatos[0] ?? null;
       return {
         ...f,
+        contatoPrincipal: escolhido
+          ? {
+              nome: escolhido.nome,
+              cargo: escolhido.cargo,
+              telefone: escolhido.telefone,
+            }
+          : null,
         obras: [...juntas.values()].sort((a, b) => a.codigo.localeCompare(b.codigo)),
       };
     }),

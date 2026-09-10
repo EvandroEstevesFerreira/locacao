@@ -164,7 +164,12 @@ const AMOSTRAS: Record<string, unknown> = {
     nome: "Fornecedor X",
     ativo: true,
     obras: [],
+    contatos: [],
     confirmar_duplicado: false,
+  },
+  contatoFornecedorSchema: {
+    nome: "Dayane Canavesi Peruzzi",
+    principal: true,
   },
   contratoSchema: {
     obra_id: UUID,

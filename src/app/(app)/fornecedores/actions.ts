@@ -42,7 +42,7 @@ export async function salvarFornecedor(
   const parsed = fornecedorSchema.safeParse(raw);
   if (!parsed.success) return falha(primeiroErro(parsed.error.issues));
 
-  const { id, obras, confirmar_duplicado, cnpj, ...resto } = parsed.data;
+  const { id, obras, contatos, confirmar_duplicado, cnpj, ...resto } = parsed.data;
   const cnpjNorm = cnpj ? normalizarCnpj(cnpj) : "";
   const dados = {
     ...resto,
@@ -88,6 +88,49 @@ export async function salvarFornecedor(
     fornecedorId = criado.id;
   }
 
+  // Sincroniza os CONTATOS.
+  //
+  // Apaga e reinsere, em vez de casar linha por linha. Duas razões: nada aponta
+  // para `fornecedor_contato` (não há FK a preservar), e é o que torna o
+  // "um principal" trivial — o índice único parcial proibiria duas linhas
+  // principais coexistindo, e num `update` linha a linha a ordem passaria por
+  // esse estado. Inserindo o lote de uma vez, com um só `principal: true`, o
+  // estado intermediário não existe.
+  //
+  // O erro das DUAS escritas é conferido. Foi a lição da sincronia de obras
+  // logo abaixo: o `delete` limpava, o `insert` falhava, e o resultado era um
+  // fornecedor que perdeu todos os vínculos — anunciado como "atualizado".
+  let avisoContatos: string | null = null;
+  if (fornecedorId) {
+    const { error: erroApagar } = await supabase
+      .from("fornecedor_contato")
+      .delete()
+      .eq("fornecedor_id", fornecedorId);
+    if (erroApagar) {
+      console.error("salvarFornecedor/contatos/apagar", erroApagar);
+      avisoContatos =
+        "O fornecedor foi salvo, mas os contatos dele não foram atualizados.";
+    } else if (contatos.length > 0) {
+      const { error: erroInserir } = await supabase
+        .from("fornecedor_contato")
+        .insert(
+          contatos.map((c) => ({
+            org_id: perfil.org_id!,
+            fornecedor_id: fornecedorId!,
+            nome: c.nome,
+            cargo: c.cargo,
+            telefone: c.telefone,
+            principal: c.principal,
+          })),
+        );
+      if (erroInserir) {
+        console.error("salvarFornecedor/contatos/inserir", erroInserir);
+        avisoContatos =
+          "O fornecedor foi salvo, mas os contatos não foram gravados — a lista ficou vazia. Abra o cadastro e refaça.";
+      }
+    }
+  }
+
   // Sincroniza os vínculos com obras (N:N).
   //
   // As duas escritas descartavam o erro. O fornecedor era salvo, o `delete`
@@ -127,10 +170,14 @@ export async function salvarFornecedor(
   revalidatePath("/fornecedores");
   // `ok: true` com `aviso`: o fornecedor foi salvo de verdade. Devolver
   // `ok: false` faria a pessoa salvar outra vez e criar um duplicado.
+  // Os DOIS avisos, e não só um: obras e contatos falham por caminhos
+  // independentes, e mostrar apenas o primeiro esconderia metade do que não
+  // ficou salvo.
+  const avisos = [avisoObras, avisoContatos].filter(Boolean);
   return {
     ok: true,
     id: fornecedorId ?? undefined,
-    aviso: avisoObras ?? undefined,
+    aviso: avisos.length > 0 ? avisos.join(" ") : undefined,
   };
 }
 
