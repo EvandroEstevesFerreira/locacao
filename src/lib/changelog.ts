@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.105.1";
+export const APP_VERSION = "0.105.2";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,18 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.105.2",
+    data: "2026-09-10",
+    titulo: "Consulta de pagamentos no Mega",
+    mudancas: [
+      {
+        tipo: "melhoria",
+        texto:
+          "Agora dá para conferir no Mega, pelo código do fornecedor, quais parcelas de uma locação já foram pagas e quais seguem em aberto.",
+      },
+    ],
+  },
   {
     versao: "0.105.1",
     data: "2026-09-10",

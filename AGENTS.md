@@ -165,3 +165,74 @@ Depois: revisar o diff, bumpar a versão nos três pontos, e commitar explicando
 
 Mexeu em `src/app/offline/page.tsx` ou em `public/icons/`? Bumpe `CACHE` em
 `public/sw.js`: o `install` só refaz o PRECACHE quando o nome do cache muda.
+
+# Pagamentos no Mega
+
+O Mega é o ERP do contas a pagar. É lá que se confere se a locação foi
+**efetivamente paga** — o Loca sabe o que foi contratado e o que corre; quem
+sabe o que saiu do caixa é o Mega.
+
+**Consulta pronta**, sem escrever código:
+
+```
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\mega-pagamentos.ps1 -Codigo 2630
+powershell ... -File scripts\mega-pagamentos.ps1 -Codigo 2630 -Inicio 2026-07-01 -Fim 2026-12-31
+powershell ... -File scripts\mega-pagamentos.ps1 -Codigo 2630 -Json
+```
+
+`-Codigo` é o **`fornecedor.codigo_mega`** do Loca, cru. Medido em 10/09/2026:
+36 dos 38 fornecedores têm o código preenchido.
+
+## O que a resposta traz
+
+```
+AP 32549 | NF     | doc 42824001 | venc 15/08/2026 | R$ 2.038,53 | saldo 0,00     → paga
+AP 33162 | FATURA | doc 42824002 | venc 15/09/2026 | R$ 2.038,53 | saldo 2.038,53 → em aberto
+```
+
+- **`SaldoAtual == 0` é o que significa "pago".** Não existe campo de data de
+  pagamento nessa rota: dá para saber SE pagou, não QUANDO.
+- **`NumeroDocumento` é o número da fatura** — `42824002` é a fatura
+  nº 042.824.002 do fornecedor. É a chave para ligar um título do Mega a um
+  documento do Loca, e não exige interpretar texto livre.
+- Retenção (ISS, INSS, IR, GUIA) fica em **agente próprio**, o do órgão. Filtrar
+  pelo código do fornecedor já as exclui — mas em consulta por período elas
+  aparecem, e `AP | parcela` **não é chave única**. A chave é
+  `AP | parcela | agente | tipoDoc | numDoc | vencimento | valor`.
+
+## Duas correções ao guia do Mega
+
+O guia completo está em
+`C:\Users\evandro.ferreira\Projects\Financeiro\docs\CONEXAO-MEGA-API.md`.
+Duas coisas foram medidas aqui e divergem dele:
+
+1. **A rota de contas a pagar quer o código CRU** (`2630`), não `1-2630`. Com o
+   prefixo, a API responde `The value '1-2630' is not valid`. O formato
+   `padrao-codigo` só vale em `/api/globalagente/Agente/{id}`, que serve para
+   confirmar nome e CNPJ do fornecedor.
+2. **`@($s | ConvertFrom-Json)` no PowerShell 5.1 devolve UM elemento** contendo
+   o array inteiro: a contagem sai 1 e a soma estoura com `op_Addition`.
+   Atribuir primeiro (`$d = $s | ConvertFrom-Json`) e envolver depois
+   (`@($d)`) desenrola certo.
+
+## Regras que não se negociam
+
+- **Uma autenticação por vez.** Encadear tentativas já bloqueou a conta
+  `120.apifin`. O script reaproveita o token salvo (vale 2 h) e só reautentica
+  quando ele passa de 100 min.
+- **Nunca imprimir `mega_cred.txt` nem o `TENANT`** — o tenant é GUID e é
+  segredo. O script lê o arquivo e mostra só o resultado da chamada.
+- **Erro de autenticação volta HTTP 200 com `text/plain`.** Nunca converter para
+  JSON direto; ler o corpo e só converter se começar com `{` ou `[`.
+- Rodar pelo **PowerShell do Windows**, não pelo shell Linux: o container não
+  alcança os arquivos de credencial.
+
+## O que ainda NÃO existe
+
+Não há integração automática: o Loca **não** consulta o Mega sozinho, e
+`lancamento_financeiro` está praticamente vazia (2 lançamentos, nenhum ligado a
+contrato). A consulta acima é manual, por sessão.
+
+Se um dia virar sincronização, ela deve ser **cron**, e não consulta ao vivo por
+requisição: vários usuários abrindo a tela do contrato autenticariam em paralelo
+e derrubariam a conta de API.

@@ -7,6 +7,20 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.105.2] - 2026-09-10
+
+Consulta de pagamentos no Mega.
+
+O Loca sabe o que foi contratado e o que corre; quem sabe o que saiu do caixa e
+o Mega. `scripts/mega-pagamentos.ps1` consulta o contas a pagar de um fornecedor
+pelo `codigo_mega` e diz, parcela a parcela, o que esta pago e o que esta em
+aberto. A secao "Pagamentos no Mega" do AGENTS.md registra as duas correcoes ao
+guia do ERP que foram medidas aqui: a rota de contas a pagar quer o codigo CRU
+(nao `1-2630`), e `@($s | ConvertFrom-Json)` no PowerShell 5.1 nao desenrola o
+array.
+
+Ainda **nao** ha integracao automatica: a consulta e manual, por sessao.
+
 ## [0.105.1] - 2026-09-10
 
 O valor do contrato agora salva.
