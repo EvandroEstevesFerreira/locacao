@@ -8,6 +8,7 @@ import {
   montarLinhaDoTempo,
   moverPecaSchema,
   editarPecaSchema,
+  posseOculta,
   type Posse,
 } from "./custodia";
 
@@ -316,5 +317,31 @@ describe("editarPecaSchema", () => {
     });
     expect(r.success).toBe(false);
     if (!r.success) expect(r.error.issues[0].message).toBe("IMEI tem 15 dígitos.");
+  });
+});
+
+describe("posseOculta — o que sai da primeira leitura do histórico", () => {
+  it("posse fechada de termo cancelado sai", () => {
+    // O mutirão de regularização deixou 48 delas. Na 14L4594 viraram quatro
+    // linhas para uma posse que importa.
+    expect(posseOculta({ anulada: true, aberta: false })).toBe(true);
+  });
+
+  it("posse válida fica", () => {
+    expect(posseOculta({ anulada: false, aberta: false })).toBe(false);
+  });
+
+  it("A POSSE ABERTA NUNCA SAI, mesmo anulada", () => {
+    // `cancelarTermo` grava o cancelamento ANTES de mexer no livro e devolve
+    // `problemaNoLivro` quando a segunda parte falha — o que deixa uma posse
+    // ABERTA apontando para um termo CANCELADO.
+    //
+    // Esconder essa linha seria a pior falha desta tela: a peça está com
+    // alguém, e o histórico diria que não está com ninguém.
+    expect(posseOculta({ anulada: true, aberta: true })).toBe(false);
+  });
+
+  it("posse aberta e válida, obviamente fica", () => {
+    expect(posseOculta({ anulada: false, aberta: true })).toBe(false);
   });
 });

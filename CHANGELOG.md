@@ -7,6 +7,40 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.102.1] — 2026-09-10
+
+O histórico de custódia volta a caber numa tela.
+
+### Recolhido, não apagado
+
+`peca-linha-do-tempo.tsx` dizia o contrário, e por um bom motivo: *"documento
+anulado não some do histórico, e 'esteve com o Fulano' é diferente de 'houve um
+termo que não valeu'"*. A intenção continua certa — **o que mudou foi a escala**.
+
+O mutirão de regularização emitiu 142 termos para 95 peças (um `useState` que
+não reinicializava entre rodadas, corrigido na 0.98.1), e os **48 duplicados**
+foram cancelados. Na `14L4594` isso virou **quatro linhas**, três anuladas no
+mesmo dia, para uma posse que importa.
+
+Histórico que ninguém consegue ler protege menos que histórico curto.
+
+**Consideramos apagar as 48 e não apagamos.** São documentos numerados que
+registram um incidente de produção e a remediação dele; apagá-los deixaria
+buracos na numeração e destruiria o rastro. Elas saem da primeira leitura e
+ficam a **um clique** — e continuam no banco, que é onde a auditoria as procura.
+
+### A posse aberta nunca sai
+
+O comentário que eu ia escrever afirmava que "a posse aberta nunca é anulada",
+porque cancelar um termo fecha a posse que ele abriu. **Não é garantido:**
+`cancelarTermo` grava o cancelamento ANTES de mexer no livro e devolve
+`problemaNoLivro` quando a segunda parte falha — o que deixa uma posse **aberta**
+apontando para um termo **cancelado**.
+
+Esconder essa linha seria a pior falha possível desta tela: a peça está com
+alguém, e o histórico diria que não está com ninguém. Quando as duas condições
+brigam, "está com alguém agora" ganha — e há teste com esse nome.
+
 ## [0.102.0] — 2026-09-10
 
 Transferir custódia de uma pessoa para outra.

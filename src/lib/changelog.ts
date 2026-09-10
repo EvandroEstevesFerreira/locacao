@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.102.0";
+export const APP_VERSION = "0.102.1";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,15 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.102.1",
+    data: "2026-09-10",
+    titulo: "O histórico de custódia volta a caber numa tela",
+    mudancas: [
+      { tipo: "melhoria", texto: "O histórico de custódia recolhe as posses de termos cancelados. Elas continuam no sistema, a um clique — mas saem da primeira leitura, onde viraram ruído depois do mutirão de regularização." },
+      { tipo: "seguranca", texto: "A posse ABERTA nunca é recolhida, mesmo vinda de termo cancelado. Escondê-la seria a pior falha possível dessa tela: a peça está com alguém, e o histórico diria que não está com ninguém." },
+    ],
+  },
   {
     versao: "0.102.0",
     data: "2026-09-10",
