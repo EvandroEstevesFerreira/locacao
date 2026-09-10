@@ -27,6 +27,14 @@ export type PecaDetalhe = {
   ficha: Record<string, unknown>;
   /** A definição desses campos, para o formulário saber o que desenhar. */
   camposDoTipo: CampoFicha[];
+  /**
+   * Para quem a peça foi prometida numa transferência de custódia.
+   *
+   * NÃO É RESERVA: a peça está disponível de verdade entre a devolução e a
+   * entrega. Se alguém levar antes, `lembreteValido` para de mostrar isto.
+   */
+  entregaPendente: { id: string; nome: string } | null;
+  entregaPendenteEm: string | null;
   id: string;
   identificador: string;
   numeroSerie: string | null;
@@ -60,6 +68,7 @@ export async function obterPeca(id: string): Promise<PecaDetalhe | null> {
       "id, identificador, numero_serie, situacao, propriedade, estado, ano, observacoes, " +
         "obra_id, item_id, imei, imei_2, linha_telefonica, operadora, service_tag, " +
         "memoria_gb, configuracao, ficha, tem_medidor, " +
+        "entrega_pendente_em, entregaPendente:entrega_pendente_funcionario_id(id, nome), " +
         "item:item_id(descricao, tipo:tipo_id(campos_ficha, unidade_medidor), categoria:categoria_id(nome, perfil_campos)), " +
         "obra:obra_id(codigo, nome)",
     )
@@ -99,6 +108,9 @@ export async function obterPeca(id: string): Promise<PecaDetalhe | null> {
     // no hodômetro de um carro, e a leitura de 48.000 viraria “48.000 h”.
     unidadeMedidor: (item?.tipo?.unidade_medidor as UnidadeMedidor | null) ?? null,
     ficha: (b.ficha as Record<string, unknown> | null) ?? {},
+    entregaPendente:
+      (b.entregaPendente as { id: string; nome: string } | null) ?? null,
+    entregaPendenteEm: (b.entrega_pendente_em as string | null) ?? null,
     camposDoTipo: definicao.success ? definicao.data : [],
     id: b.id as string,
     identificador: b.identificador as string,

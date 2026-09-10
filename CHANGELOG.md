@@ -7,6 +7,72 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.102.0] — 2026-09-10
+
+Transferir custódia de uma pessoa para outra.
+
+*"Vou herdar a máquina que era do André, e a minha fica disponível."*
+
+### O caminho que existia
+
+Dois caminhos separados, em telas diferentes: caçar o termo ativo na lista de
+Termos, registrar devolução, encerrar; e só então voltar à peça para emitir o
+novo. A página da peça mostrava “Com quem está” e **nem link para o termo
+tinha** — o número aparecia como texto.
+
+O bloco “Movimentar” oferece Obra, Almoxarifado e Fornecedor, nunca uma pessoa,
+e nada dizia que para outra pessoa o caminho era outro.
+
+### Continuam sendo dois termos
+
+A trava `custodia_funcionario_exige_termo` fica como está: posse de funcionário
+só nasce de termo assinado. É ela que garante existir um papel dizendo **em que
+estado** o equipamento saiu da mão de quem o tinha — se a tela aparecer trincada
+semana que vem, o termo encerrado responde.
+
+O que muda é o **caminho**, não a regra.
+
+### Não é uma transação, e isso é deliberado
+
+As duas assinaturas podem acontecer em dias diferentes, e entre elas a peça fica
+**disponível** — sem estado novo na matriz de transição, sem trava.
+
+O preço é que outra pessoa pode levá-la no meio do caminho. A resposta é um
+**lembrete**, não uma reserva: a peça mostra “entrega pendente para Fulano” com
+o botão que retoma. Se alguém levou antes, `lembreteValido` para de mostrar
+sozinho — foi decisão de quem estava lá, e insistir transformaria uma intenção
+anotada num impedimento real.
+
+### Devolução sem assinatura, com motivo
+
+211 pessoas da base estão desligadas. Uma delas que saiu com um notebook **não
+vai assinar devolução nenhuma**, e exigir a assinatura ali não protegia o
+patrimônio: só impedia o fato de ser registrado, e o equipamento ficava para
+sempre “com” quem não trabalha mais aqui.
+
+O motivo é **obrigatório** quando a assinatura falta, com mínimo de dez
+caracteres, e quem garante isso é o `check` do banco — não a tela. Sem ele o
+caminho sem assinatura viraria o mais curto, e em seis meses metade das
+devoluções não teria nem assinatura nem explicação. O campo **só aparece quando
+a assinatura falta**, pelo mesmo motivo.
+
+A regra passou a valer também no servidor: `assinaturaSchema` sempre aceitou
+imagem nula, e quem chamasse `encerrarTermo` por fora encerrava sem assinatura e
+sem explicação nenhuma.
+
+### O termo é descoberto no servidor
+
+A action não recebe `termo_id` da tela. Aceitá-lo permitiria encerrar o termo de
+**outra peça** — e encerrar termo alheio devolve para `disponivel` equipamento
+que está legitimamente com alguém.
+
+### Migrations
+
+- `0102_transferir_custodia.sql` — `devolucao_sem_assinatura_motivo` no termo,
+  com `check` de tamanho mínimo; `entrega_pendente_funcionario_id` e
+  `entrega_pendente_em` na peça, com índice parcial. Aborta se a trava que
+  obriga o termo tiver sumido.
+
 ## [0.101.0] — 2026-09-10
 
 Quem vê o parque de máquinas.

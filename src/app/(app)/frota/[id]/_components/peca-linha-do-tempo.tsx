@@ -1,5 +1,6 @@
 import { Clock } from "lucide-react";
 
+import Link from "next/link";
 import { montarLinhaDoTempo, descreverDetentor, DETENTOR_INFO, type Posse } from "@/lib/custodia";
 import { formatarData } from "@/lib/locacao";
 import { Badge } from "@/components/ui/badge";
@@ -45,9 +46,21 @@ export function PecaLinhaDoTempo({ posses, hoje }: { posses: Posse[]; hoje: stri
             {p.periodo}
           </span>
 
+          {/* LINK, e não texto. Ele era só o número escrito, e quem precisava
+              do termo — para devolver, para reimprimir — tinha de ir caçá-lo na
+              lista de Termos com aquele número na cabeça. */}
           {p.termoNumero ? (
             <span className="w-full text-xs text-muted-foreground">
-              Termo {p.termoNumero}
+              {p.termoId ? (
+                <Link
+                  href={`/termos/${p.termoId}`}
+                  className="underline underline-offset-4 hover:text-foreground"
+                >
+                  Termo {p.termoNumero}
+                </Link>
+              ) : (
+                <>Termo {p.termoNumero}</>
+              )}
             </span>
           ) : null}
           {p.observacoes ? (
