@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { differenceInCalendarDays } from "date-fns";
-import {
+import { opcional,
   idOpcional,
   dataOpcional as dataOpcionalCampo,
   textoOpcional,
@@ -241,6 +241,20 @@ export const contratoSchema = z
     status: z.enum(STATUS_CONTRATOS),
     observacoes: textoOpcional(1000),
     cobranca_prorata: z.boolean(),
+    /**
+     * O valor total previsto NO DOCUMENTO do contrato.
+     *
+     * Digitado, não calculado: é a referência contra a qual o cadastro é
+     * conferido (`conciliarContrato`). Vazio vira `null` — contrato antigo não
+     * tem o número do papel, e ausência não pode virar alarme.
+     */
+    valor_total_contratado: opcional.transform((v) => {
+      const t = (v ?? "").trim();
+      if (t === "") return null;
+      // Aceita "32.616,48" e "32616.48": quem copia do PDF cola o formato de lá.
+      const n = Number(t.replace(/\./g, "").replace(",", "."));
+      return Number.isFinite(n) ? n : null;
+    }),
   })
   // Regra cruzada: só o zod pega, porque depende de dois campos. Antes um
   // contrato podia ser salvo terminando antes de começar, e o erro só apareceria
@@ -355,4 +369,119 @@ export function efeitoDaEdicao({
  */
 export function podeTrocarItem(jaDevolvido: number): boolean {
   return Number(jaDevolvido) === 0;
+}
+
+// ── Conciliação: o cadastro contra o documento ───────────────────────────────
+
+/**
+ * Tolerância da conciliação, em reais.
+ *
+ * Um real, fixo. O erro de arredondamento acumulado é da ordem de centavos —
+ * mesmo com cem linhas e sessenta períodos, `0,00005 × 100 × 60` dá trinta
+ * centavos. Já o menor erro REAL que a conferência precisa pegar é uma unidade
+ * a mais ou a menos: no contrato 1726, um aparelho de R$ 156,67 por vinte meses
+ * são R$ 3.100.
+ *
+ * Entre trinta centavos e três mil reais cabe qualquer corte; um real é o que
+ * se explica sem tabela. Percentual do contratado seria pior: num contrato
+ * grande, a tolerância cresceria até engolir o item que se quer flagrar.
+ */
+export const TOLERANCIA_CONCILIACAO = 1;
+
+export type Conciliacao =
+  | { situacao: "sem_referencia" }
+  | { situacao: "confere" }
+  | { situacao: "acima"; diferenca: number }
+  | { situacao: "abaixo"; diferenca: number };
+
+/**
+ * Compara o que o CADASTRO projeta com o que o DOCUMENTO contratou.
+ *
+ * Hoje nada compara os dois: cadastrar seis aparelhos onde o contrato prevê
+ * sete passa em silêncio, e o contrato subfatura até alguém conferir no papel.
+ *
+ * `acima` e `abaixo` são estados separados de propósito, e não um `diverge`
+ * único: projetar a MAIS costuma ser prazo (o item corre até o fim do contrato
+ * quando deveria voltar antes), e projetar a MENOS costuma ser item faltando.
+ * São dois problemas diferentes, com duas conversas diferentes, e a mensagem
+ * precisa dizer qual é.
+ *
+ * `contratado: 0` NÃO é ausência — é um número que alguém digitou, e tratá-lo
+ * como "não informado" esconderia um contrato cadastrado errado. Ausência é
+ * `null`.
+ */
+export function conciliarContrato({
+  contratado,
+  comprometido,
+}: {
+  contratado: number | null;
+  comprometido: number;
+}): Conciliacao {
+  if (contratado === null) return { situacao: "sem_referencia" };
+
+  const diferenca = comprometido - contratado;
+  if (Math.abs(diferenca) <= TOLERANCIA_CONCILIACAO) return { situacao: "confere" };
+
+  return diferenca > 0
+    ? { situacao: "acima", diferenca }
+    : { situacao: "abaixo", diferenca: -diferenca };
+}
+
+/**
+ * O que o contrato COMPROMETE: cada item projetado até o fim do contrato.
+ *
+ * A diferença para o "custo estimado acumulado" é só o HORIZONTE. O acumulado
+ * usa `custoLinhaLocado` com `fim = hoje`; este usa `fim = data_fim_prevista do
+ * contrato`. Nenhuma matemática nova — a mesma função, outro fim.
+ *
+ * Item JÁ DEVOLVIDO para na devolução, e não no fim do contrato: comprometer
+ * até o fim um equipamento que voltou inflaria a projeção e faria a conferência
+ * acusar divergência que não existe.
+ *
+ * `null` quando o contrato não tem fim previsto. Sem horizonte não há o que
+ * comprometer, e chutar um prazo seria inventar um número que ninguém
+ * contratou. Zero é resposta diferente: o contrato existe e nada foi cadastrado.
+ *
+ * Recebe as LINHAS já lidas, e não o id do contrato: `obterItensLocadosCalculados`
+ * está sob `cache()` e a página inteira compartilha aquele resultado. Uma
+ * consulta nova aqui, com outro parâmetro, furaria o cache e dobraria a consulta
+ * mais pesada da rota.
+ */
+export function comprometidoDoContrato({
+  linhas,
+  cadencia,
+  fimContrato,
+  prorata,
+}: {
+  linhas: {
+    quantidade: number;
+    valor_unitario_periodo: number;
+    data_retirada: string;
+    data_devolucao: string | null;
+    movimentacao: { quantidade: number | string; tipo: string; data: string }[];
+  }[];
+  cadencia: Cadencia;
+  fimContrato: Date | null;
+  prorata: boolean;
+}): number | null {
+  if (!fimContrato) return null;
+
+  let total = 0;
+  for (const l of linhas) {
+    const devolucoes = (l.movimentacao ?? [])
+      .filter((m) => m.tipo === "devolucao")
+      .map((m) => ({ quantidade: Number(m.quantidade), data: dataDeISO(m.data) }));
+
+    const { custo } = custoLinhaLocado({
+      quantidade: Number(l.quantidade),
+      valorUnitarioPeriodo: Number(l.valor_unitario_periodo),
+      cadencia,
+      retirada: dataDeISO(l.data_retirada),
+      devolucoes,
+      fim: l.data_devolucao ? dataDeISO(l.data_devolucao) : fimContrato,
+      prorata,
+    });
+    total += custo;
+  }
+  return total;
 }

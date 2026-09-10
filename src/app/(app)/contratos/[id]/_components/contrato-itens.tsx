@@ -211,8 +211,24 @@ async function listarItensDoCatalogo() {
   const supabase = await createClient();
   const { data } = await supabase
     .from("item_catalogo")
-    .select("id, descricao, unidade")
+    // A CATEGORIA vem junto para o seletor agrupar. Relação para-um: não muda
+    // cardinalidade, ao contrário de `!inner`.
+    .select("id, descricao, unidade, categoria:categoria_id(nome)")
     .eq("ativo", true)
     .order("descricao");
-  return data ?? [];
+
+  type Bruto = {
+    id: string;
+    descricao: string;
+    unidade: string | null;
+    categoria: { nome: string } | null;
+  };
+  return ((data ?? []) as unknown as Bruto[]).map((i) => ({
+    id: i.id,
+    descricao: i.descricao,
+    unidade: i.unidade,
+    // "Sem categoria" é grupo próprio, e não some: item sem categoria existe no
+    // cadastro e escondê-lo faria a pessoa concluir que ele não está lá.
+    categoria: i.categoria?.nome ?? "Sem categoria",
+  }));
 }

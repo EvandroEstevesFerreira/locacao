@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Package, Plus, Pencil, TriangleAlert } from "lucide-react";
+import { ChevronRight, Package, Plus, Pencil, TriangleAlert } from "lucide-react";
 import { getCurrentPerfil, podeEditarCadastros } from "@/lib/auth";
 import { agruparPorTipo, type LinhaCatalogo } from "@/lib/itens";
 import {
@@ -51,6 +51,16 @@ export default async function ItensPage({
   const q = (sp.q ?? "").trim();
   const categoria = sp.categoria ?? "";
   const tipo = sp.tipo ?? "";
+  // OS GRUPOS ABREM SOZINHOS QUANDO HÁ BUSCA OU FILTRO DE TIPO — e a categoria
+  // NÃO conta. Escolher "TI" no menu é navegar, não procurar: abrir os três
+  // grupos ali daria a mesma parede que o recolhimento existe para resolver.
+  // Já quem digita no campo precisa ver o resultado, e grupo recolhido
+  // esconderia justamente o que a pessoa procurou.
+  //
+  // Mesma regra da lista da Frota (0.99.0), e de propósito: duas telas com o
+  // mesmo desenho que se comportassem diferente seriam duas regras para
+  // aprender.
+  const procurando = q !== "" || tipo !== "";
 
   const [{ linhas, total, truncado }, categorias, tipos] = await Promise.all([
     listarCatalogo({ q, categoria, tipo }),
@@ -184,9 +194,16 @@ export default async function ItensPage({
                 <Card key={g.chave} className="overflow-hidden">
                   {/* `<details>` nativo: a seção abre e fecha sem JavaScript,
                       então funciona no primeiro render e na tela offline. */}
-                  <details open>
+                  <details open={procurando}>
                     <summary className="cursor-pointer list-none px-4 py-3 marker:content-none [&::-webkit-details-marker]:hidden">
                       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                        {/* A seta gira com o `open`. Sem ela, cabeçalho
+                            recolhido parece linha morta e ninguém descobre que
+                            clica. */}
+                        <ChevronRight
+                          className="size-4 self-center transition-transform [details[open]_&]:rotate-90"
+                          aria-hidden
+                        />
                         <span className="font-medium">{g.rotulo}</span>
                         <span className="text-sm text-muted-foreground">
                           {g.modelos} {g.modelos === 1 ? "modelo" : "modelos"}

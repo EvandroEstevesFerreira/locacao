@@ -7,6 +7,94 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.105.0] - 2026-09-10
+
+O contrato confere consigo mesmo.
+
+### Medido no contrato 1726, que e um documento real
+
+    2 x AR CONDICIONADO 12000BTU  @ R$ 156,667  = R$   313,33
+    7 x AR CONDICIONADO 18000BTU  @ R$ 246,457  = R$ 1.725,20
+    Valor mensal ......................... R$ 2.038,53
+    Prazo previsto: 16 meses
+    Valor total previsto ................. R$ 32.616,48
+
+Tres divergencias apareceram sozinhas ao comparar o cadastro com o PDF, e as
+tres motivam o que esta nesta versao.
+
+### Adicionado
+
+- `contrato_locacao.valor_total_contratado` (0105): o valor que esta no
+  DOCUMENTO. Digitado, nao calculado -- e a referencia contra a qual o cadastro
+  e conferido.
+- `comprometidoDoContrato()`: cada item projetado ate o fim do contrato. Nenhuma
+  matematica nova -- e `custoLinhaLocado` com `fim = data_fim_prevista` em vez de
+  `fim = hoje`. Item ja devolvido para na devolucao, senao a projecao inflaria e
+  a conferencia acusaria divergencia que nao existe.
+- `conciliarContrato()`: compara os dois. `acima` e `abaixo` sao estados
+  separados de proposito -- projetar a mais costuma ser prazo, projetar a menos
+  costuma ser item faltando. Dois problemas, duas conversas, duas mensagens.
+- Painel do contrato com os TRES numeros: Contratado, Comprometido, Acumulado.
+
+### A tolerancia, e por que ela existe
+
+`TOLERANCIA_CONCILIACAO = 1` real, fixo.
+
+O erro de arredondamento acumulado e da ordem de centavos -- mesmo com cem
+linhas e sessenta periodos da trinta centavos. Ja o menor erro REAL a pegar e
+uma unidade a mais ou a menos: no 1726, um aparelho de R$ 156,67 por vinte meses
+sao R$ 3.100. Entre trinta centavos e tres mil reais cabe qualquer corte, e um
+real e o que se explica sem tabela.
+
+Percentual do contratado seria pior: num contrato grande a tolerancia cresceria
+ate engolir o item que se quer flagrar.
+
+### Quatro casas decimais, e sem elas nada disso funciona
+
+`item_locado.valor_unitario_periodo` foi de `numeric(14,2)` para `numeric(14,4)`.
+
+O contrato tem valor unitario com TRES casas. Com duas, o cadastro do 1726 ficou
+com 156,67 e 246,46 -- mensal de R$ 2.038,56 contra os R$ 2.038,53 do documento.
+Tres centavos por mes.
+
+Em dinheiro nao e nada. Para a conferencia e fatal: todo contrato divergiria por
+centavos, e um alarme que toca sempre e um alarme que ninguem le. Com quatro
+casas, `156,667 x 2 + 246,457 x 7 = 2.038,533`, que arredonda para os 2.038,53
+do documento.
+
+Alargar a escala preserva os valores existentes -- 156,67 continua 156,67 --,
+mas NAO os corrige: os itens ja cadastrados seguem com duas casas ate alguem
+reeditar.
+
+### Agrupamento por categoria, e por que nao a cascata
+
+O pedido era um seletor de categoria que filtrasse os itens. Medido: 29 itens
+ativos, 10 categorias, **8 delas vazias**, e **27 dos 29 em TI**.
+
+Filtrar por categoria leva 29 para 2 num contrato de climatizacao e 29 para 27
+num de TI -- cobrando um clique a mais em toda linha para nao resolver o caso
+majoritario. O que quebra TI e o TIPO, nao a categoria, e ai seriam dois cliques.
+
+`<optgroup>` nativo resolve o mesmo desconforto sem cascata, sem segundo
+controle e sem estado novo. Quando o catalogo passar de ~60 itens, um campo com
+busca -- que tambem resolve TI.
+
+### Alterado
+
+- `/itens` abre com os grupos recolhidos, como `/frota` desde a 0.99.0. Buscar
+  ou filtrar por tipo abre sozinho; escolher categoria nao, porque ali e
+  navegacao. Duas telas com o mesmo desenho que se comportassem diferente seriam
+  duas regras para aprender.
+
+### Um teste que corrigi no lado certo
+
+A primeira versao de `comprometido.test.ts` esperava 12 periodos para um ano e
+recebeu 13. Nao e defeito: `periodosEntre` e inclusiva e arredonda para cima
+("periodo iniciado = periodo cheio"), com mensal aproximado em 30 dias -- 366/30
+= 12,2, que vira 13. O teste e que estava com o modelo mental errado, e agora diz
+isso por escrito, porque quem comparar a projecao com os "16 meses" do documento
+vai ser tentado a consertar o lado errado.
+
 ## [0.104.0] - 2026-09-10
 
 Varios contatos por fornecedor.
