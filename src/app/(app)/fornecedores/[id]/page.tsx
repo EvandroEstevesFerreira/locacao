@@ -24,7 +24,7 @@ export default async function EditarFornecedorPage({
       supabase
         .from("fornecedor")
         .select(
-          "id, nome, cnpj, contato_nome, contato_telefone, contato_email, observacoes, ativo",
+          "id, nome, cnpj, codigo_mega, contato_nome, contato_telefone, contato_email, observacoes, ativo",
         )
         .eq("id", id)
         .single(),

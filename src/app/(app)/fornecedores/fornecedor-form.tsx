@@ -25,6 +25,7 @@ type Fornecedor = {
   id: string;
   nome: string;
   cnpj: string | null;
+  codigo_mega: string | null;
   contato_nome: string | null;
   contato_telefone: string | null;
   contato_email: string | null;
@@ -61,6 +62,7 @@ export function FornecedorForm({
       id: fornecedor?.id,
       nome: fornecedor?.nome ?? "",
       cnpj: fornecedor?.cnpj ?? "",
+      codigo_mega: fornecedor?.codigo_mega ?? "",
       contato_nome: fornecedor?.contato_nome ?? "",
       contato_telefone: fornecedor?.contato_telefone ?? "",
       contato_email: fornecedor?.contato_email ?? "",
@@ -147,6 +149,31 @@ export function FornecedorForm({
           ) : (
             <p className="text-xs text-muted-foreground">
               Aceita o CNPJ alfanumérico (letras e números).
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="codigo_mega">
+            Código no Mega{" "}
+            <span className="font-normal text-muted-foreground">(opcional)</span>
+          </Label>
+          <Input
+            id="codigo_mega"
+            inputMode="numeric"
+            maxLength={30}
+            placeholder="2630"
+            aria-invalid={!!errors.codigo_mega}
+            disabled={pendente}
+            {...register("codigo_mega")}
+          />
+          {errors.codigo_mega ? (
+            <p className="text-xs text-destructive">{errors.codigo_mega.message}</p>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              O mesmo número do cadastro no Mega. É por ele que a nota daqui
+              encontra o título de lá — o nome da empresa não serve, porque muda
+              de grafia entre os dois sistemas.
             </p>
           )}
         </div>
