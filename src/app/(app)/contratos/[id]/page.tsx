@@ -62,7 +62,7 @@ export default async function ContratoDetalhePage({
   const { data: contrato } = await supabase
     .from("contrato_locacao")
     .select(
-      "id, numero, cadencia, cobranca_prorata, anexo_path, data_inicio, data_fim_prevista, status, observacoes, obra:obra_id(codigo,nome), fornecedor:fornecedor_id(nome), vistoria_retirada:vistoria_retirada_id(id, vistoria_foto(count))",
+      "id, numero, cadencia, cobranca_prorata, anexo_path, valor_total_contratado, data_inicio, data_fim_prevista, status, observacoes, obra:obra_id(codigo,nome), fornecedor:fornecedor_id(nome), vistoria_retirada:vistoria_retirada_id(id, vistoria_foto(count))",
     )
     .eq("id", id)
     .single();
@@ -158,6 +158,12 @@ export default async function ContratoDetalhePage({
               contratoId={contrato.id}
               cadencia={cadencia}
               prorata={prorata}
+              fimPrevisto={contrato.data_fim_prevista as string | null}
+              valorContratado={
+                contrato.valor_total_contratado != null
+                  ? Number(contrato.valor_total_contratado)
+                  : null
+              }
             />
           </Suspense>
         </CardContent>

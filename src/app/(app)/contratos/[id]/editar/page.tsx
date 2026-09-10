@@ -23,7 +23,7 @@ export default async function EditarContratoPage({
       supabase
         .from("contrato_locacao")
         .select(
-          "id, obra_id, fornecedor_id, numero, cadencia, data_inicio, data_fim_prevista, status, observacoes, cobranca_prorata",
+          "id, obra_id, fornecedor_id, numero, cadencia, data_inicio, data_fim_prevista, status, observacoes, cobranca_prorata, valor_total_contratado",
         )
         .eq("id", id)
         .single(),

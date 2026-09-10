@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.104.0";
+export const APP_VERSION = "0.105.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,18 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.105.0",
+    data: "2026-09-10",
+    titulo: "O contrato confere consigo mesmo",
+    mudancas: [
+      { tipo: "novo", texto: "O contrato ganhou o campo do valor total previsto, digitado do documento. Com ele, a tela mostra três números: o contratado, o comprometido pelos itens até o fim do contrato, e o que já correu até hoje." },
+      { tipo: "novo", texto: "O sistema avisa quando os itens cadastrados não somam o valor do contrato — para mais ou para menos, com a diferença em reais. Cadastrar seis aparelhos onde o contrato prevê sete passava despercebido até alguém conferir no papel." },
+      { tipo: "melhoria", texto: "O valor unitário aceita quatro casas decimais. Contrato de locação usa três (R$ 156,667 no 1726), e com duas o total do cadastro divergia do documento por centavos — o suficiente para a conferência acusar todo contrato e ninguém mais olhar para ela." },
+      { tipo: "melhoria", texto: "A lista de itens do contrato vem agrupada por categoria. Vinte e nove itens soltos numa lista fazem procurar; agrupados, você cai na seção certa de olho." },
+      { tipo: "melhoria", texto: "A tela de Itens abre com os grupos recolhidos, como a Frota. Buscar ou filtrar por tipo abre sozinho; escolher categoria no menu não, porque ali é navegação e não busca." },
+    ],
+  },
   {
     versao: "0.104.0",
     data: "2026-09-10",

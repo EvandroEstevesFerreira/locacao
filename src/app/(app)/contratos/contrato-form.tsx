@@ -38,6 +38,7 @@ type Contrato = {
   status: StatusContrato;
   observacoes: string | null;
   cobranca_prorata?: boolean;
+  valor_total_contratado?: number | null;
 };
 
 export function ContratoForm({
@@ -72,6 +73,10 @@ export function ContratoForm({
       status: contrato?.status ?? "ativo",
       observacoes: contrato?.observacoes ?? "",
       cobranca_prorata: contrato?.cobranca_prorata ?? false,
+      valor_total_contratado:
+        contrato?.valor_total_contratado != null
+          ? String(contrato.valor_total_contratado)
+          : "",
     },
   });
 
@@ -205,6 +210,26 @@ export function ContratoForm({
             ))}
           </NativeSelect>
         </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="valor_total_contratado">
+          Valor total do contrato{" "}
+          <span className="font-normal text-muted-foreground">(opcional)</span>
+        </Label>
+        <Input
+          id="valor_total_contratado"
+          inputMode="decimal"
+          placeholder="32.616,48"
+          disabled={pendente}
+          {...register("valor_total_contratado")}
+        />
+        <p className="text-xs text-muted-foreground">
+          O valor que está no documento. É <strong>digitado, não calculado</strong>
+          — serve para o sistema conferir se os itens cadastrados somam o que foi
+          contratado. Sem ele, cadastrar seis aparelhos onde o contrato prevê sete
+          passa despercebido.
+        </p>
       </div>
 
       <label className="flex items-start gap-2 rounded-md border p-3 text-sm">

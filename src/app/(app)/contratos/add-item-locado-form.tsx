@@ -42,7 +42,12 @@ export function AddItemLocadoForm({
   prorata = false,
 }: {
   contratoId: string;
-  itens: { id: string; descricao: string; unidade: string | null }[];
+  itens: {
+    id: string;
+    descricao: string;
+    unidade: string | null;
+    categoria?: string;
+  }[];
   /** Frentes ATIVAS da obra deste contrato (migration 0072). */
   frentes?: { id: string; nome: string }[];
   /** Cadência do contrato — usada para estimar o custo antes de salvar. */
@@ -116,11 +121,22 @@ export function AddItemLocadoForm({
           <Label htmlFor="item_id">Item</Label>
           <NativeSelect id="item_id" disabled={pendente} {...register("item_id")}>
             <option value="">Selecione o item…</option>
-            {itens.map((i) => (
-              <option key={i.id} value={i.id}>
-                {i.descricao}
-                {i.unidade ? ` (${i.unidade})` : ""}
-              </option>
+            {/* AGRUPADO POR CATEGORIA, com `<optgroup>` nativo.
+                Vinte e nove itens soltos numa lista fazem procurar; agrupados,
+                a pessoa cai na seção certa de olho. Escolhido em vez de uma
+                cascata categoria→item porque o catálogo é 93% TI: filtrar por
+                categoria levaria 29 opções para 27 num contrato de TI, cobrando
+                um clique a mais em toda linha para não resolver nada.
+                Se o catálogo passar de ~60 itens, aí um campo com busca. */}
+            {agruparPorCategoria(itens).map(([categoria, doGrupo]) => (
+              <optgroup key={categoria} label={categoria}>
+                {doGrupo.map((i) => (
+                  <option key={i.id} value={i.id}>
+                    {i.descricao}
+                    {i.unidade ? ` (${i.unidade})` : ""}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </NativeSelect>
           {errors.item_id ? (
@@ -252,4 +268,25 @@ export function AddItemLocadoForm({
       </Button>
     </form>
   );
+}
+
+/**
+ * Os itens do catálogo agrupados por categoria, na ordem alfabética dela.
+ *
+ * "Sem categoria" vai para o FIM, e não some: item sem categoria existe no
+ * cadastro, e escondê-lo faria a pessoa concluir que ele não está lá.
+ */
+export function agruparPorCategoria(
+  itens: { id: string; descricao: string; unidade: string | null; categoria?: string }[],
+): [string, typeof itens][] {
+  const grupos = new Map<string, typeof itens>();
+  for (const i of itens) {
+    const chave = i.categoria ?? "Sem categoria";
+    grupos.set(chave, [...(grupos.get(chave) ?? []), i]);
+  }
+  return [...grupos.entries()].sort(([a], [b]) => {
+    if (a === "Sem categoria") return 1;
+    if (b === "Sem categoria") return -1;
+    return a.localeCompare(b, "pt-BR");
+  });
 }

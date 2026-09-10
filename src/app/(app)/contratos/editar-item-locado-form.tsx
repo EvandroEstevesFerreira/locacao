@@ -42,6 +42,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { editarItemLocado } from "./actions";
+import { agruparPorCategoria } from "./add-item-locado-form";
 
 export type ItemParaEditar = {
   id: string;
@@ -68,7 +69,12 @@ export function EditarItemLocadoForm({
 }: {
   contratoId: string;
   item: ItemParaEditar;
-  itens: { id: string; descricao: string; unidade: string | null }[];
+  itens: {
+    id: string;
+    descricao: string;
+    unidade: string | null;
+    categoria?: string;
+  }[];
   frentes?: { id: string; nome: string }[];
   cadencia?: Cadencia;
   prorata?: boolean;
@@ -182,11 +188,16 @@ export function EditarItemLocadoForm({
               {...register("item_id")}
             >
               <option value="">Selecione o item…</option>
-              {itens.map((i) => (
-                <option key={i.id} value={i.id}>
-                  {i.descricao}
-                  {i.unidade ? ` (${i.unidade})` : ""}
-                </option>
+              {/* Agrupado por categoria, como no formulário de adicionar. */}
+              {agruparPorCategoria(itens).map(([categoria, doGrupo]) => (
+                <optgroup key={categoria} label={categoria}>
+                  {doGrupo.map((i) => (
+                    <option key={i.id} value={i.id}>
+                      {i.descricao}
+                      {i.unidade ? ` (${i.unidade})` : ""}
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </NativeSelect>
             {errors.item_id ? (
