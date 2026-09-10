@@ -116,6 +116,34 @@ export function linhasParaEspelho({
   });
 }
 
+/**
+ * Uma linha por chave, ficando com a última.
+ *
+ * O upsert do PostgREST FALHA INTEIRO se o mesmo alvo aparecer duas vezes no
+ * mesmo comando ("cannot affect row a second time") — e são duas janelas de
+ * consulta por fornecedor. Elas não se sobrepõem, então em tese não repete; mas
+ * o custo de garantir é um Map, e o custo de não garantir é a rodada do dia
+ * inteiro morrer por causa de um título repetido.
+ */
+export function dedupPorChave(linhas: LinhaEspelho[]): LinhaEspelho[] {
+  const porChave = new Map<string, LinhaEspelho>();
+  for (const l of linhas) {
+    porChave.set(
+      chaveDoTitulo({
+        codigoAgente: l.codigo_mega,
+        numeroAp: l.numero_ap,
+        numeroParcela: l.numero_parcela,
+        tipoDocumento: l.tipo_documento,
+        numeroDocumento: l.numero_documento,
+        dataVencimento: l.data_vencimento,
+        valorParcela: l.valor_parcela,
+      }),
+      l,
+    );
+  }
+  return [...porChave.values()];
+}
+
 /** O resumo de uma rodada, para o log e para `mega_sync`. */
 export type ResumoRodada = {
   fornecedoresLidos: number;

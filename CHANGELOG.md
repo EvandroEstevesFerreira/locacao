@@ -7,6 +7,21 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.106.1] - 2026-09-10
+
+A primeira rodada em producao voltou 37 consultas recusadas.
+
+O Mega **nao aceita intervalo maior que 2 anos** entre as datas, e a janela era
+de tres (do ano passado ao ano que vem). A mensagem do ERP diz isso com todas as
+letras -- mas o erro do Loca a descartava, entao o cron rendeu 37 linhas de "o
+Mega recusou a consulta" e nenhuma pista. Duas correcoes:
+
+- a janela foi partida em duas, de no maximo 2 anos, sem pular data na emenda;
+- o erro da consulta passou a carregar o corpo da resposta do ERP. O do
+  `SignIn` continua fora do log, porque la o que volta pode falar da credencial.
+
+Nada disso esta na documentacao do Mega.
+
 ## [0.106.0] - 2026-09-10
 
 O Loca passa a ver os pagamentos do Mega.

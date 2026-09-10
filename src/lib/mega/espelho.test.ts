@@ -1,6 +1,11 @@
 import { describe, it, expect } from "vitest";
 
-import { chaveDoTitulo, linhasParaEspelho, type LinhaExistente } from "./espelho";
+import {
+  chaveDoTitulo,
+  dedupPorChave,
+  linhasParaEspelho,
+  type LinhaExistente,
+} from "./espelho";
 import type { TituloMega } from "./contrato";
 
 const HOJE = "2026-09-10";
@@ -161,5 +166,33 @@ describe("linhasParaEspelho", () => {
     });
     expect(l.valor_parcela).toBe(2038.53);
     expect(l.saldo_atual).toBe(1019.27);
+  });
+});
+
+describe("dedupPorChave", () => {
+  // O upsert do PostgREST falha INTEIRO quando o mesmo alvo aparece duas vezes
+  // no mesmo comando. São duas janelas de consulta por fornecedor: um título
+  // repetido entre elas mataria a rodada do dia.
+  it("mantém uma linha por chave", () => {
+    const linhas = linhasParaEspelho({
+      orgId: "org-1",
+      titulos: [titulo(), titulo()],
+      existentes: [],
+      fornecedorPorCodigo: new Map(),
+      hojeISO: HOJE,
+    });
+    expect(linhas).toHaveLength(2);
+    expect(dedupPorChave(linhas)).toHaveLength(1);
+  });
+
+  it("não junta títulos que só diferem no vencimento", () => {
+    const linhas = linhasParaEspelho({
+      orgId: "org-1",
+      titulos: [titulo(), titulo({ dataVencimento: "2026-09-15" })],
+      existentes: [],
+      fornecedorPorCodigo: new Map(),
+      hojeISO: HOJE,
+    });
+    expect(dedupPorChave(linhas)).toHaveLength(2);
   });
 });

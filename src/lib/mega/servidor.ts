@@ -5,8 +5,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { hojeISOSaoPaulo } from "@/lib/locacao";
 import { logger, erroMeta } from "@/lib/logger";
 import { SessaoMega, ErroMega } from "./cliente";
+import { janelasDeConsulta } from "./janela";
 import {
   chaveDoTitulo,
+  dedupPorChave,
   linhasParaEspelho,
   type LinhaExistente,
   type ResumoRodada,
@@ -19,19 +21,6 @@ import {
  * regra do AGENTS.md para escrita compartilhada.
  */
 
-/**
- * A janela de consulta: do 1º de janeiro do ano passado ao 31 de dezembro do
- * ano que vem.
- *
- * Larga porque locação é plurianual — o contrato 1726 vence parcelas até 2027 —
- * e porque a consulta é UMA por fornecedor por dia: estreitar não economiza
- * chamada, só cria buraco no espelho.
- */
-export function janelaDeConsulta(hojeISO: string): { inicio: string; fim: string } {
-  const ano = Number(hojeISO.slice(0, 4));
-  return { inicio: `${ano - 1}-01-01`, fim: `${ano + 1}-12-31` };
-}
-
 type Fornecedor = { id: string; codigo_mega: string | null };
 
 export async function sincronizarOrg(
@@ -40,7 +29,7 @@ export async function sincronizarOrg(
   sessao: SessaoMega,
 ): Promise<ResumoRodada> {
   const hoje = hojeISOSaoPaulo();
-  const { inicio, fim } = janelaDeConsulta(hoje);
+  const janelas = janelasDeConsulta(hoje);
 
   const { data: fornecedores, error: erroForn } = await supabase
     .from("fornecedor")
@@ -72,12 +61,16 @@ export async function sincronizarOrg(
   // que o projeto Financeiro também usa. A rodada é diária: não há pressa que
   // pague esse risco.
   for (const codigo of porCodigo.keys()) {
-    let titulos;
-    let recusados;
+    // DUAS JANELAS POR FORNECEDOR porque o Mega recusa intervalo maior que
+    // 2 anos, e locação é plurianual. Sequenciais, como tudo aqui.
+    const titulos = [];
+    let recusados = 0;
     try {
-      const r = await sessao.titulosDoFornecedor(codigo, inicio, fim);
-      titulos = r.titulos;
-      recusados = r.recusados;
+      for (const j of janelas) {
+        const r = await sessao.titulosDoFornecedor(codigo, j.inicio, j.fim);
+        titulos.push(...r.titulos);
+        recusados += r.recusados;
+      }
     } catch (e) {
       // FALHA DE AUTENTICAÇÃO ABORTA A RODADA INTEIRA. Continuar o laço
       // tentaria autenticar de novo a cada fornecedor — que é exatamente o
@@ -117,13 +110,15 @@ export async function sincronizarOrg(
       quitacao_vista_em: (l.quitacao_vista_em as string | null) ?? null,
     }));
 
-    const linhas = linhasParaEspelho({
-      orgId,
-      titulos,
-      existentes,
-      fornecedorPorCodigo: porCodigo,
-      hojeISO: hoje,
-    });
+    const linhas = dedupPorChave(
+      linhasParaEspelho({
+        orgId,
+        titulos,
+        existentes,
+        fornecedorPorCodigo: porCodigo,
+        hojeISO: hoje,
+      }),
+    );
 
     const { error: erroUpsert } = await supabase.from("mega_titulo").upsert(linhas, {
       onConflict:

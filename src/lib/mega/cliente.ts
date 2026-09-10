@@ -154,7 +154,18 @@ export class SessaoMega {
     });
 
     if (!res.ok) {
-      throw new ErroMega(res.status, `O Mega recusou a consulta do fornecedor ${codigo}.`);
+      // A MENSAGEM DO ERP VAI JUNTO, e isso não é detalhe. Sem ela, a primeira
+      // rodada em produção rendeu 37 linhas de "o Mega recusou a consulta" e
+      // nenhuma pista; o motivo real ("o intervalo máximo permitido entre as
+      // datas é 2 ano") só apareceu ao repetir a chamada à mão.
+      //
+      // Só nesta rota. O corpo do SignIn continua fora do log: lá o que volta
+      // pode falar da credencial.
+      const detalhe = (await res.text()).replace(/\s+/g, " ").trim().slice(0, 300);
+      throw new ErroMega(
+        res.status,
+        `O Mega recusou a consulta do fornecedor ${codigo} (HTTP ${res.status}): ${detalhe}`,
+      );
     }
     return parseTitulos(await corpoJson(res));
   }
