@@ -441,3 +441,25 @@ export const transferirCustodiaSchema = z
 
 export type TransferirCustodiaInput = z.input<typeof transferirCustodiaSchema>;
 export type TransferirCustodiaDados = z.output<typeof transferirCustodiaSchema>;
+
+/**
+ * A posse sai da primeira leitura do histórico?
+ *
+ * Posse de termo cancelado sai — o mutirão de regularização deixou 48 delas, e
+ * na `14L4594` isso virou quatro linhas para uma posse que importa. Histórico
+ * que ninguém consegue ler protege menos que histórico curto.
+ *
+ * ┌─ A POSSE ABERTA NUNCA SAI, mesmo anulada ────────────────────────────────┐
+ * │ Normalmente as duas coisas não coexistem: cancelar um termo fecha a posse │
+ * │ que ele abriu. Mas `cancelarTermo` grava o cancelamento ANTES de mexer no │
+ * │ livro, e devolve `problemaNoLivro` quando a segunda parte falha — o que   │
+ * │ deixa uma posse ABERTA apontando para um termo CANCELADO.                 │
+ * │                                                                          │
+ * │ Esconder essa linha seria a pior falha possível desta tela: a peça está   │
+ * │ com alguém, e o histórico diria que não está com ninguém. Quando as duas  │
+ * │ condições brigam, "está com alguém agora" ganha.                          │
+ * └──────────────────────────────────────────────────────────────────────────┘
+ */
+export function posseOculta(p: { anulada: boolean; aberta: boolean }): boolean {
+  return p.anulada && !p.aberta;
+}
