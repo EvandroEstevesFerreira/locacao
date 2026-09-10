@@ -24,6 +24,7 @@ import { ConfirmDelete } from "@/components/confirm-delete";
 import { Pagination } from "@/components/pagination";
 import { SortHeader } from "@/components/sort-header";
 import { PAGE_SIZE, contagem, parseListParams } from "@/lib/lista";
+import { formatarTelefone } from "@/lib/telefone";
 import { FornecedoresToolbar } from "./fornecedores-toolbar";
 import { excluirFornecedor } from "./actions";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -134,10 +135,18 @@ export default async function FornecedoresPage({
                             sem e-mail
                           </span>
                         )}
-                        {f.contato_nome ? (
+                        {f.contatoPrincipal ? (
                           <span className="block text-xs text-muted-foreground">
-                            {f.contato_nome}
-                            {f.contato_telefone ? ` · ${f.contato_telefone}` : ""}
+                            {f.contatoPrincipal.nome}
+                            {f.contatoPrincipal.cargo
+                              ? ` · ${f.contatoPrincipal.cargo}`
+                              : ""}
+                            {/* O telefone vai FORMATADO. O banco guarda dígitos
+                                com DDI, e "5511980765016" na tela é o tipo de
+                                dado cru que faz a pessoa conferir no papel. */}
+                            {f.contatoPrincipal.telefone
+                              ? ` · ${formatarTelefone(f.contatoPrincipal.telefone)}`
+                              : ""}
                           </span>
                         ) : null}
                       </TableCell>
