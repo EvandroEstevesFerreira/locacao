@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.103.0";
+export const APP_VERSION = "0.103.1";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,14 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.103.1",
+    data: "2026-09-10",
+    titulo: "Os 37 fornecedores com código do Mega",
+    mudancas: [
+      { tipo: "correcao", texto: "Todos os 37 fornecedores estão com o código do Mega preenchido. Dois tiveram razão social e CNPJ corrigidos a partir do próprio Mega: “Voke SA” era SUPRISUL LOCACAO E SERVICO LTDA, e “A2 WORKS” era WORKS INFORMATICA COMERCIAL LTDA." },
+    ],
+  },
   {
     versao: "0.103.0",
     data: "2026-09-10",

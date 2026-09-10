@@ -7,6 +7,36 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.103.1] — 2026-09-10
+
+Os 37 fornecedores com código do Mega — e duas razões sociais corrigidas.
+
+**Mudança de dado, não de código.** Fica registrada porque razão social e CNPJ
+saem em contrato, e daqui a seis meses alguém vai perguntar por que a “Voke”
+virou “Suprisul”.
+
+| Antes (Loca) | Agora (do Mega) | Código |
+|---|---|---|
+| Voke SA — `04.212.396/0001-91` | SUPRISUL LOCACAO E SERVICO LTDA — `01.899.546/0001-99` | 2863 |
+| A2 WORKS COMERCIO E SERVICOS LTDA — `04.121.167/0001-61` | WORKS INFORMATICA COMERCIAL LTDA — `00.320.065/0001-14` | 3703 |
+| ARMASA (duplicado) | — excluído pelo Evandro | 4114 no que ficou |
+
+Nos dois casos **o nome e o CNPJ vieram do Mega**, e não do que estava digitado
+aqui: era o cadastro do Loca que estava errado.
+
+### O código que quase entrou errado
+
+O primeiro número informado para a Suprisul foi **1684**. Conferido antes de
+gravar, `1-1684` é **`BANCO ITAU SA AG. 8098 CC. 01595-4`** — e o campo `cnpj`
+dele volta como `"1684              "`, o próprio código com padding, que é a
+marca de agente que é conta bancária ou órgão. Os padrões 0 a 5 foram testados;
+só existe o `1-1684`.
+
+O código certo é **2863**. Conferir custou uma chamada; gravá-lo errado teria
+amarrado um fornecedor de locação à conta corrente do banco na conciliação.
+
+**Estado final:** 37 fornecedores, 37 com código, **37 códigos distintos**.
+
 ## [0.103.0] — 2026-09-10
 
 O código do fornecedor no Mega.
