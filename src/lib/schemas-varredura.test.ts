@@ -178,6 +178,10 @@ const AMOSTRAS: Record<string, unknown> = {
     cadencia: "mensal",
     data_inicio: "2026-08-01",
     status: "ativo",
+    // Com valor: sem ele na amostra, a varredura de idempotência não exercita
+    // o campo — foi assim que um schema que recusava o próprio output chegou à
+    // produção e devolveu "Invalid input" ao salvar.
+    valor_total_contratado: "32616,48",
     cobranca_prorata: false,
   },
   itemLocadoSchema: {
