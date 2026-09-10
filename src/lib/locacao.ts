@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { differenceInCalendarDays } from "date-fns";
-import { opcional,
+import {
   idOpcional,
   dataOpcional as dataOpcionalCampo,
   textoOpcional,
@@ -248,13 +248,26 @@ export const contratoSchema = z
      * conferido (`conciliarContrato`). Vazio vira `null` — contrato antigo não
      * tem o número do papel, e ausência não pode virar alarme.
      */
-    valor_total_contratado: opcional.transform((v) => {
-      const t = (v ?? "").trim();
-      if (t === "") return null;
-      // Aceita "32.616,48" e "32616.48": quem copia do PDF cola o formato de lá.
-      const n = Number(t.replace(/\./g, "").replace(",", "."));
-      return Number.isFinite(n) ? n : null;
-    }),
+    valor_total_contratado: z
+      // ACEITA NÚMERO, e não só string. O formulário usa
+      // `useForm<Input, unknown, Output>`: o submit recebe o output JÁ
+      // transformado e o manda para a action, que parseia de novo. Sem o
+      // `z.number()` aqui, a segunda passagem recusava o próprio output e o
+      // usuário via "Invalid input" ao salvar — com o campo preenchido certo.
+      //
+      // É a regra que `schemas-varredura.test.ts` cobra de todo schema; ela só
+      // não pegou este campo porque a amostra não o incluía.
+      .union([z.string(), z.number(), z.null()])
+      .optional()
+      .transform((v) => {
+        if (typeof v === "number") return Number.isFinite(v) ? v : null;
+        const t = (v ?? "").trim();
+        if (t === "") return null;
+        // Aceita "32.616,48" e "32616.48": quem copia do PDF cola o formato de
+        // lá, com ponto de milhar e vírgula decimal.
+        const n = Number(t.replace(/\./g, "").replace(",", "."));
+        return Number.isFinite(n) ? n : null;
+      }),
   })
   // Regra cruzada: só o zod pega, porque depende de dois campos. Antes um
   // contrato podia ser salvo terminando antes de começar, e o erro só apareceria

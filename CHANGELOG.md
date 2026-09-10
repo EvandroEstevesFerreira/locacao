@@ -7,6 +7,41 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.105.1] - 2026-09-10
+
+O valor do contrato agora salva.
+
+### O defeito
+
+Salvar o contrato com "32616,48" no campo novo devolvia **"Invalid input"** --
+mensagem crua do zod, com o campo preenchido corretamente.
+
+Causa: **falha de idempotencia**. O formulario usa
+`useForm<Input, unknown, Output>`, entao o submit recebe o output JA
+transformado (`32616.48`, um NUMERO) e o manda para a action, que parseia de
+novo. O campo aceitava `z.union([z.string(), z.null()])`, e a segunda passagem
+recusava o proprio output:
+
+    invalid_union
+      expected: "string", received: number
+      expected: "null",   received: number
+
+### O guarda existia, e eu escapei dele
+
+`schemas-varredura.test.ts` cobra exatamente isso de todo schema -- "aceita o
+proprio output" e "nao muda o output na segunda passagem". Ele passou na 0.105.0
+porque a AMOSTRA de `contratoSchema` nao incluia o campo novo: a varredura testa
+o que a amostra tem.
+
+O conserto foi na ordem certa: primeiro o campo entrou na amostra (e os dois
+casos passaram a falhar, provando que o guarda morde), depois o schema passou a
+aceitar `z.number()`.
+
+### Corrigido
+
+`valor_total_contratado` aceita string e numero. String continua tratando
+"32.616,48" e "32616.48" -- quem copia do PDF cola o formato de la.
+
 ## [0.105.0] - 2026-09-10
 
 O contrato confere consigo mesmo.

@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.105.0";
+export const APP_VERSION = "0.105.1";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,15 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.105.1",
+    data: "2026-09-10",
+    titulo: "O valor do contrato agora salva",
+    mudancas: [
+      { tipo: "correcao", texto: "Salvar o contrato com o valor total preenchido devolvia “Invalid input”, com o campo digitado corretamente. O sistema recusava o próprio dado depois de convertê-lo." },
+      { tipo: "seguranca", texto: "A varredura que existia justamente para pegar esse tipo de erro não cobria o campo novo. Agora cobre — e foi ela que apontou o defeito antes do conserto." },
+    ],
+  },
   {
     versao: "0.105.0",
     data: "2026-09-10",
