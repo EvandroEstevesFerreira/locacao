@@ -10,6 +10,7 @@ import {
   primeiroErro,
   type ActionResult,
 } from "@/lib/acoes";
+import { exigirModulo } from "@/lib/modulos";
 import { camposFichaSchema, validarFicha } from "@/lib/catalogo";
 import { moverPecaSchema, editarPecaSchema } from "@/lib/custodia";
 import { abrirCustodia } from "@/lib/custodia-servidor";
@@ -33,6 +34,8 @@ import {
  */
 export async function moverPeca(raw: unknown): Promise<ActionResult> {
   const perfil = await getCurrentPerfil();
+  const semModulo = exigirModulo(perfil, "frota");
+  if (semModulo) return falha(semModulo);
   if (!perfil?.org_id) return falha("Sessão inválida. Entre novamente.");
   if (!podeOperar(perfil.papel)) {
     return falha("Você não tem permissão para movimentar peças.");
@@ -107,6 +110,8 @@ export async function moverPeca(raw: unknown): Promise<ActionResult> {
  */
 export async function editarPeca(raw: unknown): Promise<ActionResult> {
   const perfil = await getCurrentPerfil();
+  const semModulo = exigirModulo(perfil, "frota");
+  if (semModulo) return falha(semModulo);
   if (!perfil?.org_id) return falha("Sessão inválida. Entre novamente.");
   if (!podeEditarCadastros(perfil.papel)) {
     return falha("Você não tem permissão para editar o cadastro da peça.");
@@ -197,6 +202,8 @@ export async function editarPeca(raw: unknown): Promise<ActionResult> {
  */
 export async function mudarSituacao(formData: FormData): Promise<ActionResult> {
   const perfil = await getCurrentPerfil();
+  const semModulo = exigirModulo(perfil, "frota");
+  if (semModulo) return falha(semModulo);
   if (!perfil?.org_id) return falha("Sessão inválida. Entre novamente.");
   if (!podeEditarCadastros(perfil.papel)) {
     return falha("Somente master ou administrador pode baixar uma peça.");
@@ -259,6 +266,8 @@ export async function mudarSituacao(formData: FormData): Promise<ActionResult> {
  */
 export async function amarrarPecaAoContrato(raw: unknown): Promise<ActionResult> {
   const perfil = await getCurrentPerfil();
+  const semModulo = exigirModulo(perfil, "frota");
+  if (semModulo) return falha(semModulo);
   if (!perfil?.org_id) return falha("Sessão inválida. Entre novamente.");
   if (!podeEditarCadastros(perfil.papel)) {
     return falha("Você não tem permissão para editar o cadastro da peça.");

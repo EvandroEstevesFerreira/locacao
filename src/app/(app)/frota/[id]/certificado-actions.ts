@@ -11,6 +11,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeOperar } from "@/lib/auth";
 import { falha, primeiroErro, type ActionResult } from "@/lib/acoes";
+import { exigirModulo } from "@/lib/modulos";
 import { certificadoSchema } from "@/lib/certificado";
 
 async function guarda() {
@@ -19,6 +20,8 @@ async function guarda() {
   if (!podeOperar(perfil.papel)) {
     return { erro: "Você não tem permissão para lançar certificados." };
   }
+  const semModulo = exigirModulo(perfil, "frota");
+  if (semModulo) return { erro: semModulo };
   return { orgId: perfil.org_id };
 }
 

@@ -17,6 +17,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeOperar } from "@/lib/auth";
 import { reparoSchema } from "@/lib/reparo";
 import { falha, primeiroErro, type ActionResult } from "@/lib/acoes";
+import { exigirModulo } from "@/lib/modulos";
 import { buscarReparo } from "@/lib/data/reparos";
 
 function revalidar(unidadeId: string, reparoId?: string) {
@@ -27,6 +28,8 @@ function revalidar(unidadeId: string, reparoId?: string) {
 
 export async function salvarReparo(raw: unknown): Promise<ActionResult> {
   const perfil = await getCurrentPerfil();
+  const semModulo = exigirModulo(perfil, "frota");
+  if (semModulo) return falha(semModulo);
   if (!perfil?.org_id || !podeOperar(perfil.papel)) {
     return falha("Você não tem permissão para registrar ordens de reparo.");
   }
@@ -88,6 +91,8 @@ export async function salvarReparo(raw: unknown): Promise<ActionResult> {
  */
 export async function concluirReparo(raw: unknown): Promise<ActionResult> {
   const perfil = await getCurrentPerfil();
+  const semModulo = exigirModulo(perfil, "frota");
+  if (semModulo) return falha(semModulo);
   if (!perfil?.org_id || !podeOperar(perfil.papel)) {
     return falha("Você não tem permissão para concluir ordens de reparo.");
   }
@@ -154,6 +159,12 @@ export async function concluirReparo(raw: unknown): Promise<ActionResult> {
 export async function excluirReparo(
   formData: FormData,
 ): Promise<{ error?: string } | void> {
+  // Esta action não lia o perfil: a proteção era só o RPC + RLS. Com o módulo
+  // restrito, "quem pode excluir" passou a depender também de quem enxerga a
+  // frota.
+  const semModulo = exigirModulo(await getCurrentPerfil(), "frota");
+  if (semModulo) return { error: semModulo };
+
   const id = String(formData.get("id") ?? "").trim();
   const unidadeId = String(formData.get("unidade_id") ?? "").trim();
   if (!id) return;
