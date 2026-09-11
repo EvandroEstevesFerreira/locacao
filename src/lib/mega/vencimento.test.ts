@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { vencimentoEfetivo, situacaoDoTitulo } from "./vencimento";
+import { vencimentoEfetivo, dataDePagamento, situacaoDoTitulo } from "./vencimento";
 
 /**
  * A DATA DE PAGAR É A PRORROGADA, não a de vencimento.
@@ -104,5 +104,68 @@ describe("situacaoDoTitulo", () => {
         hojeISO: hoje,
       }),
     ).toBe("a_vencer");
+  });
+});
+
+/**
+ * QUANDO se pagou — a pergunta que até 11/09/2026 se dizia impossível.
+ *
+ * O `AGENTS.md` afirmava que a API do Mega não devolve data de pagamento. A
+ * regra do dono do processo é que a prorrogação É essa data; medido no espelho
+ * no mesmo dia, as 450 parcelas copiadas têm prorrogação preenchida e nenhuma
+ * prorroga para trás.
+ */
+describe("dataDePagamento", () => {
+  it("devolve a prorrogação quando o título está quitado", () => {
+    expect(
+      dataDePagamento({
+        saldoAtual: 0,
+        dataVencimento: "2024-12-03",
+        dataProrrogado: "2025-03-31",
+      }),
+    ).toBe("2025-03-31");
+  });
+
+  it("devolve o vencimento quando não houve prorrogação", () => {
+    expect(
+      dataDePagamento({
+        saldoAtual: 0,
+        dataVencimento: "2026-08-15",
+        dataProrrogado: "2026-08-15",
+      }),
+    ).toBe("2026-08-15");
+  });
+
+  // A GUARDA QUE JUSTIFICA O SALDO NA ASSINATURA. Em título aberto a
+  // prorrogação é previsão; devolvê-la como "pago em" marcaria como quitado o
+  // que ainda vai vencer.
+  it("devolve nulo enquanto há saldo", () => {
+    expect(
+      dataDePagamento({
+        saldoAtual: 2038.53,
+        dataVencimento: "2026-09-15",
+        dataProrrogado: "2026-09-15",
+      }),
+    ).toBeNull();
+  });
+
+  it("devolve nulo mesmo com saldo negativo, que é dado estranho", () => {
+    expect(
+      dataDePagamento({
+        saldoAtual: -10,
+        dataVencimento: "2026-09-15",
+        dataProrrogado: "2026-09-15",
+      }),
+    ).toBeNull();
+  });
+
+  it("não antecipa se a prorrogação vier para trás", () => {
+    expect(
+      dataDePagamento({
+        saldoAtual: 0,
+        dataVencimento: "2026-09-15",
+        dataProrrogado: "2026-09-01",
+      }),
+    ).toBe("2026-09-15");
   });
 });

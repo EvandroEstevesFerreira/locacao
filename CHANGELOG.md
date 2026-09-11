@@ -7,6 +7,36 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.112.0] - 2026-09-11
+
+A data de pagamento existe, e e a PRORROGACAO.
+
+Ate aqui o `AGENTS.md` afirmava que a API do Mega nao devolve data de pagamento,
+e por isso a baixa nao existia. A afirmacao caiu: confirmado com o dono do
+processo, `DataProrrogado` **e** a data de pagamento -- `DataVencimento` e o
+vencimento contratado do documento, e quando o financeiro renegocia quem manda e
+a prorrogada.
+
+Medido no espelho no mesmo dia, sobre as 450 parcelas ja copiadas: nenhuma vem
+sem prorrogacao, nenhuma prorroga para tras, e 54 (12,0%) adiam de fato.
+
+### Adicionado
+- `dataDePagamento()` em `src/lib/mega/vencimento.ts`. Exige o saldo na
+  assinatura: em titulo aberto a prorrogacao e previsao, e devolve-la como
+  "pago em" marcaria como quitado o que ainda vai vencer.
+- `pagoEm` no espelho lido, e "pago em <data>" na secao "No Mega".
+
+### Alterado
+- O rodape da secao nao afirma mais que o Mega desconhece a data do pagamento.
+- `AGENTS.md` e `docs/mega-api-para-custos.md` corrigidos. Falta **uma** decisao
+  para a baixa existir (faturamento por mes ou por bloco), nao mais duas.
+
+### Nao mudou
+- O espelho continua **sem escrever** em `lancamento_financeiro`;
+  `espelho-nao-da-baixa.test.ts` segue cobrando isso.
+- `quitacao_vista_em` fica: e o dia em que o cron VIU o saldo zerar, auditoria
+  da sincronizacao, e nao a data de pagamento.
+
 ## [0.111.1] - 2026-09-11
 
 Cada linha da resposta de contratos e um ITEM, nao um contrato.

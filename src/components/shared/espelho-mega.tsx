@@ -94,8 +94,17 @@ export function EspelhoMega({
                 </span>
                 <span className="text-muted-foreground">
                   {" "}
-                  · parcela {t.numeroParcela} · pagar em{" "}
-                  {formatarData(t.vencimentoEfetivo)}
+                  · parcela {t.numeroParcela} ·{" "}
+                  {/* "PAGO EM" E "PAGAR EM" SÃO FATOS DIFERENTES e a mesma data
+                      serve aos dois: com saldo zerado ela é o dia em que se
+                      pagou; com saldo em aberto, o dia em que se vai pagar.
+                      Escrever "pagar em" num título quitado faria a tela pedir
+                      um pagamento que já saiu. */}
+                  {t.pagoEm ? (
+                    <>pago em {formatarData(t.pagoEm)}</>
+                  ) : (
+                    <>pagar em {formatarData(t.vencimentoEfetivo)}</>
+                  )}
                 </span>
                 {/* A DATA ORIGINAL SÓ APARECE QUANDO FOI ADIADA, e nunca no
                     lugar da de pagar. Sem esta linha, o título prorrogado
@@ -116,13 +125,13 @@ export function EspelhoMega({
           ))}
         </ul>
 
-        {/* A HONESTIDADE QUE FALTA NO DADO, DITA EM VOZ ALTA. A API do Mega não
-            devolve data de pagamento — no projeto Financeiro ela saía da pasta
-            de comprovantes. Sem esta linha, alguém leria "Pago" como se o Loca
-            soubesse o dia em que o dinheiro saiu. */}
+        {/* DE ONDE VEM A DATA, DITO EM VOZ ALTA. Ela é do ERP, não uma
+            observação nossa — e quem lê "pago em" precisa saber que está lendo
+            a prorrogação, que é a data que o financeiro usa para pagar. */}
         <p className="text-xs text-muted-foreground">
-          A data de pagar é a prorrogada, quando o financeiro renegociou. O Mega
-          informa se o título foi quitado, mas não a data do pagamento. {rodape}
+          A data é a prorrogada do Mega, que é a que o financeiro usa para pagar.
+          Enquanto há saldo ela é a data prevista; com o título quitado, é o dia
+          do pagamento. {rodape}
         </p>
       </CardContent>
     </Card>

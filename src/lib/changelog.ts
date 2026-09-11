@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.111.1";
+export const APP_VERSION = "0.112.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,23 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.112.0",
+    data: "2026-09-11",
+    titulo: "O Mega passa a dizer QUANDO a conta foi paga",
+    mudancas: [
+      {
+        tipo: "novo",
+        texto:
+          "Na seção \"No Mega\", o título já quitado mostra o dia do pagamento, e não mais só a etiqueta \"Pago\". A data é a de prorrogação do ERP, que é a que o financeiro usa para pagar.",
+      },
+      {
+        tipo: "melhoria",
+        texto:
+          "Título ainda em aberto continua mostrando \"pagar em\", com a data prevista — antes as duas situações usavam o mesmo texto.",
+      },
+    ],
+  },
   {
     versao: "0.111.1",
     data: "2026-09-11",

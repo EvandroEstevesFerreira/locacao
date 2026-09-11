@@ -6,6 +6,7 @@ import { hojeISOSaoPaulo } from "@/lib/locacao";
 import {
   situacaoDoTitulo,
   vencimentoEfetivo,
+  dataDePagamento,
   foiProrrogado,
   type SituacaoTitulo,
 } from "@/lib/mega/vencimento";
@@ -36,6 +37,13 @@ export type TituloEspelhado = {
   valorParcela: number;
   saldoAtual: number;
   quitado: boolean;
+  /**
+   * O dia em que foi pago, ou `null` se ainda não foi.
+   *
+   * Vem do ERP (a prorrogação), não da nossa observação. Para "quando o cron
+   * viu o saldo zerar", que é outra pergunta, use `quitacaoVistaEm`.
+   */
+  pagoEm: string | null;
   quitacaoVistaEm: string | null;
 };
 
@@ -133,6 +141,7 @@ const lerEspelho = async (
       valorParcela: Number(l.valor_parcela),
       saldoAtual: Number(l.saldo_atual),
       quitado: Number(l.saldo_atual) === 0,
+      pagoEm: dataDePagamento({ ...datas, saldoAtual: Number(l.saldo_atual) }),
       quitacaoVistaEm: (l.quitacao_vista_em as string | null) ?? null,
       };
     })

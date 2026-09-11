@@ -282,20 +282,39 @@ em dois cadastros. Isto NÃO é o mutirão de custódia, que acertou 89 de 95.
 campo `cnpj` volta com o PRÓPRIO CÓDIGO e padding. Para esses, `GetAgenteCnpj`
 tende a não achar, e o código precisa vir do Mega à mão.
 
+## A data de pagamento é a PRORROGAÇÃO
+
+Confirmado com o dono do processo em **11/09/2026**, e é regra de negócio, não
+inferência: no Mega, `DataProrrogado` **é** a data de pagamento.
+`DataVencimento` é o vencimento contratado do documento; quando o financeiro
+renegocia, quem manda é a prorrogada.
+
+Medido no espelho no mesmo dia, sobre as 450 parcelas já copiadas: **nenhuma**
+vem sem prorrogação, **nenhuma** prorroga para trás, e 54 (12,0%) adiam de fato.
+
+Combinada com `SaldoAtual`, ela responde as duas perguntas:
+
+| `SaldoAtual` | O que `DataProrrogado` é |
+| --- | --- |
+| `0` | o dia em que **foi** pago |
+| `> 0` | o dia em que **será** pago |
+
+`dataDePagamento()` em `src/lib/mega/vencimento.ts` faz esse recorte e exige o
+saldo na assinatura: devolver a data de um título em aberto como "pago em"
+marcaria como quitado o que ainda vai vencer.
+
+**`quitacao_vista_em` não é a data de pagamento** — é o dia em que o cron **viu**
+o saldo zerar, auditoria da sincronização. Continua na tabela por isso, e não
+como aproximação de nada.
+
 ## O que ainda NÃO existe: a BAIXA
 
 O espelho **não escreve em `lancamento_financeiro`**, e há varredura cobrando
 isso (`src/lib/mega/espelho-nao-da-baixa.test.ts`). Não é escopo cortado por
-pressa; é decisão, e o motivo é concreto:
+pressa; é decisão.
 
-**a API do Mega não devolve data de pagamento.** A rota tem 10 campos e nenhum
-é isso — no projeto Financeiro essa data saía da pasta de comprovantes no
-OneDrive. Sem ela, baixa automática só poderia inventar a data, e conta marcada
-como paga errada ninguém percebe olhando a tela.
-
-O que existe é `mega_titulo.quitacao_vista_em`: o dia em que o Loca **viu** o
-saldo zerar. Com cron diário erra no máximo um dia, e o nome diz o que é.
-
-Antes da baixa existir, faltam duas decisões: **de onde vem a data de pagamento**
-e **se o fornecedor fatura por mês ou por bloco** — no contrato 1726 uma única
-fatura cobre o período inteiro, então o casamento não é 1↔1.
+Até 11/09/2026 o motivo era a falta da data de pagamento. **Esse motivo caiu**
+com a regra acima. Resta **uma** decisão: **se o fornecedor fatura por mês ou
+por bloco** — no contrato 1726 uma única fatura cobre o período inteiro, então o
+casamento não é 1↔1, e uma baixa 1↔1 quitaria o contrato inteiro com a primeira
+parcela.

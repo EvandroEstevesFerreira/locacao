@@ -15,7 +15,17 @@
 
 export type SituacaoTitulo = "pago" | "a_vencer" | "vence_hoje" | "atrasado";
 
-/** A data que vale para pagar: a prorrogada, quando ela adia de fato. */
+/**
+ * A data que vale para pagar: a PRORROGADA, sempre.
+ *
+ * Confirmado com o dono do processo em 11/09/2026: no Mega, a prorrogação É a
+ * data de pagamento. `DataVencimento` é o vencimento contratado do documento;
+ * quando o financeiro renegocia, quem manda é `DataProrrogado`.
+ *
+ * Medido no espelho no mesmo dia, sobre as 450 parcelas já copiadas: NENHUMA
+ * vem sem prorrogação e NENHUMA prorroga para trás. O `null` e o `<` abaixo
+ * são rede para dado estranho, não caminho normal.
+ */
 export function vencimentoEfetivo({
   dataVencimento,
   dataProrrogado,
@@ -28,6 +38,31 @@ export function vencimentoEfetivo({
   // trás; se aparecer, é dado estranho, e antecipar por conta própria a data de
   // pagar é o pior dos dois erros possíveis aqui.
   return dataProrrogado > dataVencimento ? dataProrrogado : dataVencimento;
+}
+
+/**
+ * O dia em que o título foi pago, ou `null` se ele ainda não foi.
+ *
+ * SÓ FAZ SENTIDO COM SALDO ZERADO, e é por isso que o saldo entra aqui. Num
+ * título em aberto a prorrogação é previsão — devolver essa data como "pago em"
+ * marcaria como quitado o que ainda vai vencer, e conta paga por engano ninguém
+ * percebe olhando a tela.
+ *
+ * É esta função, e não `quitacao_vista_em`, que responde QUANDO se pagou.
+ * `quitacao_vista_em` é o dia em que o cron VIU o saldo zerar — auditoria da
+ * sincronização, não fato do ERP.
+ */
+export function dataDePagamento({
+  saldoAtual,
+  dataVencimento,
+  dataProrrogado,
+}: {
+  saldoAtual: number;
+  dataVencimento: string;
+  dataProrrogado: string | null;
+}): string | null {
+  if (saldoAtual !== 0) return null;
+  return vencimentoEfetivo({ dataVencimento, dataProrrogado });
 }
 
 /** Houve renegociação de fato? (o Mega repete a data quando não houve) */

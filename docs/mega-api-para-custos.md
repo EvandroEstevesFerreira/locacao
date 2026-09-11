@@ -113,12 +113,15 @@ Cada parcela tem exatamente estes 10 campos:
 
 **Seis coisas medidas sobre esses campos:**
 
-1. **`SaldoAtual == 0` é o que significa "pago".** Não existe campo de data de
-   pagamento em nenhuma rota de listagem. Dá para saber SE pagou, não QUANDO.
-2. **A data de PAGAR é `DataProrrogado`**, não `DataVencimento`. Medido sobre
-   5.372 parcelas: **866 (16,1%) têm prorrogação**, e ela é **sempre para
-   depois**, às vezes por meses. Usar o vencimento original nesses 16% acusa
-   atraso em título que está em dia.
+1. **`SaldoAtual == 0` é o que significa "pago".** Não existe coluna chamada
+   "data de pagamento" — mas ela existe sob outro nome, ver o item 2.
+2. **`DataProrrogado` É a data de pagamento**, não `DataVencimento`. Confirmado
+   com o dono do processo em **11/09/2026**: `DataVencimento` é o vencimento
+   contratado do documento; quando o financeiro renegocia, a data que vale é a
+   prorrogada. Com `SaldoAtual == 0` ela é o dia em que **foi** pago; com saldo
+   em aberto, o dia em que **será**. Medido sobre 5.372 parcelas: **866 (16,1%)
+   adiam de fato**, e **nunca** para antes. Usar o vencimento original nesses
+   16% acusa atraso em título que está em dia.
 3. **As datas voltam em `dd/MM/yyyy` no corpo**, embora o path seja ISO.
    Converter com `new Date("01/12/2024")` em JavaScript dá **12 de janeiro** —
    um erro de 11 meses que não se denuncia sozinho.
@@ -348,9 +351,10 @@ salvo com `Out-File`/`Set-Content` costuma sair **com BOM**, o que faz
   variantes de filtro testadas em 28/08/2026; é job assíncrono Hangfire e voltou
   `Succeeded` em 227 ms sem dado. Ou o módulo AdmObra não tem movimento para a
   Sistenge, ou não está liberado para a conta de API.
-- **Data de pagamento.** Não existe em nenhuma rota testada. No projeto
-  Financeiro essa informação era obtida da estrutura de pastas dos comprovantes
-  no OneDrive.
+- ~~**Data de pagamento.**~~ **Resolvido em 11/09/2026:** é `DataProrrogado`,
+  por regra do dono do processo — ver §3.1, item 2. O que continua sem existir é
+  um campo com esse nome, e o comprovante em si (que no projeto Financeiro vinha
+  da estrutura de pastas do OneDrive).
 
 ---
 
