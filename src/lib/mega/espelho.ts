@@ -1,4 +1,5 @@
 import type { TituloMega } from "./contrato";
+import { imovelDaConta, type PontoConsumo } from "./consumo";
 
 /**
  * A decisão do que gravar no espelho, separada de quem grava.
@@ -71,6 +72,7 @@ export function linhasParaEspelho({
   existentes,
   fornecedorPorCodigo,
   imovelPorCodigo,
+  pontos,
   hojeISO,
 }: {
   orgId: string;
@@ -87,6 +89,14 @@ export function linhasParaEspelho({
    * vencia e todos os títulos caíam nele, em silêncio.
    */
   imovelPorCodigo?: Map<string, string[]>;
+  /**
+   * Os pontos de consumo cadastrados (instalação/RGI por imóvel).
+   *
+   * Conta de luz e de água não tem locador: o agente é a concessionária, que
+   * atende dezenas de imóveis. Quem diz de qual imóvel é a conta é a
+   * INSTALAÇÃO, no campo Documento.
+   */
+  pontos?: PontoConsumo[];
   /** Sempre `hojeISOSaoPaulo()`: a Vercel roda em UTC. */
   hojeISO: string;
 }): LinhaEspelho[] {
@@ -112,7 +122,15 @@ export function linhasParaEspelho({
     // SÓ APONTA PARA O IMÓVEL QUANDO NÃO HÁ DÚVIDA. Com o locador pagando
     // vários, atribuir a um deles seria inventar um rateio que o Mega não
     // informa. A tela acha os títulos pelo `codigo_mega`, que fica sempre.
-    const imovelId = imoveis.length === 1 ? imoveis[0] : null;
+    // TRÊS CAMINHOS ATÉ O IMÓVEL, nesta ordem: o locador exclusivo, e depois a
+    // instalação da conta de consumo. O segundo é o único que funciona para
+    // CPFL e SABESP, cujo agente atende a casa toda.
+    const imovelId =
+      imoveis.length === 1
+        ? imoveis[0]
+        : fornecedorId
+          ? null
+          : (pontos && pontos.length > 0 ? imovelDaConta(t, pontos) : null);
 
     return {
       org_id: orgId,

@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.109.0";
+export const APP_VERSION = "0.110.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,23 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.110.0",
+    data: "2026-09-11",
+    titulo: "Códigos das contas de consumo",
+    mudancas: [
+      {
+        tipo: "novo",
+        texto:
+          "O imóvel passou a ter os códigos das contas de consumo — a instalação da luz, o RGI da água, o contrato da internet. É por eles que o Loca reconhece a conta paga no Mega.",
+      },
+      {
+        tipo: "novo",
+        texto:
+          "Conta de consumo paga no Mega passa a aparecer ligada ao imóvel certo, sem depender de valor nem de data.",
+      },
+    ],
+  },
   {
     versao: "0.109.0",
     data: "2026-09-11",

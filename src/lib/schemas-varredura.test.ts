@@ -108,6 +108,17 @@ const AMOSTRAS: Record<string, unknown> = {
     seguro_fianca_mensal: false,
     vigente: true,
   },
+  pontoConsumoSchema: {
+    imovel_id: UUID,
+    tipo: "luz",
+    // COM MÁSCARA de propósito: o schema só guarda dígitos, e a idempotência
+    // (parsear o próprio output) é justamente o que garante que a segunda
+    // passagem não estrague o número já limpo.
+    identificador: "3.022.287",
+    concessionaria_codigo_mega: "2719",
+    concessionaria_nome: "CPFL",
+    ativo: true,
+  },
   contaConsumoSchema: {
     imovel_id: UUID,
     tipo: "agua",

@@ -24,6 +24,7 @@ import {
   contratoImovelSchema,
   imovelSchema,
   ocupanteSchema,
+  pontoConsumoSchema,
   reparoSchema,
 } from "@/lib/imoveis";
 import {
@@ -1289,6 +1290,56 @@ export async function buscarCodigoMegaDoImovel(imovelId: string): Promise<Action
   if (erroGravar) return falha("Achei o agente, mas não consegui gravar o código.");
 
   revalidatePath("/imoveis");
+  revalidatePath(`/imoveis/${imovelId}`);
+  return { ok: true };
+}
+
+/**
+ * Cadastra ou atualiza um ponto de consumo (instalação/RGI).
+ *
+ * É O QUE TORNA A CONCILIAÇÃO POSSÍVEL. Sem a instalação, conta de luz e de
+ * água só se casaria por valor e data — e 20% dos títulos do Mega colidem
+ * nisso, com contas de água de imóveis diferentes diferindo em centavos no
+ * mesmo dia.
+ */
+export async function salvarPontoConsumo(raw: unknown): Promise<ActionResult> {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id) return falha("Sessão inválida. Entre novamente.");
+  if (!podeOperar(perfil.papel)) {
+    return falha("Você não tem permissão para gerenciar pontos de consumo.");
+  }
+
+  const parsed = pontoConsumoSchema.safeParse(raw);
+  if (!parsed.success) return falha(primeiroErro(parsed.error.issues));
+
+  const { id, ...dados } = parsed.data;
+  const supabase = await createClient();
+  const { error } = id
+    ? await supabase.from("ponto_consumo").update(dados).eq("id", id)
+    : await supabase.from("ponto_consumo").insert({ org_id: perfil.org_id, ...dados });
+
+  if (error) {
+    // O índice único é por concessionária + identificador: a mesma instalação
+    // em dois imóveis faria a mesma conta aparecer nos dois.
+    if (error.code === "23505") {
+      return falha("Essa instalação já está cadastrada em outro imóvel.");
+    }
+    return falha("Não foi possível salvar o ponto de consumo.");
+  }
+
+  revalidatePath(`/imoveis/${dados.imovel_id}`);
+  return { ok: true };
+}
+
+export async function excluirPontoConsumo(id: string, imovelId: string): Promise<ActionResult> {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id) return falha("Sessão inválida. Entre novamente.");
+  if (!podeEditarCadastros(perfil.papel)) {
+    return falha("Você não tem permissão para excluir pontos de consumo.");
+  }
+  const supabase = await createClient();
+  const { error } = await supabase.from("ponto_consumo").delete().eq("id", id);
+  if (error) return falha("Não foi possível excluir.");
   revalidatePath(`/imoveis/${imovelId}`);
   return { ok: true };
 }

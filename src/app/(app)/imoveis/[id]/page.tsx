@@ -17,6 +17,7 @@ import {
 } from "./_components/imovel-identificacao";
 import { ImovelContratos } from "./_components/imovel-contratos";
 import { ImovelMega } from "./_components/imovel-mega";
+import { PontosConsumo } from "./_components/pontos-consumo";
 import { ImovelConsumo } from "./_components/imovel-consumo";
 import { ImovelReparos } from "./_components/imovel-reparos";
 import { ImovelVistorias } from "./_components/imovel-vistorias";
@@ -115,6 +116,13 @@ export default async function ImovelDetalhePage({
 
       <Suspense fallback={<SecaoSkeleton linhas={4} />}>
         <ImovelConsumo imovelId={id} podeEditar={podeEditar} />
+      </Suspense>
+
+      {/* Logo ABAIXO das contas de consumo, porque é o cadastro que faz aquelas
+          contas serem reconhecidas no Mega — quem estranha um valor ali tem o
+          conserto na seção seguinte. */}
+      <Suspense fallback={<SecaoSkeleton linhas={3} />}>
+        <PontosConsumo imovelId={id} podeEditar={podeEditar} />
       </Suspense>
 
       <Suspense fallback={<SecaoSkeleton linhas={3} />}>

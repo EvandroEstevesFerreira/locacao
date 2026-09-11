@@ -353,3 +353,42 @@ export const ocupanteSchema = z
 
 export type OcupanteInput = z.input<typeof ocupanteSchema>;
 export type OcupanteDados = z.output<typeof ocupanteSchema>;
+
+/**
+ * Ponto de consumo: a instalação/RGI que liga a conta do Mega a este imóvel.
+ *
+ * A CHAVE É O NÚMERO DA INSTALAÇÃO, e não o valor com a data. Medido em
+ * 11/09/2026 sobre os 803 títulos CONTA do Mega: 20% colidem em agente + mês +
+ * valor, e contas de água de imóveis diferentes chegam a diferir em centavos no
+ * mesmo dia.
+ */
+export const pontoConsumoSchema = z.object({
+  id: idOpcional,
+  imovel_id: z.string().uuid(),
+  tipo: z.enum(TIPOS_CONSUMO as [TipoConsumo, ...TipoConsumo[]]),
+  /**
+   * Guardado SÓ COM DÍGITOS, porque é assim que ele é comparado com o campo
+   * Documento do Mega. Deixar a máscara entrar obrigaria a adivinhar
+   * formatação dos dois lados.
+   */
+  identificador: z
+    .union([z.string(), z.null()])
+    .optional()
+    .transform((v) => (v ?? "").replace(/\D/g, ""))
+    .refine((v) => v.length >= 3, {
+      message: "Informe o número da instalação (só números).",
+    }),
+  concessionaria_codigo_mega: z
+    .union([z.string(), z.null()])
+    .optional()
+    .transform((v) => {
+      const d = (v ?? "").replace(/\D/g, "");
+      return d.length > 0 ? d : null;
+    }),
+  concessionaria_nome: texto(120),
+  ativo: z.boolean(),
+  observacoes: texto(300),
+});
+
+export type PontoConsumoInput = z.input<typeof pontoConsumoSchema>;
+export type PontoConsumoDados = z.output<typeof pontoConsumoSchema>;

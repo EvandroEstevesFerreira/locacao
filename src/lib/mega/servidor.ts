@@ -6,6 +6,7 @@ import { hojeISOSaoPaulo } from "@/lib/locacao";
 import { logger, erroMeta } from "@/lib/logger";
 import { SessaoMega } from "./cliente";
 import { janelasDeConsulta } from "./janela";
+import type { PontoConsumo } from "./consumo";
 import {
   chaveDoTitulo,
   dedupPorChave,
@@ -25,7 +26,7 @@ type ComCodigo = { id: string; codigo_mega: string | null };
 
 /** Os códigos do Mega que o Loca conhece: fornecedores e locadores de imóvel. */
 async function codigosConhecidos(supabase: SupabaseClient, orgId: string) {
-  const [forn, imov] = await Promise.all([
+  const [forn, imov, pts] = await Promise.all([
     supabase
       .from("fornecedor")
       .select("id, codigo_mega")
@@ -41,10 +42,15 @@ async function codigosConhecidos(supabase: SupabaseClient, orgId: string) {
       .eq("org_id", orgId)
       .is("deleted_at", null)
       .not("codigo_mega", "is", null),
+    supabase
+      .from("ponto_consumo")
+      .select("imovel_id, identificador, concessionaria_codigo_mega")
+      .eq("org_id", orgId),
   ]);
 
   if (forn.error) throw new Error(forn.error.message);
   if (imov.error) throw new Error(imov.error.message);
+  if (pts.error) throw new Error(pts.error.message);
 
   const validos = (linhas: ComCodigo[] | null) =>
     (linhas ?? []).filter((l): l is { id: string; codigo_mega: string } =>
@@ -65,7 +71,13 @@ async function codigosConhecidos(supabase: SupabaseClient, orgId: string) {
     imovelPorCodigo.set(cod, [...(imovelPorCodigo.get(cod) ?? []), l.id]);
   }
 
-  return { fornecedorPorCodigo, imovelPorCodigo };
+  const pontos: PontoConsumo[] = (pts.data ?? []).map((l) => ({
+    imovelId: l.imovel_id as string,
+    identificador: l.identificador as string,
+    concessionaria: (l.concessionaria_codigo_mega as string | null) ?? null,
+  }));
+
+  return { fornecedorPorCodigo, imovelPorCodigo, pontos };
 }
 
 export async function sincronizarOrg(
@@ -75,7 +87,10 @@ export async function sincronizarOrg(
 ): Promise<ResumoRodada> {
   const hoje = hojeISOSaoPaulo();
   const janelas = janelasDeConsulta(hoje);
-  const { fornecedorPorCodigo, imovelPorCodigo } = await codigosConhecidos(supabase, orgId);
+  const { fornecedorPorCodigo, imovelPorCodigo, pontos } = await codigosConhecidos(
+    supabase,
+    orgId,
+  );
 
   const resumo: ResumoRodada = {
     fornecedoresLidos: 0,
@@ -84,7 +99,15 @@ export async function sincronizarOrg(
     falhas: [],
   };
 
-  const conhecidos = new Set([...fornecedorPorCodigo.keys(), ...imovelPorCodigo.keys()]);
+  // As CONCESSIONÁRIAS entram junto: sem elas, todo título CONTA seria
+  // descartado pelo filtro e o consumo nunca chegaria ao espelho. Entra a
+  // concessionária inteira, não só as contas que casam — é assim que aparece a
+  // conta de imóvel já entregue que a empresa continua pagando.
+  const conhecidos = new Set([
+    ...fornecedorPorCodigo.keys(),
+    ...imovelPorCodigo.keys(),
+    ...pontos.map((p) => p.concessionaria).filter((c): c is string => Boolean(c)),
+  ]);
   if (conhecidos.size === 0) return resumo;
 
   // DUAS CHAMADAS NA RODADA INTEIRA, e não uma por fornecedor.
@@ -144,6 +167,7 @@ export async function sincronizarOrg(
         existentes,
         fornecedorPorCodigo,
         imovelPorCodigo,
+        pontos,
         hojeISO: hoje,
       }),
     );

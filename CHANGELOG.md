@@ -7,6 +7,41 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.110.0] - 2026-09-11
+
+Codigos das contas de consumo.
+
+O Mega tem 803 titulos do tipo CONTA (CPFL 287, SABESP 274, DESKTOP 111) e
+nenhum diz de que imovel e: o agente e a concessionaria, que atende a casa
+toda.
+
+### Por que nao casar por valor e data
+
+Foi medido, nao suposto:
+
+- o Mega registra a data do LOTE de pagamento, nao o vencimento do boleto --
+  contas de agua de tres imoveis diferentes caem todas em 24/08;
+- contas de agua colidem por natureza: R$ 74,83 / R$ 74,86 / R$ 75,44 no mesmo
+  mes. Uma conta do Loca casou com TRES titulos ao mesmo tempo;
+- 157 dos 803 titulos (20%) colidem em agente + mes + valor, e piora conforme
+  entram mais imoveis.
+
+### A chave
+
+O numero da instalacao (CPFL) ou do RGI (SABESP): impresso em toda conta, nao
+muda e e unico. O imovel ganhou o cadastro desses codigos, e a rodada liga o
+titulo ao imovel por ele -- ignorando valor e vencimento.
+
+A convencao combinada com o Evandro: o numero vai no campo **Documento** do
+lancamento, so digitos. O Historico continua com obra + nome da casa +
+instalacao, para quem le o Mega. O Documento foi escolhido como chave porque
+vem de graca nas 2 chamadas diarias; o Historico so existe na rota de detalhe,
+um titulo por chamada, com 36% de aproveitamento -- sessenta chamadas por dia
+contra duas.
+
+Conta cuja instalacao nao esta cadastrada fica SEM imovel, de proposito: e
+assim que aparece a conta de imovel ja entregue que a empresa segue pagando.
+
 ## [0.109.0] - 2026-09-11
 
 Imobiliaria que recebe por varios imoveis.

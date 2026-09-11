@@ -68,6 +68,14 @@ const VAZIOS: Record<string, unknown> = {
     seguro_fianca_mensal: false,
     vigente: true,
   },
+  pontoConsumoSchema: {
+    imovel_id: "",
+    tipo: "",
+    identificador: "",
+    concessionaria_codigo_mega: "",
+    concessionaria_nome: "",
+    ativo: true,
+  },
   contaConsumoSchema: {
     imovel_id: "",
     tipo: "",
