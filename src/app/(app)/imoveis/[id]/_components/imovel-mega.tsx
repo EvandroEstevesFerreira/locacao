@@ -9,7 +9,7 @@
 // sem pagamento — é um cadastro pela metade, e some-lo da tela esconde
 // justamente o que precisa ser feito.
 
-import { obterEspelhoDoImovel } from "@/lib/data/mega";
+import { obterEspelhoDoImovel, contarImoveisDoLocador } from "@/lib/data/mega";
 import { EspelhoMega } from "@/components/shared/espelho-mega";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BuscarCodigoMega } from "./buscar-codigo-mega";
@@ -25,13 +25,21 @@ export async function ImovelMega({
   temDocumento: boolean;
   podeEditar: boolean;
 }) {
-  const espelho = codigoMega ? await obterEspelhoDoImovel(imovelId) : null;
+  const espelho = codigoMega ? await obterEspelhoDoImovel(codigoMega) : null;
 
   if (espelho) {
+    // Quantos imóveis dividem este locador. Imobiliária que administra um
+    // conjunto é o caso normal, e a conta de "pago" abaixo é a DELE, não a
+    // deste imóvel — dizer isso evita que alguém some as telas.
+    const quantos = await contarImoveisDoLocador(codigoMega!);
     return (
       <EspelhoMega
         espelho={espelho}
-        rodape="Os títulos são do locador inteiro, não só deste imóvel."
+        rodape={
+          quantos > 1
+            ? `Este locador recebe por ${quantos} imóveis. Os valores acima são de todos eles somados, não só deste.`
+            : "Os títulos são do locador inteiro, não só deste imóvel."
+        }
       />
     );
   }

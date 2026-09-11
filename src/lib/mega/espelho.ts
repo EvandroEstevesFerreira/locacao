@@ -78,8 +78,15 @@ export function linhasParaEspelho({
   existentes: LinhaExistente[];
   /** `codigo_mega` → `fornecedor.id`, do cadastro do Loca. */
   fornecedorPorCodigo: Map<string, string>;
-  /** `codigo_mega` → `imovel.id`. O aluguel é pago ao locador, não a fornecedor. */
-  imovelPorCodigo?: Map<string, string>;
+  /**
+   * `codigo_mega` → os imóveis daquele locador.
+   *
+   * É UMA LISTA, e não um imóvel, porque imobiliária é o caso normal: desde
+   * abril/2026 a EXPRESSO ENGENHARIA recebe o aluguel de vários imóveis do MPD
+   * Contagem num agente só. Com um Map de código→imóvel, o último cadastrado
+   * vencia e todos os títulos caíam nele, em silêncio.
+   */
+  imovelPorCodigo?: Map<string, string[]>;
   /** Sempre `hojeISOSaoPaulo()`: a Vercel roda em UTC. */
   hojeISO: string;
 }): LinhaEspelho[] {
@@ -101,7 +108,11 @@ export function linhasParaEspelho({
     // mesmo código estivesse nos dois cadastros, o título apareceria somado
     // duas vezes — uma no contrato de equipamento, outra no de imóvel.
     const fornecedorId = fornecedorPorCodigo.get(t.codigoAgente) ?? null;
-    const imovelId = fornecedorId ? null : (imovelPorCodigo?.get(t.codigoAgente) ?? null);
+    const imoveis = fornecedorId ? [] : (imovelPorCodigo?.get(t.codigoAgente) ?? []);
+    // SÓ APONTA PARA O IMÓVEL QUANDO NÃO HÁ DÚVIDA. Com o locador pagando
+    // vários, atribuir a um deles seria inventar um rateio que o Mega não
+    // informa. A tela acha os títulos pelo `codigo_mega`, que fica sempre.
+    const imovelId = imoveis.length === 1 ? imoveis[0] : null;
 
     return {
       org_id: orgId,

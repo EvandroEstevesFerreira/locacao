@@ -69,12 +69,29 @@ export const obterEspelhoDoFornecedor = cache(
  * muda só a coluna do filtro.
  */
 export const obterEspelhoDoImovel = cache(
-  async (imovelId: string): Promise<EspelhoDoFornecedor | null> =>
-    lerEspelho("imovel_id", imovelId),
+  async (codigoMega: string): Promise<EspelhoDoFornecedor | null> =>
+    lerEspelho("codigo_mega", codigoMega),
 );
 
+/**
+ * Quantos imóveis dividem o mesmo locador.
+ *
+ * A TELA PRECISA DIZER ISSO EM VOZ ALTA. Desde abril/2026 a EXPRESSO
+ * ENGENHARIA recebe o aluguel de vários imóveis do MPD num agente só; sem o
+ * aviso, quem somasse o "pago" de cada tela contaria o mesmo dinheiro N vezes.
+ */
+export const contarImoveisDoLocador = cache(async (codigoMega: string): Promise<number> => {
+  const supabase = await createClient();
+  const { count } = await supabase
+    .from("imovel")
+    .select("id", { count: "exact", head: true })
+    .eq("codigo_mega", codigoMega)
+    .is("deleted_at", null);
+  return count ?? 0;
+});
+
 const lerEspelho = async (
-  coluna: "fornecedor_id" | "imovel_id",
+  coluna: "fornecedor_id" | "codigo_mega",
   id: string,
 ): Promise<EspelhoDoFornecedor | null> => {
     const supabase = await createClient();

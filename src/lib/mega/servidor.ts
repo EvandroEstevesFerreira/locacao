@@ -46,17 +46,26 @@ async function codigosConhecidos(supabase: SupabaseClient, orgId: string) {
   if (forn.error) throw new Error(forn.error.message);
   if (imov.error) throw new Error(imov.error.message);
 
-  const limpa = (linhas: ComCodigo[] | null) =>
-    new Map(
-      (linhas ?? [])
-        .filter((l): l is { id: string; codigo_mega: string } => Boolean(l.codigo_mega?.trim()))
-        .map((l) => [l.codigo_mega.trim(), l.id]),
+  const validos = (linhas: ComCodigo[] | null) =>
+    (linhas ?? []).filter((l): l is { id: string; codigo_mega: string } =>
+      Boolean(l.codigo_mega?.trim()),
     );
 
-  return {
-    fornecedorPorCodigo: limpa(forn.data as ComCodigo[] | null),
-    imovelPorCodigo: limpa(imov.data as ComCodigo[] | null),
-  };
+  // Fornecedor: um código, um fornecedor (há índice único em `codigo_mega`).
+  const fornecedorPorCodigo = new Map(
+    validos(forn.data as ComCodigo[] | null).map((l) => [l.codigo_mega.trim(), l.id]),
+  );
+
+  // Imóvel: um código pode ser de VÁRIOS — a imobiliária que administra o
+  // conjunto. Agrupar em lista é o que impede o último cadastrado de ficar com
+  // os títulos de todos.
+  const imovelPorCodigo = new Map<string, string[]>();
+  for (const l of validos(imov.data as ComCodigo[] | null)) {
+    const cod = l.codigo_mega.trim();
+    imovelPorCodigo.set(cod, [...(imovelPorCodigo.get(cod) ?? []), l.id]);
+  }
+
+  return { fornecedorPorCodigo, imovelPorCodigo };
 }
 
 export async function sincronizarOrg(

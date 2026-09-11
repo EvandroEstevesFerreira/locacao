@@ -204,7 +204,7 @@ describe("aluguel de imóvel", () => {
       titulos: [titulo({ codigoAgente: "3135" })],
       existentes: [],
       fornecedorPorCodigo: new Map(),
-      imovelPorCodigo: new Map([["3135", "imovel-7"]]),
+      imovelPorCodigo: new Map([["3135", ["imovel-7"]]]),
       hojeISO: HOJE,
     });
     expect(l.imovel_id).toBe("imovel-7");
@@ -220,10 +220,44 @@ describe("aluguel de imóvel", () => {
       titulos: [titulo({ codigoAgente: "2630" })],
       existentes: [],
       fornecedorPorCodigo: new Map([["2630", "forn-5i"]]),
-      imovelPorCodigo: new Map([["2630", "imovel-7"]]),
+      imovelPorCodigo: new Map([["2630", ["imovel-7"]]]),
       hojeISO: HOJE,
     });
     expect(l.fornecedor_id).toBe("forn-5i");
     expect(l.imovel_id).toBeNull();
+  });
+});
+
+describe("um agente que paga vários imóveis", () => {
+  // A IMOBILIÁRIA É O CASO NORMAL, NÃO A EXCEÇÃO. Desde abril/2026 a EXPRESSO
+  // ENGENHARIA recebe o aluguel de vários imóveis do MPD Contagem num agente
+  // só. Com um Map de código→imóvel, o último cadastrado vencia e TODOS os
+  // títulos caíam nele — 15 títulos de 6 imóveis somados numa tela só, em
+  // silêncio.
+  it("não atribui o título a nenhum imóvel quando o código é de vários", () => {
+    const [l] = linhasParaEspelho({
+      orgId: "org-1",
+      titulos: [titulo({ codigoAgente: "4193" })],
+      existentes: [],
+      fornecedorPorCodigo: new Map(),
+      imovelPorCodigo: new Map([["4193", ["imovel-1", "imovel-2"]]]),
+      hojeISO: HOJE,
+    });
+    expect(l.imovel_id).toBeNull();
+    // O CÓDIGO FICA. É por ele que a tela do imóvel acha os títulos — perder o
+    // vínculo aqui apagaria o aluguel da tela dos dois imóveis.
+    expect(l.codigo_mega).toBe("4193");
+  });
+
+  it("atribui normalmente quando o código é de um imóvel só", () => {
+    const [l] = linhasParaEspelho({
+      orgId: "org-1",
+      titulos: [titulo({ codigoAgente: "3135" })],
+      existentes: [],
+      fornecedorPorCodigo: new Map(),
+      imovelPorCodigo: new Map([["3135", ["imovel-7"]]]),
+      hojeISO: HOJE,
+    });
+    expect(l.imovel_id).toBe("imovel-7");
   });
 });

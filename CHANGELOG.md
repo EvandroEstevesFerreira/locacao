@@ -7,6 +7,25 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.109.0] - 2026-09-11
+
+Imobiliaria que recebe por varios imoveis.
+
+Descoberto ao conciliar o MPD Contagem: ate marco/2026 os alugueis iam para
+locadores individuais (KEILA SANTOS, ANDERSON ALMEIDA, ROBERTO BATISTA); desde
+abril/2026 **passaram todos para a EXPRESSO ENGENHARIA**, um agente so, com 15
+titulos do tipo ALUGUEL cobrindo varios imoveis.
+
+O modelo nao suportava isso. `imovelPorCodigo` era um Map de codigo->imovel: com
+6 imoveis no mesmo codigo, o ultimo cadastrado vencia e TODOS os titulos caiam
+nele, em silencio.
+
+Agora o mapa e codigo->lista. O titulo so aponta para um imovel quando nao ha
+duvida; com locador compartilhado, `imovel_id` fica nulo e a tela acha os
+titulos pelo `codigo_mega`. O rodape avisa por quantos imoveis aquele locador
+recebe -- sem isso, somar o "pago" de cada tela contaria o mesmo dinheiro N
+vezes.
+
 ## [0.108.1] - 2026-09-10
 
 Excluir imovel passou a encerrar os contratos dele.

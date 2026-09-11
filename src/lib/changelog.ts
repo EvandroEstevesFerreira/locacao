@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.108.1";
+export const APP_VERSION = "0.109.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,18 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.109.0",
+    data: "2026-09-11",
+    titulo: "Imobiliária que recebe por vários imóveis",
+    mudancas: [
+      {
+        tipo: "correcao",
+        texto:
+          "Quando o mesmo locador recebe o aluguel de vários imóveis, a seção “No Mega” agora avisa e mostra por quantos ele recebe — antes os títulos de todos iam parar num imóvel só.",
+      },
+    ],
+  },
   {
     versao: "0.108.1",
     data: "2026-09-10",
