@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.112.0";
+export const APP_VERSION = "0.112.1";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,23 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.112.1",
+    data: "2026-09-11",
+    titulo: "A conexão com o Mega ficou mais resistente",
+    mudancas: [
+      {
+        tipo: "correcao",
+        texto:
+          "A conexão com o Mega passou a respeitar o prazo de validade que o próprio ERP informa, em vez de supor duas horas. Isso evita falhas intermitentes no fim da sincronização da manhã.",
+      },
+      {
+        tipo: "melhoria",
+        texto:
+          "Consulta ao Mega que demore demais agora é interrompida em 30 segundos, para que uma rota lenta não consuma a sincronização inteira.",
+      },
+    ],
+  },
   {
     versao: "0.112.0",
     data: "2026-09-11",

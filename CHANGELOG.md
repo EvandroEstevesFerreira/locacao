@@ -7,6 +7,35 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.112.1] - 2026-09-11
+
+O cliente do Mega deixa de supor o que o ERP informa.
+
+Tres lacunas apontadas pela referencia de integracao do Sistenge People, todas
+fechadas em `src/lib/mega/cliente.ts` -- que ate aqui era o unico modulo do
+diretorio sem teste.
+
+### Corrigido
+- A validade do token sai de `expirationToken`, campo da resposta do SignIn,
+  com margem de 5 min. Supor 2 h rende 401 intermitente no dia em que o
+  fornecedor mudar a politica. A constante antiga virou fallback.
+- HTTP 401 numa consulta rende UMA renovacao e uma repeticao. O segundo 401
+  propaga: encadear login foi o que bloqueou a conta `120.apifin`, compartilhada
+  com o projeto Financeiro.
+- Toda chamada leva `AbortSignal.timeout(30s)`. O cron tem `maxDuration = 300`;
+  sem teto, uma rota travada consome a rodada e as outras consultas nem saem.
+
+### Adicionado
+- `src/lib/mega/cliente.test.ts`, 8 casos -- incluindo a **assercao negativa**:
+  passa a senha real num corpo de erro que a ecoa e prova que ela nao aparece na
+  mensagem nem na pilha.
+
+### Medido
+- Faturamento por mes x por bloco, sobre os 465 titulos do espelho. A divisao e
+  estrutural: **imovel e sempre bloco** (7 de 7), **fornecedor e quase sempre
+  mensal** (29 de 32). As 3 excecoes sao alugueis pagos pelo cadastro de
+  fornecedor. Logo a baixa tem de casar pelo DOCUMENTO, nunca 1<->1.
+
 ## [0.112.0] - 2026-09-11
 
 A data de pagamento existe, e e a PRORROGACAO.

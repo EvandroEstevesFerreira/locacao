@@ -262,6 +262,25 @@ seção "No Mega".
   reaproveitam uma autenticação só. A conta é compartilhada com o projeto
   Financeiro e já foi bloqueada por encadeamento.
 
+## O cliente HTTP
+
+`src/lib/mega/cliente.ts`, coberto por `cliente.test.ts`. Quatro coisas nele são
+proteção da conta compartilhada, não estilo:
+
+- **A expiração sai de `expirationToken`**, campo da resposta do SignIn — nunca
+  de constante nossa. O SignIn devolve quatro campos, e os dois de expiração não
+  constavam na documentação recebida. Assumir 2 h rende 401 intermitente no dia
+  em que o fornecedor mudar a política, e ninguém liga o sintoma à causa. A
+  constante que existe é só fallback para quando o campo não vier.
+- **O 401 rende UMA renovação**, em `buscar()`. O segundo 401 propaga; não há
+  terceiro login. Encadear tentativas foi o que bloqueou a `120.apifin`.
+- **Toda chamada leva `AbortSignal.timeout(30s)`.** O cron tem
+  `maxDuration = 300`: sem teto, uma rota travada consome a rodada inteira e as
+  outras consultas nem saem.
+- **O corpo do SignIn nunca vai para log nem para mensagem de erro** — ele pode
+  ecoar a credencial enviada. Só a rota de consulta repassa o motivo do ERP, e
+  isso é de propósito. Há asserção negativa cobrando os dois.
+
 ## O locador do imóvel
 
 O aluguel é pago ao locador, que **não é fornecedor**: `mega_titulo` aponta para
@@ -314,7 +333,24 @@ isso (`src/lib/mega/espelho-nao-da-baixa.test.ts`). Não é escopo cortado por
 pressa; é decisão.
 
 Até 11/09/2026 o motivo era a falta da data de pagamento. **Esse motivo caiu**
-com a regra acima. Resta **uma** decisão: **se o fornecedor fatura por mês ou
-por bloco** — no contrato 1726 uma única fatura cobre o período inteiro, então o
-casamento não é 1↔1, e uma baixa 1↔1 quitaria o contrato inteiro com a primeira
+com a regra acima. O que resta é a forma do faturamento — e ela foi medida no
+mesmo dia, sobre os 465 títulos do espelho:
+
+| | um documento por parcela | um documento para várias parcelas |
+| --- | --- | --- |
+| **imóvel** (locador) | 0 | **7** |
+| **fornecedor** (equipamento) | **29** | 3 |
+
+**A divisão é estrutural, não caso a caso.** Aluguel é sempre bloco: o locador
+emite um RECIBO/CONTRATO e o ERP parcela — o código 3234 tem 18 parcelas sob o
+mesmo documento. Equipamento é quase sempre mensal: uma NF por medição.
+
+Os 3 fornecedores em bloco são a exceção que interessa: `4193` (tipo `ALUGUEL`,
+15 parcelas num documento) e `4493` (`CAUCAO`/`ALUGUEL`) são **aluguel pago pelo
+cadastro de fornecedor**, não locação de equipamento; `2863` é `BOLETO` com 23
+parcelas.
+
+Então a baixa **não pode assumir 1↔1** nem decidir pelo tipo de agente. Ela tem
+de casar **pelo documento** e distribuir o valor entre as parcelas — e é isso
+que falta desenhar. Uma baixa 1↔1 quitaria o contrato inteiro com a primeira
 parcela.

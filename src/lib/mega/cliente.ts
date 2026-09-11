@@ -24,8 +24,27 @@ import {
 
 const BASE = "https://rest.megaerp.online";
 
-/** O token do Mega vale 2 h. 100 min deixa margem para a rodada terminar. */
-const VALIDADE_TOKEN_MS = 100 * 60 * 1000;
+/**
+ * A validade do token quando o Mega NÃO disser qual é.
+ *
+ * O certo é ler `expirationToken` da resposta, e é o que `autenticar` faz.
+ * Isto é o fallback: assumir a duração é o defeito que expira em produção no
+ * dia em que o fornecedor mudar a política, e o sintoma é um 401 intermitente
+ * que ninguém liga à causa.
+ */
+const VALIDADE_TOKEN_PADRAO_MS = 100 * 60 * 1000;
+
+/** Margem para o token não vencer no meio de uma sequência de chamadas. */
+const MARGEM_TOKEN_MS = 5 * 60 * 1000;
+
+/**
+ * Teto de tempo por chamada.
+ *
+ * Sem ele, uma rota lenta pendura a invocação até o limite da plataforma — o
+ * cron tem `maxDuration = 300`, então uma única rota travada consome a rodada
+ * inteira e as outras consultas nem chegam a sair.
+ */
+const TIMEOUT_MS = 30_000;
 
 export type ConfigMega = { tenant: string; usuario: string; senha: string };
 
@@ -82,7 +101,8 @@ async function corpoJson(res: Response): Promise<unknown> {
 /** Sessão de UMA rodada. Não é cache global: o módulo morre com a invocação. */
 export class SessaoMega {
   private token: string | null = null;
-  private obtidoEm = 0;
+  /** Epoch ms em que o token deixa de valer, já com margem. */
+  private expiraEm = 0;
   private autenticacaoFalhou = false;
 
   constructor(private readonly cfg: ConfigMega) {}
@@ -103,6 +123,7 @@ export class SessaoMega {
       },
       body: JSON.stringify({ userName: this.cfg.usuario, password: this.cfg.senha }),
       cache: "no-store",
+      signal: AbortSignal.timeout(TIMEOUT_MS),
     });
 
     let corpo: unknown;
@@ -124,15 +145,53 @@ export class SessaoMega {
     }
 
     this.token = token;
-    this.obtidoEm = Date.now();
+    // A EXPIRAÇÃO SAI DA RESPOSTA, NÃO DE UMA CONSTANTE NOSSA. O SignIn devolve
+    // quatro campos (`accessToken`, `expirationToken`, `refreshToken`,
+    // `expirationRefreshToken`); os dois de expiração não constavam na
+    // documentação que recebemos, e é `expirationToken` que manda.
+    const bruto =
+      corpo && typeof corpo === "object" && "expirationToken" in corpo
+        ? (corpo as { expirationToken?: unknown }).expirationToken
+        : null;
+    const anunciado = typeof bruto === "string" ? Date.parse(bruto) : NaN;
+    this.expiraEm = Number.isNaN(anunciado)
+      ? Date.now() + VALIDADE_TOKEN_PADRAO_MS
+      : anunciado - MARGEM_TOKEN_MS;
     return token;
   }
 
   private async tokenValido(): Promise<string> {
-    if (this.token && Date.now() - this.obtidoEm < VALIDADE_TOKEN_MS) {
-      return this.token;
-    }
+    if (this.token && Date.now() < this.expiraEm) return this.token;
     return this.autenticar();
+  }
+
+  /**
+   * Um GET autenticado, com teto de tempo e UMA renovação por 401.
+   *
+   * A RENOVAÇÃO É ÚNICA, E ISSO NÃO É ECONOMIA. Encadear tentativas de login
+   * com credencial real já bloqueou a conta `120.apifin`, que é compartilhada
+   * com o projeto Financeiro. Se o segundo 401 vier, ele propaga — nunca há um
+   * terceiro. A trava de `autenticacaoFalhou` fecha o resto.
+   */
+  private async buscar(rota: string): Promise<Response> {
+    const chamar = async (token: string) =>
+      fetch(rota, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          tenantId: this.cfg.tenant,
+          Accept: "application/json",
+        },
+        cache: "no-store",
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+      });
+
+    let res = await chamar(await this.tokenValido());
+    if (res.status === 401) {
+      // O token morreu antes da hora anunciada. UMA renovação, e só.
+      this.token = null;
+      res = await chamar(await this.tokenValido());
+    }
+    return res;
   }
 
   /**
@@ -147,17 +206,9 @@ export class SessaoMega {
     inicioISO: string,
     fimISO: string,
   ): Promise<{ titulos: TituloMega[]; recusados: number }> {
-    const token = await this.tokenValido();
     const rota = `${BASE}/api/FinanceiroMovimentacao/FaturaPagar/Saldo/Agente/${encodeURIComponent(codigo)}/${inicioISO}/${fimISO}`;
 
-    const res = await fetch(rota, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        tenantId: this.cfg.tenant,
-        Accept: "application/json",
-      },
-      cache: "no-store",
-    });
+    const res = await this.buscar(rota);
 
     if (!res.ok) {
       // A MENSAGEM DO ERP VAI JUNTO, e isso não é detalhe. Sem ela, a primeira
@@ -191,17 +242,9 @@ export class SessaoMega {
     inicioISO: string,
     fimISO: string,
   ): Promise<{ titulos: TituloMega[]; recusados: number }> {
-    const token = await this.tokenValido();
     const rota = `${BASE}/api/FinanceiroMovimentacao/FaturaPagar/Saldo/${inicioISO}/${fimISO}`;
 
-    const res = await fetch(rota, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        tenantId: this.cfg.tenant,
-        Accept: "application/json",
-      },
-      cache: "no-store",
-    });
+    const res = await this.buscar(rota);
 
     if (!res.ok) {
       const detalhe = (await res.text()).replace(/\s+/g, " ").trim().slice(0, 300);
@@ -221,15 +264,9 @@ export class SessaoMega {
    * medido, não documentado.
    */
   async agentePorCodigo(codigo: string, padrao = 1): Promise<AgenteMega | null> {
-    const token = await this.tokenValido();
-    const res = await fetch(`${BASE}/api/globalagente/Agente/${padrao}-${encodeURIComponent(codigo)}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        tenantId: this.cfg.tenant,
-        Accept: "application/json",
-      },
-      cache: "no-store",
-    });
+    const res = await this.buscar(
+      `${BASE}/api/globalagente/Agente/${padrao}-${encodeURIComponent(codigo)}`,
+    );
 
     // AGENTE QUE NÃO RESOLVE NÃO DERRUBA A RODADA. São centenas, e um código
     // que o ERP não reconhece é dado, não falha: vira "não sei o nome".
@@ -247,18 +284,9 @@ export class SessaoMega {
    * não tem esse problema.
    */
   async agentePorDocumento(documento: string): Promise<AgenteMega | null> {
-    const token = await this.tokenValido();
     const limpo = documento.replace(/[^0-9A-Z]/gi, "");
-    const res = await fetch(
+    const res = await this.buscar(
       `${BASE}/api/globalagente/Agente/GetAgenteCnpj/${encodeURIComponent(limpo)}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          tenantId: this.cfg.tenant,
-          Accept: "application/json",
-        },
-        cache: "no-store",
-      },
     );
 
     // NÃO ENCONTRADO NÃO É ERRO. O locador pode simplesmente não estar
@@ -292,20 +320,12 @@ export class SessaoMega {
     contratos: ContratoMega[];
     recusados: number;
   }> {
-    const token = await this.tokenValido();
     const br = (iso: string) => iso.split("-").reverse().join("/");
     const rota =
       `${BASE}/api/AcompanhamentoContratoEngenhariaX/Visoes/GetVisoesFornecedor` +
       `?data_inicio=${br(inicioISO)}&data_fim=${br(fimISO)}`;
 
-    const res = await fetch(rota, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        tenantId: this.cfg.tenant,
-        Accept: "application/json",
-      },
-      cache: "no-store",
-    });
+    const res = await this.buscar(rota);
 
     if (!res.ok) {
       const detalhe = (await res.text()).replace(/\s+/g, " ").trim().slice(0, 300);
