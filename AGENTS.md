@@ -229,9 +229,25 @@ Duas coisas foram medidas aqui e divergem dele:
 
 ## A sincronização automática
 
-O cron `/api/cron/mega` roda **todo dia às 07:30 de Brasília** e copia o contas
-a pagar de cada fornecedor com `codigo_mega` para a tabela `mega_titulo`. A tela
-do contrato lê esse espelho na seção "No Mega".
+O cron `/api/cron/mega` roda **todo dia às 07:30 de Brasília** e copia para
+`mega_titulo` o contas a pagar dos agentes que o Loca conhece — fornecedores e
+locadores de imóvel. As telas de contrato e de imóvel leem esse espelho na
+seção "No Mega".
+
+- **Duas chamadas na rodada inteira**, não uma por agente. A rota
+  `FaturaPagar/Saldo/{ini}/{fim}` traz TODAS as parcelas do período (458 num
+  mês, de 224 agentes) e o filtro é **em memória**. Ela cobre 3 anos em 2
+  janelas porque **o Mega recusa intervalo maior que 2 anos**.
+- **O filtro em memória é decisão, não economia.** A resposta traz tudo que a
+  empresa paga — folha, vale-transporte, impostos, veículos. Guardar isso no
+  Loca seria coletar muito além do propósito do sistema.
+- **Nessa rota `Agente.Nome` e `Agente.Cnpj` vêm NULOS.** O nome sai de
+  `/api/globalagente/Agente/{padrao}-{codigo}`, uma chamada por agente, e fica
+  em `mega_agente`. Repare que essa rota devolve chaves em **minúscula**
+  (`nome`, `cnpj`), enquanto a de contas a pagar devolve em PascalCase.
+- **A data de pagar é `DataProrrogado`**, não `DataVencimento`. 16,1% das
+  parcelas têm prorrogação e ela é sempre para depois. Ler a data original faz
+  a tela acusar atraso em título em dia.
 
 - **`30 10 * * *` no `vercel.json` — a Vercel roda cron em UTC.** Quem
   "corrigir" para `30 7` move a rodada para as 04:30 da manhã, e nada na tela
@@ -245,6 +261,26 @@ do contrato lê esse espelho na seção "No Mega".
 - **Nunca chame a API em `Promise.all`.** As 37 consultas são sequenciais e
   reaproveitam uma autenticação só. A conta é compartilhada com o projeto
   Financeiro e já foi bloqueada por encadeamento.
+
+## O locador do imóvel
+
+O aluguel é pago ao locador, que **não é fornecedor**: `mega_titulo` aponta para
+`fornecedor_id` OU `imovel_id`, com CHECK no banco cobrando um dono só.
+
+**A chave é o documento, e só ele.** `imovel.locador_documento` (CPF ou CNPJ,
+com dígito verificador conferido) resolve o código por `GetAgenteCnpj`, sob
+clique. A rota quer o documento **só com dígitos** — com máscara devolve 500.
+
+**Não tente casar locador por nome ou por valor.** Foi medido em 10/09/2026:
+dos 8 candidatos por valor+dia, **3 eram falsos** — PONTOMAIS TECNOLOGIA,
+PREVENT SENIOR e BULLLA INSTITUIÇÃO DE PAGAMENTO casaram com aluguel por
+coincidência. Cinco imóveis têm aluguel de R$ 2.000 e o dia de vencimento se
+repete; e "Rogerio Soares de Lima" e "Rogerio Soares Lima" são a mesma pessoa
+em dois cadastros. Isto NÃO é o mutirão de custódia, que acertou 89 de 95.
+
+**Pessoa física pode não ter documento no ERP:** em `3086`, `3135` e `3927` o
+campo `cnpj` volta com o PRÓPRIO CÓDIGO e padding. Para esses, `GetAgenteCnpj`
+tende a não achar, e o código precisa vir do Mega à mão.
 
 ## O que ainda NÃO existe: a BAIXA
 
