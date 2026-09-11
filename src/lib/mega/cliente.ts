@@ -1,5 +1,6 @@
 import "server-only";
 
+import { parseContratos, type ContratoMega } from "./contratos";
 import {
   parseTitulos,
   agenteMegaSchema,
@@ -274,5 +275,45 @@ export class SessaoMega {
     const alvo = Array.isArray(corpo) ? corpo[0] : corpo;
     const r = agenteMegaSchema.safeParse(alvo);
     return r.success ? r.data : null;
+  }
+
+  /**
+   * TODOS os contratos do módulo de acompanhamento, numa chamada.
+   *
+   * Medido em 11/09/2026: 958 contratos de 247 fornecedores, com projeto,
+   * medição e saldo. Consultar fornecedor a fornecedor seriam 37 chamadas
+   * diárias para o mesmo dado.
+   *
+   * A DATA AQUI É `dd/MM/yyyy`, ao contrário da rota de contas a pagar, que
+   * exige ISO e recusa o formato brasileiro. Mesmo ERP, duas convenções — e
+   * mandar ISO aqui devolve HTTP 500, sem dizer por quê.
+   */
+  async contratos(inicioISO: string, fimISO: string): Promise<{
+    contratos: ContratoMega[];
+    recusados: number;
+  }> {
+    const token = await this.tokenValido();
+    const br = (iso: string) => iso.split("-").reverse().join("/");
+    const rota =
+      `${BASE}/api/AcompanhamentoContratoEngenhariaX/Visoes/GetVisoesFornecedor` +
+      `?data_inicio=${br(inicioISO)}&data_fim=${br(fimISO)}`;
+
+    const res = await fetch(rota, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        tenantId: this.cfg.tenant,
+        Accept: "application/json",
+      },
+      cache: "no-store",
+    });
+
+    if (!res.ok) {
+      const detalhe = (await res.text()).replace(/\s+/g, " ").trim().slice(0, 300);
+      throw new ErroMega(
+        res.status,
+        `O Mega recusou a consulta de contratos (HTTP ${res.status}): ${detalhe}`,
+      );
+    }
+    return parseContratos(await corpoJson(res));
   }
 }

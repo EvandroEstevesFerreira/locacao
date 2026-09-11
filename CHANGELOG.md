@@ -7,6 +7,38 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.111.0] - 2026-09-11
+
+Contratos do ERP na tela do contrato.
+
+O Loca projeta o comprometido a partir dos itens cadastrados. O Mega tem o
+numero OFICIAL: quanto foi contratado com cada fornecedor em cada obra, quanto
+ja foi medido e quanto sobra.
+
+### Como foi encontrado
+
+O portal de APIs e uma SPA e nao entrega catalogo. O caminho foram as **63
+especificacoes OpenAPI publicas** em
+`storage.googleapis.com/br-com-mega-ecossistema-api/`. Varrendo as 63: cinco
+modulos com rotas de contrato, e o util e
+`Construcao.AdmObra.AcompanhamentoContratoEngenhariaX`, com 31 rotas.
+
+`Visoes/GetVisoesFornecedor` sem filtro devolve **958 contratos de 247
+fornecedores numa unica chamada**, com projeto, codigo do contrato, medicao e
+saldo. O `projeto` vem como "608 - RACIONAL - DANTE" e o prefixo e o
+`obra.codigo` do Loca: **7 das 8 obras casam, cobrindo 571 contratos**.
+
+### Duas armadilhas do ERP
+
+- **A data aqui e `dd/MM/yyyy`**, ao contrario da rota de contas a pagar, que
+  exige ISO. Mandar ISO devolve HTTP 500 sem dizer por que -- foi o que custou
+  as primeiras tentativas.
+- O campo `nota` volta como NUMERO nesta rota e como TEXTO em
+  `GetTabelaFornecedores`. O schema aceita os dois.
+
+O filtro do que entra e em memoria, como nos titulos: dos 55 projetos, so
+entram as obras do Loca.
+
 ## [0.110.0] - 2026-09-11
 
 Codigos das contas de consumo.

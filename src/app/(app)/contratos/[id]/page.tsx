@@ -32,6 +32,7 @@ import { ContratoDevolucoes } from "./_components/contrato-devolucoes";
 import { ContratoDevolucoesDoc } from "./_components/contrato-devolucoes-doc";
 import { ContratoRecebimentos } from "./_components/contrato-recebimentos";
 import { ContratoMega } from "./_components/contrato-mega";
+import { ContratoMegaContratos } from "./_components/contrato-mega-contratos";
 
 export const metadata = { title: "Contrato — Loca" };
 
@@ -68,7 +69,7 @@ export default async function ContratoDetalhePage({
   const { data: contrato } = await supabase
     .from("contrato_locacao")
     .select(
-      "id, numero, cadencia, cobranca_prorata, anexo_path, valor_total_contratado, fornecedor_id, data_inicio, data_fim_prevista, status, observacoes, obra:obra_id(codigo,nome), fornecedor:fornecedor_id(nome), vistoria_retirada:vistoria_retirada_id(id, vistoria_foto(count))",
+      "id, numero, cadencia, cobranca_prorata, anexo_path, valor_total_contratado, fornecedor_id, obra_id, data_inicio, data_fim_prevista, status, observacoes, obra:obra_id(codigo,nome), fornecedor:fornecedor_id(nome), vistoria_retirada:vistoria_retirada_id(id, vistoria_foto(count))",
     )
     .eq("id", id)
     .single();
@@ -210,9 +211,23 @@ export default async function ContratoDetalhePage({
       </Suspense>
 
       {podeVerFinanceiro && contrato.fornecedor_id ? (
-        <Suspense fallback={null}>
-          <ContratoMega fornecedorId={contrato.fornecedor_id as string} />
-        </Suspense>
+        <>
+          {/* Os contratos do ERP vêm ANTES dos títulos: contrato é o acordo, e
+              título é a consequência dele. Ler na ordem inversa faz parecer que
+              o pagamento veio do nada. */}
+          {contrato.obra_id ? (
+            <Suspense fallback={null}>
+              <ContratoMegaContratos
+                fornecedorId={contrato.fornecedor_id as string}
+                obraId={contrato.obra_id as string}
+              />
+            </Suspense>
+          ) : null}
+
+          <Suspense fallback={null}>
+            <ContratoMega fornecedorId={contrato.fornecedor_id as string} />
+          </Suspense>
+        </>
       ) : null}
 
       <Suspense fallback={null}>

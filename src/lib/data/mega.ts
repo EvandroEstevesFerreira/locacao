@@ -157,3 +157,49 @@ const lerEspelho = async (
       ultimoErro: (sync?.ultimo_erro as string | null) ?? null,
     };
 };
+
+export type ContratoEspelhado = {
+  id: string;
+  codigo: string;
+  nome: string | null;
+  produto: string | null;
+  projetoNome: string | null;
+  totalContratado: number;
+  medicao: number;
+  saldo: number;
+};
+
+/**
+ * Os contratos que o Mega tem para este fornecedor nesta obra.
+ *
+ * O RECORTE É FORNECEDOR + OBRA, e não só fornecedor: a CCN tem 19 contratos em
+ * 12 obras diferentes. Mostrar todos na tela de um contrato de locação de uma
+ * obra só seria ruído — e pior, faria o total parecer o desta obra.
+ */
+export const obterContratosDoMega = cache(
+  async (fornecedorId: string, obraId: string): Promise<ContratoEspelhado[]> => {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("mega_contrato")
+      .select("id, codigo, nome, produto, projeto_nome, total_contratado, medicao, saldo")
+      .eq("fornecedor_id", fornecedorId)
+      .eq("obra_id", obraId)
+      .order("total_contratado", { ascending: false });
+
+    if (error) {
+      console.error("obterContratosDoMega:", error.message);
+      return [];
+    }
+
+    return (data ?? []).map((c) => ({
+      id: c.id as string,
+      codigo: c.codigo as string,
+      nome: (c.nome as string | null) ?? null,
+      produto: (c.produto as string | null) ?? null,
+      projetoNome: (c.projeto_nome as string | null) ?? null,
+      totalContratado: Number(c.total_contratado),
+      medicao: Number(c.medicao),
+      saldo: Number(c.saldo),
+    }));
+  },
+);

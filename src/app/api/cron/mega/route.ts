@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { logger, erroMeta } from "@/lib/logger";
 import { configMega, megaConfigurado, SessaoMega } from "@/lib/mega/cliente";
 import { sincronizarOrg, registrarRodada } from "@/lib/mega/servidor";
+import { sincronizarContratos } from "@/lib/mega/contratos-servidor";
 
 /**
  * O espelho diário do contas a pagar do Mega.
@@ -67,6 +68,9 @@ export async function GET(request: Request) {
   for (const { org_id } of orgs) {
     try {
       const resumo = await sincronizarOrg(supabase, org_id, sessao);
+      // Os CONTRATOS são uma chamada a mais, e valem: é o "contratado ×
+      // executado" oficial do ERP, que o Loca só consegue projetar.
+      const contratos = await sincronizarContratos(supabase, org_id, sessao);
       await registrarRodada(supabase, org_id, resumo, null);
       if (resumo.falhas.length > 0) {
         logger.error("cron/mega: fornecedores que falharam", {
@@ -74,7 +78,7 @@ export async function GET(request: Request) {
           falhas: resumo.falhas,
         });
       }
-      resultado.push({ org_id, ...resumo });
+      resultado.push({ org_id, ...resumo, contratos });
     } catch (e) {
       const motivo = e instanceof Error ? e.message : "Falha desconhecida.";
       logger.error("cron/mega: rodada abortada", { org_id, ...erroMeta(e) });
