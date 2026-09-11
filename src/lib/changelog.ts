@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.108.0";
+export const APP_VERSION = "0.108.1";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -29,7 +29,7 @@ export const TIPO_MUDANCA_INFO: Record<
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
   {
-    versao: "0.108.0",
+    versao: "0.108.1",
     data: "2026-09-10",
     titulo: "Aluguel de imóvel no Mega",
     mudancas: [
@@ -47,6 +47,11 @@ export const CHANGELOG: Release[] = [
         tipo: "melhoria",
         texto:
           "A busca diária no Mega ficou muito mais leve: passou de 74 consultas por dia para 2.",
+      },
+      {
+        tipo: "correcao",
+        texto:
+          "Excluir um imóvel passou a encerrar os contratos dele. Contratos de imóveis excluídos estavam somando R$ 8.500/mês de aluguel que não existe.",
       },
     ],
   },

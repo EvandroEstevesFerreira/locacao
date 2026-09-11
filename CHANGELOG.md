@@ -7,6 +7,28 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.108.1] - 2026-09-10
+
+Excluir imovel passou a encerrar os contratos dele.
+
+`soft_delete('imovel', ...)` marcava so o imovel. O `contrato_imovel` seguia
+`vigente = true`, apontando para um imovel que a policy de SELECT esconde -- e
+toda soma de contratos vigentes herdava o erro.
+
+Apareceu na conciliacao de aluguel: a soma dava R$ 66.575/mes contra R$ 58.075
+reais. **R$ 8.500/mes de aluguel fantasma** em 3 contratos de imoveis excluidos.
+
+A migration parte do codigo EM PRODUCAO, nao da 0041: a funcao ganhou cinco
+ramos depois dela, e reescreve-la de memoria teria apagado os cinco em silencio.
+O contador do imovel ficou em variavel separada -- sem isso, um imovel sem
+contrato voltaria `false` e a tela diria "nao foi possivel excluir" logo apos
+excluir.
+
+O cadastro do imovel tambem ganhou o campo de **codigo do Mega digitavel**:
+locador pessoa fisica costuma nao ter CPF no ERP (nos quatro encontrados, o
+campo de CNPJ vem com o proprio codigo), e para esses a busca por documento nao
+acha.
+
 ## [0.108.0] - 2026-09-10
 
 Aluguel de imovel no espelho do Mega.

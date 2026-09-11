@@ -214,6 +214,19 @@ export function ImovelForm({
             )}
           </div>
           <div className="space-y-2">
+            <Label htmlFor="codigo_mega">Código no Mega</Label>
+            <Input id="codigo_mega" disabled={pendente} {...register("codigo_mega")} placeholder="3135" />
+            {/* O CAMPO MANUAL EXISTE PORQUE A BUSCA POR DOCUMENTO NÃO BASTA.
+                Medido em 10/09/2026: nos quatro locadores pessoa física
+                encontrados, o Mega devolve o campo de CNPJ preenchido com o
+                PRÓPRIO CÓDIGO — o ERP não guarda o CPF deles, e a busca por
+                documento não tem como achá-los. */}
+            <p className="text-xs text-muted-foreground">
+              Preenchido pelo botão “Procurar no Mega”. Locador pessoa física
+              costuma não ter CPF no ERP — nesse caso, digite o código aqui.
+            </p>
+          </div>
+          <div className="space-y-2">
             <Label htmlFor="proprietario_telefone">Telefone</Label>
             <Input id="proprietario_telefone" {...register("proprietario_telefone")} />
           </div>
