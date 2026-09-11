@@ -89,7 +89,15 @@ const MODULOS: Record<string, Record<string, unknown>> = {
 const UUID = "11111111-1111-4111-8111-111111111111";
 
 const AMOSTRAS: Record<string, unknown> = {
-  imovelSchema: { tipo: "casa", apelido: "Casa 1", status: "ativo" },
+  imovelSchema: {
+    tipo: "casa",
+    apelido: "Casa 1",
+    status: "ativo",
+    // O campo entra na AMOSTRA porque a varredura só testa o que a amostra tem.
+    // Amostra incompleta e guarda que não guarda foram a mesma coisa na 0.105.1,
+    // quando o valor do contrato passou vazio e quebrou em produção.
+    locador_documento: "529.982.247-25",
+  },
   contratoImovelSchema: {
     imovel_id: UUID,
     data_inicio: "2026-08-01",

@@ -130,3 +130,36 @@ export function parseTitulos(bruto: unknown): {
 export function estaQuitado(t: Pick<TituloMega, "saldoAtual">): boolean {
   return t.saldoAtual === 0;
 }
+
+/**
+ * O agente, como `/api/globalagente/Agente/{id}` devolve.
+ *
+ * ATENÇÃO ÀS CHAVES EM MINÚSCULA. Esta rota devolve `nome`/`cnpj`, enquanto a
+ * de contas a pagar devolve `Nome`/`Cnpj`. É a mesma API, com duas convenções —
+ * confiar na memória aqui rende um objeto de campos `undefined`.
+ */
+export const agenteMegaSchema = z
+  .object({
+    codigo: z.union([z.number(), z.string()]),
+    nome: texto,
+    nomeFantasia: texto,
+    cnpj: texto,
+  })
+  .transform((a) => ({
+    codigo: String(a.codigo),
+    nome: a.nome ?? a.nomeFantasia,
+    cnpj: a.cnpj,
+    // SÓ CONFIE NO CNPJ QUANDO ELE PARECER UM CNPJ. Em agente de retenção
+    // (ISS, INSS, COFINS) o Mega devolve o PRÓPRIO CÓDIGO com padding neste
+    // campo — o guia do ERP avisa, e `"516            "` casaria com nada.
+    documento: somenteDocumento(a.cnpj),
+  }));
+
+export type AgenteMega = z.infer<typeof agenteMegaSchema>;
+
+/** Os dígitos, se o campo tiver cara de CPF ou CNPJ. Senão, nulo. */
+export function somenteDocumento(bruto: string | null): string | null {
+  if (!bruto) return null;
+  const d = bruto.replace(/[^0-9A-Z]/gi, "").toUpperCase();
+  return d.length === 11 || d.length === 14 ? d : null;
+}

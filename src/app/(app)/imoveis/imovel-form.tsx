@@ -42,6 +42,8 @@ export type ImovelExistente = {
   obra_id?: string | null;
   status?: string;
   proprietario_nome?: string | null;
+  locador_documento?: string | null;
+  codigo_mega?: string | null;
   proprietario_telefone?: string | null;
   proprietario_email?: string | null;
   imobiliaria_nome?: string | null;
@@ -86,6 +88,8 @@ export function ImovelForm({
       obra_id: imovel?.obra_id ?? "",
       status: (imovel?.status as ImovelInput["status"]) ?? "ativo",
       proprietario_nome: imovel?.proprietario_nome ?? "",
+      locador_documento: imovel?.locador_documento ?? "",
+      codigo_mega: imovel?.codigo_mega ?? "",
       proprietario_telefone: imovel?.proprietario_telefone ?? "",
       proprietario_email: imovel?.proprietario_email ?? "",
       imobiliaria_nome: imovel?.imobiliaria_nome ?? "",
@@ -189,6 +193,25 @@ export function ImovelForm({
           <div className="space-y-2">
             <Label htmlFor="proprietario_nome">Nome</Label>
             <Input id="proprietario_nome" {...register("proprietario_nome")} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="locador_documento">CPF ou CNPJ</Label>
+            <Input
+              id="locador_documento"
+              aria-invalid={!!errors.locador_documento}
+              disabled={pendente}
+              {...register("locador_documento")}
+              placeholder="000.000.000-00"
+            />
+            {errors.locador_documento ? (
+              <p className="text-xs text-destructive">{errors.locador_documento.message}</p>
+            ) : (
+              /* O CAMPO EXISTE PARA A CONCILIAÇÃO, e quem preenche merece saber
+                 por quê — senão parece burocracia e fica em branco. */
+              <p className="text-xs text-muted-foreground">
+                É por ele que o Loca acha os pagamentos deste aluguel no Mega.
+              </p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="proprietario_telefone">Telefone</Label>

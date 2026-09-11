@@ -1,6 +1,11 @@
 import "server-only";
 
-import { parseTitulos, type TituloMega } from "./contrato";
+import {
+  parseTitulos,
+  agenteMegaSchema,
+  type TituloMega,
+  type AgenteMega,
+} from "./contrato";
 
 /**
  * O cliente HTTP do Mega (contas a pagar).
@@ -168,5 +173,106 @@ export class SessaoMega {
       );
     }
     return parseTitulos(await corpoJson(res));
+  }
+
+  /**
+   * TODAS as parcelas do período, sem filtrar agente.
+   *
+   * UMA CHAMADA NO LUGAR DE 37. Medido em 10/09/2026: `Saldo/2026-09-01/
+   * 2026-09-30` devolveu 458 parcelas de 224 agentes. Consultar fornecedor a
+   * fornecedor multiplicava por 37 a carga sobre uma conta de API que já foi
+   * bloqueada uma vez.
+   *
+   * O PREÇO: `Agente.Nome` e `Agente.Cnpj` vêm NULOS aqui — só o código vem.
+   * O nome sai de `agentePorCodigo`, uma vez por agente, e fica em cache.
+   */
+  async titulosDoPeriodo(
+    inicioISO: string,
+    fimISO: string,
+  ): Promise<{ titulos: TituloMega[]; recusados: number }> {
+    const token = await this.tokenValido();
+    const rota = `${BASE}/api/FinanceiroMovimentacao/FaturaPagar/Saldo/${inicioISO}/${fimISO}`;
+
+    const res = await fetch(rota, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        tenantId: this.cfg.tenant,
+        Accept: "application/json",
+      },
+      cache: "no-store",
+    });
+
+    if (!res.ok) {
+      const detalhe = (await res.text()).replace(/\s+/g, " ").trim().slice(0, 300);
+      throw new ErroMega(
+        res.status,
+        `O Mega recusou a consulta de ${inicioISO} a ${fimISO} (HTTP ${res.status}): ${detalhe}`,
+      );
+    }
+    return parseTitulos(await corpoJson(res));
+  }
+
+  /**
+   * O nome e o documento de um agente.
+   *
+   * AQUI O CÓDIGO VAI COM PREFIXO (`1-2630`), ao contrário da rota de contas a
+   * pagar, que quer ele cru. As duas rotas do mesmo ERP, com regras opostas —
+   * medido, não documentado.
+   */
+  async agentePorCodigo(codigo: string, padrao = 1): Promise<AgenteMega | null> {
+    const token = await this.tokenValido();
+    const res = await fetch(`${BASE}/api/globalagente/Agente/${padrao}-${encodeURIComponent(codigo)}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        tenantId: this.cfg.tenant,
+        Accept: "application/json",
+      },
+      cache: "no-store",
+    });
+
+    // AGENTE QUE NÃO RESOLVE NÃO DERRUBA A RODADA. São centenas, e um código
+    // que o ERP não reconhece é dado, não falha: vira "não sei o nome".
+    if (!res.ok) return null;
+    const r = agenteMegaSchema.safeParse(await corpoJson(res));
+    return r.success ? r.data : null;
+  }
+
+  /**
+   * O agente que tem este CPF/CNPJ, se houver.
+   *
+   * É O CAMINHO SEM ADIVINHAÇÃO. Casar locador por nome erra — "Rogerio Soares
+   * de Lima" e "Rogerio Soares Lima" são a mesma pessoa em dois cadastros, e
+   * dois locadores diferentes podem ter o mesmo aluguel de R$ 2.000. Documento
+   * não tem esse problema.
+   */
+  async agentePorDocumento(documento: string): Promise<AgenteMega | null> {
+    const token = await this.tokenValido();
+    const limpo = documento.replace(/[^0-9A-Z]/gi, "");
+    const res = await fetch(
+      `${BASE}/api/globalagente/Agente/GetAgenteCnpj/${encodeURIComponent(limpo)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          tenantId: this.cfg.tenant,
+          Accept: "application/json",
+        },
+        cache: "no-store",
+      },
+    );
+
+    // NÃO ENCONTRADO NÃO É ERRO. O locador pode simplesmente não estar
+    // cadastrado no ERP ainda, e isso é resposta, não falha.
+    if (!res.ok) return null;
+
+    let corpo: unknown;
+    try {
+      corpo = await corpoJson(res);
+    } catch {
+      return null;
+    }
+    // A rota pode devolver um objeto ou uma lista de um.
+    const alvo = Array.isArray(corpo) ? corpo[0] : corpo;
+    const r = agenteMegaSchema.safeParse(alvo);
+    return r.success ? r.data : null;
   }
 }

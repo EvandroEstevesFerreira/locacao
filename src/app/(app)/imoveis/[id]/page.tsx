@@ -16,6 +16,7 @@ import {
   type ImovelDetalhe,
 } from "./_components/imovel-identificacao";
 import { ImovelContratos } from "./_components/imovel-contratos";
+import { ImovelMega } from "./_components/imovel-mega";
 import { ImovelConsumo } from "./_components/imovel-consumo";
 import { ImovelReparos } from "./_components/imovel-reparos";
 import { ImovelVistorias } from "./_components/imovel-vistorias";
@@ -97,6 +98,20 @@ export default async function ImovelDetalhePage({
       <Suspense fallback={<SecaoSkeleton linhas={4} />}>
         <ImovelContratos imovelId={id} orgId={orgId} podeEditar={podeEditar} />
       </Suspense>
+
+      {/* Dinheiro segue a régua do financeiro: master e administrador. A RLS já
+          barra os demais, mas desenhar a seção para depois vir vazia diria "o
+          Mega não tem nada", que é afirmação, e errada. */}
+      {podeGerirCadastros ? (
+        <Suspense fallback={<SecaoSkeleton linhas={3} />}>
+          <ImovelMega
+            imovelId={id}
+            codigoMega={(imovel.codigo_mega as string | null) ?? null}
+            temDocumento={Boolean(imovel.locador_documento)}
+            podeEditar={podeGerirCadastros}
+          />
+        </Suspense>
+      ) : null}
 
       <Suspense fallback={<SecaoSkeleton linhas={4} />}>
         <ImovelConsumo imovelId={id} podeEditar={podeEditar} />

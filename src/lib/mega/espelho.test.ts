@@ -196,3 +196,34 @@ describe("dedupPorChave", () => {
     expect(dedupPorChave(linhas)).toHaveLength(2);
   });
 });
+
+describe("aluguel de imóvel", () => {
+  it("liga o título ao imóvel pelo código do locador", () => {
+    const [l] = linhasParaEspelho({
+      orgId: "org-1",
+      titulos: [titulo({ codigoAgente: "3135" })],
+      existentes: [],
+      fornecedorPorCodigo: new Map(),
+      imovelPorCodigo: new Map([["3135", "imovel-7"]]),
+      hojeISO: HOJE,
+    });
+    expect(l.imovel_id).toBe("imovel-7");
+    expect(l.fornecedor_id).toBeNull();
+  });
+
+  // O banco tem CHECK cobrando um dono só. Se o mesmo código estivesse nos dois
+  // cadastros, o título apareceria somado duas vezes — no contrato de
+  // equipamento E no de imóvel — e o total pago sairia dobrado.
+  it("nunca preenche fornecedor e imóvel ao mesmo tempo", () => {
+    const [l] = linhasParaEspelho({
+      orgId: "org-1",
+      titulos: [titulo({ codigoAgente: "2630" })],
+      existentes: [],
+      fornecedorPorCodigo: new Map([["2630", "forn-5i"]]),
+      imovelPorCodigo: new Map([["2630", "imovel-7"]]),
+      hojeISO: HOJE,
+    });
+    expect(l.fornecedor_id).toBe("forn-5i");
+    expect(l.imovel_id).toBeNull();
+  });
+});

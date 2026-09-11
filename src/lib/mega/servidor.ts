@@ -4,7 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { hojeISOSaoPaulo } from "@/lib/locacao";
 import { logger, erroMeta } from "@/lib/logger";
-import { SessaoMega, ErroMega } from "./cliente";
+import { SessaoMega } from "./cliente";
 import { janelasDeConsulta } from "./janela";
 import {
   chaveDoTitulo,
@@ -21,7 +21,43 @@ import {
  * regra do AGENTS.md para escrita compartilhada.
  */
 
-type Fornecedor = { id: string; codigo_mega: string | null };
+type ComCodigo = { id: string; codigo_mega: string | null };
+
+/** Os códigos do Mega que o Loca conhece: fornecedores e locadores de imóvel. */
+async function codigosConhecidos(supabase: SupabaseClient, orgId: string) {
+  const [forn, imov] = await Promise.all([
+    supabase
+      .from("fornecedor")
+      .select("id, codigo_mega")
+      .eq("org_id", orgId)
+      // `ativo`, NÃO `deleted_at`: a tabela de fornecedor não tem soft delete.
+      // Com a coluna errada o PostgREST recusa a consulta INTEIRA, `data` volta
+      // nulo, e a rodada leria zero fornecedores todo dia sem erro no log.
+      .eq("ativo", true)
+      .not("codigo_mega", "is", null),
+    supabase
+      .from("imovel")
+      .select("id, codigo_mega")
+      .eq("org_id", orgId)
+      .is("deleted_at", null)
+      .not("codigo_mega", "is", null),
+  ]);
+
+  if (forn.error) throw new Error(forn.error.message);
+  if (imov.error) throw new Error(imov.error.message);
+
+  const limpa = (linhas: ComCodigo[] | null) =>
+    new Map(
+      (linhas ?? [])
+        .filter((l): l is { id: string; codigo_mega: string } => Boolean(l.codigo_mega?.trim()))
+        .map((l) => [l.codigo_mega.trim(), l.id]),
+    );
+
+  return {
+    fornecedorPorCodigo: limpa(forn.data as ComCodigo[] | null),
+    imovelPorCodigo: limpa(imov.data as ComCodigo[] | null),
+  };
+}
 
 export async function sincronizarOrg(
   supabase: SupabaseClient,
@@ -30,24 +66,7 @@ export async function sincronizarOrg(
 ): Promise<ResumoRodada> {
   const hoje = hojeISOSaoPaulo();
   const janelas = janelasDeConsulta(hoje);
-
-  const { data: fornecedores, error: erroForn } = await supabase
-    .from("fornecedor")
-    .select("id, codigo_mega")
-    .eq("org_id", orgId)
-    // `ativo`, NÃO `deleted_at`: a tabela de fornecedor não tem soft delete. Com
-    // a coluna errada o PostgREST recusa a consulta INTEIRA, `data` volta nulo e
-    // a rodada leria zero fornecedores todo dia, sem erro nenhum no log.
-    .eq("ativo", true)
-    .not("codigo_mega", "is", null);
-
-  if (erroForn) throw new Error(erroForn.message);
-
-  const lista = ((fornecedores ?? []) as Fornecedor[]).filter(
-    (f): f is { id: string; codigo_mega: string } => Boolean(f.codigo_mega?.trim()),
-  );
-
-  const porCodigo = new Map(lista.map((f) => [f.codigo_mega.trim(), f.id]));
+  const { fornecedorPorCodigo, imovelPorCodigo } = await codigosConhecidos(supabase, orgId);
 
   const resumo: ResumoRodada = {
     fornecedoresLidos: 0,
@@ -56,37 +75,36 @@ export async function sincronizarOrg(
     falhas: [],
   };
 
-  // SEQUENCIAL, NÃO EM PARALELO. Um Promise.all de 36 fornecedores dispara 36
-  // chamadas simultâneas à conta `120.apifin` — que já foi bloqueada uma vez, e
-  // que o projeto Financeiro também usa. A rodada é diária: não há pressa que
-  // pague esse risco.
-  for (const codigo of porCodigo.keys()) {
-    // DUAS JANELAS POR FORNECEDOR porque o Mega recusa intervalo maior que
-    // 2 anos, e locação é plurianual. Sequenciais, como tudo aqui.
-    const titulos = [];
-    let recusados = 0;
-    try {
-      for (const j of janelas) {
-        const r = await sessao.titulosDoFornecedor(codigo, j.inicio, j.fim);
-        titulos.push(...r.titulos);
-        recusados += r.recusados;
-      }
-    } catch (e) {
-      // FALHA DE AUTENTICAÇÃO ABORTA A RODADA INTEIRA. Continuar o laço
-      // tentaria autenticar de novo a cada fornecedor — que é exatamente o
-      // encadeamento que bloqueia a conta no ERP.
-      if (e instanceof ErroMega && (e.status === 401 || e.status === 403)) throw e;
-      resumo.falhas.push({
-        codigo,
-        motivo: e instanceof Error ? e.message : "Falha desconhecida.",
-      });
-      continue;
-    }
+  const conhecidos = new Set([...fornecedorPorCodigo.keys(), ...imovelPorCodigo.keys()]);
+  if (conhecidos.size === 0) return resumo;
 
-    resumo.fornecedoresLidos += 1;
-    resumo.recusados += recusados;
-    if (titulos.length === 0) continue;
+  // DUAS CHAMADAS NA RODADA INTEIRA, e não uma por fornecedor.
+  //
+  // A rota por período traz TODAS as parcelas da Sistenge — 458 num mês, de 224
+  // agentes. Consultar agente a agente eram 74 chamadas diárias contra a conta
+  // `120.apifin`, que já foi bloqueada uma vez e é compartilhada com o
+  // Financeiro.
+  const todos = [];
+  for (const j of janelas) {
+    const r = await sessao.titulosDoPeriodo(j.inicio, j.fim);
+    todos.push(...r.titulos);
+    resumo.recusados += r.recusados;
+  }
 
+  // O FILTRO É EM MEMÓRIA, E É DELIBERADO. A resposta traz tudo que a empresa
+  // paga: folha, vale-transporte, impostos, veículos. Guardar isso no Loca
+  // seria coletar muito além do propósito do sistema — decisão do Evandro em
+  // 10/09/2026. Só entra agente que o Loca já conhece.
+  const doLoca = todos.filter((t) => conhecidos.has(t.codigoAgente));
+
+  const porCodigo = new Map<string, typeof doLoca>();
+  for (const t of doLoca) {
+    const lista = porCodigo.get(t.codigoAgente) ?? [];
+    lista.push(t);
+    porCodigo.set(t.codigoAgente, lista);
+  }
+
+  for (const [codigo, titulos] of porCodigo) {
     const { data: antigas, error: erroAntigas } = await supabase
       .from("mega_titulo")
       .select(
@@ -115,7 +133,8 @@ export async function sincronizarOrg(
         orgId,
         titulos,
         existentes,
-        fornecedorPorCodigo: porCodigo,
+        fornecedorPorCodigo,
+        imovelPorCodigo,
         hojeISO: hoje,
       }),
     );
@@ -126,14 +145,12 @@ export async function sincronizarOrg(
     });
 
     if (erroUpsert) {
-      logger.error("mega: falha ao gravar o espelho", {
-        codigo,
-        ...erroMeta(erroUpsert),
-      });
+      logger.error("mega: falha ao gravar o espelho", { codigo, ...erroMeta(erroUpsert) });
       resumo.falhas.push({ codigo, motivo: erroUpsert.message });
       continue;
     }
 
+    resumo.fornecedoresLidos += 1;
     resumo.titulosVistos += linhas.length;
   }
 

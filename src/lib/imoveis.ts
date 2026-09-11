@@ -1,6 +1,8 @@
 // Tipos e rótulos do módulo Imóveis (client-safe — sem imports de servidor).
 
 import { z } from "zod";
+
+import { normalizarDocumento, documentoValido } from "./documento";
 import { idOpcional } from "@/lib/campos";
 
 export type TipoImovel =
@@ -178,6 +180,25 @@ export const imovelSchema = z.object({
   obra_id: stringOpcional,
   status: z.enum(["ativo", "desocupacao", "encerrado"] as const),
   proprietario_nome: texto(200),
+  /**
+   * CPF ou CNPJ de quem recebe o aluguel.
+   *
+   * É A CHAVE PARA O MEGA. Com ele, `GetAgenteCnpj` resolve o código do agente
+   * sozinha; sem ele, só resta digitar código à mão — e código errado mostra na
+   * tela o pagamento de outra pessoa.
+   */
+  locador_documento: z
+    .union([z.string(), z.null()])
+    .optional()
+    .transform((v) => {
+      const d = normalizarDocumento(typeof v === "string" ? v : "");
+      return d.length > 0 ? d : null;
+    })
+    .refine((v) => v === null || documentoValido(v), {
+      message: "CPF ou CNPJ inválido.",
+    }),
+  /** O código do agente no Mega, uma vez resolvido. */
+  codigo_mega: texto(20),
   proprietario_telefone: texto(40),
   proprietario_email: emailOpcional("E-mail do proprietário"),
   imobiliaria_nome: texto(200),

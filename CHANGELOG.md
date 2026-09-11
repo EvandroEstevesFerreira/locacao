@@ -7,6 +7,40 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.108.0] - 2026-09-10
+
+Aluguel de imovel no espelho do Mega.
+
+21 contratos de imovel vigentes, R$ 66.575/mes de aluguel, zero lancamentos
+financeiros: o Loca sabia o contrato e nao sabia o pagamento.
+
+### Duas chamadas por dia, no lugar de 74
+
+A rota `FaturaPagar/Saldo/{ini}/{fim}` traz TODAS as parcelas do periodo sem
+filtrar agente -- 458 num mes, de 224 agentes. A rodada passou a usa-la, e o
+filtro do que interessa e **em memoria**.
+
+O filtro em memoria e decisao, nao economia: a resposta traz tudo que a empresa
+paga (folha, vale-transporte, impostos, veiculos), e guardar isso no Loca seria
+coletar muito alem do proposito do sistema.
+
+### A chave do locador
+
+O locador vivia em texto livre. O cadastro do imovel ganhou **CPF ou CNPJ**,
+com digito verificador conferido -- um documento trocado num digito acharia o
+agente de outra pessoa, e a tela mostraria o pagamento de um terceiro.
+
+`GetAgenteCnpj` resolve o codigo do agente a partir do documento, sob clique.
+Medido: a rota quer o documento **so com digitos**; com mascara devolve 500.
+
+### Casar por nome ou por valor NAO funciona aqui
+
+Diferente do mutirao de custodia (89 de 95 automaticos), o casamento por
+semelhanca erra muito: dos 8 candidatos por valor+dia, **3 eram falsos** --
+PONTOMAIS TECNOLOGIA, PREVENT SENIOR e BULLLA INSTITUICAO DE PAGAMENTO casaram
+com aluguel por pura coincidencia de valor e dia. Por isso o vinculo e pelo
+documento, e nao por proposta automatica.
+
 ## [0.107.0] - 2026-09-10
 
 A data de pagar e a prorrogada.

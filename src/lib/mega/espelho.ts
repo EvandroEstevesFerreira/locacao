@@ -12,6 +12,7 @@ import type { TituloMega } from "./contrato";
 export type LinhaEspelho = {
   org_id: string;
   fornecedor_id: string | null;
+  imovel_id: string | null;
   codigo_mega: string;
   agente_cnpj: string | null;
   agente_nome: string | null;
@@ -69,6 +70,7 @@ export function linhasParaEspelho({
   titulos,
   existentes,
   fornecedorPorCodigo,
+  imovelPorCodigo,
   hojeISO,
 }: {
   orgId: string;
@@ -76,6 +78,8 @@ export function linhasParaEspelho({
   existentes: LinhaExistente[];
   /** `codigo_mega` → `fornecedor.id`, do cadastro do Loca. */
   fornecedorPorCodigo: Map<string, string>;
+  /** `codigo_mega` → `imovel.id`. O aluguel é pago ao locador, não a fornecedor. */
+  imovelPorCodigo?: Map<string, string>;
   /** Sempre `hojeISOSaoPaulo()`: a Vercel roda em UTC. */
   hojeISO: string;
 }): LinhaEspelho[] {
@@ -93,9 +97,16 @@ export function linhasParaEspelho({
     // some junto, porque o espelho segue o Mega e não a nossa memória.
     const quitacao = quitado ? (jaVisto ?? hojeISO) : null;
 
+    // UM DONO SÓ, e o fornecedor ganha. O banco tem CHECK cobrando isso: se o
+    // mesmo código estivesse nos dois cadastros, o título apareceria somado
+    // duas vezes — uma no contrato de equipamento, outra no de imóvel.
+    const fornecedorId = fornecedorPorCodigo.get(t.codigoAgente) ?? null;
+    const imovelId = fornecedorId ? null : (imovelPorCodigo?.get(t.codigoAgente) ?? null);
+
     return {
       org_id: orgId,
-      fornecedor_id: fornecedorPorCodigo.get(t.codigoAgente) ?? null,
+      fornecedor_id: fornecedorId,
+      imovel_id: imovelId,
       codigo_mega: t.codigoAgente,
       agente_cnpj: t.agenteCnpj,
       agente_nome: t.agenteNome,

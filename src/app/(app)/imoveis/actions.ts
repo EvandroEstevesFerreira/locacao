@@ -18,6 +18,7 @@ import {
   segundaFeiraDaSemana,
 } from "@/lib/alojamento";
 import { hojeISOSaoPaulo } from "@/lib/locacao";
+import { configMega, SessaoMega } from "@/lib/mega/cliente";
 import {
   contaConsumoSchema,
   contratoImovelSchema,
@@ -1223,4 +1224,71 @@ export async function removerDocumentoAssinado(formData: FormData) {
   if (path) await supabase.storage.from("imoveis").remove([path]);
 
   if (imovelId) revalidatePath(`/imoveis/${imovelId}`);
+}
+
+// ---------------------------------------------------------------------------
+// Conciliação com o Mega
+// ---------------------------------------------------------------------------
+
+/**
+ * Acha no Mega o agente que tem o CPF/CNPJ do locador, e guarda o código.
+ *
+ * É O CAMINHO SEM ADIVINHAÇÃO, e existe porque os outros dois erram: casar por
+ * nome tropeça em "Rogerio Soares de Lima" e "Rogerio Soares Lima" (a mesma
+ * pessoa, dois cadastros), e casar por valor tropeça em cinco imóveis com
+ * aluguel de R$ 2.000. Documento não tem esse problema.
+ *
+ * UMA CHAMADA, sob ação do usuário. Não é laço, não é cron: é o botão de quem
+ * acabou de digitar o documento.
+ */
+export async function buscarCodigoMegaDoImovel(imovelId: string): Promise<ActionResult> {
+  const perfil = await getCurrentPerfil();
+  if (!perfil?.org_id) return falha("Sessão inválida. Entre novamente.");
+  // Mesma régua do financeiro: quem vê pagamento é master ou administrador.
+  if (!podeEditarCadastros(perfil.papel)) {
+    return falha("Você não tem permissão para conciliar com o Mega.");
+  }
+
+  const cfg = configMega();
+  if (!cfg) return falha("A integração com o Mega não está configurada.");
+
+  const supabase = await createClient();
+  const { data: imovel, error } = await supabase
+    .from("imovel")
+    .select("id, locador_documento")
+    .eq("id", imovelId)
+    .maybeSingle();
+
+  if (error || !imovel) return falha("Imóvel não encontrado.");
+
+  const documento = (imovel.locador_documento as string | null)?.trim();
+  if (!documento) {
+    return falha(
+      "Preencha o CPF ou CNPJ do locador primeiro — é por ele que o Loca acha o agente no Mega.",
+    );
+  }
+
+  let agente;
+  try {
+    agente = await new SessaoMega(cfg).agentePorDocumento(documento);
+  } catch {
+    return falha("Não consegui falar com o Mega agora. Tente de novo em alguns minutos.");
+  }
+
+  if (!agente) {
+    return falha(
+      "O Mega não tem agente com esse CPF/CNPJ. Confira o documento ou cadastre o locador no ERP.",
+    );
+  }
+
+  const { error: erroGravar } = await supabase
+    .from("imovel")
+    .update({ codigo_mega: agente.codigo })
+    .eq("id", imovelId);
+
+  if (erroGravar) return falha("Achei o agente, mas não consegui gravar o código.");
+
+  revalidatePath("/imoveis");
+  revalidatePath(`/imoveis/${imovelId}`);
+  return { ok: true };
 }

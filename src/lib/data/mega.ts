@@ -57,7 +57,26 @@ export type EspelhoDoFornecedor = {
  * renderização.
  */
 export const obterEspelhoDoFornecedor = cache(
-  async (fornecedorId: string): Promise<EspelhoDoFornecedor | null> => {
+  async (fornecedorId: string): Promise<EspelhoDoFornecedor | null> =>
+    lerEspelho("fornecedor_id", fornecedorId),
+);
+
+/**
+ * O mesmo espelho, do lado do imóvel.
+ *
+ * O aluguel é pago ao LOCADOR, que não é fornecedor: `mega_titulo` aponta para
+ * um ou para outro, nunca para os dois (há CHECK no banco). Por isso a leitura
+ * muda só a coluna do filtro.
+ */
+export const obterEspelhoDoImovel = cache(
+  async (imovelId: string): Promise<EspelhoDoFornecedor | null> =>
+    lerEspelho("imovel_id", imovelId),
+);
+
+const lerEspelho = async (
+  coluna: "fornecedor_id" | "imovel_id",
+  id: string,
+): Promise<EspelhoDoFornecedor | null> => {
     const supabase = await createClient();
 
     const { data, error } = await supabase
@@ -65,14 +84,14 @@ export const obterEspelhoDoFornecedor = cache(
       .select(
         "id, numero_ap, numero_parcela, tipo_documento, numero_documento, data_vencimento, data_prorrogado, valor_parcela, saldo_atual, quitacao_vista_em",
       )
-      .eq("fornecedor_id", fornecedorId)
+      .eq(coluna, id)
       .order("data_vencimento", { ascending: true });
 
     // SEM ACESSO OU SEM ESPELHO, DEVOLVE NULO — e a tela não desenha a seção.
     // Uma seção vazia diria "o Mega não tem nada para este fornecedor", que é
     // afirmação diferente de "eu não sei", e a errada das duas.
     if (error) {
-      console.error("obterEspelhoDoFornecedor:", error.message);
+      console.error("lerEspelho:", error.message);
       return null;
     }
     if (!data || data.length === 0) return null;
@@ -120,5 +139,4 @@ export const obterEspelhoDoFornecedor = cache(
       sincronizadoEm: (sync?.ultima_rodada_em as string | null) ?? null,
       ultimoErro: (sync?.ultimo_erro as string | null) ?? null,
     };
-  },
-);
+};

@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.107.0";
+export const APP_VERSION = "0.108.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,28 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.108.0",
+    data: "2026-09-10",
+    titulo: "Aluguel de imóvel no Mega",
+    mudancas: [
+      {
+        tipo: "novo",
+        texto:
+          "A tela do imóvel ganhou a seção “No Mega”, com os pagamentos do aluguel: o que já foi pago, o que está em aberto e o que está atrasado.",
+      },
+      {
+        tipo: "novo",
+        texto:
+          "O cadastro do imóvel passou a ter o CPF ou CNPJ do locador. É por ele que o Loca encontra os pagamentos no Mega, com um botão que faz a busca.",
+      },
+      {
+        tipo: "melhoria",
+        texto:
+          "A busca diária no Mega ficou muito mais leve: passou de 74 consultas por dia para 2.",
+      },
+    ],
+  },
   {
     versao: "0.107.0",
     data: "2026-09-10",
