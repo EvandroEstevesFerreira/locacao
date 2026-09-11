@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.111.0";
+export const APP_VERSION = "0.111.1";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -29,7 +29,7 @@ export const TIPO_MUDANCA_INFO: Record<
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
   {
-    versao: "0.111.0",
+    versao: "0.111.1",
     data: "2026-09-11",
     titulo: "Contratos do ERP na tela do contrato",
     mudancas: [

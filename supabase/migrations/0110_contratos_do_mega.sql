@@ -20,7 +20,11 @@ create table public.mega_contrato (
   -- O código do contrato no Mega (`cto_in_codigo`). É a identidade.
   codigo         text not null,
   nome           text,                       -- `cto_st_alternativo`, ex.: "CONT ILUM DATACENTER"
+  -- O produto só quando o contrato tem UM item: a resposta do Mega vem item a
+  -- item (958 linhas para 664 contratos), e mostrar o primeiro de quinze seria
+  -- escolher um por sorteio e chamá-lo de o contrato.
   produto        text,
+  itens          integer not null default 1,
 
   -- O agente, no formato "735 - CCN AUTOMACAO LTDA". Guardamos o código
   -- separado para casar com `fornecedor.codigo_mega` sem interpretar texto.

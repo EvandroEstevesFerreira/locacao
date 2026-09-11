@@ -102,3 +102,59 @@ export function parseContratos(bruto: unknown): {
   }
   return { contratos, recusados };
 }
+
+export type ContratoAgrupado = Omit<ContratoMega, "produto"> & {
+  produto: string | null;
+  itens: number;
+};
+
+/**
+ * Uma linha por CONTRATO, somando os itens.
+ *
+ * CADA LINHA DA RESPOSTA É UM ITEM, e isso não está em documentação nenhuma:
+ * medido em 11/09/2026, 958 linhas para 664 contratos — o contrato 813 sozinho
+ * tem 15 itens (sprinkler, tubo de cobre, execução da instalação…).
+ *
+ * Gravar linha a linha quebra o upsert do PostgREST com "ON CONFLICT DO UPDATE
+ * command cannot affect row a second time", e foi exatamente o que derrubou a
+ * primeira rodada em produção. Nem `(código, produto)` serve de chave: ainda
+ * colide 77 vezes.
+ *
+ * SOMAR É O CERTO, e dá para provar: a soma das 19 linhas da CCN é
+ * R$ 550.627,17, o mesmo que o BigNumber `GetTotalContratado` do próprio ERP
+ * responde para ela.
+ */
+export function agruparPorContrato(itens: ContratoMega[]): ContratoAgrupado[] {
+  const porCodigo = new Map<string, ContratoAgrupado>();
+
+  for (const i of itens) {
+    const atual = porCodigo.get(i.codigo);
+    if (!atual) {
+      porCodigo.set(i.codigo, { ...i, itens: 1 });
+      continue;
+    }
+    atual.itens += 1;
+    atual.totalContratado += i.totalContratado;
+    atual.totalDistratado += i.totalDistratado;
+    atual.medicao += i.medicao;
+    atual.saldo += i.saldo;
+    atual.nota += i.nota;
+    atual.adiantamento += i.adiantamento;
+    // COM MAIS DE UM ITEM O PRODUTO SOME. Mostrar o primeiro de quinze seria
+    // escolher um por sorteio e apresentá-lo como sendo o contrato.
+    atual.produto = null;
+  }
+
+  // Centavos: somar float acumula resíduo, e estes números vão para uma coluna
+  // numeric(14,2) que vai arredondar de qualquer forma.
+  for (const c of porCodigo.values()) {
+    c.totalContratado = Number(c.totalContratado.toFixed(2));
+    c.totalDistratado = Number(c.totalDistratado.toFixed(2));
+    c.medicao = Number(c.medicao.toFixed(2));
+    c.saldo = Number(c.saldo.toFixed(2));
+    c.nota = Number(c.nota.toFixed(2));
+    c.adiantamento = Number(c.adiantamento.toFixed(2));
+  }
+
+  return [...porCodigo.values()];
+}

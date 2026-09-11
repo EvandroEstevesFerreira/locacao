@@ -6,6 +6,7 @@ import { hojeISOSaoPaulo } from "@/lib/locacao";
 import { logger, erroMeta } from "@/lib/logger";
 import type { SessaoMega } from "./cliente";
 import { janelasDeConsulta } from "./janela";
+import { agruparPorContrato } from "./contratos";
 
 /**
  * O espelho dos contratos do Mega.
@@ -53,7 +54,12 @@ export async function sincronizarContratos(
       .map((f) => [String(f.codigo_mega).trim(), f.id as string]),
   );
 
-  const { contratos, recusados } = await sessao.contratos(inicio, fim);
+  const { contratos: itens, recusados } = await sessao.contratos(inicio, fim);
+
+  // CADA LINHA DA RESPOSTA É UM ITEM DO CONTRATO, não o contrato. 958 linhas
+  // para 664 contratos; sem agrupar, o upsert morre com "cannot affect row a
+  // second time" — foi o que derrubou a primeira rodada em produção.
+  const contratos = agruparPorContrato(itens);
 
   // SÓ AS OBRAS DO LOCA. Os 48 projetos restantes são de outras frentes da
   // Sistenge e não têm nada que fazer aqui.
@@ -69,6 +75,7 @@ export async function sincronizarContratos(
     codigo: c.codigo,
     nome: c.nome,
     produto: c.produto,
+    itens: c.itens,
     codigo_agente: c.codigoAgente,
     agente_nome: c.agenteNome,
     // Fica NULO quando o fornecedor não está no Loca — o contrato entra assim

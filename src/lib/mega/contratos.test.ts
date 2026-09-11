@@ -1,6 +1,11 @@
 import { describe, it, expect } from "vitest";
 
-import { parseContratos, separaCodigo, contratoMegaSchema } from "./contratos";
+import {
+  agruparPorContrato,
+  parseContratos,
+  separaCodigo,
+  contratoMegaSchema,
+} from "./contratos";
 
 /**
  * Amostra REAL de `Visoes/GetVisoesFornecedor`, copiada da resposta de
@@ -91,5 +96,54 @@ describe("parseContratos", () => {
 
   it("recusa resposta que não é lista", () => {
     expect(parseContratos({ erro: "nao autorizado" }).contratos).toEqual([]);
+  });
+});
+
+describe("agruparPorContrato", () => {
+  // CADA LINHA DA RESPOSTA É UM ITEM, NÃO UM CONTRATO. Medido em 11/09/2026:
+  // 958 linhas para 664 contratos; o contrato 813 sozinho tem 15 itens. Gravar
+  // linha a linha quebra o upsert ("cannot affect row a second time") — foi
+  // exatamente o que derrubou a primeira rodada em produção.
+  it("soma os itens do mesmo contrato", () => {
+    const itens = parseContratos([
+      { ...CRU, total_contratado: 100, medicao: 40, saldo: 60, produto: "A" },
+      { ...CRU, total_contratado: 300, medicao: 60, saldo: 240, produto: "B" },
+    ]).contratos;
+
+    const [c] = agruparPorContrato(itens);
+    expect(c.codigo).toBe("1360");
+    expect(c.totalContratado).toBe(400);
+    expect(c.medicao).toBe(100);
+    expect(c.saldo).toBe(300);
+    expect(c.itens).toBe(2);
+  });
+
+  // A soma por fornecedor tem que bater com o BigNumber do próprio ERP. Para a
+  // CCN o Mega respondeu R$ 550.627,17, e é a soma das 19 linhas dela.
+  it("não perde centavo ao agrupar", () => {
+    const itens = parseContratos([
+      { ...CRU, cto_in_codigo: 1, total_contratado: 28821.18 },
+      { ...CRU, cto_in_codigo: 2, total_contratado: 4018.48 },
+      { ...CRU, cto_in_codigo: 2, total_contratado: 200923.8 },
+    ]).contratos;
+    const soma = agruparPorContrato(itens).reduce((s, c) => s + c.totalContratado, 0);
+    expect(soma).toBeCloseTo(233763.46, 2);
+  });
+
+  // Com um item só, o produto identifica o contrato e vale mostrar. Com quinze,
+  // mostrar o primeiro seria escolher um por sorteio e chamar de o contrato.
+  it("guarda o produto só quando o contrato tem um item", () => {
+    const um = agruparPorContrato(parseContratos([CRU]).contratos);
+    expect(um[0].produto).toContain("Sistema de Controle");
+
+    const dois = agruparPorContrato(
+      parseContratos([CRU, { ...CRU, produto: "outro" }]).contratos,
+    );
+    expect(dois[0].produto).toBeNull();
+  });
+
+  it("separa contratos diferentes", () => {
+    const itens = parseContratos([CRU, { ...CRU, cto_in_codigo: 999 }]).contratos;
+    expect(agruparPorContrato(itens)).toHaveLength(2);
   });
 });

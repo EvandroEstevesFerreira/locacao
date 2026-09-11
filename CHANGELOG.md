@@ -7,6 +7,22 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.111.1] - 2026-09-11
+
+Cada linha da resposta de contratos e um ITEM, nao um contrato.
+
+A primeira rodada em producao morreu com "ON CONFLICT DO UPDATE command cannot
+affect row a second time". Medido: 958 linhas para **664 contratos** -- o
+contrato 813 sozinho tem 15 itens (sprinkler, tubo de cobre, execucao da
+instalacao). Nem `(codigo, produto)` serve de chave: ainda colide 77 vezes.
+
+Somar os itens e o certo, e da para provar: a soma das 19 linhas da CCN e
+R$ 550.627,17, o mesmo que o BigNumber `GetTotalContratado` do proprio ERP
+responde para ela.
+
+O produto so e guardado quando o contrato tem UM item -- mostrar o primeiro de
+quinze seria escolher um por sorteio e chama-lo de o contrato.
+
 ## [0.111.0] - 2026-09-11
 
 Contratos do ERP na tela do contrato.
