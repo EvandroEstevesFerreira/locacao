@@ -7,6 +7,30 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.112.2] - 2026-09-11
+
+Duas afirmacoes do AGENTS.md contradiziam o que o proprio AGENTS.md passou a
+dizer na 0.112.0, e uma terceira contradizia a referencia do Sistenge People.
+
+### Corrigido
+- A secao "O que a resposta traz" ainda afirmava que nao existe data de
+  pagamento na rota. Agora aponta para a secao da prorrogacao.
+- **`NumeroDocumento` nao e sempre o numero da fatura.** O AGENTS.md afirmava
+  que sim; a referencia do People afirmava que nao. As duas estavam certas
+  sobre populacoes diferentes, e a medicao (465 titulos) da o recorte: em `NF`
+  ele e confiavel (9 genericos em 183), em `RECIBO` nao (92 de 94), em
+  `CONTRATO` 7 de 7, em `ALUGUEL` 20 de 22. Em titulo de imovel e 100% generico
+  (106 de 106). Regra nova: casar por documento so em titulo fiscal, nunca com
+  valor de 1 a 3 digitos, e nunca corrigir o dado do Loca a partir dele.
+
+### Devolvido ao Sistenge People
+- `docs/integracoes/mega-erp/CLAUDE.md` daquele projeto recebeu oito medicoes
+  que so existiam aqui: limite de 2 anos, codigo cru x com prefixo, o modulo de
+  contratos inteiro, chaves em minuscula, `cnpj` com padding em pessoa fisica,
+  os 63 specs OpenAPI, anexos sem conteudo, e a confirmacao independente da
+  prorrogacao. **Editado, nao commitado** -- aquele repositorio esta noutro
+  branch.
+
 ## [0.112.1] - 2026-09-11
 
 O cliente do Mega deixa de supor o que o ERP informa.

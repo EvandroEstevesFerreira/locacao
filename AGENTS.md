@@ -190,11 +190,18 @@ AP 32549 | NF     | doc 42824001 | venc 15/08/2026 | R$ 2.038,53 | saldo 0,00   
 AP 33162 | FATURA | doc 42824002 | venc 15/09/2026 | R$ 2.038,53 | saldo 2.038,53 → em aberto
 ```
 
-- **`SaldoAtual == 0` é o que significa "pago".** Não existe campo de data de
-  pagamento nessa rota: dá para saber SE pagou, não QUANDO.
-- **`NumeroDocumento` é o número da fatura** — `42824002` é a fatura
-  nº 042.824.002 do fornecedor. É a chave para ligar um título do Mega a um
-  documento do Loca, e não exige interpretar texto livre.
+- **`SaldoAtual == 0` é o que significa "pago".** E o QUANDO sai de
+  `DataProrrogado` — ver "A data de pagamento é a PRORROGAÇÃO", mais abaixo.
+- **`NumeroDocumento` é o número da fatura SÓ QUANDO O TIPO É FISCAL.** Em `NF`
+  ele é confiável (9 genéricos em 183, medido sobre os 465 títulos do espelho em
+  11/09/2026); em `RECIBO` não é (92 de 94), nem em `CONTRATO` (7 de 7) ou
+  `ALUGUEL` (20 de 22) — ali ele vem como `"1"`, `"2"`, `"3"`, que é o lançador
+  numerando à mão. Em imóvel o campo é **100% genérico**: 106 de 106.
+
+  Daí a regra: **case por documento em título fiscal; nunca case quando o valor
+  tiver 1 a 3 dígitos.** E **nunca corrija o número do documento do Loca a
+  partir deste campo** — divergência é fila de revisão humana, não correção
+  automática. Corrigir destrói o dado bom.
 - Retenção (ISS, INSS, IR, GUIA) fica em **agente próprio**, o do órgão. Filtrar
   pelo código do fornecedor já as exclui — mas em consulta por período elas
   aparecem, e `AP | parcela` **não é chave única**. A chave é
@@ -245,9 +252,10 @@ seção "No Mega".
   `/api/globalagente/Agente/{padrao}-{codigo}`, uma chamada por agente, e fica
   em `mega_agente`. Repare que essa rota devolve chaves em **minúscula**
   (`nome`, `cnpj`), enquanto a de contas a pagar devolve em PascalCase.
-- **A data de pagar é `DataProrrogado`**, não `DataVencimento`. 16,1% das
-  parcelas têm prorrogação e ela é sempre para depois. Ler a data original faz
-  a tela acusar atraso em título em dia.
+- **A data de pagar é `DataProrrogado`**, não `DataVencimento` — e ela É a data
+  de pagamento, ver a seção própria mais abaixo. 16,1% das parcelas têm
+  prorrogação e ela é sempre para depois. Ler a data original faz a tela acusar
+  atraso em título em dia.
 
 - **`30 10 * * *` no `vercel.json` — a Vercel roda cron em UTC.** Quem
   "corrigir" para `30 7` move a rodada para as 04:30 da manhã, e nada na tela

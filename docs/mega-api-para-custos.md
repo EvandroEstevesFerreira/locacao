@@ -111,7 +111,7 @@ Cada parcela tem exatamente estes 10 campos:
 }
 ```
 
-**Seis coisas medidas sobre esses campos:**
+**Sete coisas medidas sobre esses campos:**
 
 1. **`SaldoAtual == 0` é o que significa "pago".** Não existe coluna chamada
    "data de pagamento" — mas ela existe sob outro nome, ver o item 2.
@@ -128,7 +128,14 @@ Cada parcela tem exatamente estes 10 campos:
 4. **`NumeroAP` vem como número**, não texto.
 5. **Na rota por período, `Agente.Nome` e `Agente.Cnpj` vêm NULOS.** Só o código
    é útil. O nome sai de `/api/globalagente/Agente/{padrao}-{codigo}`.
-6. **`AP + parcela` NÃO é chave única.** Retenções (ISS, INSS, IR) reaproveitam
+6. **`NumeroDocumento` só é o número da nota quando o tipo é fiscal.** Medido
+   em 11/09/2026 sobre os 465 títulos do espelho do Loca: em `NF` ele é
+   confiável (9 genéricos em 183), mas em `RECIBO` vem como `"1"`/`"2"` em 92
+   de 94 casos, em `CONTRATO` 7 de 7 e em `ALUGUEL` 20 de 22. Em título de
+   aluguel de imóvel é **100% genérico** (106 de 106). Nunca case por esse
+   número quando ele tiver 1 a 3 dígitos, e **nunca corrija com ele o número do
+   documento do seu sistema** — divergência é fila de revisão humana.
+7. **`AP + parcela` NÃO é chave única.** Retenções (ISS, INSS, IR) reaproveitam
    o número da AP com outro tipo de documento. A chave real é
    `AP + parcela + agente + tipoDoc + numDoc + vencimento + valor`.
 

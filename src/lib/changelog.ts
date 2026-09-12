@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.112.1";
+export const APP_VERSION = "0.112.2";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,18 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.112.2",
+    data: "2026-09-11",
+    titulo: "Documentação do Mega alinhada ao que foi medido",
+    mudancas: [
+      {
+        tipo: "correcao",
+        texto:
+          "Ajustes internos na documentação da integração com o Mega. Nada muda no que você vê nas telas.",
+      },
+    ],
+  },
   {
     versao: "0.112.1",
     data: "2026-09-11",
