@@ -62,19 +62,35 @@ Funcionário  |  Obra  |  Almoxarifado central  |  Manutenção em fornecedor
 ```
 
 Escolher **Funcionário** revela, no mesmo formulário, o seletor de pessoa e a
-assinatura. Os outros três mostram só data e observações.
+assinatura de quem está **devolvendo**. Os outros três mostram só data e
+observações.
 
-**Um formulário, sem troca de página** — e essa decisão não é nova. Ela está
-escrita em `transferir-form.tsx`:
+### "Uma porta" é um ponto de entrada, não um formulário que faz tudo
 
-> "um formulário só, e não um passo a passo: são cinco campos, e quem está com
-> o funcionário na frente não deve navegar entre telas para registrar uma coisa
-> que acontece num minuto."
+Esta distinção foi decidida em 16/09/2026, ao medir o que a emissão de termo
+realmente exige, e **corrige a primeira versão desta seção**.
 
-A decisão foi tomada uma vez e não foi aplicada ao card. Aplicamos agora.
+Emitir termo não é um insert. É `salvarTermo` seguido de `emitirTermo`, e pede
+CPF, assinatura do funcionário **e** da empresa, previsão de devolução, obra e
+contrato. Embutir isso no card seria reconstruir `/termos/novo` dentro dele —
+duplicar um fluxo que funciona, para depois ver as duas cópias divergirem.
+
+Então, com destino **Funcionário**, a action:
+
+1. encerra a posse atual, colhendo a assinatura de quem devolve, **no card**;
+2. redireciona para `/termos/novo?peca=<id>&funcionario=<id>`, com peça e
+   pessoa já escolhidas.
+
+É exatamente o que `devolverParaTransferir` já faz hoje, e o que o comentário
+daquele arquivo defende: quem está com o funcionário na frente não navega entre
+telas **para registrar a devolução**. A emissão do termo é outro ato, com outra
+assinatura, e merece a tela própria que já tem.
+
+**O que o usuário deixa de precisar saber é qual dos três botões apertar.** Era
+esse o problema relatado, e ele morre aqui.
 
 Os botões **"Transferir custódia"** e **"Novo termo"** saem da ficha. A rota
-`/frota/[id]/transferir` deixa de ser necessária.
+`/frota/[id]/transferir` deixa de ser necessária: seu formulário vira o card.
 
 ### A assinatura segue a pessoa, nos dois sentidos
 
