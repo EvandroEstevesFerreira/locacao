@@ -358,7 +358,38 @@ Os 3 fornecedores em bloco são a exceção que interessa: `4193` (tipo `ALUGUEL
 cadastro de fornecedor**, não locação de equipamento; `2863` é `BOLETO` com 23
 parcelas.
 
-Então a baixa **não pode assumir 1↔1** nem decidir pelo tipo de agente. Ela tem
-de casar **pelo documento** e distribuir o valor entre as parcelas — e é isso
-que falta desenhar. Uma baixa 1↔1 quitaria o contrato inteiro com a primeira
-parcela.
+Então a baixa **não pode casar documento ↔ lançamento**: um documento de
+aluguel quitaria o contrato inteiro com a primeira parcela.
+
+**A saída desenhada em 16/09/2026 é casar PARCELA ↔ lançamento.** Cada parcela
+do Mega tem vencimento e valor próprios, e o Loca tem um lançamento recorrente
+por competência: é 1↔1 por mês, e o bloco deixa de ser um problema. Não há
+valor a distribuir — o documento vira rótulo, não chave. O desenho completo
+está em `docs/superpowers/specs/2026-09-16-conciliacao-baixa-mega-design.md`.
+
+
+# Fechamento de sessão
+
+**Toda sessão termina com uma tabela de resumo.** Não é opcional e não depende
+de o Evandro pedir: a última mensagem de qualquer sessão de trabalho traz uma
+tabela com o que foi feito e quanto falta, em percentual.
+
+O formato é este:
+
+| Frente | O que foi feito | Falta | % concluído |
+| --- | --- | --- | --- |
+| Conciliação Mega | Spec escrita e aprovada | Migration, cron, tela | 15% |
+
+Regras da tabela:
+
+- **Uma linha por frente de trabalho** tocada na sessão, não uma por commit.
+- **O percentual é do escopo combinado**, não do esforço gasto. Se a frente tem
+  spec, migration, cálculo, tela e teste, entregar a spec é ~15%, não 50%.
+- **Frente não iniciada não entra.** A tabela conta o que se mexeu.
+- **Percentual honesto, inclusive quando é baixo.** Arredondar para cima para
+  a sessão parecer produtiva é o único jeito de esta tabela virar ruído.
+- Depois da tabela, uma linha dizendo qual é o **próximo passo único**.
+
+O mesmo resumo entra no rodapé de toda spec nova em
+`docs/superpowers/specs/`, como seção **Estado da implementação**, para a spec
+dizer sozinha quanto dela já virou código.
