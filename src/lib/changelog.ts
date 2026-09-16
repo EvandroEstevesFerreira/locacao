@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.114.0";
+export const APP_VERSION = "0.115.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,18 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.115.0",
+    data: "2026-09-16",
+    titulo: "O card Movimentar vira a porta única",
+    mudancas: [
+      {
+        tipo: "novo",
+        texto:
+          "O card \"Movimentar\", na ficha da peça, ganha o destino Funcionário e a devolução assinada — antes espalhados em três lugares diferentes.",
+      },
+    ],
+  },
   {
     versao: "0.114.0",
     data: "2026-09-16",

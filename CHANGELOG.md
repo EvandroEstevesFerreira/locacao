@@ -7,6 +7,16 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.115.0] - 2026-09-16
+
+### Adicionado
+
+- O card "Movimentar", na ficha da peça, ganha o destino Funcionário e a
+  devolução assinada (estado de conservação, assinatura de quem devolve e
+  motivo para quando ela não pode assinar). Os botões "Transferir custódia" e
+  "Entregar a funcionário" saem do cabeçalho: a movimentação inteira passa a
+  viver num só lugar.
+
 ## [0.114.0] - 2026-09-16
 
 ### Corrigido

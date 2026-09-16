@@ -1,20 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRightLeft, FileSignature, Pencil } from "lucide-react";
+import { Pencil } from "lucide-react";
 
+import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeOperar, podeEditarCadastros } from "@/lib/auth";
 import {
   obterPeca,
   listarPossesDaPeca,
   listarObrasEFornecedores,
 } from "@/lib/data/custodia";
-import {
-  descreverDetentor,
-  ehRegularizacao,
-  montarLinhaDoTempo,
-  podeReceberTermo,
-  lembreteValido,
-} from "@/lib/custodia";
+import { descreverDetentor, montarLinhaDoTempo, lembreteValido } from "@/lib/custodia";
 import { SITUACAO_INFO, PROPRIEDADE_INFO, ESTADO_INFO } from "@/lib/frota";
 import { hojeISOSaoPaulo, formatarData } from "@/lib/locacao";
 import { PageHeader } from "@/components/shared/page-header";
@@ -55,11 +50,14 @@ export default async function PecaDetalhePage({
 }) {
   const { id } = await params;
 
-  const [peca, posses, destinos, perfil] = await Promise.all([
+  const supabase = await createClient();
+
+  const [peca, posses, destinos, perfil, { data: funcionarios }] = await Promise.all([
     obterPeca(id),
     listarPossesDaPeca(id),
     listarObrasEFornecedores(),
     getCurrentPerfil(),
+    supabase.from("funcionario").select("id, nome").eq("ativo", true).order("nome"),
   ]);
   if (!peca) notFound();
 
@@ -88,9 +86,6 @@ export default async function PecaDetalhePage({
   const hoje = hojeISOSaoPaulo();
   const linha = montarLinhaDoTempo(posses, hoje);
   const atual = linha.find((p) => p.aberta) ?? null;
-  // O par que as duas regras de termo consultam. Montado uma vez para que a
-  // pergunta "tem posse aberta?" tenha uma resposta so nesta pagina.
-  const posseDaPeca = { situacao: peca.situacao, posseAberta: atual?.tipo ?? null };
 
   // O LEMBRETE DA TRANSFERÊNCIA INTERROMPIDA. Entre a devolução e a entrega a
   // peça fica disponível de verdade — este aviso não a reserva, só lembra de
@@ -114,48 +109,8 @@ export default async function PecaDetalhePage({
         descricao={peca.itemDescricao}
         acoes={
           <>
-            {/* Entregar a pessoa é o termo, com assinatura — não um botão de
-                movimentação aqui.
-
-                E APARECE TAMBÉM PARA A PEÇA "EM USO" SEM POSSE ABERTA, que era
-                um beco sem saída: a importação do inventário marcou 95 máquinas
-                como em uso a partir da planilha, sem criar termo. A matriz de
-                transição só admite chegar a `em_uso` POR um termo, e só sair
-                dali por devolução registrada NUM termo — então essas 95 não
-                podiam receber um nem voltar a `disponivel`. Ficavam presas,
-                dizendo "Sem registro de posse" e sem lugar nenhum onde
-                registrá-la.
-
-                A condição certa nunca foi a SITUAÇÃO, e sim a POSSE: peça sem
-                custódia aberta não está com ninguém, diga a coluna o que
-                disser. */}
-            {/* TRANSFERIR é o caminho de quem JÁ TEM dono: encerra o termo de
-                quem está com ela e leva ao termo de quem recebe. Antes disso a
-                pessoa tinha de caçar o termo ativo na lista de Termos, e nada
-                nesta página dizia que era esse o caminho. */}
-            {podeMover && atual !== null && atual.tipo === "funcionario" ? (
-              <Button
-                variant="outline"
-                render={<Link href={`/frota/${peca.id}/transferir`} />}
-              >
-                <ArrowRightLeft className="size-4" aria-hidden />
-                Transferir custódia
-              </Button>
-            ) : null}
-            {podeMover && podeReceberTermo(posseDaPeca) ? (
-              // `?peca=` LEVA A ESCOLHA JUNTO. Sem ele o termo abria pedindo o
-              // equipamento de novo, no passo 2, depois de a pessoa ter aberto
-              // esta peça e clicado num botão que diz o patrimônio dela.
-              <Button
-                variant="outline"
-                render={<Link href={`/termos/novo?peca=${peca.id}`} />}
-              >
-                <FileSignature className="size-4" />
-                {ehRegularizacao(posseDaPeca)
-                  ? "Registrar quem está com ela"
-                  : "Entregar a funcionário"}
-              </Button>
-            ) : null}
+            {/* A movimentação inteira — inclusive entregar a funcionário e
+                devolver com assinatura — vive no card "Movimentar", abaixo. */}
             {/* O formulário de cadastro fica no fim da página, depois da
                 linha do tempo. Sem esta âncora quem chega ao topo conclui que a
                 peça não é editável — foi o relato do Evandro em 03/09/2026.
@@ -297,6 +252,17 @@ export default async function PecaDetalhePage({
               unidadeId={peca.id}
               obras={destinos.obras}
               fornecedores={destinos.fornecedores}
+              funcionarios={
+                (funcionarios ?? []) as unknown as { id: string; nome: string }[]
+              }
+              posseAtual={
+                atual && atual.tipo === "funcionario"
+                  ? {
+                      tipo: atual.tipo,
+                      nome: atual.detentorRotulo ?? atual.funcionarioNome,
+                    }
+                  : null
+              }
             />
           </CardContent>
         </Card>
