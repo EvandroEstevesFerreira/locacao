@@ -903,13 +903,17 @@ async function liberarPecas(termoId: string, itemIds: string[]): Promise<string 
     }
 
     // A peça volta ao almoxarifado na data em que foi devolvida — não hoje.
+    //
+    // E SEM TERMO. A posse de devolução não pertence ao termo da entrega: ele
+    // está sendo encerrado neste instante, e amarrar a posse a ele produz um
+    // termo encerrado com posse aberta. Foi a única anomalia do banco em 144
+    // posses (peça 14L4594 / TRM-2026-0040), corrigida na migration 0112.
     const r = await abrirCustodia(supabase, {
       orgId: perfil.org_id,
       unidadeId: l.unidade_id,
       tipo: "almoxarifado",
       inicio: l.data_devolucao ?? hojeISOSaoPaulo(),
       origem: "termo",
-      termoId,
     });
     if (!r.ok) problemas.push(r.erro);
   }

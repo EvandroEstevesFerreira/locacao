@@ -77,3 +77,36 @@ describe("custódia de funcionário exige termo", () => {
     ).toEqual([]);
   });
 });
+
+describe("devolução não pertence ao termo da entrega", () => {
+  // A DEVOLUÇÃO NÃO PERTENCE AO TERMO DA ENTREGA.
+  //
+  // `liberarPecas` abria a posse de almoxarifado passando o `termoId` do termo
+  // que estava sendo ENCERRADO naquele instante. A posse nascia apontando para
+  // o documento que diz o contrário dela, e o resultado foi a única anomalia do
+  // banco: termo encerrado com posse aberta (peça 14L4594, TRM-2026-0040).
+  //
+  // Medido em 16/09/2026: 1 posse de almoxarifado com termo em 144.
+  it("liberarPecas abre a posse de devolução SEM termo", () => {
+    const fonte = readFileSync(
+      join(process.cwd(), "src", "app", "(app)", "termos", "actions.ts"),
+      "utf8",
+    );
+    const i = fonte.indexOf("async function liberarPecas");
+    expect(i, "liberarPecas sumiu de termos/actions.ts").toBeGreaterThan(-1);
+
+    const fimDaFuncao = fonte.indexOf("\n}\n", i);
+    const corpo = fonte.slice(i, fimDaFuncao > -1 ? fimDaFuncao : fonte.indexOf("\nexport ", i + 1));
+    expect(corpo).toContain('tipo: "almoxarifado"');
+
+    const chamada = corpo.slice(corpo.indexOf("abrirCustodia"));
+    const fimChamada = chamada.indexOf(");");
+    const argumentos = chamada.slice(0, fimChamada > -1 ? fimChamada : undefined);
+    expect(
+      /\btermoId\b(?!\s*:\s*null)/.test(argumentos),
+      "liberarPecas ainda passa termoId para abrirCustodia — a posse de " +
+        "devolução nasceria apontando para o termo da entrega, que está sendo " +
+        "encerrado no mesmo instante.",
+    ).toBe(false);
+  });
+});
