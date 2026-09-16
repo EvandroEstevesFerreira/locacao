@@ -2,12 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Pencil } from "lucide-react";
 
-import { createClient } from "@/lib/supabase/server";
 import { getCurrentPerfil, podeOperar, podeEditarCadastros } from "@/lib/auth";
 import {
   obterPeca,
   listarPossesDaPeca,
   listarObrasEFornecedores,
+  listarFuncionariosAtivos,
+  obterFuncionarioIdDaPosseAberta,
 } from "@/lib/data/custodia";
 import { descreverDetentor, montarLinhaDoTempo, lembreteValido } from "@/lib/custodia";
 import { SITUACAO_INFO, PROPRIEDADE_INFO, ESTADO_INFO } from "@/lib/frota";
@@ -50,15 +51,15 @@ export default async function PecaDetalhePage({
 }) {
   const { id } = await params;
 
-  const supabase = await createClient();
-
-  const [peca, posses, destinos, perfil, { data: funcionarios }] = await Promise.all([
-    obterPeca(id),
-    listarPossesDaPeca(id),
-    listarObrasEFornecedores(),
-    getCurrentPerfil(),
-    supabase.from("funcionario").select("id, nome").eq("ativo", true).order("nome"),
-  ]);
+  const [peca, posses, destinos, perfil, funcionarios, funcionarioAtualId] =
+    await Promise.all([
+      obterPeca(id),
+      listarPossesDaPeca(id),
+      listarObrasEFornecedores(),
+      getCurrentPerfil(),
+      listarFuncionariosAtivos(),
+      obterFuncionarioIdDaPosseAberta(id),
+    ]);
   if (!peca) notFound();
 
   // Só busca o histórico e a lista de obras quando a peça TEM horímetro: para
@@ -252,8 +253,13 @@ export default async function PecaDetalhePage({
               unidadeId={peca.id}
               obras={destinos.obras}
               fornecedores={destinos.fornecedores}
+              // Quem devolve não pode aparecer como quem recebe: entregar de
+              // volta para a mesma pessoa é encerrar e reabrir o mesmo
+              // vínculo, com dois documentos e nenhuma mudança de custódia.
               funcionarios={
-                (funcionarios ?? []) as unknown as { id: string; nome: string }[]
+                funcionarioAtualId
+                  ? funcionarios.filter((f) => f.id !== funcionarioAtualId)
+                  : funcionarios
               }
               posseAtual={
                 atual && atual.tipo === "funcionario"

@@ -219,6 +219,48 @@ export async function listarObrasEFornecedores(): Promise<{
 }
 
 /**
+ * Funcionários ativos, para o destino "Funcionário" do card Movimentar.
+ *
+ * Mesma consulta que `transferir/page.tsx` fazia inline — centralizada aqui
+ * para não duplicar o `as unknown as` do cast em cada tela que precisar da
+ * lista.
+ */
+export async function listarFuncionariosAtivos(): Promise<
+  { id: string; nome: string }[]
+> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("funcionario")
+    .select("id, nome")
+    .eq("ativo", true)
+    .order("nome");
+  return (data ?? []) as unknown as { id: string; nome: string }[];
+}
+
+/**
+ * O id de quem está com a peça agora, só quando é um funcionário.
+ *
+ * Existe para o card Movimentar excluir essa pessoa da lista de "para quem
+ * entregar": devolver e entregar de novo para o MESMO funcionário fecha um
+ * termo e abre outro sem mudar nada de verdade — dois documentos assinados
+ * registrando uma troca que não aconteceu. `transferir/page.tsx` já evitava
+ * isso filtrando por id.
+ */
+export async function obterFuncionarioIdDaPosseAberta(
+  unidadeId: string,
+): Promise<string | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("custodia_peca")
+    .select("funcionario_id")
+    .eq("unidade_id", unidadeId)
+    .eq("tipo", "funcionario")
+    .is("fim", null)
+    .maybeSingle();
+  return (data as { funcionario_id: string | null } | null)?.funcionario_id ?? null;
+}
+
+/**
  * A empresa responsável pela peça, derivada do contrato.
  *
  * Função própria em vez de campos novos no select de `obterPeca`: as linhas em
