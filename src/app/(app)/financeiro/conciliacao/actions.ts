@@ -58,7 +58,8 @@ export async function confirmarSugestao(raw: unknown): Promise<ActionResult> {
     valorPago: d.valorPago,
     multa: d.multa,
     juros: d.juros,
-    nfNumero: d.nfNumero ?? null,
+    // Sem `nfNumero`: a AUSÊNCIA da chave é o que faz `darBaixa` preservar a NF
+    // do Loca. Mandar `null` apagaria o campo, que é o dano que se quer evitar.
     dataPagamento: d.dataPagamento,
   });
   if (!baixa.ok) return baixa;

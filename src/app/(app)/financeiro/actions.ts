@@ -212,12 +212,23 @@ export async function darBaixa(raw: unknown): Promise<ActionResult> {
     valor_pago: d.valorPago,
     multa: d.multa,
     juros: d.juros,
-    nf_numero: d.nfNumero,
     data_pagamento: d.dataPagamento,
   };
   // Só sobrescreve o comprovante quando houve upload novo — senão uma segunda
   // baixa sem anexo apagaria o arquivo já enviado.
   if (d.comprovantePath) patch.comprovante_path = d.comprovantePath;
+  // A NF SEGUE A MESMA REGRA, e por um motivo mais caro: `textoOpcional`
+  // transforma ausente e vazio no mesmo `null`, então escrever `nf_numero`
+  // incondicionalmente apagava o número digitado à mão por quem chamasse a
+  // baixa sem o campo — é o que a conciliação do Mega faz. A presença da CHAVE
+  // no payload é o que separa "não mandei" de "mandei vazio": o formulário de
+  // baixa sempre manda a chave (e limpar o campo continua limpando a NF), e o
+  // conciliador não a manda nunca. O conciliador NUNCA corrige `nf_numero` do
+  // Loca a partir do Mega: em RECIBO o número é "1", "2", "3", e sobrescrever
+  // destrói o dado bom.
+  const informouNf =
+    typeof raw === "object" && raw !== null && "nfNumero" in raw;
+  if (informouNf) patch.nf_numero = d.nfNumero;
 
   const supabase = await createClient();
   const { error } = await supabase

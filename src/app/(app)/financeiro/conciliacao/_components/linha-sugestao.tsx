@@ -60,7 +60,9 @@ export function LinhaSugestao({ item }: { item: ItemFila }) {
         valorPago,
         multa,
         juros,
-        nfNumero: item.numeroDocumento || null,
+        // NADA DE `nfNumero` AQUI. O número do documento do Mega é genérico
+        // fora de título fiscal ("1", "2", "3"), e mandá-lo — mesmo nulo —
+        // sobrescreveria a NF que alguém digitou à mão meses atrás.
         dataPagamento,
       });
       if (!r.ok) {
