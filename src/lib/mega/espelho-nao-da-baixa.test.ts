@@ -36,16 +36,33 @@ describe("o espelho do Mega não dá baixa", () => {
     expect(nomes.some((n) => n.includes("route.ts"))).toBe(true);
   });
 
-  // A ONDA 1 É SEGURA PORQUE SÓ LÊ. Espelhar dá para fazer mesmo com o
-  // casamento fornecedor↔título errado: o pior caso é uma tela mostrar coisa
-  // errada, e alguém corrigir. Dar baixa com casamento errado marca como paga
-  // uma conta que ninguém pagou — e isso ninguém percebe olhando a tela.
+  // A PROMESSA ESTREITOU NA v0.113.0, E CONTINUA SENDO A QUE IMPORTA.
+  // Antes: nenhum arquivo do Mega mencionava `lancamento_financeiro`. Agora a
+  // conciliação existe, e ela LÊ os lançamentos para propor o casamento. O que
+  // segue proibido é o cron ESCREVER neles: quem escreve é a server action de
+  // confirmação, com sessão de usuário e com um humano tendo clicado.
+  //
+  // Sem esta varredura, alguém "otimiza" a confirmação daqui a seis meses
+  // movendo a escrita para dentro do cron, e a fila humana vira baixa
+  // automática sem ninguém ter decidido isso.
   it("nenhum arquivo do Mega escreve em lancamento_financeiro", () => {
+    const ESCRITAS = ["insert(", "update(", "upsert(", "delete("];
     for (const { caminho, conteudo } of arquivosDoMega()) {
-      expect(
-        conteudo.includes("lancamento_financeiro"),
-        `${caminho} menciona lancamento_financeiro — a baixa automática é outra onda, e precisa de decisão sobre a data de pagamento antes de existir.`,
-      ).toBe(false);
+      const linhas = conteudo.split("\n");
+      linhas.forEach((linha, i) => {
+        if (!linha.includes("lancamento_financeiro")) return;
+        // A menção é o `.from("lancamento_financeiro")`; o verbo vem depois,
+        // na mesma linha ou nas próximas — o PostgREST encadeia.
+        const janela = linhas.slice(i, i + 4).join("\n");
+        for (const verbo of ESCRITAS) {
+          expect(
+            janela.includes(verbo),
+            `${caminho}:${i + 1} escreve em lancamento_financeiro com ${verbo} — ` +
+              "o cron PROPÕE, quem dá baixa é a server action de confirmação, " +
+              "com sessão de usuário. Ver a spec de 2026-09-16.",
+          ).toBe(false);
+        }
+      });
     }
   });
 

@@ -5,6 +5,7 @@ import { logger, erroMeta } from "@/lib/logger";
 import { configMega, megaConfigurado, SessaoMega } from "@/lib/mega/cliente";
 import { sincronizarOrg, registrarRodada } from "@/lib/mega/servidor";
 import { sincronizarContratos } from "@/lib/mega/contratos-servidor";
+import { conciliarOrg } from "@/lib/mega/conciliacao-servidor";
 
 /**
  * O espelho diário do contas a pagar do Mega.
@@ -14,9 +15,10 @@ import { sincronizarContratos } from "@/lib/mega/contratos-servidor";
  * por `org_id` é feito à mão, a partir das linhas de `mega_sync`. E é
  * necessário: `mega_titulo` não tem policy de INSERT para ninguém, de propósito.
  *
- * ESTA ROTA NÃO DÁ BAIXA EM NADA. Ela só copia para o espelho o que o Mega
- * respondeu; a tabela de contas a pagar do Loca não é tocada. Quem cobra essa
- * promessa é `src/lib/mega/espelho-nao-da-baixa.test.ts`, por varredura.
+ * ESTA ROTA NÃO DÁ BAIXA EM NADA. Ela copia o espelho e PROPÕE casamentos em
+ * `mega_conciliacao`; quem escreve em `lancamento_financeiro` é a server
+ * action de confirmação, com sessão de usuário. Quem cobra essa promessa é
+ * `src/lib/mega/espelho-nao-da-baixa.test.ts`, por varredura.
  */
 
 export const dynamic = "force-dynamic";
@@ -71,6 +73,10 @@ export async function GET(request: Request) {
       // Os CONTRATOS são uma chamada a mais, e valem: é o "contratado ×
       // executado" oficial do ERP, que o Loca só consegue projetar.
       const contratos = await sincronizarContratos(supabase, org_id, sessao);
+      // A conciliação vem DEPOIS do espelho, e não em paralelo: ela lê
+      // `mega_titulo`, então precisa da rodada do dia já gravada.
+      // Ela PROPÕE; a baixa é da server action de confirmação.
+      const conciliacao = await conciliarOrg(supabase, org_id);
       await registrarRodada(supabase, org_id, resumo, null);
       if (resumo.falhas.length > 0) {
         logger.error("cron/mega: fornecedores que falharam", {
@@ -78,7 +84,7 @@ export async function GET(request: Request) {
           falhas: resumo.falhas,
         });
       }
-      resultado.push({ org_id, ...resumo, contratos });
+      resultado.push({ org_id, ...resumo, contratos, sugestoes: conciliacao.sugestoes });
     } catch (e) {
       const motivo = e instanceof Error ? e.message : "Falha desconhecida.";
       logger.error("cron/mega: rodada abortada", { org_id, ...erroMeta(e) });
