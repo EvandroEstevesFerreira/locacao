@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.113.1";
+export const APP_VERSION = "0.114.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,18 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.114.0",
+    data: "2026-09-16",
+    titulo: "A devolução deixa de apontar para o termo da entrega",
+    mudancas: [
+      {
+        tipo: "correcao",
+        texto:
+          "Devolver uma peça não amarra mais a posse dela no almoxarifado ao termo que estava sendo encerrado, o que deixava o termo marcado como encerrado com a posse ainda aberta.",
+      },
+    ],
+  },
   {
     versao: "0.113.1",
     data: "2026-09-16",

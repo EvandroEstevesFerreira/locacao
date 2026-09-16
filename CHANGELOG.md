@@ -7,6 +7,16 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.114.0] - 2026-09-16
+
+### Corrigido
+
+- `liberarPecas` abria a posse de devolução no almoxarifado carregando o
+  `termo_id` do termo que estava sendo encerrado no mesmo instante, deixando o
+  banco com um termo encerrado e uma posse ainda aberta. A posse de devolução
+  agora nasce sem termo, e uma migration desamarra a única ocorrência
+  existente (peça 14L4594 / TRM-2026-0040).
+
 ## [0.113.1] - 2026-09-16
 
 ### Corrigido
