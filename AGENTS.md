@@ -334,15 +334,19 @@ marcaria como quitado o que ainda vai vencer.
 o saldo zerar, auditoria da sincronização. Continua na tabela por isso, e não
 como aproximação de nada.
 
-## O que ainda NÃO existe: a BAIXA
+## A baixa: o Mega propõe, o humano confirma
 
-O espelho **não escreve em `lancamento_financeiro`**, e há varredura cobrando
-isso (`src/lib/mega/espelho-nao-da-baixa.test.ts`). Não é escopo cortado por
-pressa; é decisão.
+Desde a 0.113.0 o espelho **também alimenta uma fila de conciliação**, em
+`/financeiro/conciliacao` (`src/app/(app)/financeiro/conciliacao/`). A leitura
+mora em `src/lib/data/conciliacao.ts`; o casamento e a escrita da baixa moram
+em `src/lib/mega/conciliacao-servidor.ts`, coberto por
+`src/lib/mega/conciliacao.test.ts`. `espelho-nao-da-baixa.test.ts` mudou de
+forma junto: já não cobra a ausência da baixa — ela existe agora — e passa a
+cobrar que nenhuma baixa aconteça sem confirmação humana e que o espelho
+continue só leitura (ver "`mega_titulo` só tem policy de SELECT", acima).
 
-Até 11/09/2026 o motivo era a falta da data de pagamento. **Esse motivo caiu**
-com a regra acima. O que resta é a forma do faturamento — e ela foi medida no
-mesmo dia, sobre os 465 títulos do espelho:
+O motivo de não ter existido até aqui era a forma do faturamento — medida em
+16/09/2026, sobre os 465 títulos do espelho:
 
 | | um documento por parcela | um documento para várias parcelas |
 | --- | --- | --- |
@@ -358,14 +362,26 @@ Os 3 fornecedores em bloco são a exceção que interessa: `4193` (tipo `ALUGUEL
 cadastro de fornecedor**, não locação de equipamento; `2863` é `BOLETO` com 23
 parcelas.
 
-Então a baixa **não pode casar documento ↔ lançamento**: um documento de
-aluguel quitaria o contrato inteiro com a primeira parcela.
+Por isso a baixa **não casa documento ↔ lançamento**: um documento de aluguel
+quitaria o contrato inteiro com a primeira parcela. **O casamento é PARCELA ↔
+LANÇAMENTO.** Cada parcela do Mega tem vencimento e valor próprios, e o Loca
+tem um lançamento recorrente por competência: é 1↔1 por mês, e o bloco deixa
+de ser um problema. Não há valor a distribuir — o documento vira rótulo, não
+chave.
 
-**A saída desenhada em 16/09/2026 é casar PARCELA ↔ lançamento.** Cada parcela
-do Mega tem vencimento e valor próprios, e o Loca tem um lançamento recorrente
-por competência: é 1↔1 por mês, e o bloco deixa de ser um problema. Não há
-valor a distribuir — o documento vira rótulo, não chave. O desenho completo
-está em `docs/superpowers/specs/2026-09-16-conciliacao-baixa-mega-design.md`.
+**O sistema propõe; o humano confirma.** A tela mostra o motivo da sugestão e
+a diferença quando o valor pago diverge do esperado, para o financeiro atribuir
+multa ou juro antes de confirmar. Confirmar grava a baixa; recusar tira o
+título da fila; "Devolver à fila" desfaz uma recusa feita por engano. Nada
+escreve em `lancamento_financeiro` sem esse clique — o mesmo raciocínio da
+regra de "divergência é fila de revisão humana, não correção automática" que
+já vale para o número do documento.
+
+Ficou de fora **de propósito**: baixa parcial, escrever de volta no Mega,
+adivinhar o agente quando o documento não identifica ninguém, e corrigir
+`nf_numero` a partir do espelho. O desenho completo, incluindo por que cada um
+desses ficou fora, está em
+`docs/superpowers/specs/2026-09-16-conciliacao-baixa-mega-design.md`.
 
 
 # Fechamento de sessão

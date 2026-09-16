@@ -1,6 +1,6 @@
 # Conciliação da baixa com o Mega — desenho
 
-> Data: 16/09/2026 · Status: aprovado, não implementado
+> Data: 16/09/2026 · Status: aprovado e implementado (0.113.0)
 
 ## O problema
 
@@ -182,6 +182,8 @@ vezes por vacuidade neste repositório.
 
 | Frente | O que foi feito | Falta | % concluído |
 | --- | --- | --- | --- |
-| Conciliação da baixa | Desenho aprovado e escrito | Plano, migration, cálculo do casamento, cron, tela, action, testes | 10% |
+| Conciliação da baixa | Migration, cálculo do casamento parcela↔lançamento, cron de sugestão, tela `/financeiro/conciliacao`, actions de confirmar/recusar/devolver à fila, testes, versão 0.113.0 e documentação (AGENTS.md e changelog) atualizados | Nada do escopo combinado — baixa parcial, escrever de volta no Mega, adivinhar agente e corrigir `nf_numero` ficaram fora de propósito (ver "Fora de escopo, de propósito", acima) | 100% |
 
-Próximo passo único: escrever o plano de implementação.
+Próximo passo único: nenhum — a frente está implementada; acompanhar o uso real
+da fila de conciliação para calibrar a heurística de casamento se surgirem
+falsos positivos.
