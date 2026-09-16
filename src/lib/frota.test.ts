@@ -38,13 +38,23 @@ describe("podeTransicionar — a matriz inteira", () => {
     expect(podeTransicionar("perdida", "disponivel", "manual")).toBe(true);
   });
 
-  it("EM USO não pode ir para manutenção, baixada nem perdida — nem por evento", () => {
+  it("EM USO não pode ir para baixada nem perdida — nem por evento", () => {
     // É a linha que dá sentido a todas as outras: marcar "perdida" com a peça
     // em uso apagaria em silêncio o fato de alguém ter ASSINADO por ela.
-    for (const destino of ["manutencao", "baixada", "perdida"] as const) {
+    for (const destino of ["baixada", "perdida"] as const) {
       expect(podeTransicionar("em_uso", destino, "manual")).toBe(false);
       expect(podeTransicionar("em_uso", destino, "evento")).toBe(false);
     }
+  });
+
+  it("EM USO VAI para manutenção por evento — a máquina quebrou na obra", () => {
+    // Depois da Task 3, `em_uso` também quer dizer "está em obra". Recusar
+    // aqui obrigaria o almoxarife a passar pelo almoxarifado em dois passos
+    // para mandar um compactador quebrado à oficina, e a mensagem que ele veria
+    // falaria de encerrar um termo que não existe.
+    expect(podeTransicionar("em_uso", "manutencao", "evento")).toBe(true);
+    // À MÃO continua proibido: a situação não se digita.
+    expect(podeTransicionar("em_uso", "manutencao", "manual")).toBe(false);
   });
 
   it("transição para a mesma situação é permitida — salvar sem mudar não é erro", () => {

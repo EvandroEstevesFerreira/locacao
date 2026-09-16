@@ -284,6 +284,14 @@ export const movimentarPecaSchema = z
     // ANTES de `registrarDevolucao`: descobrir a falta do motivo depois dela é
     // descobrir tarde — os itens já teriam data de devolução e a peça já teria
     // voltado ao almoxarifado, com o termo ainda aberto.
+    //
+    // ATENÇÃO AO GATILHO: `estado_devolucao` sozinho já acorda a regra. Uma
+    // tela que passe a mandar o estado de conservação SEMPRE — inclusive ao
+    // mandar a peça para a obra — obrigaria o usuário a assinar ou escrever um
+    // motivo para uma movimentação que não devolve nada. Hoje não acontece
+    // porque o formulário manda `null` nos três campos quando não há devolução.
+    // Quem reconstruir o formulário: ou mantenha o `null`, ou troque este
+    // gatilho por um campo explícito de intenção.
     const tentaDevolver =
       v.assinatura_devolucao !== null ||
       v.motivo_sem_assinatura !== null ||

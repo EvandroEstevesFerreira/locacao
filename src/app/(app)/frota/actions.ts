@@ -194,6 +194,10 @@ export async function movimentarPeca(raw: unknown): Promise<ActionResult> {
     // foi encerrado. Dizer "falhou" faria quem clicou tentar de novo sobre um
     // termo que não existe mais, e o segundo erro seria ainda menos
     // compreensível que o primeiro.
+    // REVALIDA IGUAL. A posse mudou e o termo pode ter sido encerrado: sem
+    // isto, o aviso apareceria sobre uma tela que ainda mostra o estado
+    // anterior, e quem lesse concluiria que nada aconteceu.
+    revalidarMovimentacao(d.unidade_id);
     return {
       ok: true,
       id: d.unidade_id,
@@ -203,10 +207,21 @@ export async function movimentarPeca(raw: unknown): Promise<ActionResult> {
     };
   }
 
-  revalidatePath("/frota");
-  revalidatePath(`/frota/${d.unidade_id}`);
-  revalidatePath("/termos");
+  revalidarMovimentacao(d.unidade_id);
   return { ok: true, id: d.unidade_id };
+}
+
+/**
+ * As três telas que uma movimentação muda: a lista, a peça e os termos.
+ *
+ * Numa função só porque os dois caminhos de saída de `movimentarPeca` precisam
+ * dela — inclusive o que devolve aviso. Esquecer um deles deixa o usuário
+ * lendo o recado sobre a tela velha.
+ */
+function revalidarMovimentacao(unidadeId: string): void {
+  revalidatePath("/frota");
+  revalidatePath(`/frota/${unidadeId}`);
+  revalidatePath("/termos");
 }
 
 /**

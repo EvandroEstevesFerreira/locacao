@@ -124,7 +124,21 @@ const MATRIZ: Record<Situacao, Partial<Record<Situacao, Origem[]>>> = {
   em_uso: {
     // Só evento: a devolução registrada no termo é o que libera a peça.
     disponivel: ["evento"],
-    // manutencao, baixada e perdida NÃO entram de propósito. Ver `motivoBloqueio`.
+    // A MÁQUINA QUEBROU NA OBRA E VAI DIRETO PARA O FORNECEDOR.
+    //
+    // Esta linha nasceu proibida, e a proibição fazia sentido quando `em_uso`
+    // só podia querer dizer "alguém assinou por ela". Depois da Task 3,
+    // `situacaoDaPosse` deduz `em_uso` também da posse de OBRA — e mandar um
+    // compactador quebrado do canteiro para a oficina é movimentação legítima,
+    // não alguém digitando uma situação.
+    //
+    // Por isso `evento`, e não `manual`: quem autoriza é a movimentação da
+    // posse, registrada no livro. E por isso a peça COM PESSOA continua
+    // protegida sem guarda extra — `movimentarPeca` faz a devolução primeiro e
+    // chega aqui com `de = "disponivel"`, então a origem `em_uso` de um termo
+    // assinado não passa por esta linha.
+    manutencao: ["evento"],
+    // baixada e perdida NÃO entram de propósito. Ver `motivoBloqueio`.
   },
   manutencao: {
     // Passa por `disponivel` antes de voltar a uso: é onde alguém confere que a
