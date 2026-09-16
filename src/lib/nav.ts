@@ -36,7 +36,8 @@ export type NavIconName =
   | "sparkles"
   | "settings"
   | "graduation-cap"
-  | "book-open";
+  | "book-open"
+  | "scale";
 
 export type NavItem = {
   label: string;
@@ -94,6 +95,10 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { label: "Imóveis", href: "/imoveis", icon: "building-2", modulo: "imoveis", grupo: "Imóveis" },
 
   { label: "Financeiro", href: "/financeiro", icon: "wallet", modulo: "financeiro", grupo: "Financeiro" },
+  // A fila vive sob /financeiro para herdar a liberação do módulo, mas precisa
+  // de entrada própria: ela só existe se alguém entrar nela, e quem não sabe
+  // que o Mega propõe baixas não vai procurar dentro do Financeiro.
+  { label: "Conciliação", href: "/financeiro/conciliacao", icon: "scale", modulo: "financeiro", grupo: "Financeiro" },
   { label: "Relatórios", href: "/relatorios", icon: "bar-chart-3", modulo: "relatorios", grupo: "Financeiro" },
 
   { label: "Novidades", href: "/novidades", icon: "sparkles", separadorAntes: true },

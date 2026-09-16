@@ -73,11 +73,22 @@ export async function GET(request: Request) {
       // Os CONTRATOS são uma chamada a mais, e valem: é o "contratado ×
       // executado" oficial do ERP, que o Loca só consegue projetar.
       const contratos = await sincronizarContratos(supabase, org_id, sessao);
-      // A conciliação vem DEPOIS do espelho, e não em paralelo: ela lê
-      // `mega_titulo`, então precisa da rodada do dia já gravada.
-      // Ela PROPÕE; a baixa é da server action de confirmação.
-      const conciliacao = await conciliarOrg(supabase, org_id);
       await registrarRodada(supabase, org_id, resumo, null);
+      // A CONCILIAÇÃO RODA DEPOIS DE `registrarRodada`, E FORA DO `catch` QUE
+      // DÁ `break`. Ela vem depois do espelho porque lê `mega_titulo` e precisa
+      // da rodada do dia gravada — mas um erro DELA é erro de banco local, não
+      // do ERP, e o `break` do catch existe para credencial recusada: repetir
+      // login bloqueia a conta. Herdar esse break faria um upsert que falhou na
+      // primeira organização marcar a rodada inteira como falha (mesmo com o
+      // espelho sincronizado) e pular todas as outras. Aqui o pior caso é um
+      // aviso no log e a fila do dia seguinte propondo o que faltou.
+      const conciliacao = await conciliarOrg(supabase, org_id).catch((e: unknown) => {
+        logger.warn("cron/mega: conciliação falhou, o espelho seguiu", {
+          org_id,
+          ...erroMeta(e),
+        });
+        return { sugestoes: 0 };
+      });
       if (resumo.falhas.length > 0) {
         logger.error("cron/mega: fornecedores que falharam", {
           org_id,

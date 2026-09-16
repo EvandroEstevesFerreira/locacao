@@ -23,6 +23,7 @@ import {
   HardHat,
   LayoutDashboard,
   Package,
+  Scale,
   Settings,
   Sparkles,
   TrendingUp,
@@ -57,6 +58,7 @@ const ICONES: Record<NavIconName, LucideIcon> = {
   settings: Settings,
   "graduation-cap": GraduationCap,
   "book-open": BookOpen,
+  scale: Scale,
 };
 
 export function NavIcon({

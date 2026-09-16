@@ -7,6 +7,7 @@ import {
   Pencil,
   Plus,
   RefreshCw,
+  Scale,
   Split,
   Undo2,
 } from "lucide-react";
@@ -104,6 +105,10 @@ export default async function FinanceiroPage({
             </Button>
             {podeEditar ? (
               <>
+                <Button variant="secondary" render={<Link href="/financeiro/conciliacao" />}>
+                  <Scale className="size-4" />
+                  Conciliação
+                </Button>
                 <Button variant="secondary" render={<Link href="/financeiro/recorrentes" />}>
                   <RefreshCw className="size-4" />
                   Gerar recorrentes
