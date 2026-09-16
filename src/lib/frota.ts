@@ -42,6 +42,38 @@ export const SITUACAO_INFO: Record<
   perdida: { label: "Perdida", variant: "destructive" },
 };
 
+/** O tipo de detentor da posse aberta, ou `null` quando não há posse. */
+export type PosseAberta = "almoxarifado" | "obra" | "funcionario" | "fornecedor" | null;
+
+/**
+ * A situação da peça, DEDUZIDA de com quem ela está.
+ *
+ * A matriz de transições já dizia metade disto: passar para `em_uso` à mão é
+ * proibido, com a mensagem "«Em uso» é definido pelo termo de
+ * responsabilidade, não à mão". Esta função é a outra metade — o repositório
+ * já acreditava que a situação era consequência, e agora ela é calculada em
+ * vez de digitada.
+ *
+ * Deixar o usuário escolher `disponivel` ou `em_uso` é o que permitia a linha
+ * que diz "Em uso" com a peça no almoxarifado, sem nada na tela denunciando.
+ */
+export function situacaoDaPosse(posse: PosseAberta): Situacao {
+  if (posse === null || posse === "almoxarifado") return "disponivel";
+  if (posse === "fornecedor") return "manutencao";
+  return "em_uso";
+}
+
+/**
+ * Esta situação é calculada da posse, ou escolhida por uma pessoa?
+ *
+ * `baixada` e `perdida` não se deduzem: uma peça baixada pode estar em
+ * qualquer lugar, e uma perdida não está em lugar que se saiba. As outras três
+ * são consequência de onde a peça está.
+ */
+export function situacaoEhDeduzida(s: Situacao): boolean {
+  return s === "disponivel" || s === "em_uso" || s === "manutencao";
+}
+
 export const PROPRIEDADES = ["locada", "propria"] as const;
 export type Propriedade = (typeof PROPRIEDADES)[number];
 

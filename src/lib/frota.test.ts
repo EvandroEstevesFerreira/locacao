@@ -5,6 +5,8 @@ import {
   motivoBloqueio,
   transicoesManuais,
   unidadeSchema,
+  situacaoDaPosse,
+  situacaoEhDeduzida,
 } from "./frota";
 
 describe("podeTransicionar — a matriz inteira", () => {
@@ -163,5 +165,50 @@ describe("unidadeSchema", () => {
     const r = unidadeSchema.safeParse(primeira);
     expect(r.success).toBe(true);
     if (r.success) expect(r.data).toEqual(primeira);
+  });
+});
+
+describe("situacaoDaPosse", () => {
+  it("sem posse aberta, a peça está disponível", () => {
+    expect(situacaoDaPosse(null)).toBe("disponivel");
+  });
+
+  it("no almoxarifado a peça está disponível — é lá que ela espera", () => {
+    expect(situacaoDaPosse("almoxarifado")).toBe("disponivel");
+  });
+
+  it("com pessoa ou em obra, está em uso", () => {
+    expect(situacaoDaPosse("funcionario")).toBe("em_uso");
+    expect(situacaoDaPosse("obra")).toBe("em_uso");
+  });
+
+  it("em fornecedor, está em manutenção", () => {
+    // O destino se chama "Manutenção em fornecedor", e `moverPeca` já gravava
+    // `manutencao` para ele desde antes desta função existir.
+    expect(situacaoDaPosse("fornecedor")).toBe("manutencao");
+  });
+});
+
+describe("situacaoEhDeduzida", () => {
+  it("disponivel, em_uso e manutencao saem da posse", () => {
+    expect(situacaoEhDeduzida("disponivel")).toBe(true);
+    expect(situacaoEhDeduzida("em_uso")).toBe(true);
+    expect(situacaoEhDeduzida("manutencao")).toBe(true);
+  });
+
+  it("baixada e perdida são decisão humana", () => {
+    // Não se deduzem de posse nenhuma: uma peça baixada pode estar em qualquer
+    // lugar, e uma perdida não está em lugar que se saiba.
+    expect(situacaoEhDeduzida("baixada")).toBe(false);
+    expect(situacaoEhDeduzida("perdida")).toBe(false);
+  });
+
+  it("cobre todas as situações que existem", () => {
+    // SEM ISTO O TESTE ENVELHECE EM SILÊNCIO: uma situação nova entraria em
+    // SITUACOES e ninguém decidiria se ela é deduzida ou escolhida.
+    for (const s of SITUACOES) {
+      expect(typeof situacaoEhDeduzida(s)).toBe("boolean");
+    }
+    expect(SITUACOES.length).toBe(5);
   });
 });
