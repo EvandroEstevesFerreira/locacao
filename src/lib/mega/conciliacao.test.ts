@@ -196,3 +196,49 @@ describe("sugerirConciliacao", () => {
     expect(r[0].lancamento_id).toBeNull();
   });
 });
+
+describe("numérico que chega como string", () => {
+  // O PostgREST devolve `numeric` como STRING. `"0.00" === 0` é falso, e o
+  // preço disso não é um teste vermelho: é a fila vazia para sempre, com o
+  // cron reportando sucesso e a tela dizendo "Nada a conciliar".
+  it("casa com saldo, valor da parcela e valor do lançamento em string", () => {
+    const r = sugerirConciliacao({
+      titulos: [titulo({ saldo_atual: "0.00", valor_parcela: "2038.53" })],
+      lancamentos: [lancamento({ valor: "2038.53" })],
+    });
+    expect(r).toHaveLength(1);
+    expect(r[0].lancamento_id).toBe("l1");
+    expect(r[0].confianca).toBe("alta");
+  });
+
+  it("ainda descarta o título em aberto cujo saldo veio em string", () => {
+    const r = sugerirConciliacao({
+      titulos: [titulo({ saldo_atual: "2038.53" })],
+      lancamentos: [lancamento()],
+    });
+    expect(r).toHaveLength(0);
+  });
+
+  it("a diferença de valor sai formatada, não concatenada como texto", () => {
+    // Sem a coerção, `t.valor_parcela - escolhido.valor` com strings daria
+    // NaN e o motivo mostraria "R$ NaN" para quem vai decidir a baixa.
+    const r = sugerirConciliacao({
+      titulos: [titulo({ tipo_documento: "RECIBO", valor_parcela: "2138.53" })],
+      lancamentos: [lancamento({ valor: "2038.53", nf_numero: null })],
+    });
+    expect(r[0].motivo).not.toContain("NaN");
+    expect(r[0].motivo).toContain("100,00");
+  });
+});
+
+describe("TIPOS_FISCAIS é preso à medição", () => {
+  // `NFE`, `NFS`, `NFSE` e `FATURA` já foram aceitos aqui. A medição de
+  // 11/09/2026 só olhou `NF`; admitir tipo não medido é apostar que ele se
+  // comporta igual, e a aposta custa uma NF boa sobrescrita.
+  it("só NF é tipo fiscal", () => {
+    expect(documentoConfiavel("NF", "42824001")).toBe(true);
+    for (const tipo of ["NFE", "NFS", "NFSE", "FATURA", "BOLETO"]) {
+      expect(documentoConfiavel(tipo, "42824001"), tipo).toBe(false);
+    }
+  });
+});

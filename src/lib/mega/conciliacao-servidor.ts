@@ -54,9 +54,13 @@ export async function conciliarOrg(
   if (decididas.error) throw new Error(decididas.error.message);
 
   const fechados = new Set((decididas.data ?? []).map((d) => d.mega_titulo_id as string));
-  const titulos = ((tit.data ?? []) as unknown as TituloQuitado[]).filter(
-    (t) => !fechados.has(t.id),
-  );
+  // `Number()` nos numéricos, como todo leitor deste repositório faz (ver
+  // `src/lib/data/mega.ts`): o PostgREST entrega `numeric` como string, e um
+  // `saldo_atual` de `"0.00"` reprovaria no filtro de quitados sem levantar
+  // erro nenhum — a fila simplesmente nunca encheria.
+  const titulos: TituloQuitado[] = ((tit.data ?? []) as unknown as LinhaTitulo[])
+    .filter((t) => !fechados.has(t.id))
+    .map((t) => ({ ...t, valor_parcela: Number(t.valor_parcela), saldo_atual: Number(t.saldo_atual) }));
 
   // O lançamento aponta para o CONTRATO, não para o agente. O dono vem de lá —
   // e é por isso que o select acima traz os dois ids de contrato.
@@ -75,12 +79,17 @@ export async function conciliarOrg(
   return { sugestoes: sugestoes.length };
 }
 
+type LinhaTitulo = Omit<TituloQuitado, "valor_parcela" | "saldo_atual"> & {
+  valor_parcela: unknown;
+  saldo_atual: unknown;
+};
+
 type LinhaLancamento = {
   id: string;
   contrato_id: string | null;
   contrato_imovel_id: string | null;
   competencia: string;
-  valor: number;
+  valor: unknown;
   nf_numero: string | null;
   status: "pendente" | "pago";
 };

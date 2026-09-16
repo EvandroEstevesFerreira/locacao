@@ -12,6 +12,15 @@ import { formatarBRL } from "@/lib/locacao";
  * contrato quitado que ninguém cobra, e só aparece quando o fornecedor liga.
  */
 
+/**
+ * Coluna `numeric` como ela de fato chega: número OU string.
+ *
+ * O tipo é honesto de propósito. Declarar `number` e confiar fez o `===` com
+ * zero falhar em silêncio; quem escrever o próximo leitor tropeça no tipo
+ * antes de tropeçar na fila vazia.
+ */
+export type Numerico = number | string;
+
 export type TituloQuitado = {
   id: string;
   fornecedor_id: string | null;
@@ -20,8 +29,9 @@ export type TituloQuitado = {
   numero_documento: string;
   data_vencimento: string;
   data_prorrogado: string | null;
-  valor_parcela: number;
-  saldo_atual: number;
+  /** `numeric` do Postgres — o PostgREST entrega como string. Ver `Numerico`. */
+  valor_parcela: Numerico;
+  saldo_atual: Numerico;
 };
 
 export type LancamentoAberto = {
@@ -30,7 +40,7 @@ export type LancamentoAberto = {
   imovel_id: string | null;
   /** Sempre dia 1 do mês de referência, como a coluna `competencia` guarda. */
   competencia: string;
-  valor: number;
+  valor: Numerico;
   nf_numero: string | null;
   status: "pendente" | "pago";
 };
@@ -42,8 +52,20 @@ export type Sugestao = {
   motivo: string;
 };
 
-/** Tipos de documento em que o número É a nota. Medido sobre 465 títulos. */
-const TIPOS_FISCAIS = new Set(["NF", "NFE", "NFS", "NFSE", "FATURA"]);
+/**
+ * Tipos de documento em que o número É a nota.
+ *
+ * SÓ `NF`, e o conjunto é preso à medição: dos 465 títulos do espelho medidos
+ * em 11/09/2026, `NF` foi o único tipo em que o campo se mostrou confiável (9
+ * genéricos em 183). `RECIBO` (92 em 94), `CONTRATO` (7 em 7) e `ALUGUEL` (20
+ * em 22) ficaram de fora porque a medição os reprovou; `NFE`, `NFS`, `NFSE` e
+ * `FATURA` ficam de fora porque a medição não os viu — e admitir um tipo não
+ * medido é apostar que ele se comporta como `NF`.
+ *
+ * O que justifica ampliar: uma nova medição sobre o espelho, com a contagem de
+ * genéricos por tipo, registrada no AGENTS.md. Nada além disso.
+ */
+const TIPOS_FISCAIS = new Set(["NF"]);
 
 /**
  * A competência do título: o mês do vencimento EFETIVO.
@@ -83,6 +105,13 @@ function agente(x: { fornecedor_id: string | null; imovel_id: string | null }): 
   return null;
 }
 
+/** As mesmas linhas, já com os numéricos coeridos. Uso interno. */
+type TituloNum = Omit<TituloQuitado, "valor_parcela" | "saldo_atual"> & {
+  valor_parcela: number;
+  saldo_atual: number;
+};
+type LancamentoNum = Omit<LancamentoAberto, "valor"> & { valor: number };
+
 function mesmoValor(a: number, b: number): boolean {
   // Um centavo de folga: os dois lados são numeric(14,2), mas passam por float
   // no caminho até aqui.
@@ -97,13 +126,27 @@ export function sugerirConciliacao({
   lancamentos: LancamentoAberto[];
 }): Sugestao[] {
   // SÓ TÍTULO QUITADO. Em aberto, a prorrogada é previsão, não pagamento.
-  const quitados = titulos.filter((t) => t.saldo_atual === 0);
+  //
+  // `Number()` antes de comparar, e não é zelo: o PostgREST devolve `numeric`
+  // como STRING, e `"0.00" === 0` é falso. Sem a coerção, nada seria proposto,
+  // o cron reportaria sucesso e a tela diria "Nada a conciliar" para sempre —
+  // uma fila vazia não parece defeito. O mesmo vale para o valor da parcela,
+  // que alimenta a comparação de centavos.
+  const quitados: TituloNum[] = titulos
+    .map((t) => ({
+      ...t,
+      valor_parcela: Number(t.valor_parcela),
+      saldo_atual: Number(t.saldo_atual),
+    }))
+    .filter((t) => t.saldo_atual === 0);
 
   // Índice por agente+competência. O lançamento já pago fica de fora: ele não
   // precisa de baixa, e propor uma seria pedir para alguém confirmar o já feito.
-  const porChave = new Map<string, LancamentoAberto[]>();
-  for (const l of lancamentos) {
-    if (l.status === "pago") continue;
+  const porChave = new Map<string, LancamentoNum[]>();
+  for (const bruto of lancamentos) {
+    if (bruto.status === "pago") continue;
+    // Mesma defesa do lado do Loca: `valor` também é `numeric`.
+    const l = { ...bruto, valor: Number(bruto.valor) };
     const ag = agente(l);
     if (!ag) continue;
     const chave = `${ag}|${l.competencia}`;
