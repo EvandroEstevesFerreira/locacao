@@ -144,8 +144,9 @@ mega_conciliacao (
 | server action de confirmar | `lancamento_financeiro` + status da sugestão | `createClient()`, com sessão |
 
 A escrita no livro financeiro acontece **só** na server action, com sessão de
-usuário, passando pelas policies que a 0008 já exige (`admin` ou `financeiro`,
-ou membro da obra). O cron nunca toca `lancamento_financeiro`.
+usuário, passando pelas policies que `lancamento_financeiro` já exige
+(`master` ou `administrador`, ou membro da obra — os papéis `admin` e
+`financeiro` da 0008 saíram na migration 0011). O cron nunca toca `lancamento_financeiro`.
 
 `mega_conciliacao` é escrita pelo cron e pelo usuário — ao contrário de
 `mega_titulo`, que só tem policy de SELECT. A diferença é proposital:

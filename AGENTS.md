@@ -338,15 +338,19 @@ como aproximação de nada.
 
 Desde a 0.113.0 o espelho **também alimenta uma fila de conciliação**, em
 `/financeiro/conciliacao` (`src/app/(app)/financeiro/conciliacao/`). A leitura
-mora em `src/lib/data/conciliacao.ts`; o casamento e a escrita da baixa moram
-em `src/lib/mega/conciliacao-servidor.ts`, coberto por
-`src/lib/mega/conciliacao.test.ts`. `espelho-nao-da-baixa.test.ts` mudou de
+mora em `src/lib/data/conciliacao.ts`. **O casamento e a baixa moram em
+arquivos diferentes, e a separação é a promessa:** quem PROPÕE é
+`src/lib/mega/conciliacao-servidor.ts` (regra pura em
+`src/lib/mega/conciliacao.ts`, coberta por `conciliacao.test.ts`), chamado pelo
+cron — ele lê `lancamento_financeiro` e **nunca o escreve**; quem ESCREVE a
+baixa é `src/app/(app)/financeiro/conciliacao/actions.ts`, com sessão de
+usuário, depois de alguém clicar. `espelho-nao-da-baixa.test.ts` mudou de
 forma junto: já não cobra a ausência da baixa — ela existe agora — e passa a
 cobrar que nenhuma baixa aconteça sem confirmação humana e que o espelho
 continue só leitura (ver "`mega_titulo` só tem policy de SELECT", acima).
 
 O motivo de não ter existido até aqui era a forma do faturamento — medida em
-16/09/2026, sobre os 465 títulos do espelho:
+11/09/2026, sobre os 465 títulos do espelho:
 
 | | um documento por parcela | um documento para várias parcelas |
 | --- | --- | --- |
