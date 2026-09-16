@@ -7,6 +7,25 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.113.1] - 2026-09-16
+
+### Corrigido
+
+- Confirmar uma baixa pela conciliação não sobrescreve mais o `nf_numero` do
+  lançamento com o número de documento do Mega, genérico fora de título fiscal.
+- A fila de conciliação podia ficar permanentemente vazia: `numeric` chega do
+  PostgREST como string, e a comparação de saldo com zero falhava em silêncio.
+- Uma falha ao gravar as sugestões não marca mais a rodada inteira do cron como
+  falha nem pula as organizações seguintes.
+
+### Adicionado
+
+- Entrada de **Conciliação** no menu e botão na tela do Financeiro.
+
+### Alterado
+
+- `TIPOS_FISCAIS` voltou ao que a medição de 11/09/2026 cobriu: só `NF`.
+
 ## [0.113.0] - 2026-09-16
 
 O Loca passa a fechar a ponta que faltava na integração com o Mega: sabia o

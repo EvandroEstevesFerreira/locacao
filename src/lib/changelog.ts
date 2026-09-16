@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.113.0";
+export const APP_VERSION = "0.113.1";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,33 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.113.1",
+    data: "2026-09-16",
+    titulo: "Ajustes na conciliação com o Mega",
+    mudancas: [
+      {
+        tipo: "correcao",
+        texto:
+          "Confirmar uma baixa pela conciliação não altera mais o número da nota fiscal do lançamento. O número que vem do Mega costuma ser genérico e apagava o que tinha sido digitado à mão.",
+      },
+      {
+        tipo: "correcao",
+        texto:
+          "A fila de conciliação podia aparecer sempre vazia, sem aviso nenhum, por causa de como os valores chegavam do banco.",
+      },
+      {
+        tipo: "melhoria",
+        texto:
+          "A conciliação ganhou entrada no menu e um botão na tela do Financeiro — antes só dava para chegar nela pelo endereço.",
+      },
+      {
+        tipo: "melhoria",
+        texto:
+          "Uma falha ao propor as sugestões não interrompe mais a sincronização diária com o Mega das demais organizações.",
+      },
+    ],
+  },
   {
     versao: "0.113.0",
     data: "2026-09-16",
