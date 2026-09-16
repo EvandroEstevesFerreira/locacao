@@ -7,6 +7,22 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.113.0] - 2026-09-16
+
+O Loca passa a fechar a ponta que faltava na integração com o Mega: sabia o
+que estava contratado e o que corria, mas não sabia dizer o que já tinha sido
+pago. Agora sabe, e propõe -- a decisão continua sendo de uma pessoa.
+
+### Adicionado
+- Tela de conciliação da baixa: lista o que o Mega já pagou e o Loca ainda não
+  baixou, com o motivo da sugestão e a diferença de valor quando o pago diverge
+  do esperado (multa, juro ou desconto).
+- Confirmar, recusar e desfazer a recusa ("Devolver à fila") de cada sugestão.
+  Nenhuma baixa acontece sem clique humano.
+- `espelho-nao-da-baixa.test.ts` mudou de forma: já não cobra a ausência de
+  baixa (ela passou a existir), passa a cobrar que a baixa nunca ocorra sem
+  confirmação humana e que o espelho do Mega continue somente leitura.
+
 ## [0.112.2] - 2026-09-11
 
 Duas afirmacoes do AGENTS.md contradiziam o que o proprio AGENTS.md passou a

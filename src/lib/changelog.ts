@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.112.2";
+export const APP_VERSION = "0.113.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,28 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.113.0",
+    data: "2026-09-16",
+    titulo: "Conciliação da baixa com o Mega",
+    mudancas: [
+      {
+        tipo: "novo",
+        texto:
+          "O Loca agora mostra o que o Mega já pagou e ainda não tem baixa no sistema, com uma sugestão de qual lançamento cada pagamento resolve.",
+      },
+      {
+        tipo: "novo",
+        texto:
+          "Cada sugestão vem com o motivo do sistema ter apontado aquele lançamento, e mostra a diferença quando o valor pago não bate com o esperado — para você saber se é multa, juro ou desconto.",
+      },
+      {
+        tipo: "novo",
+        texto:
+          "Nada é baixado sozinho: você confirma ou recusa cada sugestão com um clique. Recusou por engano? A sugestão volta para a fila pelo botão Devolver à fila.",
+      },
+    ],
+  },
   {
     versao: "0.112.2",
     data: "2026-09-11",
