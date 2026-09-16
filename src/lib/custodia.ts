@@ -516,46 +516,6 @@ export function lembreteValido(p: {
 }
 
 /**
- * A transferência de custódia, de uma pessoa para outra.
- *
- * Um formulário só, dois documentos. Ele encerra o termo de quem está com a
- * peça e — quando o destinatário é informado — deixa anotado para quem ela vai,
- * de modo que o segundo passo saiba de onde retomar.
- *
- * O DESTINATÁRIO É OPCIONAL de propósito. "Devolveu e ainda não sei para quem
- * vai" é caso tão real quanto "vou herdar a máquina do André", e obrigar um
- * nome ali faria quem não sabe inventar um.
- */
-export const transferirCustodiaSchema = z
-  .object({
-    unidade_id: z.string().uuid(),
-    data_devolucao: z.string().min(1, "Informe a data da devolução."),
-    estado_devolucao: z.enum(ESTADOS),
-    observacoes: textoOpcional(300),
-    /** Nome de quem devolve, como sai no documento. */
-    assinante: z.string().trim().min(1, "Informe o nome de quem devolve."),
-    /** A imagem da assinatura, quando houve assinatura. */
-    assinatura: opcional,
-    motivo_sem_assinatura: textoOpcional(300),
-    destinatario_id: z.string().uuid().nullable().optional().default(null),
-  })
-  .refine(
-    (v) =>
-      podeEncerrarDevolucao({
-        assinou: Boolean(v.assinatura),
-        motivo: v.motivo_sem_assinatura,
-      }).ok,
-    {
-      path: ["motivo_sem_assinatura"],
-      message:
-        "Sem a assinatura de quem devolve, escreva o motivo com ao menos 10 caracteres.",
-    },
-  );
-
-export type TransferirCustodiaInput = z.input<typeof transferirCustodiaSchema>;
-export type TransferirCustodiaDados = z.output<typeof transferirCustodiaSchema>;
-
-/**
  * A posse sai da primeira leitura do histórico?
  *
  * Posse de termo cancelado sai — o mutirão de regularização deixou 48 delas, e

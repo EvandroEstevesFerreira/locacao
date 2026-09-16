@@ -38,6 +38,16 @@ export const CHANGELOG: Release[] = [
         texto:
           "O card \"Movimentar\", na ficha da peça, ganha o destino Funcionário e a devolução assinada — antes espalhados em três lugares diferentes.",
       },
+      {
+        tipo: "melhoria",
+        texto:
+          "A tela antiga de transferência de peça foi desativada — todo movimento agora passa pelo card \"Movimentar\", inclusive pelas mesmas verificações de segurança.",
+      },
+      {
+        tipo: "melhoria",
+        texto:
+          "Na ficha da peça, o campo Observações avisa quando o texto pode vir da carga inicial da planilha e lembra que o histórico de custódia é a fonte atual.",
+      },
     ],
   },
   {

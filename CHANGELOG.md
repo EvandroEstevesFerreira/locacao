@@ -17,6 +17,18 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
   "Entregar a funcionário" saem do cabeçalho: a movimentação inteira passa a
   viver num só lugar.
 
+### Corrigido
+
+- A rota `/frota/[id]/transferir` foi removida. Ela escrevia custódia sem as
+  travas da porta única (termo em aberto, matriz de transição) e continuava
+  acessível por URL, favorito ou histórico do navegador enquanto existia.
+
+### Alterado
+
+- Na ficha da peça, o campo Observações ganha um aviso: parte do texto pode
+  vir da carga inicial da planilha, não é atualizado pelo sistema, e o
+  histórico de custódia abaixo é que reflete a situação atual.
+
 ## [0.114.0] - 2026-09-16
 
 ### Corrigido

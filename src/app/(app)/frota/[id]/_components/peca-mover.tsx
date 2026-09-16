@@ -21,7 +21,7 @@ type Destino = "funcionario" | "obra" | "almoxarifado" | "fornecedor";
  * Mover a peça — a porta única. Reúne os quatro destinos (inclusive
  * "funcionário", que antes só existia no termo) e, quando a peça sai de uma
  * pessoa, a devolução assinada — antes um formulário à parte em
- * `/frota/[id]/transferir`.
+ * `/frota/[id]/transferir`, rota já removida.
  */
 export function PecaMover({
   unidadeId,

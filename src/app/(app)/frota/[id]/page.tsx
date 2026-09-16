@@ -187,7 +187,14 @@ export default async function PecaDetalhePage({
             </>
           ) : null}
           {peca.observacoes ? (
-            <Campo label="Observações" valor={peca.observacoes} span />
+            <>
+              <Campo label="Observações" valor={peca.observacoes} span />
+              <p className="text-xs text-muted-foreground sm:col-span-3">
+                Pode incluir texto da carga inicial da planilha. Não é
+                atualizado pelo sistema — o histórico de custódia abaixo é a
+                fonte atual.
+              </p>
+            </>
           ) : null}
         </CardContent>
       </Card>

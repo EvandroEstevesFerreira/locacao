@@ -200,6 +200,16 @@ estado atual.
 
 | Frente | O que foi feito | Falta | % concluído |
 | --- | --- | --- | --- |
-| Movimentação de peça | Desenho aprovado e escrito | Plano, action única, formulário, situação deduzida, as três limpezas, testes | 10% |
+| Movimentação de peça | Porta única implementada (action, formulário, situação deduzida), rota antiga `/frota/[id]/transferir` removida, aviso na Observações herdadas da planilha, testes e ritual completo passando | Nada — escopo do plano encerrado | 100% |
 
-Próximo passo único: escrever o plano de implementação.
+Fora de escopo de propósito:
+- Reescrever `equipamento_unidade.observacoes` em coluna dedicada para o texto
+  da carga inicial: o campo é compartilhado com observações digitadas pelo
+  usuário no formulário de edição da peça, então relabelar destruiria a
+  semântica de um campo que as pessoas usam ativamente. A solução foi só um
+  aviso ao lado do rótulo existente.
+- Backfill ou limpeza dos textos importados da planilha: são dado de origem
+  (source-of-record da carga inicial) e não são apagados nem reescritos.
+
+Próximo passo único: nenhum — a frente está fechada; próxima ação é normal de
+backlog, não desta spec.
