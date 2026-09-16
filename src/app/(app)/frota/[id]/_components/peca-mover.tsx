@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
-import { moverPeca } from "../../actions";
+import { movimentarPeca } from "../../actions";
 
 type Destino = "almoxarifado" | "obra" | "fornecedor";
 
@@ -40,13 +40,18 @@ export function PecaMover({
   function mover() {
     setErro(null);
     iniciar(async () => {
-      const r = await moverPeca({
+      const r = await movimentarPeca({
         unidade_id: unidadeId,
         tipo,
         obra_id: obraId || null,
         fornecedor_id: fornecedorId || null,
+        funcionario_id: null,
         data,
         observacoes: observacoes || null,
+        situacao_final: null,
+        estado_devolucao: null,
+        assinatura_devolucao: null,
+        motivo_sem_assinatura: null,
       });
       if (!r.ok) return setErro(r.erro);
       setObservacoes("");

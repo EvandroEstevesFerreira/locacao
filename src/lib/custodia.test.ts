@@ -6,7 +6,7 @@ import {
   diasDePosse,
   descreverPeriodo,
   montarLinhaDoTempo,
-  moverPecaSchema,
+  movimentarPecaSchema,
   editarPecaSchema,
   posseOculta,
   type Posse,
@@ -217,57 +217,78 @@ describe("montarLinhaDoTempo", () => {
   });
 });
 
-describe("moverPecaSchema", () => {
-  it("mover para obra exige a obra", () => {
-    const r = moverPecaSchema.safeParse({
-      unidade_id: UUID,
-      tipo: "obra",
-      obra_id: "",
-      fornecedor_id: "",
-      data: "2026-09-02",
-      observacoes: "",
-    });
-    expect(r.success).toBe(false);
-    if (!r.success) expect(r.error.issues[0].message).toBe("Selecione a obra.");
+const baseMov = {
+  unidade_id: UUID,
+  tipo: "almoxarifado" as const,
+  obra_id: null,
+  fornecedor_id: null,
+  funcionario_id: null,
+  data: "2026-09-16",
+  observacoes: null,
+  situacao_final: null,
+  estado_devolucao: null,
+  assinatura_devolucao: null,
+  motivo_sem_assinatura: null,
+};
+
+describe("movimentarPecaSchema", () => {
+  it("aceita a volta ao almoxarifado sem mais nada", () => {
+    expect(movimentarPecaSchema.safeParse(baseMov).success).toBe(true);
   });
 
-  it("mandar para manutenção exige o fornecedor", () => {
-    const r = moverPecaSchema.safeParse({
-      unidade_id: UUID,
-      tipo: "fornecedor",
-      obra_id: "",
-      fornecedor_id: "",
-      data: "2026-09-02",
-      observacoes: "",
-    });
+  it("obra sem obra_id é recusada", () => {
+    const r = movimentarPecaSchema.safeParse({ ...baseMov, tipo: "obra" });
+    expect(r.success).toBe(false);
+    if (!r.success) {
+      expect(r.error.issues[0].message).toBe("Selecione a obra de destino.");
+    }
+  });
+
+  it("fornecedor sem fornecedor_id é recusado", () => {
+    const r = movimentarPecaSchema.safeParse({ ...baseMov, tipo: "fornecedor" });
     expect(r.success).toBe(false);
     if (!r.success) expect(r.error.issues[0].message).toBe("Selecione o fornecedor.");
   });
 
-  it("almoxarifado não exige vínculo nenhum", () => {
-    const r = moverPecaSchema.safeParse({
-      unidade_id: UUID,
-      tipo: "almoxarifado",
-      obra_id: "",
-      fornecedor_id: "",
-      data: "2026-09-02",
-      observacoes: "",
+  it("funcionário sem funcionario_id é recusado", () => {
+    const r = movimentarPecaSchema.safeParse({ ...baseMov, tipo: "funcionario" });
+    expect(r.success).toBe(false);
+    if (!r.success) {
+      expect(r.error.issues[0].message).toBe("Selecione quem vai receber a peça.");
+    }
+  });
+
+  it("funcionário É destino, ao contrário do schema antigo", () => {
+    // A porta única. A posse de pessoa continua nascendo só do termo — quem
+    // garante isso é a action, não a ausência do destino no tipo.
+    const r = movimentarPecaSchema.safeParse({
+      ...baseMov,
+      tipo: "funcionario",
+      funcionario_id: UUID,
     });
     expect(r.success).toBe(true);
   });
 
-  it("NÃO aceita mover para funcionário", () => {
-    // Decisão de projeto no sistema de tipos: posse de pessoa nasce só por
-    // termo assinado. Um caminho manual seria a segunda fonte de verdade.
-    const r = moverPecaSchema.safeParse({
-      unidade_id: UUID,
-      tipo: "funcionario",
-      obra_id: "",
-      fornecedor_id: "",
-      data: "2026-09-02",
-      observacoes: "",
-    });
-    expect(r.success).toBe(false);
+  it("recusa situação deduzida vinda do cliente", () => {
+    // `em_uso` e `manutencao` saem da posse. Aceitá-las aqui deixaria o cliente
+    // gravar uma situação que contradiz onde a peça está — a divergência que
+    // este trabalho inteiro existe para fechar.
+    for (const s of ["em_uso", "manutencao"]) {
+      const r = movimentarPecaSchema.safeParse({ ...baseMov, situacao_final: s });
+      expect(r.success, `${s} deveria ser recusada`).toBe(false);
+      if (!r.success) {
+        expect(r.error.issues[0].message).toBe(
+          "Esta situação é definida pela posse, não escolhida.",
+        );
+      }
+    }
+  });
+
+  it("aceita baixada e perdida, que são decisão humana", () => {
+    for (const s of ["disponivel", "baixada", "perdida"]) {
+      const r = movimentarPecaSchema.safeParse({ ...baseMov, situacao_final: s });
+      expect(r.success, `${s} deveria ser aceita`).toBe(true);
+    }
   });
 });
 

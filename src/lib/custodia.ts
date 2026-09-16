@@ -196,33 +196,85 @@ const imeiOpcional = opcional.refine((v) => v === null || /^\d{15}$/.test(v), {
 const estadoOpcional = enumOpcional(ESTADOS);
 
 /**
- * Mover a peça — e `funcionario` NÃO está entre os destinos.
+ * A situação que uma pessoa pode ESCOLHER.
  *
- * Posse de pessoa nasce só por termo assinado (decisão de 02/09/2026). O botão
- * de entregar leva a `/termos/novo`. Duas portas para "entregar ao Fulano",
- * uma com assinatura e outra sem, produziriam a divergência que o Loca existe
- * para eliminar — então a porta sem assinatura não existe nem no tipo.
+ * `baixada` e `perdida` não se deduzem de lugar nenhum: uma peça baixada pode
+ * estar em qualquer canto, e uma perdida não está em canto que se saiba.
+ * `disponivel` entra para permitir o conserto de um engano. As outras duas são
+ * consequência da posse, e por isso a recusa aqui traz o motivo em vez do erro
+ * genérico do enum — quem tentou gravar `em_uso` precisa saber que o caminho é
+ * mover a peça, não mudar o rótulo.
  */
-export const moverPecaSchema = z
+const situacaoFinalOpcional = opcional
+  .refine(
+    (v) => v === null || v === "disponivel" || v === "baixada" || v === "perdida",
+    { message: "Esta situação é definida pela posse, não escolhida." },
+  )
+  .transform((v) => v as "disponivel" | "baixada" | "perdida" | null);
+
+/**
+ * A MOVIMENTAÇÃO DA PEÇA — uma porta só, com todos os destinos.
+ *
+ * Eram três: o card "Movimentar" (almoxarifado, obra, fornecedor), o botão
+ * "Transferir custódia" (só quando uma pessoa estava com ela) e "Novo termo".
+ * Quem procurava como entregar a peça ao Fulano não achava, porque esse
+ * caminho não estava no formulário chamado "Movimentar" — e a forma de
+ * descobri-lo era saber de antemão que ele existia em outro lugar.
+ *
+ * `funcionario` ENTRA como destino, e isso não afrouxa a regra de 02/09/2026:
+ * a posse de pessoa continua nascendo só do termo assinado. O que esta action
+ * faz quando o destino é pessoa é preparar o caminho — encerrar o que estava
+ * aberto — e devolver o controle para quem emite o termo. A porta é uma; o
+ * documento continua sendo exigido.
+ */
+export const movimentarPecaSchema = z
   .object({
     unidade_id: z.string().uuid("Peça inválida."),
-    tipo: z.enum(["almoxarifado", "obra", "fornecedor"]),
+    tipo: z.enum(["almoxarifado", "obra", "fornecedor", "funcionario"]),
     obra_id: uuidOpcional,
     fornecedor_id: uuidOpcional,
+    funcionario_id: uuidOpcional,
     data: z.string().min(1, "Informe a data da movimentação."),
     observacoes: textoOpcional(300),
+    /**
+     * A situação escolhida À MÃO — e só as três que não se deduzem.
+     *
+     * `em_uso` e `manutencao` saem de `situacaoDaPosse`. Aceitá-las aqui
+     * deixaria o cliente gravar uma situação que contradiz onde a peça está,
+     * que é exatamente a divergência que esta porta única existe para fechar.
+     */
+    situacao_final: situacaoFinalOpcional,
+    /** Os três campos abaixo só valem quando a peça está saindo de uma pessoa. */
+    estado_devolucao: enumOpcional(ESTADOS),
+    assinatura_devolucao: opcional,
+    motivo_sem_assinatura: textoOpcional(300),
   })
-  .refine((v) => v.tipo !== "obra" || v.obra_id !== null, {
-    message: "Selecione a obra.",
-    path: ["obra_id"],
-  })
-  .refine((v) => v.tipo !== "fornecedor" || v.fornecedor_id !== null, {
-    message: "Selecione o fornecedor.",
-    path: ["fornecedor_id"],
+  .superRefine((v, ctx) => {
+    if (v.tipo === "obra" && v.obra_id === null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["obra_id"],
+        message: "Selecione a obra de destino.",
+      });
+    }
+    if (v.tipo === "fornecedor" && v.fornecedor_id === null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["fornecedor_id"],
+        message: "Selecione o fornecedor.",
+      });
+    }
+    if (v.tipo === "funcionario" && v.funcionario_id === null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["funcionario_id"],
+        message: "Selecione quem vai receber a peça.",
+      });
+    }
   });
 
-export type MoverPecaInput = z.input<typeof moverPecaSchema>;
-export type MoverPecaDados = z.output<typeof moverPecaSchema>;
+export type MovimentarPecaInput = z.input<typeof movimentarPecaSchema>;
+export type MovimentarPecaDados = z.output<typeof movimentarPecaSchema>;
 
 /**
  * Editar a peça — sem obra e sem situação, de propósito.

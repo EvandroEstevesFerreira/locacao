@@ -7,6 +7,23 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.115.0] - 2026-09-16
+
+### Adicionado
+
+- `movimentarPeca`: uma action única para toda mudança de posse da peça, com
+  `funcionario` entre os destinos. Quando a peça sai de uma pessoa, a
+  devolução é registrada e o termo encerrado ANTES de a posse mudar — e o
+  termo é descoberto no servidor, a partir da posse aberta, nunca recebido do
+  cliente. Substitui `moverPeca`.
+- `movimentarPecaSchema` em `src/lib/custodia.ts`, com a validação cruzada dos
+  destinos e a recusa de `em_uso`/`manutencao` como situação escolhida: essas
+  duas saem de `situacaoDaPosse`.
+
+### Removido
+
+- `moverPeca` e `moverPecaSchema`, absorvidos pela porta única.
+
 ## [0.114.0] - 2026-09-16
 
 ### Corrigido

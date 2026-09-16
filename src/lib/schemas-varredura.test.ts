@@ -161,7 +161,7 @@ const AMOSTRAS: Record<string, unknown> = {
   },
   // Qualificadas por módulo: `catalogo.ts` também exporta `categoriaSchema`.
   "frota.categoriaSchema": { nome: "Concretagem" },
-  moverPecaSchema: {
+  movimentarPecaSchema: {
     unidade_id: UUID,
     tipo: "almoxarifado",
     data: "2026-09-02",
