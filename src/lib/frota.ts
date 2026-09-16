@@ -141,10 +141,28 @@ const MATRIZ: Record<Situacao, Partial<Record<Situacao, Origem[]>>> = {
     // baixada e perdida NÃO entram de propósito. Ver `motivoBloqueio`.
   },
   manutencao: {
-    // Passa por `disponivel` antes de voltar a uso: é onde alguém confere que a
-    // peça voltou inteira.
+    // Volta do fornecedor para o almoxarifado: é onde alguém confere que a peça
+    // voltou inteira. `manual` porque `mudarSituacao` também precisa reverter
+    // um "mandei para manutenção" digitado por engano.
     disponivel: ["manual"],
+    // A PEÇA VOLTA DA OFICINA DIRETO PARA A OBRA.
+    //
+    // Nasceu proibida, e a proibição produzia a pior mensagem do sistema: quem
+    // escolhia "Obra" em Movimentar ouvia "«Em uso» é definido pelo termo de
+    // responsabilidade, não à mão" — uma frase sobre um termo que ninguém
+    // mencionou, sem instrução que se possa seguir.
+    //
+    // Obrigar a passar pelo almoxarifado antes não protegia nada: a peça não
+    // passa por lá de verdade, e a parada de zero dia que o livro ganharia
+    // seria mentira registrada. É o mesmo argumento que abriu
+    // `em_uso → manutencao` — quem autoriza é a movimentação da posse, por
+    // isso `evento` e não `manual`. Digitar "Em uso" à mão continua barrado.
+    em_uso: ["evento"],
     baixada: ["manual"],
+    // A peça se perdeu na oficina. Não se deduz de posse nenhuma, então é
+    // decisão — e o card de situação precisa poder oferecê-la a partir daqui,
+    // senão a escolha existiria só para peça disponível.
+    perdida: ["manual"],
   },
   baixada: {
     // Reversão de erro de digitação.
@@ -178,6 +196,20 @@ export function motivoBloqueio(de: Situacao, para: Situacao): string | null {
   if (de === "em_uso") {
     return "A peça está em uso. Encerre o termo de responsabilidade antes de baixá-la.";
   }
+  // A RECUSA É A INSTRUÇÃO, e ela tem de falar do que a pessoa acabou de fazer.
+  //
+  // `baixada` e `perdida` recusam tudo menos a volta a `disponivel`, e isso
+  // está certo: material sucateado ou perdido não volta ao serviço em silêncio.
+  // O que estava errado era a frase — quem escolhia "Obra" em Movimentar com
+  // uma peça baixada ouvia "«Em uso» é definido pelo termo de responsabilidade",
+  // sobre um termo que ele não mencionou e sem dizer o que fazer. O caminho
+  // existe, tem dois passos, e agora está escrito.
+  if (de === "baixada") {
+    return "Esta peça está baixada. Traga-a de volta para “Disponível” no card “Situação da peça” antes de movimentá-la.";
+  }
+  if (de === "perdida") {
+    return "Esta peça consta como perdida. Marque-a como “Disponível” no card “Situação da peça” antes de movimentá-la.";
+  }
   if (para === "em_uso") {
     return "“Em uso” é definido pelo termo de responsabilidade, não à mão.";
   }
@@ -192,6 +224,31 @@ export function motivoBloqueio(de: Situacao, para: Situacao): string | null {
  */
 export function transicoesManuais(de: Situacao): Situacao[] {
   return SITUACOES.filter((s) => podeTransicionar(de, s, "manual"));
+}
+
+/**
+ * Os destinos que o card "Situação da peça" pode oferecer — só as DECISÕES.
+ *
+ * `transicoesManuais` sozinha contradizia a premissa desta fatia. Ela oferecia
+ * `disponivel → manutencao`, e dois cliques bastavam para o cadastro dizer "Em
+ * manutenção" com o livro de custódia dizendo "Almoxarifado central", sem nada
+ * na tela denunciando — o estado exato que `situacaoDaPosse` existe para
+ * impedir. A peça ainda sumia de `/termos/novo` e o card Movimentar a recusava.
+ *
+ * A regra: situação DEDUZIDA da posse (`disponivel`, `em_uso`, `manutencao`)
+ * não se escolhe aqui — ela muda movendo a peça, que é o ato que a produz. O
+ * que sobra para a mão é o que não se deduz de posse nenhuma (`baixada`,
+ * `perdida`) e a REVERSÃO desses dois, que ninguém pode deduzir de lugar
+ * nenhum: uma peça baixada por engano precisa de um caminho de volta, e ele é
+ * digitado.
+ *
+ * A própria situação atual continua na lista: o `select` precisa mostrar o
+ * valor de agora, e salvar sem mexer nunca é erro.
+ */
+export function transicoesDeDecisao(de: Situacao): Situacao[] {
+  return transicoesManuais(de).filter(
+    (s) => s === de || !situacaoEhDeduzida(s) || !situacaoEhDeduzida(de),
+  );
 }
 
 // ── Schema ───────────────────────────────────────────────────────────────────

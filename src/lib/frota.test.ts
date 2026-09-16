@@ -4,6 +4,7 @@ import {
   podeTransicionar,
   motivoBloqueio,
   transicoesManuais,
+  transicoesDeDecisao,
   unidadeSchema,
   situacaoDaPosse,
   situacaoEhDeduzida,
@@ -63,11 +64,23 @@ describe("podeTransicionar — a matriz inteira", () => {
     }
   });
 
-  it("manutenção não pula direto para em uso", () => {
-    // Peça em manutenção precisa passar por disponível: é onde alguém confere
-    // que ela voltou inteira.
-    expect(podeTransicionar("manutencao", "em_uso", "evento")).toBe(false);
+  it("manutenção VOLTA direto para em uso por evento — da oficina à obra", () => {
+    // A peça consertada que volta para o canteiro é movimentação de verdade.
+    // Obrigar a passar pelo almoxarifado antes registraria no livro uma parada
+    // de zero dia que não houve, e a recusa que o usuário via falava de um
+    // termo de responsabilidade que ele não tinha mencionado.
+    expect(podeTransicionar("manutencao", "em_uso", "evento")).toBe(true);
+    // À MÃO continua proibido: "em uso" não se digita.
     expect(podeTransicionar("manutencao", "em_uso", "manual")).toBe(false);
+  });
+
+  it("baixada e perdida não vão para lugar nenhum além de disponível", () => {
+    for (const de of ["baixada", "perdida"] as const) {
+      for (const para of ["em_uso", "manutencao"] as const) {
+        expect(podeTransicionar(de, para, "manual")).toBe(false);
+        expect(podeTransicionar(de, para, "evento")).toBe(false);
+      }
+    }
   });
 });
 
@@ -81,6 +94,30 @@ describe("motivoBloqueio", () => {
   it("explica que em uso depende de evento", () => {
     expect(motivoBloqueio("disponivel", "em_uso")).toBe(
       "“Em uso” é definido pelo termo de responsabilidade, não à mão.",
+    );
+  });
+
+  it("diz o caminho de volta da peça baixada, e não fala de termo", () => {
+    // A frase que aparecia era "«Em uso» é definido pelo termo de
+    // responsabilidade" — sobre um termo que quem clicou não mencionou, e sem
+    // nenhuma instrução que ele pudesse seguir.
+    expect(motivoBloqueio("baixada", "em_uso")).toBe(
+      "Esta peça está baixada. Traga-a de volta para “Disponível” no card “Situação da peça” antes de movimentá-la.",
+    );
+    expect(motivoBloqueio("perdida", "em_uso")).toBe(
+      "Esta peça consta como perdida. Marque-a como “Disponível” no card “Situação da peça” antes de movimentá-la.",
+    );
+  });
+
+  it("diz o caminho de volta da peça baixada, e não fala de termo", () => {
+    // A frase que aparecia era "«Em uso» é definido pelo termo de
+    // responsabilidade" — sobre um termo que quem clicou não mencionou, e sem
+    // nenhuma instrução que ele pudesse seguir.
+    expect(motivoBloqueio("baixada", "em_uso")).toBe(
+      "Esta peça está baixada. Traga-a de volta para “Disponível” no card “Situação da peça” antes de movimentá-la.",
+    );
+    expect(motivoBloqueio("perdida", "em_uso")).toBe(
+      "Esta peça consta como perdida. Marque-a como “Disponível” no card “Situação da peça” antes de movimentá-la.",
     );
   });
 
@@ -100,10 +137,51 @@ describe("transicoesManuais", () => {
     expect(transicoesManuais("em_uso")).toEqual(["em_uso"]);
   });
 
-  it("manutenção oferece volta e baixa", () => {
+  it("manutenção oferece volta, baixa e perda", () => {
     expect(transicoesManuais("manutencao").sort()).toEqual(
-      ["baixada", "disponivel", "manutencao"].sort(),
+      ["baixada", "disponivel", "manutencao", "perdida"].sort(),
     );
+  });
+});
+
+describe("transicoesDeDecisao — o que o card de situação pode oferecer", () => {
+  it("peça disponível não pode ser mandada para manutenção pelo card", () => {
+    // Era o buraco que contradizia a fatia inteira: dois cliques e o cadastro
+    // dizia "Em manutenção" com o livro dizendo "Almoxarifado central".
+    // Manutenção é DEDUZIDA da posse no fornecedor, e quem a produz é o card
+    // "Movimentar".
+    expect(transicoesDeDecisao("disponivel").sort()).toEqual(
+      ["baixada", "disponivel", "perdida"].sort(),
+    );
+  });
+
+  it("de manutenção só saem as decisões — a volta é movimentação", () => {
+    expect(transicoesDeDecisao("manutencao").sort()).toEqual(
+      ["baixada", "manutencao", "perdida"].sort(),
+    );
+  });
+
+  it("baixada e perdida mantêm a reversão para disponível", () => {
+    // A exceção que a regra precisa ter: erro de digitação não se deduz de
+    // posse nenhuma, e sem ela a peça baixada por engano ficaria presa.
+    expect(transicoesDeDecisao("baixada").sort()).toEqual(
+      ["baixada", "disponivel"].sort(),
+    );
+    expect(transicoesDeDecisao("perdida").sort()).toEqual(
+      ["disponivel", "perdida"].sort(),
+    );
+  });
+
+  it("nunca oferece uma situação deduzida como destino novo", () => {
+    // SEM ISTO A REGRA ENVELHECE: uma transição manual nova para `em_uso` ou
+    // `manutencao` entraria na matriz e voltaria a aparecer no card.
+    for (const de of SITUACOES) {
+      for (const para of transicoesDeDecisao(de)) {
+        if (para === de) continue;
+        const ehReversao = !situacaoEhDeduzida(de);
+        expect(!situacaoEhDeduzida(para) || ehReversao).toBe(true);
+      }
+    }
   });
 });
 
