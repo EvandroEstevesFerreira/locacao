@@ -111,6 +111,41 @@ export async function movimentarPeca(raw: unknown): Promise<ActionResult> {
   // recusa de mexer em peça em uso existia porque esta action não sabia
   // encerrar termo, e agora sabe. Fora daí, `de` é a situação de verdade.
   const saiDePessoa = posseAtual?.tipo === "funcionario";
+
+  // ── A POSSE SOZINHA NÃO SABE SE ALGUÉM ASSINOU POR ESTA PEÇA ─────────────
+  //
+  // O banco garante a implicação em UMA direção só:
+  // `custodia_funcionario_exige_termo` (migration 0059) obriga posse de
+  // funcionário a ter termo — e nada obriga termo aberto a ter posse. Uma peça
+  // nesse estado chega aqui com `posseAtual` de obra, ou sem posse nenhuma, e
+  // `saiDePessoa` é falso: ela seguiria para o fornecedor com um termo assinado
+  // ainda aberto, dizendo que uma pessoa com nome responde por equipamento que
+  // não está mais com ela.
+  //
+  // Hoje essa combinação é anomalia de dado. Foi assim que nasceu a anomalia
+  // que a Task 1 corrigiu, e "só acontece com dado ruim" é o motivo pelo qual
+  // registro e livro puderam discordar em primeiro lugar.
+  //
+  // A consulta roda SÓ neste ramo: quando `saiDePessoa` é verdadeiro, a
+  // devolução logo abaixo já cuida do termo, e perguntar de novo seria cobrar
+  // duas vezes pela mesma resposta.
+  if (!saiDePessoa) {
+    const aberto = await temTermoEmAberto(supabase, d.unidade_id);
+    if (aberto === null) {
+      // FECHA A PORTA quando não dá para saber. Seguir em frente aqui é
+      // apostar que não há termo, e a aposta perdida é um documento assinado
+      // que continua valendo sobre peça que foi para outro lugar.
+      return falha(
+        "Não consegui conferir se esta peça está em algum termo de responsabilidade. Tente de novo em instantes.",
+      );
+    }
+    if (aberto) {
+      return falha(
+        "Esta peça está em um termo de responsabilidade em aberto. Registre a devolução no termo antes de movimentá-la.",
+      );
+    }
+  }
+
   const de: Situacao = saiDePessoa ? "disponivel" : situacaoAtual;
   //
   // A ORIGEM informada à matriz depende do que se está pedindo. `baixada` e
@@ -209,6 +244,37 @@ export async function movimentarPeca(raw: unknown): Promise<ActionResult> {
 
   revalidarMovimentacao(d.unidade_id);
   return { ok: true, id: d.unidade_id };
+}
+
+/**
+ * Esta peça está em algum termo de responsabilidade que ainda corre?
+ *
+ * Item sem `data_devolucao`, em termo que não foi encerrado nem cancelado. O
+ * `!inner` é o que faz o filtro do termo valer como filtro da consulta — sem
+ * ele o PostgREST devolveria o item com o termo nulo e a pergunta responderia
+ * "sim" para termo já encerrado.
+ *
+ * `null` é "não sei", e quem chama trata como bloqueio. Devolver `false` num
+ * erro de leitura transformaria falha de rede em autorização.
+ */
+async function temTermoEmAberto(
+  supabase: Cliente,
+  unidadeId: string,
+): Promise<boolean | null> {
+  const { data, error } = await supabase
+    .from("termo_equipamento_item")
+    .select("id, termo:termo_id!inner(encerrado_em, cancelado_em)")
+    .eq("unidade_id", unidadeId)
+    .is("data_devolucao", null)
+    .is("termo.encerrado_em", null)
+    .is("termo.cancelado_em", null)
+    .limit(1);
+
+  if (error) {
+    console.error("temTermoEmAberto", error);
+    return null;
+  }
+  return (data?.length ?? 0) > 0;
 }
 
 /**
