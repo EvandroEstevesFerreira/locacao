@@ -44,8 +44,12 @@ export function LinhaSugestao({ item }: { item: ItemFila }) {
   const [pendente, startTransition] = useTransition();
 
   const conf = CONFIANCA[item.confianca];
+  // Lê o ESTADO `valorPago`, não `item.valorPago`: o usuário pode corrigir o
+  // valor pago antes de confirmar, e uma diferença calculada sobre o valor
+  // antigo mandaria atribuir multa/juros contra um número que já não aparece
+  // em lugar nenhum da tela.
   const diferenca =
-    item.lancamentoValor === null ? 0 : item.valorPago - item.lancamentoValor;
+    item.lancamentoValor === null ? 0 : valorPago - item.lancamentoValor;
 
   function confirmar() {
     setErro(null);
