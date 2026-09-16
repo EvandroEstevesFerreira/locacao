@@ -23,7 +23,23 @@ import type { TipoDetentor } from "@/lib/custodia";
 // `src/lib/custodia-varredura.test.ts` é o que reprova isso no CI.
 // ═══════════════════════════════════════════════════════════════════════════
 
-export type ResultadoCustodia = { ok: true } | { ok: false; erro: string };
+export type ResultadoCustodia =
+  | { ok: true }
+  | {
+      ok: false;
+      erro: string;
+      /**
+       * A POSSE JÁ ENTROU NO LIVRO, e o que falhou foi o passo seguinte.
+       *
+       * `abrirCustodia` tem duas falhas de naturezas opostas: o insert recusado
+       * (nada mudou, dá para tentar de novo) e o cache `obra_id` que não subiu
+       * (a posse é fato, e repetir a ação repetiria a posse). Quem chama
+       * precisa distinguir as duas para escolher entre `ok: false` e
+       * `ok: true` + `aviso` — devolver "falhou" depois de um passo
+       * irreversível manda o usuário tentar de novo sobre o que já aconteceu.
+       */
+      posseGravada?: boolean;
+    };
 
 export type AberturaCustodia = {
   orgId: string;
@@ -230,6 +246,9 @@ export async function abrirCustodia(
     // tela de Frota mostraria a peça no lugar antigo sem explicar por quê.
     return {
       ok: false,
+      // A posse ESTÁ no livro: quem chamou não pode tratar isto como "não
+      // aconteceu nada" e mandar tentar de novo.
+      posseGravada: true,
       erro:
         "A posse foi registrada, mas a localização da peça não mudou no cadastro — " +
         "provavelmente falta de permissão para alterar a peça. Avise um administrador.",
@@ -237,4 +256,43 @@ export async function abrirCustodia(
   }
 
   return { ok: true };
+}
+
+/**
+ * Apaga a parada de ZERO DIA que a devolução deixa quando a peça não para.
+ *
+ * `registrarDevolucao` → `liberarPecas` sempre abre uma posse de ALMOXARIFADO,
+ * e está certo: na esmagadora maioria das devoluções a peça volta mesmo para a
+ * prateleira. Mas quando a movimentação leva a peça da pessoa DIRETO para a
+ * obra, essa posse nasce e morre no mesmo dia — `abrirCustodia` a fecha com
+ * `fim = inicio` — e a linha do tempo ganha "Almoxarifado central — menos de 1
+ * dia" por uma parada que não existiu.
+ *
+ * `moverPecasDoTermo` já se desvia disso pulando o movimento; a porta única não
+ * pode pular, porque precisa mesmo abrir a posse de destino. Então limpa
+ * depois, e só o que ela própria acabou de produzir: as condições descrevem
+ * exatamente a linha da devolução automática — almoxarifado, origem `termo`,
+ * SEM termo amarrado, começando e terminando no mesmo dia.
+ *
+ * MORA AQUI, no escritor único, e não na action: apagar linha do livro de
+ * custódia é escrita de custódia, e escrita de custódia tem um endereço só.
+ *
+ * Falhar NÃO derruba a movimentação: a peça está no lugar certo, e o que sobra
+ * é uma linha feia no histórico. Por isso devolve `void` e loga.
+ */
+export async function descartarPassagemDeZeroDia(
+  supabase: Cliente,
+  { unidadeId, dia }: { unidadeId: string; dia: string },
+): Promise<void> {
+  const { error } = await supabase
+    .from("custodia_peca")
+    .delete()
+    .eq("unidade_id", unidadeId)
+    .eq("tipo", "almoxarifado")
+    .eq("origem", "termo")
+    .is("termo_id", null)
+    .eq("inicio", dia)
+    .eq("fim", dia);
+
+  if (error) console.error("descartarPassagemDeZeroDia", error);
 }

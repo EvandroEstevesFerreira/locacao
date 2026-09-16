@@ -51,6 +51,14 @@ export function PecaMover({
   const [pendente, iniciar] = useTransition();
 
   const saiDePessoa = posseAtual?.tipo === "funcionario";
+  // A PERGUNTA DA DEVOLUCAO VALE PARA TODA VOLTA AO ALMOXARIFADO.
+  //
+  // "ao devolver um equipamento devemos selecionar se ele fica disponivel" foi
+  // o pedido, e ele nao dizia "quando vier de uma pessoa". A peca que volta de
+  // uma obra esta tao `em_uso` quanto a que volta do Joao, e a peca que volta
+  // da oficina tambem pode ter voltado imprestavel. A escolha e real sempre que
+  // ha posse aberta e o destino e a prateleira.
+  const ehDevolucao = posseAtual !== null && tipo === "almoxarifado";
 
   function mover() {
     setErro(null);
@@ -63,7 +71,7 @@ export function PecaMover({
         funcionario_id: tipo === "funcionario" ? funcionarioId || null : null,
         data,
         observacoes: observacoes || null,
-        situacao_final: saiDePessoa && tipo === "almoxarifado" ? situacaoFinal : null,
+        situacao_final: ehDevolucao ? situacaoFinal : null,
         // NUNCA mandar `estado_devolucao` fora do caso de devolução: sozinho
         // ele acorda a exigência de assinatura-ou-motivo no schema, e uma
         // movimentação que não devolve nada de ninguém ficaria presa pedindo
@@ -226,7 +234,7 @@ export function PecaMover({
           </div>
         ) : null}
 
-        {saiDePessoa && tipo === "almoxarifado" ? (
+        {ehDevolucao ? (
           <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor="situacao_final">Como ela volta</Label>
             <NativeSelect

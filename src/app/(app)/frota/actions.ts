@@ -17,7 +17,11 @@ import {
   editarPecaSchema,
   podeEncerrarDevolucao,
 } from "@/lib/custodia";
-import { abrirCustodia, type Cliente } from "@/lib/custodia-servidor";
+import {
+  abrirCustodia,
+  descartarPassagemDeZeroDia,
+  type Cliente,
+} from "@/lib/custodia-servidor";
 import {
   amarrarPecaSchema,
   podeTransicionar,
@@ -146,15 +150,24 @@ export async function movimentarPeca(raw: unknown): Promise<ActionResult> {
     }
   }
 
-  const de: Situacao = saiDePessoa ? "disponivel" : situacaoAtual;
+  // A ORIGEM INFORMADA À MATRIZ: `em_uso` aqui NUNCA é o de um termo aberto.
   //
-  // A ORIGEM informada à matriz depende do que se está pedindo. `baixada` e
-  // `perdida` são decisão humana e só passam por `manual` — é o que mantém
-  // `em_uso → baixada` bloqueado com "encerre o termo antes". Já uma situação
-  // DEDUZIDA da posse não está sendo digitada por ninguém: mover a peça é o
-  // próprio evento que a muda, e aceitar as duas origens é o que permite a
-  // devolução de obra (`em_uso → disponivel`, que a matriz marca como
-  // "evento") sem reabrir a porta que a matriz fecha para `baixada`.
+  // Nenhum caminho chega a esta linha com termo em aberto sobre a peça: ou ela
+  // sai de uma pessoa, e a devolução logo abaixo encerra o termo, ou
+  // `temTermoEmAberto` já barrou. Então o `em_uso` que resta vem da POSSE — a
+  // peça está numa obra — e a movimentação é o próprio evento que o muda.
+  //
+  // Tratá-lo como `disponivel` é o que permite trazer da obra uma peça que vai
+  // ser BAIXADA: com `de = "em_uso"` a matriz recusaria com "encerre o termo de
+  // responsabilidade", sobre um termo que não existe. A proteção que a matriz
+  // dá ao `em_uso` assinado continua inteira em `mudarSituacao`, que é a porta
+  // da mão e não encerra termo nenhum.
+  const de: Situacao = situacaoAtual === "em_uso" ? "disponivel" : situacaoAtual;
+  //
+  // `baixada` e `perdida` são decisão humana e só passam por `manual`. Já uma
+  // situação DEDUZIDA da posse não está sendo digitada por ninguém: mover a
+  // peça é o evento que a muda, e aceitar as duas origens é o que permite a
+  // devolução de obra e a volta da oficina direto para o canteiro.
   const passa = manual
     ? podeTransicionar(de, destinoSituacao, "manual")
     : podeTransicionar(de, destinoSituacao, "manual") ||
@@ -187,7 +200,21 @@ export async function movimentarPeca(raw: unknown): Promise<ActionResult> {
       motivoSemAssinatura: d.motivo_sem_assinatura,
       empresa: perfil.nome ?? "—",
     });
-    if (!devolveu.ok) return devolveu;
+    if (!devolveu.ok) {
+      // A DEVOLUÇÃO NÃO É ATÔMICA, e o corte é em `encerrarTermo`. Antes dele
+      // nada saiu do lugar e `ok: false` é a verdade. Depois dele, não: a
+      // devolução já foi registrada e `liberarPecas` já pôs a peça no
+      // almoxarifado. Dizer "falhou" ali manda o usuário tentar de novo sobre
+      // uma peça que já voltou, e a segunda recusa ("já consta devolvida") é
+      // ainda menos compreensível que a primeira. É a mesma regra do passo 5.
+      if (!devolveu.posseJaMoveu) return falha(devolveu.erro);
+      revalidarMovimentacao(d.unidade_id);
+      return {
+        ok: true,
+        id: d.unidade_id,
+        aviso: `A peça voltou ao almoxarifado, mas o termo não foi encerrado e a movimentação parou aí. ${devolveu.erro}`,
+      };
+    }
   }
 
   // ── 4. A POSSE NOVA ──────────────────────────────────────────────────────
@@ -210,7 +237,35 @@ export async function movimentarPeca(raw: unknown): Promise<ActionResult> {
       origem: "manual",
       observacoes: d.observacoes,
     });
-    if (!r.ok) return falha(r.erro);
+    if (!r.ok) {
+      // MESMA REGRA DO PASSO 5. `abrirCustodia` falha de dois jeitos: o insert
+      // recusado, em que nada mudou, e o cache `obra_id` que não subiu, em que
+      // a posse JÁ está no livro. E quando a peça saía de uma pessoa, o termo
+      // já foi encerrado de todo modo. Nesses dois casos `ok: false` seria
+      // mentira e mandaria repetir o que não se repete.
+      if (!r.posseGravada && !saiDePessoa) return falha(r.erro);
+      revalidarMovimentacao(d.unidade_id);
+      return { ok: true, id: d.unidade_id, aviso: r.erro };
+    }
+
+    // A PASSAGEM DE ZERO DIA PELO ALMOXARIFADO NÃO VAI PARA O LIVRO.
+    //
+    // Quando a peça sai de uma pessoa e vai para qualquer lugar que não seja o
+    // almoxarifado, `liberarPecas` já abriu — necessariamente — uma posse de
+    // almoxarifado na data de hoje, e o `abrirCustodia` acima acabou de
+    // fechá-la com `fim = inicio`. Sem esta limpeza a ficha da peça passa a
+    // mostrar "Almoxarifado central — menos de 1 dia" por uma parada que não
+    // houve. É a mesma preocupação das guardas de `moverPecasDoTermo`.
+    //
+    // DEPOIS de abrir a posse nova, nunca antes: se a abertura falhar, a peça
+    // continua com uma posse aberta no almoxarifado, que é onde a devolução a
+    // deixou — e não sem posse nenhuma.
+    if (saiDePessoa && posseFinal !== "almoxarifado") {
+      await descartarPassagemDeZeroDia(supabase, {
+        unidadeId: d.unidade_id,
+        dia: d.data,
+      });
+    }
   }
 
   // ── 5. A SITUAÇÃO ────────────────────────────────────────────────────────
@@ -291,11 +346,33 @@ function revalidarMovimentacao(unidadeId: string): void {
 }
 
 /**
+ * O que a devolução devolve — com o corte de irreversibilidade explícito.
+ *
+ * Não é `ActionResult` porque `ActionResult` não tem onde dizer isto, e a
+ * diferença decide entre `ok: false` e `ok: true` + `aviso` em quem chama.
+ */
+type ResultadoDevolucao =
+  | { ok: true }
+  | { ok: false; erro: string; posseJaMoveu: boolean };
+
+/** Recusa ANTES de qualquer escrita: nada se moveu, tentar de novo é seguro. */
+function recusa(erro: string): ResultadoDevolucao {
+  return { ok: false, erro, posseJaMoveu: false };
+}
+
+/**
  * A metade da devolução, quando a peça está saindo de uma pessoa.
  *
  * Não reimplementa nada: chama `registrarDevolucao` e `encerrarTermo`, as
- * mesmas que `devolverParaTransferir` usa. Continuam sendo DOIS documentos —
- * este encerra o de quem entrega, e o de quem recebe é a emissão normal.
+ * mesmas que a rota `/frota/[id]/transferir` usava antes de ser removida.
+ * Continuam sendo DOIS documentos — este encerra o de quem entrega, e o de quem
+ * recebe é a emissão normal.
+ *
+ * `posseJaMoveu` existe porque a devolução NÃO é atômica: `registrarDevolucao`
+ * grava a data nos itens e chama `liberarPecas`, que põe a peça no
+ * almoxarifado; só depois vem `encerrarTermo`. Uma falha DEPOIS desse corte
+ * deixa a peça já movida, e quem chama precisa saber disso para não devolver
+ * `ok: false` sobre o que já aconteceu.
  */
 async function devolverDaPessoa(
   // O cliente vem de quem chama: a action já criou um, e dois clientes na
@@ -312,9 +389,9 @@ async function devolverDaPessoa(
     motivoSemAssinatura: string | null;
     empresa: string;
   },
-): Promise<ActionResult> {
+): Promise<ResultadoDevolucao> {
   if (!e.termoId) {
-    return falha(
+    return recusa(
       "Esta peça consta com uma pessoa, mas sem termo aberto. Regularize a custódia antes de movimentá-la.",
     );
   }
@@ -322,7 +399,7 @@ async function devolverDaPessoa(
   // campo obrigatório no schema pediria estado de conservação a quem só está
   // mandando a betoneira para a obra.
   if (!e.estado) {
-    return falha("Informe o estado de conservação da peça na devolução.");
+    return recusa("Informe o estado de conservação da peça na devolução.");
   }
   const estado = e.estado;
 
@@ -336,7 +413,7 @@ async function devolverDaPessoa(
     assinou: Boolean(e.assinatura),
     motivo: e.motivoSemAssinatura,
   });
-  if (!pode.ok) return falha(pode.erro);
+  if (!pode.ok) return recusa(pode.erro);
 
   const { data: itens, error: erroItens } = await supabase
     .from("termo_equipamento_item")
@@ -345,8 +422,8 @@ async function devolverDaPessoa(
     .eq("unidade_id", e.unidadeId)
     .is("data_devolucao", null);
 
-  if (erroItens) return falha("Não consegui ler os itens do termo.");
-  if (!itens?.length) return falha("Esta peça já consta devolvida neste termo.");
+  if (erroItens) return recusa("Não consegui ler os itens do termo.");
+  if (!itens?.length) return recusa("Esta peça já consta devolvida neste termo.");
 
   const rDev = await registrarDevolucao(
     e.termoId,
@@ -359,12 +436,12 @@ async function devolverDaPessoa(
       observacoes: e.observacoes ?? undefined,
     })),
   );
-  if (!rDev.ok) return rDev;
+  if (!rDev.ok) return recusa(rDev.erro);
 
   // O motivo sem assinatura entra porque 211 pessoas da base estão desligadas,
   // e uma que saiu com um notebook não volta para assinar. Exigir a assinatura
   // ali não protegeria ninguém — só impediria o registro da verdade.
-  return encerrarTermo(
+  const rFim = await encerrarTermo(
     e.termoId,
     {
       funcionario: { nome: e.assinante, cpf: null, imagem: e.assinatura },
@@ -372,13 +449,17 @@ async function devolverDaPessoa(
     },
     e.motivoSemAssinatura,
   );
+  // AQUI A PECA JA SE MOVEU: `registrarDevolucao` acima gravou a devolucao e
+  // `liberarPecas` ja abriu a posse de almoxarifado. Uma falha em encerrar o
+  // termo e falha de um passo POSTERIOR a um passo irreversivel.
+  return rFim.ok ? { ok: true } : { ok: false, erro: rFim.erro, posseJaMoveu: true };
 }
 
 /**
  * Edita a peça — e NÃO move.
  *
  * Sem `obra_id` e sem `situacao`, de propósito: os dois mudam só por
- * `moverPeca` e `mudarSituacao`, que passam pelo livro. Um formulário de
+ * `movimentarPeca` e `mudarSituacao`, que passam pelo livro. Um formulário de
  * edição genérico com `obra_id` dentro seria a primeira porta a furar a
  * custódia, e a divergência apareceria em silêncio.
  */
@@ -508,7 +589,7 @@ export async function mudarSituacao(formData: FormData): Promise<ActionResult> {
     .from("equipamento_unidade")
     .update({ situacao: para })
     .eq("id", id)
-    // Mesmo motivo de `moverPeca`: 0 linhas atualizadas não é erro para o
+    // Mesmo motivo de `movimentarPeca`: 0 linhas atualizadas não é erro para o
     // PostgREST, e "baixei a peça" com a peça ainda disponível é mentira que a
     // tela repetiria sem nenhum sinal.
     .select("id");
@@ -640,7 +721,7 @@ export async function amarrarPecaAoContrato(raw: unknown): Promise<ActionResult>
  * com o motivo escrito ao lado: "posse de funcionário só nasce por termo
  * assinado. No BANCO, e não só na tela: a tela pode estar velha, e o valor do
  * termo é justamente ser a única fonte de verdade sobre quem respondeu pelo
- * equipamento". `moverPeca` sempre respeitou isso — `custodia.ts` registra que
+ * equipamento". `movimentarPeca` sempre respeitou isso — `custodia.ts` registra que
  * "funcionario NÃO está entre os destinos".
  *
  * A invariante está CERTA e o mutirão estava errado. Quem está com a peça se

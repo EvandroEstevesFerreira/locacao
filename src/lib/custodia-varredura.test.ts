@@ -24,7 +24,7 @@ const AUTORIZADOS: Record<string, string> = {
   "app/(app)/itens/actions.ts":
     "adicionarUnidade — cadastro da peça, antes de existir posse a registrar",
   "app/(app)/frota/actions.ts":
-    "moverPeca e mudarSituacao, que passam pelo livro e pela matriz",
+    "movimentarPeca e mudarSituacao, que passam pelo livro e pela matriz",
   "app/(app)/termos/actions.ts":
     "moverPecasDoTermo e liberarPecas — a situacao por evento de termo",
 };
