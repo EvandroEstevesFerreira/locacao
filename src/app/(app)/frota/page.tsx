@@ -387,7 +387,7 @@ export default async function FrotaPage({
                         // resposta certa, não o nome de uma pessoa.
                         const nomeDoDetentor =
                           p.situacao === "em_uso"
-                            ? (comResponsavel?.get(p.id) ?? null)
+                            ? (comResponsavel?.get(p.id)?.rotulo ?? null)
                             : null;
                         return (
                           <div

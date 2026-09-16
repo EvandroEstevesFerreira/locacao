@@ -12,8 +12,12 @@ import {
 } from "@/lib/acoes";
 import { exigirModulo } from "@/lib/modulos";
 import { camposFichaSchema, validarFicha } from "@/lib/catalogo";
-import { movimentarPecaSchema, editarPecaSchema } from "@/lib/custodia";
-import { abrirCustodia } from "@/lib/custodia-servidor";
+import {
+  movimentarPecaSchema,
+  editarPecaSchema,
+  podeEncerrarDevolucao,
+} from "@/lib/custodia";
+import { abrirCustodia, type Cliente } from "@/lib/custodia-servidor";
 import {
   amarrarPecaSchema,
   podeTransicionar,
@@ -36,8 +40,9 @@ import { registrarDevolucao, encerrarTermo } from "../termos/actions";
  * O QUE ESTA ACTION NÃO FAZ: criar posse de pessoa. O check
  * `custodia_funcionario_exige_termo` (migration 0059) recusa isso no banco, e
  * ele tem razão — quem respondeu pelo equipamento se registra assinando. Com
- * destino `funcionario` esta action só desamarra o que estava amarrado e
- * devolve `{ ok: true }`; quem navega para `/termos/novo` é o cliente.
+ * destino `funcionario` ela deixa a peça no ALMOXARIFADO, que é onde a peça
+ * está de verdade enquanto o termo não sai, e devolve `{ ok: true }`; quem
+ * navega para `/termos/novo` é o cliente.
  *
  * NÃO REDIRECIONA. Um `redirect()` lança `NEXT_REDIRECT` e mataria o
  * `if (!r.ok)` de quem chamou, inclusive o `router.push` que leva ao termo.
@@ -63,6 +68,7 @@ export async function movimentarPeca(raw: unknown): Promise<ActionResult> {
     .eq("id", d.unidade_id)
     .single();
   if (erroPeca || !peca) return falha("Peça não encontrada.");
+  const situacaoAtual = (peca as unknown as { situacao: Situacao }).situacao;
 
   // A POSSE ABERTA É LIDA AQUI, e o `termo_id` sai dela. Nunca do cliente:
   // aceitar um `termo_id` de fora permitiria encerrar o termo de OUTRA peça, e
@@ -84,11 +90,51 @@ export async function movimentarPeca(raw: unknown): Promise<ActionResult> {
     funcionario: { nome: string } | null;
   } | null;
 
-  // ── 1. SAIR DA PESSOA VEM ANTES DE QUALQUER OUTRA COISA ──────────────────
+  // ── 1. A SITUAÇÃO DE DESTINO, antes de qualquer escrita ──────────────────
+  // Com destino `funcionario` a posse que fica aberta é a do ALMOXARIFADO: a de
+  // pessoa nasce na emissão do termo, e é o almoxarifado que responde "onde
+  // está" enquanto o documento não é assinado.
+  const posseFinal: Exclude<PosseAberta, null> =
+    d.tipo === "funcionario" ? "almoxarifado" : d.tipo;
+  const manual = d.situacao_final === "baixada" || d.situacao_final === "perdida";
+  const destinoSituacao: Situacao = manual
+    ? (d.situacao_final as Situacao)
+    : situacaoDaPosse(posseFinal);
+
+  // ── 2. A MATRIZ, EM TODA MOVIMENTAÇÃO ────────────────────────────────────
+  // Não só nas manuais. Uma peça `baixada` mandada para obra chegaria a
+  // `em_uso` sem passar por lugar nenhum, e material dado como sucateado ou
+  // perdido voltaria ao serviço em silêncio — a matriz só admite
+  // `baixada → disponivel`.
+  //
+  // A ÚNICA exceção é a origem `em_uso` que a devolução logo abaixo resolve: a
+  // recusa de mexer em peça em uso existia porque esta action não sabia
+  // encerrar termo, e agora sabe. Fora daí, `de` é a situação de verdade.
+  const saiDePessoa = posseAtual?.tipo === "funcionario";
+  const de: Situacao = saiDePessoa ? "disponivel" : situacaoAtual;
+  //
+  // A ORIGEM informada à matriz depende do que se está pedindo. `baixada` e
+  // `perdida` são decisão humana e só passam por `manual` — é o que mantém
+  // `em_uso → baixada` bloqueado com "encerre o termo antes". Já uma situação
+  // DEDUZIDA da posse não está sendo digitada por ninguém: mover a peça é o
+  // próprio evento que a muda, e aceitar as duas origens é o que permite a
+  // devolução de obra (`em_uso → disponivel`, que a matriz marca como
+  // "evento") sem reabrir a porta que a matriz fecha para `baixada`.
+  const passa = manual
+    ? podeTransicionar(de, destinoSituacao, "manual")
+    : podeTransicionar(de, destinoSituacao, "manual") ||
+      podeTransicionar(de, destinoSituacao, "evento");
+  if (!passa) {
+    return falha(
+      motivoBloqueio(de, destinoSituacao) ??
+        "Esta peça não pode ser movimentada na situação atual.",
+    );
+  }
+
+  // ── 3. SAIR DA PESSOA VEM ANTES DE MOVER A POSSE ─────────────────────────
   // Se a devolução falhar, a posse NÃO se move: peça no almoxarifado com termo
   // aberto dizendo que está com alguém é pior que a movimentação que não
   // aconteceu — a primeira mente, a segunda só não fez nada.
-  const saiDePessoa = posseAtual?.tipo === "funcionario";
   if (saiDePessoa) {
     const devolveu = await devolverDaPessoa(supabase, {
       unidadeId: d.unidade_id,
@@ -109,37 +155,20 @@ export async function movimentarPeca(raw: unknown): Promise<ActionResult> {
     if (!devolveu.ok) return devolveu;
   }
 
-  // ── 2. A MATRIZ, só para o que continua sendo escolha humana ─────────────
-  // `baixada` e `perdida` não se deduzem e continuam passando pela matriz de
-  // `frota.ts`. A recusa de mexer em peça `em_uso` existia porque esta action
-  // não sabia encerrar termo; agora sabe, então o `de` é a situação DEPOIS da
-  // devolução.
-  const manual = d.situacao_final === "baixada" || d.situacao_final === "perdida";
-  const de: Situacao = saiDePessoa
-    ? "disponivel"
-    : (peca as unknown as { situacao: Situacao }).situacao;
-  if (manual && !podeTransicionar(de, d.situacao_final as Situacao, "manual")) {
-    return falha(
-      motivoBloqueio(de, d.situacao_final as Situacao) ??
-        "Esta peça não pode ser movimentada na situação atual.",
-    );
-  }
-
-  // ── 3. A POSSE NOVA ──────────────────────────────────────────────────────
-  // Com destino `funcionario` NÃO se abre posse nenhuma, e isto é escolha: a
-  // posse de destino nasce na emissão do termo, e `podeReceberTermo` recusa
-  // peça COM posse aberta. Abrir uma de almoxarifado aqui deixaria a peça fora
-  // da lista de `/termos/novo` — a porta única terminaria num beco sem saída.
-  //
-  // Quando a peça vinha de uma pessoa, a posse de almoxarifado já nasceu na
-  // devolução (`liberarPecas`), e repeti-la criaria uma segunda linha no mesmo
-  // dia sem nada de novo a dizer.
-  const posseFinal: PosseAberta = d.tipo === "funcionario" ? null : d.tipo;
-  if (d.tipo !== "funcionario") {
+  // ── 4. A POSSE NOVA ──────────────────────────────────────────────────────
+  // Pulada só quando a peça JÁ está no almoxarifado e é para lá que ela vai —
+  // caso do destino `funcionario` logo após a devolução, que `liberarPecas`
+  // acabou de deixar ali. Abrir de novo fecharia e reabriria a mesma posse no
+  // mesmo dia, deixando no livro uma linha de zero dia que não conta nada.
+  const jaEstaOndeVai =
+    posseFinal === "almoxarifado" &&
+    (saiDePessoa || posseAtual?.tipo === "almoxarifado") &&
+    d.tipo === "funcionario";
+  if (!jaEstaOndeVai) {
     const r = await abrirCustodia(supabase, {
       orgId: perfil.org_id,
       unidadeId: d.unidade_id,
-      tipo: d.tipo,
+      tipo: posseFinal,
       obraId: d.tipo === "obra" ? d.obra_id : null,
       fornecedorId: d.tipo === "fornecedor" ? d.fornecedor_id : null,
       inicio: d.data,
@@ -149,18 +178,7 @@ export async function movimentarPeca(raw: unknown): Promise<ActionResult> {
     if (!r.ok) return falha(r.erro);
   }
 
-  // ── 4. A SITUAÇÃO, DEDUZIDA da posse que ficou aberta ────────────────────
-  // Salvo quando a pessoa disse `baixada` ou `perdida`, que a posse não tem
-  // como saber: uma peça baixada pode estar em qualquer canto, e uma perdida
-  // não está em canto que se saiba.
-  const destinoSituacao: Situacao = manual
-    ? (d.situacao_final as Situacao)
-    : situacaoDaPosse(
-        // Sem posse nova e vindo de pessoa, quem manda é o almoxarifado onde a
-        // devolução deixou a peça.
-        posseFinal ?? (saiDePessoa ? "almoxarifado" : null),
-      );
-
+  // ── 5. A SITUAÇÃO ────────────────────────────────────────────────────────
   const { data: mudou, error } = await supabase
     .from("equipamento_unidade")
     .update({ situacao: destinoSituacao })
@@ -171,10 +189,18 @@ export async function movimentarPeca(raw: unknown): Promise<ActionResult> {
     .select("id");
   if (error || !mudou?.length) {
     console.error("movimentarPeca/situacao", error ?? "update atingiu 0 linhas");
-    return falha(
-      "A posse foi registrada, mas a situação da peça não mudou no cadastro — " +
+    // `ok: true` com aviso, e NÃO `ok: false`. O que veio antes é
+    // irreversível — a posse está no livro, e quando havia pessoa o termo já
+    // foi encerrado. Dizer "falhou" faria quem clicou tentar de novo sobre um
+    // termo que não existe mais, e o segundo erro seria ainda menos
+    // compreensível que o primeiro.
+    return {
+      ok: true,
+      id: d.unidade_id,
+      aviso:
+        "A movimentação foi registrada, mas a situação da peça não mudou no cadastro — " +
         "provavelmente falta de permissão para alterar a peça. Avise um administrador.",
-    );
+    };
   }
 
   revalidatePath("/frota");
@@ -193,8 +219,7 @@ export async function movimentarPeca(raw: unknown): Promise<ActionResult> {
 async function devolverDaPessoa(
   // O cliente vem de quem chama: a action já criou um, e dois clientes na
   // mesma requisição gastam duas resoluções de sessão.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  supabase: any,
+  supabase: Cliente,
   e: {
     unidadeId: string;
     termoId: string | null;
@@ -219,6 +244,18 @@ async function devolverDaPessoa(
     return falha("Informe o estado de conservação da peça na devolução.");
   }
   const estado = e.estado;
+
+  // OU ASSINOU, OU ESCREVEU O PORQUÊ — e a pergunta é feita ANTES de escrever
+  // qualquer coisa. `encerrarTermo` também a faz, mas lá é tarde: quando ele
+  // recusa, `registrarDevolucao` já gravou a data e o estado nos itens e já
+  // chamou `liberarPecas`, que abriu a posse de almoxarifado. A action
+  // devolveria erro com a peça já movida e o termo ainda aberto — exatamente o
+  // estado que a ordem desta função existe para impedir.
+  const pode = podeEncerrarDevolucao({
+    assinou: Boolean(e.assinatura),
+    motivo: e.motivoSemAssinatura,
+  });
+  if (!pode.ok) return falha(pode.erro);
 
   const { data: itens, error: erroItens } = await supabase
     .from("termo_equipamento_item")

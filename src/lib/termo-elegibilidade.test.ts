@@ -6,11 +6,12 @@ import {
   podeEncerrarDevolucao,
   lembreteValido,
   MOTIVO_SEM_ASSINATURA_MINIMO,
+  type TipoDetentor,
 } from "./custodia";
 
-const peca = (situacao: string, temPosseAberta = false) => ({
+const peca = (situacao: string, posseAberta: TipoDetentor | null = null) => ({
   situacao,
-  temPosseAberta,
+  posseAberta,
 });
 
 describe("podeReceberTermo", () => {
@@ -25,11 +26,19 @@ describe("podeReceberTermo", () => {
     expect(podeReceberTermo(peca("em_uso"))).toBe(true);
   });
 
-  it("peça com posse aberta NÃO pode, esteja como estiver", () => {
+  it("peça com posse de ALGUÉM não pode, esteja como estiver", () => {
     // É a proteção que o filtro antigo queria dar e mirava errado: dois termos
     // assinados sobre o mesmo patrimônio.
-    expect(podeReceberTermo(peca("em_uso", true))).toBe(false);
-    expect(podeReceberTermo(peca("disponivel", true))).toBe(false);
+    expect(podeReceberTermo(peca("em_uso", "funcionario"))).toBe(false);
+    expect(podeReceberTermo(peca("disponivel", "obra"))).toBe(false);
+    expect(podeReceberTermo(peca("disponivel", "fornecedor"))).toBe(false);
+  });
+
+  it("posse de ALMOXARIFADO não impede — é onde a peça espera", () => {
+    // O beco: `liberarPecas` abre posse de almoxarifado em TODA devolução, e
+    // com a pergunta booleana a peça recém-devolvida sumia de `/termos/novo`.
+    // A transferência morria logo depois de encerrar o termo de quem entregou.
+    expect(podeReceberTermo(peca("disponivel", "almoxarifado"))).toBe(true);
   });
 
   it("manutenção, baixada e perdida ficam de fora", () => {
@@ -43,7 +52,7 @@ describe("podeReceberTermo", () => {
   it("a posse vence a situação", () => {
     // A ordem das checagens importa: se a situação fosse consultada primeiro,
     // uma peça disponível com posse aberta passaria.
-    expect(podeReceberTermo(peca("disponivel", true))).toBe(false);
+    expect(podeReceberTermo(peca("disponivel", "funcionario"))).toBe(false);
   });
 });
 
@@ -61,7 +70,7 @@ describe("ehRegularizacao", () => {
 
   it("com posse aberta não é nem uma coisa nem outra", () => {
     // E nem chega a aparecer: `podeReceberTermo` já barrou.
-    expect(ehRegularizacao(peca("em_uso", true))).toBe(false);
+    expect(ehRegularizacao(peca("em_uso", "funcionario"))).toBe(false);
   });
 });
 
@@ -152,7 +161,11 @@ describe("podeEncerrarDevolucao", () => {
 });
 
 describe("lembreteValido", () => {
-  const base = { destinatarioId: "f1", situacao: "disponivel", temPosseAberta: false };
+  const base = {
+    destinatarioId: "f1",
+    situacao: "disponivel",
+    posseAberta: null as TipoDetentor | null,
+  };
 
   it("peça livre e destinatário anotado: o lembrete vale", () => {
     expect(lembreteValido(base)).toBe(true);
@@ -165,8 +178,12 @@ describe("lembreteValido", () => {
   it("ALGUÉM LEVOU ANTES: o lembrete deixa de valer", () => {
     // Não impede, lembra. Insistir transformaria uma intenção anotada num
     // impedimento real — e a decisão foi de quem estava lá.
-    expect(lembreteValido({ ...base, temPosseAberta: true })).toBe(false);
+    expect(lembreteValido({ ...base, posseAberta: "funcionario" })).toBe(false);
     expect(lembreteValido({ ...base, situacao: "em_uso" })).toBe(false);
+  });
+
+  it("mas a posse de almoxarifado, que a devolução abriu, não derruba", () => {
+    expect(lembreteValido({ ...base, posseAberta: "almoxarifado" })).toBe(true);
   });
 
   it("peça em manutenção também não lembra", () => {

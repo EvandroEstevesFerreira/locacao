@@ -2,6 +2,7 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 import type { Situacao, Propriedade, Estado } from "@/lib/frota";
+import type { TipoDetentor } from "@/lib/custodia";
 
 export type PecaFrota = {
   id: string;
@@ -244,7 +245,9 @@ export async function listarTrilhoDaFrota(): Promise<CategoriaTrilhoFrota[]> {
  * faixa que precisa ser levada a sério. Nulo faz a tela omitir a pendência, que
  * é honesto: ela não sabe.
  */
-export async function pecasComResponsavel(): Promise<Map<string, string> | null> {
+export async function pecasComResponsavel(): Promise<
+  Map<string, { tipo: TipoDetentor; rotulo: string }> | null
+> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("custodia_peca")
@@ -252,7 +255,11 @@ export async function pecasComResponsavel(): Promise<Map<string, string> | null>
     // reservada para o NOME de quem está com a peça — ela mostrava "sem
     // responsável" só porque não havia custódia. Uma consulta responde as duas
     // perguntas: quem tem responsável, e quem é.
-    .select("unidade_id, detentor_rotulo")
+    // `tipo` vem junto porque "tem posse aberta" não é a mesma pergunta que
+    // "está com alguém": a posse de almoxarifado é onde a peça ESPERA para ser
+    // entregue, e tratá-la como responsável tirava da lista de `/termos/novo`
+    // toda peça recém-devolvida. Quem decide é `posseEntregaAAlguem`.
+    .select("unidade_id, tipo, detentor_rotulo")
     .is("fim", null);
 
   if (error) {
@@ -260,12 +267,21 @@ export async function pecasComResponsavel(): Promise<Map<string, string> | null>
     return null;
   }
   // Map, e não Set: `.has()` continua servindo a quem só pergunta se existe, e
-  // o valor serve a quem precisa do nome. Trocar o tipo aqui não mexeu em
-  // nenhum call site, porque os dois usavam `.has()`.
+  // o valor serve a quem precisa do nome e do tipo da posse.
   return new Map(
-    ((data ?? []) as { unidade_id: string; detentor_rotulo: string | null }[]).map(
-      (c) => [c.unidade_id, c.detentor_rotulo ?? "Responsável não identificado"],
-    ),
+    (
+      (data ?? []) as {
+        unidade_id: string;
+        tipo: TipoDetentor;
+        detentor_rotulo: string | null;
+      }[]
+    ).map((c) => [
+      c.unidade_id,
+      {
+        tipo: c.tipo,
+        rotulo: c.detentor_rotulo ?? "Responsável não identificado",
+      },
+    ]),
   );
 }
 

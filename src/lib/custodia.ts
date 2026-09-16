@@ -233,6 +233,11 @@ export const movimentarPecaSchema = z
     tipo: z.enum(["almoxarifado", "obra", "fornecedor", "funcionario"]),
     obra_id: uuidOpcional,
     fornecedor_id: uuidOpcional,
+    /**
+     * Validado aqui, USADO na Task 5: a action não abre posse de pessoa (o
+     * termo é que abre), e este campo é o contrato com a tela, que o leva no
+     * `?funcionario=` ao navegar para /termos/novo.
+     */
     funcionario_id: uuidOpcional,
     data: z.string().min(1, "Informe a data da movimentação."),
     observacoes: textoOpcional(300),
@@ -269,6 +274,32 @@ export const movimentarPecaSchema = z
         code: "custom",
         path: ["funcionario_id"],
         message: "Selecione quem vai receber a peça.",
+      });
+    }
+    // OU ASSINOU, OU ESCREVEU O PORQUÊ — nunca nenhum dos dois.
+    //
+    // O schema não sabe se a peça está saindo de uma pessoa (isso só a posse
+    // responde, no servidor), então a regra só vale quando a tela mandou
+    // ALGUMA coisa de devolução. A guarda de verdade está em `devolverDaPessoa`,
+    // ANTES de `registrarDevolucao`: descobrir a falta do motivo depois dela é
+    // descobrir tarde — os itens já teriam data de devolução e a peça já teria
+    // voltado ao almoxarifado, com o termo ainda aberto.
+    const tentaDevolver =
+      v.assinatura_devolucao !== null ||
+      v.motivo_sem_assinatura !== null ||
+      v.estado_devolucao !== null;
+    if (
+      tentaDevolver &&
+      !podeEncerrarDevolucao({
+        assinou: Boolean(v.assinatura_devolucao),
+        motivo: v.motivo_sem_assinatura,
+      }).ok
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["motivo_sem_assinatura"],
+        message:
+          "Sem a assinatura de quem devolve, escreva o motivo com ao menos 10 caracteres.",
       });
     }
   });
@@ -349,10 +380,29 @@ export type EditarPecaDados = z.output<typeof editarPecaSchema>;
  */
 export function podeReceberTermo(p: {
   situacao: string;
-  temPosseAberta: boolean;
+  posseAberta: TipoDetentor | null;
 }): boolean {
-  if (p.temPosseAberta) return false;
+  if (posseEntregaAAlguem(p.posseAberta)) return false;
   return p.situacao === "disponivel" || p.situacao === "em_uso";
+}
+
+/**
+ * Esta posse aberta ENTREGA a peça a alguém, ou é o almoxarifado guardando?
+ *
+ * A pergunta nasceu boolena — "tem posse aberta?" — e a resposta estava errada
+ * para o almoxarifado. Toda peça devolvida por termo ganha uma posse de
+ * almoxarifado (`liberarPecas`), e com a pergunta booleana ela deixava de
+ * aparecer em `/termos/novo`: o caminho da transferência morria logo depois da
+ * devolução, e nada na tela dizia por quê.
+ *
+ * ALMOXARIFADO NÃO É ALGUÉM. É exatamente o lugar onde a peça espera para ser
+ * entregue, e dizer que ele impede a entrega é dizer que a prateleira assinou
+ * pelo equipamento. Obra, fornecedor e funcionário continuam impedindo — ali há
+ * um responsável de verdade, e um segundo termo sobre o mesmo patrimônio é o
+ * que estas regras existem para evitar.
+ */
+export function posseEntregaAAlguem(posse: TipoDetentor | null): boolean {
+  return posse !== null && posse !== "almoxarifado";
 }
 
 /**
@@ -365,9 +415,9 @@ export function podeReceberTermo(p: {
  */
 export function ehRegularizacao(p: {
   situacao: string;
-  temPosseAberta: boolean;
+  posseAberta: TipoDetentor | null;
 }): boolean {
-  return p.situacao === "em_uso" && !p.temPosseAberta;
+  return p.situacao === "em_uso" && !posseEntregaAAlguem(p.posseAberta);
 }
 
 /**
@@ -447,10 +497,13 @@ export function podeEncerrarDevolucao(p: {
 export function lembreteValido(p: {
   destinatarioId: string | null;
   situacao: string;
-  temPosseAberta: boolean;
+  posseAberta: TipoDetentor | null;
 }): boolean {
   if (!p.destinatarioId) return false;
-  if (p.temPosseAberta) return false;
+  // Posse de almoxarifado NÃO derruba o lembrete: é a posse que a própria
+  // devolução acabou de abrir, e derrubá-la apagaria o aviso no instante em que
+  // ele passa a ser útil.
+  if (posseEntregaAAlguem(p.posseAberta)) return false;
   return p.situacao === "disponivel";
 }
 

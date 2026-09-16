@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.115.0";
+export const APP_VERSION = "0.114.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,28 +28,6 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
-  {
-    versao: "0.115.0",
-    data: "2026-09-16",
-    titulo: "Uma porta só para movimentar a peça",
-    mudancas: [
-      {
-        tipo: "novo",
-        texto:
-          "Movimentar uma peça passou a ser um ato só, com todos os destinos no mesmo lugar: almoxarifado, obra, manutenção em fornecedor e entrega a uma pessoa. Antes, entregar a alguém ficava fora do formulário chamado \u201cMovimentar\u201d, e quem procurava ali não achava.",
-      },
-      {
-        tipo: "melhoria",
-        texto:
-          "Quando a peça está com uma pessoa, a movimentação registra a devolução e encerra o termo antes de mudar o lugar dela — sem precisar caçar o termo na lista de Termos.",
-      },
-      {
-        tipo: "seguranca",
-        texto:
-          "A situação da peça deixou de ser escolhida na tela nos casos em que ela é consequência de onde a peça está. Só \u201cbaixada\u201d e \u201cperdida\u201d continuam sendo decisão de quem registra.",
-      },
-    ],
-  },
   {
     versao: "0.114.0",
     data: "2026-09-16",

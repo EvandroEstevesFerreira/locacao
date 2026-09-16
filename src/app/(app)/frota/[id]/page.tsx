@@ -90,7 +90,7 @@ export default async function PecaDetalhePage({
   const atual = linha.find((p) => p.aberta) ?? null;
   // O par que as duas regras de termo consultam. Montado uma vez para que a
   // pergunta "tem posse aberta?" tenha uma resposta so nesta pagina.
-  const posseDaPeca = { situacao: peca.situacao, temPosseAberta: atual !== null };
+  const posseDaPeca = { situacao: peca.situacao, posseAberta: atual?.tipo ?? null };
 
   // O LEMBRETE DA TRANSFERÊNCIA INTERROMPIDA. Entre a devolução e a entrega a
   // peça fica disponível de verdade — este aviso não a reserva, só lembra de
@@ -98,7 +98,7 @@ export default async function PecaDetalhePage({
   const lembrete = lembreteValido({
     destinatarioId: peca.entregaPendente?.id ?? null,
     situacao: peca.situacao,
-    temPosseAberta: atual !== null,
+    posseAberta: atual?.tipo ?? null,
   })
     ? peca.entregaPendente
     : null;

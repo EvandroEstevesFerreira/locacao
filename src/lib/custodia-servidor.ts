@@ -42,8 +42,12 @@ export type AberturaCustodia = {
 // Este projeto não tem tipos gerados do Supabase; `data/frota.ts` e
 // `data/termo.ts` fazem o mesmo por meio de casts. O tipo do cliente não é o
 // que dá segurança aqui.
+//
+// EXPORTADO porque quem escreve custódia passa o cliente adiante: sem um nome
+// para ele, cada auxiliar de action redeclararia `any` com o seu próprio
+// `eslint-disable`, e um `any` solto é onde o cast errado passa despercebido.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Cliente = SupabaseClient<any, "public", any>;
+export type Cliente = SupabaseClient<any, "public", any>;
 
 /**
  * Encerra a posse aberta da peça, se houver.

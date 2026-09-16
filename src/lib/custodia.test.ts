@@ -284,6 +284,40 @@ describe("movimentarPecaSchema", () => {
     }
   });
 
+  it("devolução sem assinatura exige o motivo, e exige ANTES da escrita", () => {
+    // `encerrarTermo` também recusa, mas lá é tarde: quando ele recusa,
+    // `registrarDevolucao` já gravou a devolução nos itens e já devolveu a peça
+    // ao almoxarifado, com o termo ainda aberto.
+    const r = movimentarPecaSchema.safeParse({
+      ...baseMov,
+      estado_devolucao: "bom",
+    });
+    expect(r.success).toBe(false);
+    if (!r.success) {
+      expect(r.error.issues[0].message).toBe(
+        "Sem a assinatura de quem devolve, escreva o motivo com ao menos 10 caracteres.",
+      );
+    }
+  });
+
+  it("com motivo escrito, a devolução sem assinatura passa", () => {
+    // 211 pessoas da base estão desligadas, e uma que saiu com um notebook não
+    // volta para assinar. Exigir a assinatura ali não protegeria ninguém.
+    const r = movimentarPecaSchema.safeParse({
+      ...baseMov,
+      estado_devolucao: "bom",
+      motivo_sem_assinatura: "Desligado em 12/08, recolhido pelo RH.",
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it("movimentação comum não pede motivo nenhum", () => {
+    // A regra só acorda quando a tela mandou algo de devolução. Mandar a
+    // betoneira para a obra não é devolver nada.
+    const r = movimentarPecaSchema.safeParse({ ...baseMov, tipo: "obra", obra_id: UUID });
+    expect(r.success).toBe(true);
+  });
+
   it("aceita baixada e perdida, que são decisão humana", () => {
     for (const s of ["disponivel", "baixada", "perdida"]) {
       const r = movimentarPecaSchema.safeParse({ ...baseMov, situacao_final: s });

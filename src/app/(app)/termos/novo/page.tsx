@@ -97,7 +97,10 @@ export default async function NovoTermoPage({
       comResponsavel !== null &&
       podeReceberTermo({
         situacao: p.situacao,
-        temPosseAberta: comResponsavel.has(p.id),
+        // O TIPO, e não o "existe". Peça com posse de almoxarifado está
+        // esperando para ser entregue — era ela que sumia daqui depois de toda
+        // devolução, porque `liberarPecas` abre essa posse.
+        posseAberta: comResponsavel.get(p.id)?.tipo ?? null,
       }),
   );
 
