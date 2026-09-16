@@ -36,15 +36,33 @@ function arquivos(dir = RAIZ, achados: string[] = []): string[] {
   return achados;
 }
 
-/** Cada chamada de `abrirCustodia(`, com o trecho que carrega os argumentos. */
+/**
+ * Os ARGUMENTOS de cada chamada de `abrirCustodia(`, por parênteses casados.
+ *
+ * Janela de tamanho fixo NÃO serve: `moverPecasDoTermo` tem as duas chamadas —
+ * a da entrega, que amarra o termo, e a da devolução, que não pode amarrar —
+ * a poucas linhas uma da outra. Qualquer janela generosa o bastante para
+ * alcançar os campos de uma alcança os da outra, e a varredura acusaria a
+ * inocente ou inocentaria a culpada.
+ */
 function chamadas(texto: string): string[] {
   const saida: string[] = [];
   const re = /abrirCustodia\s*\(/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(texto)) !== null) {
-    // Janela generosa: o objeto de argumentos deste projeto tem comentários
-    // longos entre os campos, e cortar curto deixaria o `origem` fora.
-    saida.push(texto.slice(m.index, m.index + 1200));
+    let nivel = 0;
+    const abre = m.index + m[0].length - 1;
+    for (let i = abre; i < texto.length; i++) {
+      const c = texto[i];
+      if (c === "(") nivel++;
+      else if (c === ")") {
+        nivel--;
+        if (nivel === 0) {
+          saida.push(texto.slice(abre, i + 1));
+          break;
+        }
+      }
+    }
   }
   return saida;
 }
@@ -79,34 +97,58 @@ describe("custódia de funcionário exige termo", () => {
 });
 
 describe("devolução não pertence ao termo da entrega", () => {
-  // A DEVOLUÇÃO NÃO PERTENCE AO TERMO DA ENTREGA.
+  // A POSSE DE ALMOXARIFADO NUNCA NASCE AMARRADA A UM TERMO.
   //
   // `liberarPecas` abria a posse de almoxarifado passando o `termoId` do termo
   // que estava sendo ENCERRADO naquele instante. A posse nascia apontando para
   // o documento que diz o contrário dela, e o resultado foi a única anomalia do
   // banco: termo encerrado com posse aberta (peça 14L4594, TRM-2026-0040).
-  //
   // Medido em 16/09/2026: 1 posse de almoxarifado com termo em 144.
-  it("liberarPecas abre a posse de devolução SEM termo", () => {
-    const fonte = readFileSync(
-      join(process.cwd(), "src", "app", "(app)", "termos", "actions.ts"),
-      "utf8",
-    );
-    const i = fonte.indexOf("async function liberarPecas");
-    expect(i, "liberarPecas sumiu de termos/actions.ts").toBeGreaterThan(-1);
+  //
+  // A PRIMEIRA VERSÃO DESTA VARREDURA COBRAVA `liberarPecas` PELO NOME, e por
+  // isso ficou verde com o buraco aberto: `moverPecasDoTermo(id, "devolucao")`
+  // — o caminho do "Encerrar" e o do "Cancelar", que são os mais usados —
+  // continuava passando `termoId`. Cobrar uma função pelo nome protege aquela
+  // função; o que precisa de proteção é a INVARIANTE.
+  //
+  // Então a varredura não conhece nome nenhum: pega TODA chamada de
+  // `abrirCustodia` em `src/`, em qualquer arquivo, e reprova a que abre posse
+  // de almoxarifado carregando termo. Arquivo novo entra por existir.
+  const todos = arquivos();
 
-    const fimDaFuncao = fonte.indexOf("\n}\n", i);
-    const corpo = fonte.slice(i, fimDaFuncao > -1 ? fimDaFuncao : fonte.indexOf("\nexport ", i + 1));
-    expect(corpo).toContain('tipo: "almoxarifado"');
+  it("nenhuma chamada abre posse de almoxarifado com termo", () => {
+    const infratores: string[] = [];
 
-    const chamada = corpo.slice(corpo.indexOf("abrirCustodia"));
-    const fimChamada = chamada.indexOf(");");
-    const argumentos = chamada.slice(0, fimChamada > -1 ? fimChamada : undefined);
+    for (const caminho of todos) {
+      const texto = readFileSync(caminho, "utf8");
+      if (!texto.includes("abrirCustodia")) continue;
+      for (const argumentos of chamadas(texto)) {
+        const ehAlmoxarifado = /tipo:\s*["']almoxarifado["']/.test(argumentos);
+        // `termoId: null` é explícito e honesto, e passa.
+        const levaTermo = /\btermoId\b\s*:\s*(?!null\b)/.test(argumentos);
+        if (ehAlmoxarifado && levaTermo) {
+          infratores.push(caminho.replace(RAIZ, "src").replace(/\\/g, "/"));
+        }
+      }
+    }
+
     expect(
-      /\btermoId\b(?!\s*:\s*null)/.test(argumentos),
-      "liberarPecas ainda passa termoId para abrirCustodia — a posse de " +
-        "devolução nasceria apontando para o termo da entrega, que está sendo " +
-        "encerrado no mesmo instante.",
-    ).toBe(false);
+      infratores,
+      "Posse de ALMOXARIFADO nascendo amarrada a um termo. A peça volta ao " +
+        "almoxarifado justamente quando o termo deixa de valer — encerrado ou " +
+        "cancelado — e a posse aberta ficaria apontando para o documento que " +
+        "diz o contrário dela (anomalia 14L4594 / TRM-2026-0040).\nSó a ENTREGA " +
+        'amarra posse a termo. Na volta, `origem: "termo"` já diz por que a peça voltou.\n' +
+        infratores.join("\n"),
+    ).toEqual([]);
+  });
+
+  it("a varredura enxerga as chamadas que existem", () => {
+    // Sem isto, um erro no extrator de argumentos deixaria o teste acima
+    // passando por vacuidade — verde sem ter olhado para nada.
+    const comChamada = todos.filter((c) =>
+      readFileSync(c, "utf8").includes("abrirCustodia("),
+    );
+    expect(comChamada.length).toBeGreaterThanOrEqual(3);
   });
 });

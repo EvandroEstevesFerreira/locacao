@@ -1,5 +1,5 @@
 -- ============================================================================
--- v0.114.0 — A posse de devolução deixa de apontar para o termo da entrega
+-- v0.115.0 — A posse de devolução deixa de apontar para o termo da entrega
 -- ============================================================================
 --
 -- `liberarPecas` abria a posse de almoxarifado carregando o `termo_id` do termo
@@ -18,6 +18,14 @@
 -- condição descreve a anomalia em vez de apontar para uma linha específica. Se
 -- não houver nenhuma, o UPDATE afeta zero linhas e a migration passa — que é o
 -- comportamento certo para um banco já limpo.
+--
+-- NOTA DA 0113: o `where` abaixo é mais amplo do que este cabeçalho prometia —
+-- ele não exige `t.encerrado_em is not null`, e portanto desamarra TODA posse
+-- de almoxarifado em aberto que tenha termo. A amplitude está certa, e a 0113
+-- explica por quê: depois da correção de `moverPecasDoTermo`, nenhum caminho
+-- cria essa amarração, então não há caso legítimo a preservar. Este arquivo não
+-- foi reescrito porque migration aplicada não se edita; só este parágrafo foi
+-- acrescentado.
 
 update public.custodia_peca c
    set termo_id = null

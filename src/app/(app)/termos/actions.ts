@@ -677,13 +677,27 @@ async function moverPecasDoTermo(
           // é isso que permite a linha do tempo dizer POR QUE a peça voltou. A
           // guarda acima já eliminou os itens com `data_devolucao`, então aqui
           // resta só quem nunca foi devolvido — a data é sempre a do documento.
+          //
+          // E SEM `termoId`. O que a linha do tempo precisa saber é que a peça
+          // voltou POR UM TERMO, e disso `origem: "termo"` já dá conta. O
+          // `termo_id` é outra coisa: é a amarração da posse AO DOCUMENTO que a
+          // sustenta — e este documento acabou de ser marcado `encerrado_em`
+          // (ou `cancelado_em`, no cancelamento) vinte linhas acima. A posse
+          // nasceria aberta apontando para o papel que diz o contrário dela:
+          // é a anomalia 14L4594 / TRM-2026-0040, e por esta porta ela saía no
+          // encerramento mais comum que existe — o do termo sem devolução
+          // parcial registrada antes.
+          //
+          // Só a ENTREGA precisa do `termo_id`, e ali ele é verdade: aquela
+          // posse existe porque alguém assinou aquele termo, que segue em
+          // aberto enquanto ela dura. O `check` da migration 0059 cobra isso
+          // só da posse de funcionário, justamente por isso.
           await abrirCustodia(supabase, {
             orgId: perfil.org_id,
             unidadeId: l.unidade_id,
             tipo: "almoxarifado",
             inicio: fimDoDocumento,
             origem: "termo",
-            termoId: termoId,
           });
     if (!r.ok) problemas.push(r.erro);
   }
