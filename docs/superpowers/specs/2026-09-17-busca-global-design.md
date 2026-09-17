@@ -66,19 +66,34 @@ falham em silêncio, devolvendo dado de outro tenant sem erro nenhum.
 lugar novo onde a permissão possa estar errada.** É a razão pela qual esta é a
 arquitetura, e não a latência.
 
-## O pré-requisito que decide se a feature funciona: `unaccent`
+## O acento decide se a feature funciona — e o filtro não roda no banco
 
 O cliente já remove acentos (`normalizar`, em `command-palette.tsx:41`), mas o
-Postgres **não tem `unaccent` nem `pg_trgm` instalados**. Sem isso,
-`.ilike('%andre%')` não acha "André".
+Postgres **não tem `unaccent` nem `pg_trgm` instalados**. Sem tratar isso,
+buscar "joao", "jose" ou "antonio" não encontra nada entre 510 funcionários de
+nomes brasileiros, e a busca parece quebrada no primeiro uso.
 
-Com 510 funcionários e nomes brasileiros, buscar "joao", "jose" ou "antonio"
-não encontraria nada, e a busca pareceria quebrada no primeiro uso.
+**A primeira versão desta seção mandava usar `unaccent(campo) ilike
+unaccent('%termo%')`. Está errada, e a correção é de 17/09/2026.** O PostgREST
+não expressa isso: o helper que o repositório já usa, `termoOr`
+(`src/lib/lista.ts:34`), monta `campo.ilike.%termo%`, e o filtro `.or()` não
+aceita função envolvendo a coluna. A consulta descrita não pode ser emitida
+pela camada de acesso.
 
-`unaccent` está disponível (versão 1.1). A migration que o instala é
-**pré-requisito da feature, não um detalhe de polimento**. A comparação vira
-`unaccent(campo) ilike unaccent('%termo%')`. Com 720 linhas não é preciso
-índice; se um dia for, aí entra `pg_trgm`.
+**A saída é filtrar no servidor, não no banco.** Cada consulta traz só as
+colunas de identidade, sem filtro, e o casamento acontece em memória com o
+mesmo `normalizar()` que o palette já usa.
+
+Isso só é defensável por causa do tamanho: 720 linhas, umas dezenas de
+quilobytes por busca, e **nada sai do servidor além dos acertos** — a leitura
+continua sob RLS e o filtro roda antes da resposta. Em troca, some a migration,
+some a dependência da extensão, e o acerto fica idêntico entre páginas (filtro
+no cliente) e registros (filtro no servidor), porque é a mesma função.
+
+**O limite está escrito de propósito:** a dez vezes o tamanho atual — algo como
+7.000 linhas — reler tudo a cada busca deixa de ser barato, e aí a conversa
+volta para colunas geradas com um invólucro imutável de `unaccent`, ou para
+`pg_trgm`. Não antes.
 
 ## Onde o código mora
 
@@ -87,7 +102,6 @@ não encontraria nada, e a busca pareceria quebrada no primeiro uso.
 | `src/lib/busca.ts` | **puro**: tipos, ordenação, o termo mínimo |
 | `src/lib/busca.test.ts` | testes da ordenação e dos limites |
 | `src/lib/data/busca.ts` | as seis consultas, `server-only`, `createClient()` |
-| `supabase/migrations/0114_unaccent.sql` | instala a extensão |
 | `src/components/layout/command-palette.tsx` | **modificar**: debounce e resultados do servidor |
 
 A ordenação sai para o módulo puro pela razão de sempre neste repositório:
@@ -101,7 +115,7 @@ regra inventada por nós precisa de teste em memória, como `conciliacao.ts` e
 | Obra | `nome`, `codigo` | `/obras/<id>` |
 | Fornecedor | `nome`, `cnpj` | `/fornecedores/<id>` |
 | Equipamento | `identificador`, `numero_serie`, `service_tag`, e a descrição do modelo | `/frota/<id>` |
-| Funcionário | `nome`, `cpf` | a ficha do funcionário |
+| Funcionário | `nome`, `cpf` | `/termos/funcionarios` — **não há ficha individual**; o resultado leva à lista |
 | Contrato | `numero`, `numero_registro` | `/contratos/<id>` |
 | Imóvel | `apelido`, `proprietario_nome` | `/imoveis/<id>` |
 
