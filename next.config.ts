@@ -61,6 +61,30 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
+  /**
+   * `/centros-custo` é atalho de vocabulário, não uma segunda tela.
+   *
+   * A lista canônica continua em `/obras`: mover a rota significaria reescrever
+   * 68 referências em 24 arquivos, incluindo as trilhas do módulo de
+   * treinamento, que levam a pessoa a URLs específicas. O ganho seria estético
+   * e o risco, real. É a mesma troca que a abordagem A faz no banco — a tabela
+   * continua `obra`, o conceito se chama centro de custo.
+   *
+   * Aqui e não numa `page.tsx` com `redirect()`: uma página vazia seria uma
+   * rota de primeiro nível sem módulo (todo usuário autenticado entra, porque o
+   * middleware só checa permissão quando `moduloDaRota` devolve algo) e sem
+   * papel de largura declarado. As duas guardas do repositório reprovaram a
+   * primeira tentativa, e estavam certas.
+   *
+   * `permanent: false`: se um dia a rota canônica mudar de verdade, um 308 já
+   * cacheado no navegador de cada usuário seria irreversível.
+   */
+  async redirects() {
+    return [
+      { source: "/centros-custo", destination: "/obras", permanent: false },
+      { source: "/centros-custo/:path*", destination: "/obras/:path*", permanent: false },
+    ];
+  },
 };
 
 export default nextConfig;

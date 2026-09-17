@@ -80,6 +80,9 @@ export async function GET(request: Request) {
       const { data: obras } = await supabase
         .from("obra")
         .select("id, codigo, nome, data_inicio, data_fim_prevista, destinatarios_alerta")
+        // Só obra. Sem isto o aviso semanal cobraria avanço físico do RH e do
+        // Financeiro, por e-mail, toda semana.
+        .eq("tipo", "obra")
         .eq("org_id", org.id)
         .eq("status", "ativa")
         .is("deleted_at", null)

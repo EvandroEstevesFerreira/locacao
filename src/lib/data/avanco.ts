@@ -39,6 +39,10 @@ export async function listarObrasComAvanco(semanaISO: string): Promise<ObraAvanc
   const { data: obras, error } = await supabase
     .from("obra")
     .select("id, codigo, nome, data_inicio, data_fim_prevista")
+    // Só obra: departamento não tem avanço físico, e os gatilhos da migration
+    // 0114 recusam a linha. Sem este filtro a tela de lançamento semanal
+    // ofereceria o RH para alguém digitar percentual.
+    .eq("tipo", "obra")
     .eq("status", "ativa")
     .is("deleted_at", null)
     .order("codigo");

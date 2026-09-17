@@ -11,6 +11,7 @@ import {
   dataOpcional,
   textoOpcional as textoOpcionalCampo,
 } from "@/lib/campos";
+import { TIPO_CENTRO_CUSTO } from "@/lib/centro-custo";
 
 export const STATUS_OBRA = ["ativa", "pausada", "encerrada"] as const;
 export type StatusObra = (typeof STATUS_OBRA)[number];
@@ -72,8 +73,15 @@ export const obraSchema = z
     // `id` presente = edição; em branco = criação (o <input hidden> do form
     // manda `""`, e é por isso que o campo é `idOpcional`).
     id: idOpcional,
-    codigo: z.string().trim().min(1, "Informe o código da obra.").max(50),
-    nome: z.string().trim().min(1, "Informe o nome da obra.").max(200),
+    // Obra ou departamento administrativo. Imutável depois de criado — a trava
+    // é o trigger da migration 0114; aqui o campo existe porque a criação
+    // precisa mandá-lo.
+    tipo: z.enum(TIPO_CENTRO_CUSTO).default("obra"),
+    // O departamento pai. `idOpcional` porque o select manda `""` para "nenhum",
+    // e "" gravado no lugar de NULL faria todo `is null` deixar de encontrá-lo.
+    pai_id: idOpcional,
+    codigo: z.string().trim().min(1, "Informe o código.").max(50),
+    nome: z.string().trim().min(1, "Informe o nome.").max(200),
     endereco: textoOpcional(300),
     responsavel: textoOpcional(200),
     centro_custo: textoOpcional(100),
@@ -99,6 +107,43 @@ export const obraSchema = z
         path: ["data_fim_prevista"],
         message: "O fim previsto não pode ser anterior ao início.",
       });
+    }
+
+    // As três regras abaixo espelham CHECKs da migration 0114. Elas existem
+    // aqui para DAR MENSAGEM no campo certo — o banco recusa com erro cru, sem
+    // nome de campo, e o formulário não teria onde pendurá-lo.
+    if (d.tipo === "obra" && d.pai_id) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["pai_id"],
+        message:
+          "Uma obra não fica subordinada a outro centro de custo. " +
+          "Para agrupar trabalho dentro dela, use frentes de serviço.",
+      });
+    }
+
+    if (d.tipo === "departamento") {
+      // Um departamento não "atrasa": não há prazo do qual medir atraso, e
+      // `percentualPrazo` (src/lib/avanco.ts) usa estas datas como denominador.
+      for (const campo of ["data_inicio", "data_fim_prevista", "data_fim_real"] as const) {
+        if (d[campo]) {
+          ctx.addIssue({
+            code: "custom",
+            path: [campo],
+            message: "Departamento não tem prazo — o período é da obra.",
+          });
+        }
+      }
+
+      if (d.status === "pausada") {
+        ctx.addIssue({
+          code: "custom",
+          path: ["status"],
+          message:
+            'Departamento não pausa: use "Ativa" ou "Encerrada". ' +
+            '"Pausada" descreve obra cujo contrato parou.',
+        });
+      }
     }
   });
 

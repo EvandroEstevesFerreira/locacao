@@ -68,7 +68,7 @@ export type GrupoNav = (typeof GRUPOS_NAV)[number];
 export const NAV_ITEMS: readonly NavItem[] = [
   { label: "Início", href: "/", icon: "layout-dashboard" },
 
-  { label: "Obras", href: "/obras", icon: "hard-hat", modulo: "obras", grupo: "Obra" },
+  { label: "Centros de custo", href: "/obras", icon: "hard-hat", modulo: "obras", grupo: "Obra" },
   { label: "Avanço", href: "/avanco", icon: "trending-up", modulo: "avanco", grupo: "Obra" },
 
   { label: "Itens", href: "/itens", icon: "package", modulo: "itens", grupo: "Equipamento" },

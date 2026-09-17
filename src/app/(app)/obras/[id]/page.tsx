@@ -13,6 +13,7 @@ import { hojeISOSaoPaulo } from "@/lib/locacao";
 import { percentualPrazo } from "@/lib/avanco";
 import { percentualConsumido } from "@/lib/orcamento";
 import { ObraForm } from "../obra-form";
+import { listarDepartamentosPossiveisPai } from "@/lib/data/obras";
 import { BlocoAvanco } from "./_components/bloco-avanco";
 import { BlocoOrcamento } from "./_components/bloco-orcamento";
 import { BlocoCustoItem } from "./_components/bloco-custo-item";
@@ -39,12 +40,18 @@ export default async function EditarObraPage({
   const { data: obra } = await supabase
     .from("obra")
     .select(
-      "id, codigo, nome, endereco, responsavel, centro_custo, status, destinatarios_alerta, data_inicio, data_fim_prevista, data_fim_real",
+      "id, codigo, nome, endereco, responsavel, centro_custo, status, tipo, pai_id, destinatarios_alerta, data_inicio, data_fim_prevista, data_fim_real",
     )
     .eq("id", id)
     .single();
 
   if (!obra) notFound();
+
+  // Os departamentos que podem ser pai DESTE registro — já sem ele mesmo, e só
+  // os de raiz, porque a hierarquia tem dois níveis. Oferecer na tela o que o
+  // trigger da 0114 vai recusar é convidar ao erro.
+  const paisPossiveis =
+    obra.tipo === "departamento" ? await listarDepartamentosPossiveisPai(obra.id) : [];
 
   // Quem já recebe os avisos desta obra por estar vinculado a ela. É exibição,
   // não configuração: sem isto a pessoa digita nos "e-mails extras" endereços
@@ -88,7 +95,7 @@ export default async function EditarObraPage({
       <PageHeader titulo="Editar obra" descricao={obra.nome} />
       <Card>
         <CardContent className="pt-6">
-          <ObraForm obra={obra} vinculados={vinculados} />
+          <ObraForm obra={obra} vinculados={vinculados} paisPossiveis={paisPossiveis} />
         </CardContent>
       </Card>
 

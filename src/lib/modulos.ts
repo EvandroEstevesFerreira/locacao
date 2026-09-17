@@ -36,7 +36,7 @@ export const MODULOS: {
   href: string;
   grupo: GrupoModulo;
 }[] = [
-  { grupo: "Obra", chave: "obras", label: "Obras", href: "/obras" },
+  { grupo: "Obra", chave: "obras", label: "Centros de custo", href: "/obras" },
   { grupo: "Obra", chave: "avanco", label: "Avanço", href: "/avanco" },
   { grupo: "Equipamento", chave: "fornecedores", label: "Fornecedores", href: "/fornecedores" },
   { grupo: "Equipamento", chave: "itens", label: "Itens", href: "/itens" },

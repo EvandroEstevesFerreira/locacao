@@ -231,8 +231,22 @@ CSS, e regra em componente é regra sem teste.
 
 ### Rota
 
-Nasce `/centros-custo`. `/obras` passa a **redirecionar** para ela — links
-antigos, favoritos e o `Nova obra` da paleta de comandos continuam vivos.
+**A rota canônica continua `/obras`**, e `/centros-custo` é um atalho que
+redireciona para ela, declarado em `next.config.ts`.
+
+O desenho original dizia o contrário — `/centros-custo` canônica, `/obras`
+redirecionando. A implementação inverteu depois de medir: são **68 referências
+a `/obras` em 24 arquivos**, incluindo as trilhas do módulo de treinamento, que
+levam a pessoa a URLs específicas. O ganho seria estético; o risco, real. É a
+mesma troca consciente que a abordagem A já faz no banco — a tabela continua
+`obra`, o conceito se chama centro de custo.
+
+O redirect vive no `next.config.ts`, e não numa `page.tsx` com `redirect()`,
+porque uma página vazia seria rota de primeiro nível **sem módulo** — e o
+middleware só checa permissão quando `moduloDaRota` devolve algo, então
+qualquer usuário autenticado entraria. As duas guardas do repositório
+(`modulos.test.ts` e `largura-de-pagina.test.ts`) reprovaram a primeira
+tentativa, e estavam certas.
 
 A **chave do módulo continua `"obras"`** em `src/lib/modulos.ts`. Ela está
 gravada na configuração de módulos de cada organização no banco; renomeá-la
@@ -250,8 +264,9 @@ seria uma migração de dados para trocar uma string interna. Muda o `label` e o
 ### Formulário
 
 - **Tipo** é escolhido na criação e some (vira texto) na edição.
-- Departamento mostra: código, nome, responsável, centro de custo, **pai**,
-  status, destinatários de alerta.
+- Departamento mostra: código, nome, endereço, responsável, centro de custo,
+  **pai**, status, destinatários de alerta. (O endereço ficou: uma sala tem
+  andar, e esconder um campo de texto opcional não compra nada.)
 - Obra mostra exatamente o que mostra hoje, mais nada.
 - O select de **pai** lista apenas departamentos sem pai, menos o próprio.
 
@@ -281,6 +296,18 @@ ficar.
 Quem continua **só obra** (`tipo: "obra"`): avanço, frentes, orçamento de
 locação, fechamento mensal. Os mesmos quatro que a trava 6 protege no banco —
 a tela não oferece e o banco não aceita.
+
+Três consumidores **não passam** por `listarObrasParaFiltro` e liam `obra`
+direto; os três ganharam `.eq("tipo", "obra")`:
+
+| Arquivo | O que aconteceria sem o filtro |
+| --- | --- |
+| `src/lib/data/avanco.ts` | a tela de lançamento semanal ofereceria o RH para alguém digitar percentual |
+| `src/lib/data/painel.ts` | departamento entraria no painel como linha eternamente em 0% de prazo |
+| `src/app/api/cron/avanco/route.ts` | o aviso semanal cobraria avanço físico do Financeiro **por e-mail**, toda semana |
+
+O terceiro é o que justifica a varredura: nenhuma tela denunciaria, e o sintoma
+chegaria como reclamação de quem recebeu o e-mail.
 
 ### Busca global — dependência cruzada
 
@@ -329,6 +356,8 @@ nomeia esta mudança, e esta nomeia `src/lib/data/busca.ts`.
 
 | Frente | O que foi feito | Falta | % concluído |
 | --- | --- | --- | --- |
-| Centros de custo | Desenho fechado e spec escrita | Migration, domínio, telas, seletores, testes | 15% |
+| Centros de custo | Spec, migration 0114 com as 7 travas, domínio puro testado, schema, camada de leitura, lista com tipo e hierarquia, formulário condicional, action, 3 consumidores de avanço filtrados, rota-atalho, menu. Suíte em 1488 testes | Confirmar as 2 premissas com o Evandro; cadastrar os departamentos reais na tela; rotular `busca.ts` quando as branches se encontrarem | 85% |
 
-**Próximo passo:** a migration com as sete travas.
+**Próximo passo:** o Evandro confirmar as duas premissas — quais linhas viram
+departamento e se departamento aceita "pausada" — e cadastrar os departamentos
+com os códigos que batem com o Mega e o People.

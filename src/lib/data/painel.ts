@@ -32,6 +32,9 @@ export async function entradasPainel(
   let qObras = supabase
     .from("obra")
     .select("id, codigo, nome, data_inicio, data_fim_prevista")
+    // Só obra: o painel mede prazo decorrido e avanço, e departamento não tem
+    // nem um nem outro — apareceria como linha eternamente em 0%.
+    .eq("tipo", "obra")
     .eq("status", "ativa")
     .is("deleted_at", null)
     .order("codigo");
