@@ -10,7 +10,6 @@ import {
   type Entidade,
   type ResultadoBusca,
 } from "@/lib/busca";
-import { TIPO_CENTRO_CUSTO_INFO } from "@/lib/centro-custo";
 
 /**
  * Um grupo de resultados por entidade, pronto para a UI do Ctrl+K.
@@ -61,22 +60,12 @@ function hrefTodos(base: string, termo: string): string {
 /**
  * Rótulo em PT-BR de cada entidade, no plural — texto visível ao usuário.
  *
- * "obra" virou "Centros de custo" porque a tabela `obra` deixou de conter só
- * obra: ganhou `tipo` (obra | departamento) e a tela é "Centros de custo".
- * Rotular o grupo inteiro de "Obras" ficaria errado sempre que ele trouxer um
- * departamento — hoje já são dois (800 — Administração, 686 — CPQ03
- * Manutenção). O `GrupoBusca` só tem UM rótulo para o grupo inteiro (é o que
- * vira o cabeçalho no palette, ver `command-palette.tsx`), e um grupo pode
- * misturar os dois tipos — então o rótulo do grupo fica neutro, e QUEM
- * diferencia cada linha é o `detalhe`, que passa a levar
- * `TIPO_CENTRO_CUSTO_INFO[tipo].label` (ver `buscarObras` abaixo). Dividir em
- * dois grupos foi cogitado e descartado: exigiria duas entidades em
- * `ENTIDADES`/`MODULO_POR_ENTIDADE`, e as duas already resolvem para o mesmo
- * módulo (`obras`) e a mesma tabela — duas entidades por uma tabela só criaria
- * uma segunda forma de o filtro por módulo divergir do RLS.
+ * NOTA: outra onda vai acrescentar a coluna `tipo` em `obra` (obra |
+ * departamento). Quando ela chegar, o rótulo de "obra" pode precisar ler essa
+ * coluna para diferenciar os dois; até lá, `obra` não existe e não é filtrada.
  */
 const ROTULOS: Record<Entidade, string> = {
-  obra: "Centros de custo",
+  obra: "Obras",
   fornecedor: "Fornecedores",
   equipamento: "Equipamentos",
   funcionario: "Funcionários",
@@ -110,7 +99,7 @@ async function buscarObras(termo: string): Promise<GrupoBusca | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("obra")
-    .select("id, nome, codigo, tipo")
+    .select("id, nome, codigo")
     .is("deleted_at", null);
 
   if (error) {
@@ -118,24 +107,16 @@ async function buscarObras(termo: string): Promise<GrupoBusca | null> {
     return null;
   }
 
-  const linhas = (data ?? []) as unknown as {
-    id: string;
-    nome: string;
-    codigo: string;
-    tipo: "obra" | "departamento";
-  }[];
+  const linhas = (data ?? []) as unknown as { id: string; nome: string; codigo: string }[];
   const resultados: ResultadoBusca[] = [];
   for (const o of linhas) {
     const acerto = classificarAcerto({ termo, nome: o.nome, codigos: [o.codigo] });
     if (!acerto) continue;
-    // O grupo mistura obra e departamento sob um rótulo só ("Centros de
-    // custo"); o `detalhe` é quem diferencia cada linha na tela, com o mesmo
-    // rótulo de `TIPO_CENTRO_CUSTO_INFO` que a tela de cadastro usa.
     resultados.push({
       entidade: "obra",
       id: o.id,
       titulo: o.nome,
-      detalhe: `${TIPO_CENTRO_CUSTO_INFO[o.tipo].label} · ${o.codigo}`,
+      detalhe: o.codigo,
       href: `/obras/${o.id}`,
       acerto,
     });
