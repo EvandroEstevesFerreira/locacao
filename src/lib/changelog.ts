@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.116.2";
+export const APP_VERSION = "0.117.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,43 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.117.0",
+    data: "2026-09-17",
+    titulo: "Departamentos entram no sistema, ao lado das obras",
+    mudancas: [
+      {
+        tipo: "novo",
+        texto:
+          "A tela de Obras agora se chama Centros de custo e aceita os departamentos da empresa — Engenharia, Comercial, Financeiro, RH, TI e os demais —, além das obras. Cada um tem sua própria coluna Tipo na lista.",
+      },
+      {
+        tipo: "novo",
+        texto:
+          "Um departamento pode ficar abaixo de outro (o RH dentro do Administrativo, por exemplo), e a lista mostra o setor recuado sob o seu departamento.",
+      },
+      {
+        tipo: "novo",
+        texto:
+          "Equipamento, contrato, termo de responsabilidade, imóvel, movimento de estoque e lançamento financeiro já podem ser vinculados a um departamento. O notebook do RH finalmente tem onde ficar.",
+      },
+      {
+        tipo: "melhoria",
+        texto:
+          "Departamento não tem prazo, avanço físico, frente de serviço, orçamento de locação nem fechamento mensal — esses campos simplesmente não aparecem para ele, e o sistema não os aceita por nenhum caminho.",
+      },
+      {
+        tipo: "melhoria",
+        texto:
+          "O aviso semanal de avanço por e-mail passa a cobrar apenas as obras. Antes, um departamento cadastrado como obra receberia cobrança de percentual toda semana.",
+      },
+      {
+        tipo: "melhoria",
+        texto:
+          "Quem tinha o link antigo continua chegando: /obras segue funcionando, e /centros-custo leva para a mesma tela.",
+      },
+    ],
+  },
   {
     versao: "0.116.2",
     data: "2026-09-17",

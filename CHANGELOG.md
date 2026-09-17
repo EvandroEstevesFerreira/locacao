@@ -7,6 +7,39 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.117.0] - 2026-09-17
+
+A tela de Obras tinha oito linhas, e uma delas — `800 — Administração` — não era
+uma obra: era o departamento administrativo disfarçado, para conseguir existir
+no sistema. O disfarce lhe dava prazo, avanço físico, orçamento e fechamento
+mensal, quatro números que entram em relatório financeiro parecendo legítimos.
+E não escalava: Engenharia, Comercial, Financeiro, RH e TI também consomem
+locação, e não tinham onde ficar.
+
+Obra e departamento passam a ser o mesmo conceito com naturezas diferentes: um
+**centro de custo**.
+
+### Adicionado
+
+- Coluna `tipo` (obra | departamento) e `pai_id` em `obra`, com hierarquia de
+  dois níveis (migration `0114`).
+- Filtro por tipo e indentação de setor sob o seu departamento na lista.
+- `/centros-custo` como atalho para `/obras`.
+
+### Alterado
+
+- Os 17 seletores de obra do sistema passam a listar os dois tipos.
+- Avanço, painel e o cron de avanço passam a ler **só obra**.
+
+### Segurança
+
+- Sete travas **no banco**, não na tela: departamento não recebe frente,
+  avanço, orçamento nem fechamento mensal; não tem prazo; não pausa; e `tipo`
+  é imutável. Esconder o bloco no React não fecha a server action.
+- Nenhuma policy de RLS mudou: `is_member_of_obra` é indiferente ao tipo da
+  linha, e departamento entra no mesmo regime de vínculo que a obra — sem
+  herança pelo pai.
+
 ## [0.116.2] - 2026-09-17
 
 A 0.116.1 consertou o fundo da tela de entrada e deixou passar a outra metade
