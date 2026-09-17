@@ -7,6 +7,22 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.116.1] - 2026-09-17
+
+A tela de entrada renderizava escura para quem tem o sistema operacional em
+modo escuro — exatamente o que o `AuthShell` diz querer evitar.
+
+### Corrigido
+
+- **O fundo translúcido desfazia o tema claro forçado.** `bg-muted/40` compila
+  para `color-mix(in oklab, var(--muted) 40%, transparent)`: os tokens dentro
+  do `<main>` viravam claros, mas 60% do fundo deixava passar a tela do
+  navegador, escura porque o `next-themes` põe `class="dark"` no `<html>`
+  seguindo o sistema. O cartão, opaco, ficava branco; o subtítulo e o rodapé
+  ficavam em cinza de tema claro sobre fundo escuro. Agora o fundo é opaco.
+  Vale para `/login`, `/auth/nova-senha` e `/auth/recuperar`, que dividem a
+  `AuthShell`.
+
 ## [0.116.0] - 2026-09-16
 
 ### Corrigido

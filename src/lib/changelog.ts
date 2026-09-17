@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.116.0";
+export const APP_VERSION = "0.116.1";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,18 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.116.1",
+    data: "2026-09-17",
+    titulo: "A tela de entrada volta a ser clara",
+    mudancas: [
+      {
+        tipo: "correcao",
+        texto:
+          "Para quem usa o computador em modo escuro, a tela de entrada aparecia escura, com o subtítulo e o rodapé quase ilegíveis. Ela volta a ser clara para todo mundo, como foi desenhada.",
+      },
+    ],
+  },
   {
     versao: "0.116.0",
     data: "2026-09-16",
