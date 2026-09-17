@@ -7,6 +7,25 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.118.0] - 2026-09-17
+
+O Ctrl+K deixa de ser um atalho de menu e vira busca.
+
+### Adicionado
+
+- **Busca global por registro.** Obras, fornecedores, equipamentos,
+  funcionários, contratos e imóveis, por nome ou código, ao lado das páginas e
+  ações que já existiam.
+- **Acento não atrapalha.** `unaccent` não está instalado e o PostgREST não
+  expressa função sobre coluna num `.or()`, então o casamento roda no servidor
+  com a mesma normalização que o palette já usava para páginas. Defensável
+  porque as seis tabelas somam 720 linhas (medido em 17/09/2026); a dez vezes
+  isso, a decisão volta à mesa.
+- **O módulo do perfil é respeitado.** `perfil.modulos` é uma lista branca que
+  vive no código, não na RLS — a ponte `"use server"` filtra as entidades antes
+  de consultar. Sem isso, quem só tem o módulo de imóveis leria o nome de um
+  fornecedor na lista de resultados.
+
 ## [0.117.0] - 2026-09-17
 
 A tela de Obras tinha oito linhas, e uma delas — `800 — Administração` — não era

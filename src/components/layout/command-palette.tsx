@@ -16,15 +16,23 @@
 // Isso é conveniência, não controle de acesso — a segurança real é RLS mais a
 // checagem dentro de cada action.
 //
-// Não indexamos registros do banco (obras/contratos por nome): exigiria
-// endpoint de busca com debounce, e as listas já têm o ListSearch.
+// Registros do banco (obras, fornecedores, equipamentos, funcionários,
+// contratos, imóveis) entram na busca desde a Task 3 do plano de busca
+// global. O filtro roda no servidor, não aqui: o PostgREST não expressa
+// `unaccent` sobre coluna dentro de um `.or()`, então "joao" só encontra
+// "João" filtrando em memória do lado de cá (ver `buscarGlobal` em
+// `src/lib/data/busca.ts`). O palette chama esse servidor por uma server
+// action (`buscarGlobalAction`) com debounce; a permissão de ver cada
+// registro vem da RLS por trás da consulta, não de checagem alguma aqui.
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import type { NavItem } from "@/lib/nav";
+import { ENTIDADES, TERMO_MINIMO } from "@/lib/busca";
+import type { GrupoBusca } from "@/lib/data/busca";
 import {
   podeEditarCadastros,
   podeGerenciarFinanceiro,
@@ -33,9 +41,19 @@ import {
   type Papel,
 } from "@/lib/permissoes";
 import { cn } from "@/lib/utils";
+import { buscarGlobalAction } from "./busca-global-action";
 
-type Grupo = "Páginas" | "Ações";
-type Entrada = { label: string; href: string; grupo: Grupo };
+type Grupo = "Páginas" | "Ações" | string;
+type Entrada =
+  | { tipo: "simples"; label: string; href: string; grupo: Grupo }
+  | {
+      tipo: "registro";
+      label: string;
+      href: string;
+      grupo: Grupo;
+      detalhe: string | null;
+      id: string;
+    };
 
 /** Remove acentos para que "imoveis" encontre "Imóveis". */
 function normalizar(s: string) {
@@ -55,13 +73,20 @@ export function CommandPalette({
   const [aberto, setAberto] = useState(false);
   const [busca, setBusca] = useState("");
   const [indiceAtivo, setIndiceAtivo] = useState(0);
+  const [resultadosServidor, setResultadosServidor] = useState<GrupoBusca[]>([]);
+  const [buscando, setBuscando] = useState(false);
   const router = useRouter();
+  // Guarda o termo que originou a chamada em curso, para descartar respostas
+  // fora de ordem: se "and" voltar depois de o usuário já ter digitado
+  // "anderson", comparar com o termo atual evita sobrescrever o resultado
+  // certo com o velho.
+  const termoEmVoo = useRef<string | null>(null);
 
   const indice = useMemo<Entrada[]>(() => {
     const liberado = (m: string) => itens.some((n) => n.modulo === m);
     const acoes: Entrada[] = [];
     const add = (label: string, href: string) =>
-      acoes.push({ label, href, grupo: "Ações" });
+      acoes.push({ tipo: "simples", label, href, grupo: "Ações" });
 
     if (liberado("obras") && podeEditarCadastros(papel)) add("Nova obra", "/obras/nova");
     if (liberado("fornecedores") && podeEditarCadastros(papel))
@@ -74,17 +99,69 @@ export function CommandPalette({
       add("Novo lançamento", "/financeiro/novo");
     if (podeGerenciarUsuarios(papel)) add("Novo usuário", "/usuarios/novo");
 
-    return [
-      ...itens.map((n) => ({ label: n.label, href: n.href, grupo: "Páginas" as const })),
-      ...acoes,
-    ];
+    const paginas: Entrada[] = itens.map((n) => ({
+      tipo: "simples",
+      label: n.label,
+      href: n.href,
+      grupo: "Páginas",
+    }));
+
+    // Ordem fixa: Ações, Páginas, depois um grupo por entidade na ordem de
+    // ENTIDADES — páginas antes dos registros porque são instantâneas e a
+    // lista já é útil enquanto os registros ainda carregam do servidor.
+    return [...acoes, ...paginas];
   }, [itens, papel]);
+
+  const termoValidoAtual = normalizar(busca.trim()).length >= TERMO_MINIMO;
+
+  const gruposPorEntidade = useMemo(() => {
+    if (!termoValidoAtual) return [];
+    const mapa = new Map(resultadosServidor.map((g) => [g.entidade, g]));
+    return ENTIDADES.map((e) => mapa.get(e)).filter((g): g is GrupoBusca => g !== undefined);
+  }, [resultadosServidor, termoValidoAtual]);
 
   const resultados = useMemo(() => {
     const termo = normalizar(busca.trim());
-    if (!termo) return indice;
-    return indice.filter((e) => normalizar(e.label).includes(termo));
-  }, [busca, indice]);
+    const locais = termo ? indice.filter((e) => normalizar(e.label).includes(termo)) : indice;
+
+    const registros: Entrada[] = gruposPorEntidade.flatMap((g) =>
+      g.itens.map<Entrada>((item) => ({
+        tipo: "registro",
+        label: item.titulo,
+        href: item.href,
+        grupo: g.rotulo,
+        detalhe: item.detalhe,
+        id: item.id,
+      })),
+    );
+
+    return [...locais, ...registros];
+  }, [busca, indice, gruposPorEntidade]);
+
+  // Busca no servidor, com debounce de 200ms e descarte de resposta fora de
+  // ordem.
+  useEffect(() => {
+    const termo = busca.trim();
+    if (normalizar(termo).length < TERMO_MINIMO) {
+      termoEmVoo.current = null;
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      termoEmVoo.current = termo;
+      setBuscando(true);
+      buscarGlobalAction(termo)
+        .then((grupos) => {
+          if (termoEmVoo.current !== termo) return; // resposta velha, descarta
+          setResultadosServidor(grupos);
+        })
+        .finally(() => {
+          if (termoEmVoo.current === termo) setBuscando(false);
+        });
+    }, 200);
+
+    return () => clearTimeout(timer);
+  }, [busca]);
 
   // Atalho global. Ctrl+K / ⌘+K abre e fecha.
   useEffect(() => {
@@ -103,6 +180,7 @@ export function CommandPalette({
     if (!proximo) {
       setBusca("");
       setIndiceAtivo(0);
+      setResultadosServidor([]);
     }
   }
 
@@ -170,8 +248,8 @@ export function CommandPalette({
                 setIndiceAtivo(0);
               }}
               onKeyDown={onKeyDownLista}
-              placeholder="Buscar páginas e ações…"
-              aria-label="Buscar páginas e ações"
+              placeholder="Buscar páginas, ações e registros…"
+              aria-label="Buscar páginas, ações e registros"
               className="border-0 shadow-none focus-visible:ring-0"
             />
           </div>
@@ -185,11 +263,40 @@ export function CommandPalette({
               resultados.map((e, i) => {
                 const novoGrupo = e.grupo !== grupoAnterior;
                 grupoAnterior = e.grupo;
+                const grupoBusca =
+                  e.tipo === "registro"
+                    ? gruposPorEntidade.find((g) => g.rotulo === e.grupo)
+                    : undefined;
+                // `funcionario` é o único grupo cujo destino não filtra por
+                // termo (`/termos/funcionarios` não lê `?q=`): o cabeçalho
+                // mostra a contagem, mas sem virar link, para não prometer um
+                // recorte que a página de destino não entrega.
+                const linkVerTodos =
+                  grupoBusca && grupoBusca.total > grupoBusca.itens.length
+                    ? grupoBusca.entidade === "funcionario"
+                      ? null
+                      : grupoBusca.hrefTodos
+                    : null;
                 return (
-                  <div key={`${e.grupo}-${e.href}`}>
+                  <div key={`${e.grupo}-${e.tipo === "registro" ? e.id : e.href}`}>
                     {novoGrupo ? (
-                      <div className="px-2 pt-2 pb-1 text-xs font-medium text-muted-foreground">
-                        {e.grupo}
+                      <div className="flex items-center justify-between px-2 pt-2 pb-1 text-xs font-medium text-muted-foreground">
+                        <span>{e.grupo}</span>
+                        {grupoBusca && grupoBusca.total > grupoBusca.itens.length ? (
+                          linkVerTodos ? (
+                            <button
+                              type="button"
+                              onClick={() => ir(linkVerTodos)}
+                              className="font-normal underline-offset-2 hover:underline"
+                            >
+                              ({grupoBusca.itens.length} de {grupoBusca.total})
+                            </button>
+                          ) : (
+                            <span className="font-normal">
+                              ({grupoBusca.itens.length} de {grupoBusca.total})
+                            </span>
+                          )
+                        ) : null}
                       </div>
                     ) : null}
                     <button
@@ -197,18 +304,24 @@ export function CommandPalette({
                       onClick={() => ir(e.href)}
                       onMouseEnter={() => setIndiceAtivo(i)}
                       className={cn(
-                        "flex w-full items-center rounded-sm px-2 py-1.5 text-left text-sm transition-colors",
+                        "flex w-full flex-col items-start rounded-sm px-2 py-1.5 text-left text-sm transition-colors",
                         i === indiceAtivo
                           ? "bg-accent text-accent-foreground"
                           : "hover:bg-accent hover:text-accent-foreground",
                       )}
                     >
-                      {e.label}
+                      <span>{e.label}</span>
+                      {e.tipo === "registro" && e.detalhe ? (
+                        <span className="text-xs text-muted-foreground">{e.detalhe}</span>
+                      ) : null}
                     </button>
                   </div>
                 );
               })
             )}
+            {buscando && gruposPorEntidade.length === 0 ? (
+              <p className="px-3 py-2 text-center text-xs text-muted-foreground">Buscando…</p>
+            ) : null}
           </div>
         </DialogContent>
       </Dialog>

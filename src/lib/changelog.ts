@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.117.0";
+export const APP_VERSION = "0.118.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,33 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.118.0",
+    data: "2026-09-17",
+    titulo: "O Ctrl+K agora acha registro, não só página",
+    mudancas: [
+      {
+        tipo: "novo",
+        texto:
+          "A busca rápida (Ctrl+K) passa a encontrar obras, fornecedores, equipamentos, funcionários, contratos e imóveis pelo nome ou pelo código, além das páginas e ações de sempre.",
+      },
+      {
+        tipo: "novo",
+        texto:
+          "Buscar sem acento funciona: digitar “joao” encontra “João”, e “imovel” encontra “Imóvel”.",
+      },
+      {
+        tipo: "novo",
+        texto:
+          "O equipamento é encontrado por patrimônio, número de série, service tag e também pelo modelo — procurar “betoneira” traz as betoneiras.",
+      },
+      {
+        tipo: "seguranca",
+        texto:
+          "A busca só mostra o que você já poderia ver navegando: respeita a sua obra, a sua organização e os módulos liberados para o seu perfil.",
+      },
+    ],
+  },
   {
     versao: "0.117.0",
     data: "2026-09-17",
