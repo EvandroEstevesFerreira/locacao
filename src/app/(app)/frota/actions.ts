@@ -184,12 +184,12 @@ export async function movimentarPeca(raw: unknown): Promise<ActionResult> {
       unidadeId: d.unidade_id,
       termoId: posseAtual.termo_id,
       data: d.data,
-      // A PARADA DE ZERO DIA SE EVITA NA ORIGEM, porque o livro e
-      // somente-inclusao: a linha errada nao se apaga depois (sem policy de
+      // A PARADA DE ZERO DIA SE EVITA NA ORIGEM, porque o livro é
+      // somente-inclusão: a linha errada não se apaga depois (não há policy de
       // DELETE, e a trigger `trg_custodia_imutavel` recusaria de todo jeito).
-      // Quando a peca vai da pessoa direto para a obra ou para o fornecedor, a
-      // devolucao NAO abre a posse de almoxarifado — a posse da pessoa fica
-      // aberta ate o `abrirCustodia` logo abaixo, que e quem a fecha.
+      // Quando a peça vai da pessoa direto para a obra ou para o fornecedor, a
+      // devolução NÃO abre a posse de almoxarifado — a posse da pessoa fica
+      // aberta até o `abrirCustodia` logo abaixo, que é quem a fecha.
       abrirPosseDeVolta: posseFinal === "almoxarifado",
       estado: d.estado_devolucao,
       observacoes: d.observacoes,
@@ -206,16 +206,25 @@ export async function movimentarPeca(raw: unknown): Promise<ActionResult> {
     if (!devolveu.ok) {
       // A DEVOLUÇÃO NÃO É ATÔMICA, e o corte é em `encerrarTermo`. Antes dele
       // nada saiu do lugar e `ok: false` é a verdade. Depois dele, não: a
-      // devolução já foi registrada e `liberarPecas` já pôs a peça no
-      // almoxarifado. Dizer "falhou" ali manda o usuário tentar de novo sobre
-      // uma peça que já voltou, e a segunda recusa ("já consta devolvida") é
-      // ainda menos compreensível que a primeira. É a mesma regra do passo 5.
+      // devolução já está gravada nos itens do termo, e isso não se desfaz.
+      // Dizer "falhou" ali manda o usuário tentar de novo, e a segunda recusa
+      // ("já consta devolvida") é ainda menos compreensível que a primeira. É
+      // a mesma regra do passo 5.
       if (!devolveu.posseJaMoveu) return falha(devolveu.erro);
       revalidarMovimentacao(d.unidade_id);
+      // O AVISO NÃO PODE AFIRMAR ONDE A PEÇA ESTÁ. Só quando o destino é o
+      // almoxarifado a devolução abriu a posse de lá (`abrirPosseDeVolta`);
+      // indo para obra ou fornecedor ela NÃO abriu, e a peça continua com a
+      // pessoa no livro. A frase antiga dizia "voltou ao almoxarifado" nos três
+      // casos, e nos dois últimos era mentira — a ficha ao lado mostraria o
+      // nome de quem está com ela.
       return {
         ok: true,
         id: d.unidade_id,
-        aviso: `A peça voltou ao almoxarifado, mas o termo não foi encerrado e a movimentação parou aí. ${devolveu.erro}`,
+        aviso:
+          posseFinal === "almoxarifado"
+            ? `A peça voltou ao almoxarifado, mas o termo não foi encerrado e a movimentação parou aí. ${devolveu.erro}`
+            : `A devolução foi registrada, mas o termo não foi encerrado e a movimentação parou aí: a peça ainda consta com quem estava. ${devolveu.erro}`,
       };
     }
   }
@@ -395,10 +404,11 @@ async function devolverDaPessoa(
 
   // OU ASSINOU, OU ESCREVEU O PORQUÊ — e a pergunta é feita ANTES de escrever
   // qualquer coisa. `encerrarTermo` também a faz, mas lá é tarde: quando ele
-  // recusa, `registrarDevolucao` já gravou a data e o estado nos itens e já
-  // chamou `liberarPecas`, que abriu a posse de almoxarifado. A action
-  // devolveria erro com a peça já movida e o termo ainda aberto — exatamente o
-  // estado que a ordem desta função existe para impedir.
+  // recusa, `registrarDevolucao` já gravou a data e o estado nos itens — e, se
+  // `abrirPosseDeVolta` for verdadeiro, `liberarPecas` já terá aberto a posse
+  // de almoxarifado por cima. A action devolveria erro com a devolução já
+  // registrada e o termo ainda aberto — exatamente o estado que a ordem desta
+  // função existe para impedir.
   const pode = podeEncerrarDevolucao({
     assinou: Boolean(e.assinatura),
     motivo: e.motivoSemAssinatura,
@@ -440,9 +450,13 @@ async function devolverDaPessoa(
     },
     e.motivoSemAssinatura,
   );
-  // AQUI A PECA JA SE MOVEU: `registrarDevolucao` acima gravou a devolucao e
-  // `liberarPecas` ja abriu a posse de almoxarifado. Uma falha em encerrar o
-  // termo e falha de um passo POSTERIOR a um passo irreversivel.
+  // AQUI O IRREVERSÍVEL JÁ ACONTECEU: `registrarDevolucao` gravou a data e o
+  // estado nos itens do termo, e uma segunda tentativa esbarraria em "já consta
+  // devolvida". Se `abrirPosseDeVolta` era verdadeiro, a posse de almoxarifado
+  // também já está aberta; se era falso, a peça segue com a pessoa no livro e
+  // quem chamou abre a posse de destino em seguida. Nos dois casos, falhar em
+  // encerrar o termo é falha de um passo POSTERIOR ao que não se desfaz — daí
+  // `posseJaMoveu`, que quem chama usa para não pedir repetição.
   return rFim.ok ? { ok: true } : { ok: false, erro: rFim.erro, posseJaMoveu: true };
 }
 

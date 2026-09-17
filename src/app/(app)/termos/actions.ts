@@ -872,18 +872,18 @@ export async function emitirTermo(
 async function liberarPecas(
   termoId: string,
   itemIds: string[],
-  // ABRIR A POSSE DE VOLTA E O PADRAO, e e o certo em toda devolucao registrada
-  // pela tela do termo: a peca volta mesmo para a prateleira.
+  // ABRIR A POSSE DE VOLTA É O PADRÃO, e é o certo em toda devolução registrada
+  // pela tela do termo: a peça volta mesmo para a prateleira.
   //
-  // `false` existe para UM chamador, `movimentarPeca`, e so quando ele ja sabe
-  // que a peca NAO para no almoxarifado — vai da pessoa direto para a obra ou
-  // para o fornecedor. Abrir a posse de almoxarifado ali e fecha-la no mesmo
+  // `false` existe para UM chamador, `movimentarPeca`, e só quando ele já sabe
+  // que a peça NÃO para no almoxarifado — vai da pessoa direto para a obra ou
+  // para o fornecedor. Abrir a posse de almoxarifado ali e fechá-la no mesmo
   // instante deixaria no livro "Almoxarifado central — menos de 1 dia", uma
-  // parada que nao houve. E o livro e somente-inclusao: linha errada nao se
-  // apaga depois, entao ela nao pode ser escrita.
+  // parada que não houve. E o livro é somente-inclusão: linha errada não se
+  // apaga depois, então ela não pode ser escrita.
   //
   // Quem passa `false` fica OBRIGADO a abrir a posse de destino em seguida: a
-  // posse de funcionario continua aberta ate la.
+  // posse de funcionário continua aberta até lá.
   { abrirPosseDeVolta = true }: { abrirPosseDeVolta?: boolean } = {},
 ): Promise<string | null> {
   if (itemIds.length === 0) return null;
@@ -970,7 +970,7 @@ export async function registrarDevolucao(
     estado_devolucao: string;
     observacoes?: string;
   }[],
-  // Repassado a `liberarPecas`. Ver la por que existe.
+  // Repassado a `liberarPecas`. Ver lá por que existe.
   opcoes: { abrirPosseDeVolta?: boolean } = {},
 ): Promise<ActionResult> {
   const perfil = await getCurrentPerfil();

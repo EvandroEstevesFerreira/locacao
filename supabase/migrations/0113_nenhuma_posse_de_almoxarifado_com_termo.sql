@@ -32,29 +32,29 @@
 -- sai é a amarração falsa.
 
 -- ---------------------------------------------------------------------------
--- A TRIGGER DE IMUTABILIDADE PRECISA SAIR DA FRENTE, e so deste UPDATE
+-- A TRIGGER DE IMUTABILIDADE PRECISA SAIR DA FRENTE, e só deste UPDATE
 -- ---------------------------------------------------------------------------
 -- `trg_custodia_imutavel` (0059) chama `guard_custodia_peca()`, que levanta
--- excecao em todo UPDATE cuja linha tenha `fim is null`:
+-- exceção em todo UPDATE cuja linha tenha `fim is null`:
 --
 --   if new.fim is null then
---     raise exception 'Nada a alterar: so o encerramento da posse pode ser
+--     raise exception 'Nada a alterar: só o encerramento da posse pode ser
 --     gravado.';
 --
--- E exatamente o recorte desta limpeza — posse ABERTA — entao sem isto a
+-- É exatamente o recorte desta limpeza — posse ABERTA — então sem isto a
 -- migration ABORTA justamente no banco que tem a anomalia, e o deploy inteiro
--- falha. Em banco ja limpo ela passaria por nao casar nenhuma linha, o que faz
--- a falha aparecer so em producao.
+-- falha. Em banco já limpo ela passaria por não casar nenhuma linha, o que faz
+-- a falha aparecer só em produção.
 --
--- POR QUE E SEGURO. O `disable` vale para esta transacao e volta na linha
--- seguinte: se o UPDATE falhar, a transacao da migration inteira desfaz, e a
--- trigger nunca fica desligada num banco vivo. O que a trigger protege e a
--- escrita da APLICACAO, e a aplicacao nao passa por aqui — este arquivo roda
+-- POR QUE É SEGURO. O `disable` vale para esta transação e volta na linha
+-- seguinte: se o UPDATE falhar, a transação da migration inteira desfaz, e a
+-- trigger nunca fica desligada num banco vivo. O que a trigger protege é a
+-- escrita da APLICAÇÃO, e a aplicação não passa por aqui — este arquivo roda
 -- uma vez, com o papel dono do schema. A trigger de auditoria continua LIGADA:
--- a limpeza fica registrada como qualquer outra alteracao.
+-- a limpeza fica registrada como qualquer outra alteração.
 --
--- E NAO ABRE O LIVRO PARA EDICAO COMUM. Nenhuma policy muda, `custodia_peca`
--- continua sem DELETE, e o unico caminho de escrita da aplicacao continua
+-- E NÃO ABRE O LIVRO PARA EDIÇÃO COMUM. Nenhuma policy muda, `custodia_peca`
+-- continua sem DELETE, e o único caminho de escrita da aplicação continua
 -- sendo `src/lib/custodia-servidor.ts`.
 
 alter table public.custodia_peca disable trigger trg_custodia_imutavel;

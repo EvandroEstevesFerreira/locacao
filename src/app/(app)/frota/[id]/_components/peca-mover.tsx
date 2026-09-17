@@ -51,13 +51,13 @@ export function PecaMover({
   const [pendente, iniciar] = useTransition();
 
   const saiDePessoa = posseAtual?.tipo === "funcionario";
-  // A PERGUNTA DA DEVOLUCAO VALE PARA TODA VOLTA AO ALMOXARIFADO.
+  // A PERGUNTA DA DEVOLUÇÃO VALE PARA TODA VOLTA AO ALMOXARIFADO.
   //
-  // "ao devolver um equipamento devemos selecionar se ele fica disponivel" foi
-  // o pedido, e ele nao dizia "quando vier de uma pessoa". A peca que volta de
-  // uma obra esta tao `em_uso` quanto a que volta do Joao, e a peca que volta
-  // da oficina tambem pode ter voltado imprestavel. A escolha e real sempre que
-  // ha posse aberta e o destino e a prateleira.
+  // "ao devolver um equipamento devemos selecionar se ele fica disponível" foi
+  // o pedido, e ele não dizia "quando vier de uma pessoa". A peça que volta de
+  // uma obra está tão `em_uso` quanto a que volta do João, e a que volta da
+  // oficina também pode ter voltado imprestável. A escolha é real sempre que há
+  // posse aberta e o destino é a prateleira.
   const ehDevolucao = posseAtual !== null && tipo === "almoxarifado";
 
   function mover() {
@@ -89,12 +89,12 @@ export function PecaMover({
       // CPF, previsão e a assinatura da empresa. O que esta tela resolve é a
       // pessoa não precisar mais descobrir sozinha qual botão apertar.
       //
-      // COM AVISO, NAO NAVEGA. O aviso quer dizer que algum passo do caminho
-      // nao se completou — o termo anterior pode nao ter sido encerrado. Levar
+      // COM AVISO, NÃO NAVEGA. O aviso quer dizer que algum passo do caminho
+      // não se completou — o termo anterior pode não ter sido encerrado. Levar
       // para /termos/novo assim mesmo convida a emitir um segundo termo sobre a
-      // mesma peca: duas pessoas respondendo no papel por uma maquina so, e
-      // `temTermoEmAberto` barrando toda movimentacao seguinte ate alguem
-      // desfazer isso a mao. A pessoa le o alerta, confere a ficha e decide.
+      // mesma peça: duas pessoas respondendo no papel por uma máquina só, e
+      // `temTermoEmAberto` barrando toda movimentação seguinte até alguém
+      // desfazer isso à mão. A pessoa lê o alerta, confere a ficha e decide.
       if (tipo === "funcionario" && !r.aviso) {
         router.push(`/termos/novo?peca=${unidadeId}&funcionario=${funcionarioId}`);
         return;
