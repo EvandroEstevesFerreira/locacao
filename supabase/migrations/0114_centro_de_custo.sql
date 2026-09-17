@@ -294,10 +294,12 @@ create temp table tmp_promocao_800 (
   codigo_mega text
 );
 
--- >>> Duas linhas estao com codigo NULO de proposito: PLANEJAMENTO e SMS. <<<
--- Nao esta claro em qual centro de custo da ADP elas caem, e chutar coloca
--- custo no departamento errado -- erro que so aparece num rateio, meses
--- depois. Com qualquer uma em branco a migration ABORTA dizendo qual falta.
+-- Planejamento e SMS ficaram sem centro de custo ate 17/09/2026: a migration
+-- abortou nomeando as duas em vez de chuta-las, e o Evandro respondeu 801.
+--
+-- A trava fica: qualquer frente nova sem codigo aborta a migration do mesmo
+-- jeito. Chutar poe custo no departamento errado, e o erro nao aparece na
+-- tela -- aparece num rateio, meses depois, como numero que ninguem explica.
 insert into tmp_promocao_800 (frente, codigo_adp, nome, codigo_mega) values
   ('Comercial',    '803', 'Comercial / Orcamentos',              null),
   ('Orcamentos',   '803', 'Comercial / Orcamentos',              null),
@@ -308,8 +310,8 @@ insert into tmp_promocao_800 (frente, codigo_adp, nome, codigo_mega) values
   ('Deposito',     '805', 'Deposito',                            null),
   ('Financeiro',   '800', 'Administracao',                       '6'),
   ('RH',           '800', 'Administracao',                       '6'),
-  ('Planejamento', null,  null,                                  null),  -- <<< preencher
-  ('SMS',          null,  null,                                  null);  -- <<< preencher
+  ('Planejamento', '801', 'Engenharia / Suprimentos / Projetos', '7'),
+  ('SMS',          '801', 'Engenharia / Suprimentos / Projetos', '7');
 
 create or replace function pg_temp.chave(t text) returns text
 language sql immutable as $$
@@ -383,13 +385,17 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------------
--- 5. As duas conversoes: o 800 e o 686 voltam a ser o que sempre foram
+-- 5. A conversao: o 800 volta a ser o que sempre foi
 -- ---------------------------------------------------------------------------
--- `800 - Administracao` e o departamento administrativo. `686 - CPQ03
--- Manutencao` e manutencao continua, e nao obra com prazo -- confirmado com o
--- Evandro em 17/09/2026. Os dois sao centros de custo sem avanco fisico, e
--- mante-los como obra e o que lhes da prazo, frente, orcamento e fechamento
--- mensal que nao significam nada para eles.
+-- `800 - Administracao` e o departamento administrativo, e mante-lo como obra
+-- e o que lhe da prazo, frente, orcamento e fechamento mensal que nao
+-- significam nada para ele.
+--
+-- O 686 ESTEVE NESTA LISTA E SAIU. A primeira resposta foi que ele era
+-- departamento; a estrutura do Mega mostrou que ele esta no grupo 21,
+-- "Alocacao de Custo Direto com Contratos de Manutencao" -- custo DIRETO,
+-- irmao das obras e nao dos departamentos. Ele continua obra, com prazo,
+-- avanco e fechamento, e so muda de pai.
 --
 -- A lista e explicita, e nao um padrao ("todo codigo 8xx"): a regra por padrao
 -- converteria sozinha a proxima obra que nascesse com codigo parecido, e o
@@ -415,8 +421,7 @@ declare
 begin
   for v_alvo in
     select * from (values
-      ('800', 'administra%'),   -- Administracao
-      ('686', 'cpq03%')         -- CPQ03 - Manutencao
+      ('800', 'administra%')    -- Administracao
     ) as t(codigo, nome_like)
   loop
     select count(*) into v_qtd
@@ -497,6 +502,7 @@ do $$
 declare
   v_38      uuid;
   v_20      uuid;
+  v_21      uuid;
   v_obra800 uuid;
   v_qtd     int := 0;
 begin
@@ -531,16 +537,27 @@ begin
     where id = v_obra800;
   end if;
 
-  -- 3. As obras, sob o 20. `21` (contratos de manutencao) fica de fora de
-  --    proposito: quais obras sao contrato de manutencao e dado que so o dono
-  --    do processo tem, e pendurar no grupo errado poe custo de obra na conta
-  --    da manutencao -- erro que aparece no relatorio, nao na tela.
+  -- 3. Os contratos de manutencao, sob o 21. A lista e EXPLICITA porque so o
+  --    dono do processo sabe quais obras sao contrato de manutencao, e
+  --    pendurar no grupo errado poe custo de obra na conta da manutencao --
+  --    erro que aparece no relatorio financeiro, nao na tela.
+  select id into v_21 from public.obra where codigo = '21' and tipo = 'grupo';
+
+  update public.obra
+  set pai_id = v_21,
+      codigo_mega = coalesce(codigo_mega, codigo)
+  where tipo = 'obra' and pai_id is null and deleted_at is null
+    and codigo in ('686');   -- acrescente aqui os proximos (705 e afins)
+  get diagnostics v_qtd = row_count;
+  raise notice '% contrato(s) de manutencao pendurado(s) no grupo 21.', v_qtd;
+
+  -- 4. Todas as demais obras, sob o 20.
   update public.obra
   set pai_id = v_20,
       codigo_mega = coalesce(codigo_mega, codigo)
   where tipo = 'obra' and pai_id is null and deleted_at is null;
   get diagnostics v_qtd = row_count;
-  raise notice '% obra(s) penduradas no grupo 20.', v_qtd;
+  raise notice '% obra(s) pendurada(s) no grupo 20.', v_qtd;
 end $$;
 
 drop table if exists tmp_filhos_800;

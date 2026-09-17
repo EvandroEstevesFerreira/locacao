@@ -106,11 +106,25 @@ describe("a conversão do 800 é defensiva", () => {
     expect(conversao).toMatch(/select distinct[\s\S]{0,120}t\.codigo_adp as codigo/i);
   });
 
-  it("deixa Planejamento e SMS sem código, de propósito", () => {
-    // Não está claro em qual centro de custo da ADP elas caem, e chutar põe
-    // custo no departamento errado — erro que só aparece num rateio.
-    expect(conversao).toMatch(/\('Planejamento', null/);
-    expect(conversao).toMatch(/\('SMS', *null/);
+  it("a trava de código em branco continua de pé", () => {
+    // Planejamento e SMS chegaram sem centro de custo definido, a migration
+    // abortou nomeando as duas, e o dono do processo respondeu 801. A trava
+    // FICA: qualquer frente nova sem código aborta do mesmo jeito. Ela não é
+    // um andaime da primeira rodada — é a regra.
+    expect(conversao).toMatch(/nao tem centro de custo da ADP definido/i);
+    expect(conversao).toMatch(/aparece num rateio/i);
+  });
+
+  it("o 686 continua obra: no Mega ele é custo DIRETO, do grupo 21", () => {
+    // Ele esteve na lista de conversão e saiu. A primeira resposta foi que era
+    // departamento; a estrutura do Mega mostrou que é irmão das obras, não dos
+    // departamentos. Converter teria tirado dele prazo, avanço e fechamento.
+    const conversoes = conversao.slice(
+      conversao.indexOf("select * from (values"),
+      conversao.indexOf("loop"),
+    );
+    expect(conversoes).not.toMatch(/'686'/);
+    expect(conversao).toMatch(/codigo in \('686'\)/);
   });
 
   it("não inventa código nenhum: só insere o que veio do mapa", () => {
