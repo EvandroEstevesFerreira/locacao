@@ -278,6 +278,7 @@ desambiguador natural para a linha secundária — melhoria posterior, não agor
 
 | Frente | O que foi feito | Falta | % concluído |
 | --- | --- | --- | --- |
-| Busca global | Pedido revisado, desenho aprovado e escrito | Plano, migration, módulo puro, camada de leitura, tela, testes | 10% |
+| Busca global | Desenho, módulo puro, camada de leitura, ponte, tela, testes; revisão final da branch aplicada (módulo por perfil, "ver todos" honesto, descrição do modelo, estado pendente) | Versionar nos três pontos (segurada de propósito) e merge | 95% |
 
-Próximo passo único: escrever o plano de implementação.
+Próximo passo único: decidir a ordem de merge com a branch que disputa o mesmo
+número de versão, e então bumpar `APP_VERSION`, `CHANGELOG.md` e `package.json`.
