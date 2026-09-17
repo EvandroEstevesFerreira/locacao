@@ -118,7 +118,7 @@ begin
     raise exception 'Um centro de custo nao pode ser pai de si mesmo.';
   end if;
 
-  select id, org_id, tipo, pai_id into v_pai
+  select id, nome, org_id, tipo, pai_id into v_pai
   from public.obra where id = new.pai_id;
 
   if not found then
@@ -140,7 +140,7 @@ begin
   if v_pai.pai_id is not null then
     raise exception
       'A hierarquia tem no maximo dois niveis: "%" ja e um setor de outro departamento.',
-      v_pai.id;
+      v_pai.nome;
   end if;
 
   return new;
