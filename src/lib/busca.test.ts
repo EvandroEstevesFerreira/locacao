@@ -5,8 +5,10 @@ import {
   classificarAcerto,
   ordenarResultados,
   ENTIDADES,
+  MODULO_POR_ENTIDADE,
   type ResultadoBusca,
 } from "./busca";
+import { MODULO_CHAVES } from "./modulos";
 
 describe("normalizarBusca", () => {
   it("tira acento e caixa, para que 'andre' ache 'André'", () => {
@@ -100,5 +102,19 @@ describe("ordenarResultados", () => {
   it("não perde nem duplica resultado", () => {
     const entrada = ENTIDADES.map((e, i) => r({ id: String(i), entidade: e }));
     expect(ordenarResultados(entrada)).toHaveLength(ENTIDADES.length);
+  });
+});
+
+describe("MODULO_POR_ENTIDADE", () => {
+  it("cobre as seis entidades com chaves de módulo que existem", () => {
+    // ESTE MAPA É A SEGUNDA BARREIRA DA BUSCA. A RLS recorta organização e
+    // obra; `perfil.modulos` recorta módulo e não tem policy nenhuma — quem
+    // o aplica é a ponte, com este mapa. Uma entidade sem entrada, ou com
+    // chave que não existe mais em MODULOS, deixaria de ser filtrada e o nome
+    // do registro apareceria na tela de quem não pode vê-lo.
+    for (const e of ENTIDADES) {
+      expect(MODULO_CHAVES).toContain(MODULO_POR_ENTIDADE[e]);
+    }
+    expect(Object.keys(MODULO_POR_ENTIDADE)).toHaveLength(ENTIDADES.length);
   });
 });

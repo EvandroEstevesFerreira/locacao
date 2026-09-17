@@ -302,9 +302,13 @@ async function buscarImoveis(termo: string): Promise<GrupoBusca | null> {
  * Busca global (Ctrl+K) sobre os seis registros da aplicação.
  *
  * `createClient()`, nunca `createAdminClient()`: o isolamento por organização
- * é feito por RLS, e é a única barreira desta busca — um client admin faria
- * qualquer usuário ver os registros de todas as organizações, sem erro e sem
- * teste vermelho.
+ * e o escopo por obra são feitos por RLS — um client admin faria qualquer
+ * usuário ver os registros de todas as organizações, sem erro e sem teste
+ * vermelho.
+ *
+ * A RLS NÃO é a barreira inteira, porém. O acesso por módulo (`perfil.modulos`)
+ * não tem policy nenhuma: ele é conferido em código, e por isso chega aqui já
+ * resolvido, em `entidades`.
  *
  * O filtro roda em memória (não em SQL) porque `unaccent` não está instalado
  * nesta base e o PostgREST não permite função sobre coluna dentro de um
@@ -315,18 +319,29 @@ async function buscarImoveis(termo: string): Promise<GrupoBusca | null> {
  *
  * Cada consulta roda isolada: uma falhar loga e devolve grupo vazio, sem
  * derrubar as outras cinco.
+ *
+ * `entidades` NÃO tem valor padrão de propósito: é a lista que sobrou depois
+ * de `perfil.modulos` — a segunda barreira, a que só existe em código de
+ * aplicação (ver `MODULO_POR_ENTIDADE` em `src/lib/busca.ts`). Um padrão
+ * "todas" faria um chamador futuro esquecer o filtro sem nada ficar vermelho,
+ * e o vazamento é silencioso: o nome do registro na tela, sem clique.
  */
-export async function buscarGlobal(termo: string): Promise<GrupoBusca[]> {
+export async function buscarGlobal(
+  termo: string,
+  entidades: readonly Entidade[],
+): Promise<GrupoBusca[]> {
   if (!termoValido(termo)) return [];
 
-  const grupos = await Promise.all([
-    buscarObras(termo),
-    buscarFornecedores(termo),
-    buscarEquipamentos(termo),
-    buscarFuncionarios(termo),
-    buscarContratos(termo),
-    buscarImoveis(termo),
-  ]);
+  const permitida = (e: Entidade) => entidades.includes(e);
+  const consultas: Promise<GrupoBusca | null>[] = [];
+  if (permitida("obra")) consultas.push(buscarObras(termo));
+  if (permitida("fornecedor")) consultas.push(buscarFornecedores(termo));
+  if (permitida("equipamento")) consultas.push(buscarEquipamentos(termo));
+  if (permitida("funcionario")) consultas.push(buscarFuncionarios(termo));
+  if (permitida("contrato")) consultas.push(buscarContratos(termo));
+  if (permitida("imovel")) consultas.push(buscarImoveis(termo));
+
+  const grupos = await Promise.all(consultas);
 
   return grupos.filter((g): g is GrupoBusca => g !== null);
 }

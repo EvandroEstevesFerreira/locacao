@@ -20,6 +20,8 @@
 // que acerta está aqui, ou está espalhado.
 // ═══════════════════════════════════════════════════════════════════════════
 
+import type { ModuloKey } from "@/lib/modulos";
+
 /** As entidades que a busca cobre, na ordem fixa de desempate. */
 export const ENTIDADES = ["obra", "fornecedor", "equipamento", "funcionario", "contrato", "imovel"] as const;
 export type Entidade = (typeof ENTIDADES)[number];
@@ -36,6 +38,27 @@ export type ResultadoBusca = {
 };
 
 export type Acerto = "codigo-prefixo" | "codigo-contem" | "nome-prefixo" | "nome-contem";
+
+/**
+ * De qual módulo cada entidade depende.
+ *
+ * POR QUE ISTO EXISTE. `perfil.modulos` (migration 0023) é uma segunda lista
+ * branca, além da RLS, e ela é conferida SÓ em código de aplicação —
+ * `moduloLiberado` / `exigirModulo` e o filtro do menu. Nenhuma policy carrega
+ * predicado de módulo. Quer dizer: a RLS devolve alegremente o fornecedor para
+ * quem tem só `imoveis` liberado, e sem este mapa a busca imprimiria o nome
+ * dele na tela — que é exatamente o dano que a busca global tem de evitar,
+ * porque acontece ANTES de qualquer clique. Quem aplica o mapa é a ponte
+ * (`busca-global-action.ts`), do lado do servidor, nunca o cliente.
+ */
+export const MODULO_POR_ENTIDADE: Record<Entidade, ModuloKey> = {
+  obra: "obras",
+  fornecedor: "fornecedores",
+  equipamento: "frota",
+  funcionario: "termos",
+  contrato: "contratos",
+  imovel: "imoveis",
+};
 
 export const TERMO_MINIMO = 2;
 

@@ -159,20 +159,62 @@ já é útil enquanto os registros carregam.
 - **Erro numa consulta não derruba a busca:** loga e devolve vazio para aquela
   entidade, seguindo a regra de leitura de lista do AGENTS.md. As outras cinco
   continuam aparecendo.
-- **Nenhuma permissão nova é escrita.** As seis consultas usam `createClient()`
-  e passam pela RLS existente. Se o usuário não vê a obra na tela de Obras, ela
-  não aparece aqui — pelo mesmo mecanismo, não por uma regra paralela.
+- **Nenhuma regra de permissão nova é inventada.** As seis consultas usam
+  `createClient()` e passam pela RLS existente; o acesso por módulo é aplicado
+  na ponte reusando `moduloLiberado`, a mesma função do menu e das actions. Se
+  o usuário não vê a obra na tela de Obras, ela não aparece aqui — pelos mesmos
+  dois mecanismos, não por uma regra paralela. Ver a seção da permissão.
 
-## Por que a permissão não é uma seção de segurança à parte
+## A permissão são DUAS barreiras, e só uma é do banco
 
 Busca global é o vazamento perfeito, porque **o resultado mostra o nome do
 registro antes de qualquer clique**. Digitar três letras e ler o nome de um
 contrato de outra obra é o dano, e ele acontece sem ninguém abrir nada.
 
-A defesa não é uma verificação que a busca faz. É a busca **não ter caminho
-próprio até o dado**: as seis consultas são leituras comuns, sob o mesmo
-`createClient()` de qualquer tela. Não há o que conferir a mais, porque não há
-privilégio a mais.
+**A primeira versão desta seção dizia que a RLS era a história inteira. Estava
+errada, e a correção é de 17/09/2026** — o código nasceu com o mesmo erro e foi
+corrigido junto. São dois portões, e eles não se sobrepõem:
+
+| Portão | O que recorta | Onde é conferido |
+| --- | --- | --- |
+| RLS | organização e escopo por obra | no banco, em toda consulta |
+| `perfil.modulos` (migration 0023) | quais módulos o usuário acessa | **só em código de aplicação** |
+
+Para o primeiro, o argumento original vale e continua valendo: a busca **não
+tem caminho próprio até o dado**. As seis consultas são leituras comuns, sob o
+mesmo `createClient()` de qualquer tela, sem privilégio a mais.
+
+Para o segundo, ele não vale. **Nenhuma policy carrega predicado de módulo.**
+Quem confere é `moduloLiberado` / `exigirModulo` (`src/lib/modulos.ts`) mais o
+filtro do menu — e uma consulta que não passe por eles devolve a linha
+normalmente. Um usuário com `modulos = {imoveis}` que digitasse `val` leria
+"Fornecedores — Vale Equipamentos Ltda · 12.345.678/0001-90", um nome
+inalcançável para ele em qualquer outro lugar do sistema. O 403 que viria do
+clique chega tarde: o nome já está na tela.
+
+**Por isso o filtro de módulo é aplicado na ponte**, `busca-global-action.ts`,
+que já tem o perfil em mãos. Ela derruba as entidades bloqueadas ANTES de
+consultar, pelo mapa `MODULO_POR_ENTIDADE` (`src/lib/busca.ts`):
+
+| Entidade | Módulo |
+| --- | --- |
+| Obra | `obras` |
+| Fornecedor | `fornecedores` |
+| Equipamento | `frota` |
+| Funcionário | `termos` |
+| Contrato | `contratos` |
+| Imóvel | `imoveis` |
+
+Duas consequências de desenho, e nenhuma das duas é detalhe:
+
+- **No servidor, nunca no cliente.** Uma função `"use server"` é endpoint
+  público: qualquer sessão a chama com o argumento que quiser. Filtro no
+  palette é cosmético.
+- **`buscarGlobal` exige a lista de entidades, sem valor padrão.** Um padrão
+  "todas" faz o próximo chamador esquecer o portão sem nada ficar vermelho.
+
+Isso alinha os registros com as oito ações rápidas, que já respeitavam módulo e
+papel desde antes desta onda.
 
 ## Uma dependência combinada com a onda de Centros de custo (17/09/2026)
 
