@@ -174,6 +174,31 @@ próprio até o dado**: as seis consultas são leituras comuns, sob o mesmo
 `createClient()` de qualquer tela. Não há o que conferir a mais, porque não há
 privilégio a mais.
 
+## Uma dependência combinada com a onda de Centros de custo (17/09/2026)
+
+Outra frente está remodelando `obra` para abranger departamentos
+administrativos: colunas `tipo` (`obra` | `departamento`) e `pai_id`, rota
+`/centros-custo` com redirect de `/obras`.
+
+**Não há nada a filtrar aqui, e isso foi confirmado com aquela frente, não
+suposto.** `tipo` nasce `not null default 'obra'`, então toda linha de `obra`
+continua aparecendo na busca antes e depois da migration. Obra e departamento
+viram **um conceito só** — quem digita "Financeiro" no Ctrl+K quer chegar ao
+centro de custo Financeiro, do mesmo jeito que quem digita "Unimed" quer chegar
+à obra.
+
+**E é por isso que esta spec NÃO manda prever o filtro.** Escrever
+`.eq("tipo", "obra")` antes da coluna existir faz o PostgREST recusar a consulta
+inteira, `data` volta nulo, e a entidade some da busca **em silêncio** — sem
+erro e sem teste vermelho. É o acidente do `ativo` x `deleted_at` documentado em
+`src/lib/mega/servidor.ts`. Retrabalho pequeno é melhor que falha silenciosa.
+
+**O que precisa voltar aqui depois daquela migration** é o RÓTULO, não o
+conjunto: `src/lib/data/busca.ts` passa a ler `tipo` e a rotular o resultado com
+ele. Hoje o rótulo da entidade é constante, e dizer "Obra" para o RH passará a
+ser mentira na tela. Quando houver hierarquia de dois níveis, o `pai_id` é o
+desambiguador natural para a linha secundária — melhoria posterior, não agora.
+
 ## Fora de escopo, de propósito
 
 - **Busca por conteúdo** (`tsvector` em observações, descrições, motivos). É a
