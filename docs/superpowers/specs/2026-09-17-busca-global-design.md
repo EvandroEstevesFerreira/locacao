@@ -292,15 +292,36 @@ está escrito para que quem voltar não fixe o desenho supondo o que já não va
    `20 — Custo Direto Operacional` ou de `21 — Contratos de Manutenção`, não só
    departamento sob departamento. A profundidade segue sendo dois níveis.
 
-2. **São dois sistemas de código que não se correspondem.** Administração é `6`
-   no Mega e `800` na ADP, e a ADP **agrupa**: `801` cobre Engenharia,
-   Suprimentos e Projetos; `803` cobre Comercial e Orçamentos.
+2. **Um centro de custo passa a ter até TRÊS códigos.** Decidido em 17/09/2026,
+   depois que a estrutura real do Mega chegou: `codigo` passa a ser o da **ADP**
+   (800, 801…) e nasce **`codigo_mega`** ao lado do `codigo_people` que já
+   existe. Administração é `6` no Mega e `800` na ADP.
 
-   Se `obra.codigo` mudar de significado e nascer um `codigo_mega` ao lado,
-   **a busca provavelmente quer indexar os dois**: quem digita `6` procurando
-   Administração e quem digita `800` procurando a mesma coisa são a mesma
-   pessoa em dias diferentes. `buscarObras` hoje trata `codigo` como campo
-   único — é esse pressuposto que pode cair.
+   **`buscarObras` hoje trata `codigo` como campo único, e é esse pressuposto
+   que cai.** Quem digita `6` procurando Administração e quem digita `800`
+   procurando a mesma coisa são a mesma pessoa em dias diferentes; os três
+   campos deveriam entrar como `codigos` no `classificarAcerto`, que já aceita
+   lista e já ignora nulo.
+
+3. **Um terceiro tipo, `grupo`.** `38 Sistenge`, `20 Custo Direto Operacional` e
+   `21 Contratos de Manutenção` viram grupos de topo. Isso afeta o rótulo do
+   resultado — `TIPO_CENTRO_CUSTO_INFO` passa a ter três entradas, não duas — e
+   levanta uma pergunta que a busca vai ter de responder: **grupo de topo deve
+   aparecer nos resultados?** Quem digita "Custo Direto" provavelmente quer o
+   grupo; quem digita "Sistenge" quase certamente não. Não decidir por
+   antecipação.
+
+### Um aviso que nasceu desta onda e vale para a próxima
+
+A ADP **agrupa**: `801` cobre Engenharia, Suprimentos e Projetos; `803` cobre
+Comercial e Orçamentos. Isso quase virou o desenho errado — 11 linhas com
+código repetido —, o que teria batido em `idx_obra_codigo`, que é
+`unique (org_id, codigo)` desde a migration 0001. A escolha foi 6 linhas
+agrupadas, e o índice sobrevive.
+
+Fica registrado porque o próximo a mexer em código de centro de custo vai
+encontrar a mesma tentação: **o índice único é a restrição que decide, e ele é
+mais velho que qualquer uma destas ondas.**
 
 ## Fora de escopo, de propósito
 
