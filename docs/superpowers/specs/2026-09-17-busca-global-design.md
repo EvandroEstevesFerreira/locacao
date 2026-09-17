@@ -264,6 +264,44 @@ ele. Hoje o rótulo da entidade é constante, e dizer "Obra" para o RH passará 
 ser mentira na tela. Quando houver hierarquia de dois níveis, o `pai_id` é o
 desambiguador natural para a linha secundária — melhoria posterior, não agora.
 
+## O que ficou pendente com a onda de Centros de custo (17/09/2026, tarde)
+
+O rótulo por tipo **chegou a ser implementado e foi revertido** (`fd67b5d`).
+Motivo: o código foi publicado lendo `obra.tipo` numa produção onde a coluna
+não existe — a migration 0114 abortou pela própria guarda e reverteu limpa.
+Confirmar que uma coluna existe na migration e no código **não é** confirmar
+que ela existe no banco; a lição custou uma reversão.
+
+O commit do rótulo tem sete linhas e já passou por revisão. Reaplicar é barato
+assim que a 0114 entrar.
+
+**Por que a 0114 abortou, e por que isso está certo.** A obra `800 —
+Administração` tem 11 frentes de serviço: Comercial, Depósito, Diretoria,
+Engenharia, Financeiro, Orçamentos, Planejamento, Projetos, RH, SMS e
+Suprimentos. **Não são lixo — são os departamentos**, representados por uma
+gambiarra que a própria onda de Centros de custo veio aposentar. A guarda se
+recusou a apagá-los em silêncio.
+
+### Duas coisas que ainda podem mudar o resultado de `obra` na busca
+
+Ambas vieram da estrutura real do Mega, entregue pelo dono do processo depois
+que esta spec foi escrita. **Nada aqui deve ser implementado por antecipação** —
+está escrito para que quem voltar não fixe o desenho supondo o que já não vale.
+
+1. **Obra tem pai.** A hierarquia do Mega põe a obra como filha de
+   `20 — Custo Direto Operacional` ou de `21 — Contratos de Manutenção`, não só
+   departamento sob departamento. A profundidade segue sendo dois níveis.
+
+2. **São dois sistemas de código que não se correspondem.** Administração é `6`
+   no Mega e `800` na ADP, e a ADP **agrupa**: `801` cobre Engenharia,
+   Suprimentos e Projetos; `803` cobre Comercial e Orçamentos.
+
+   Se `obra.codigo` mudar de significado e nascer um `codigo_mega` ao lado,
+   **a busca provavelmente quer indexar os dois**: quem digita `6` procurando
+   Administração e quem digita `800` procurando a mesma coisa são a mesma
+   pessoa em dias diferentes. `buscarObras` hoje trata `codigo` como campo
+   único — é esse pressuposto que pode cair.
+
 ## Fora de escopo, de propósito
 
 - **Busca por conteúdo** (`tsvector` em observações, descrições, motivos). É a
