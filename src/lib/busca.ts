@@ -1,0 +1,150 @@
+// Busca global: o módulo puro de normalização, classificação e ordenação.
+//
+// ═══════════════════════════════════════════════════════════════════════════
+// POR QUE ESTE ARQUIVO EXISTE
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// A busca global (Ctrl+K) já navega páginas estáticas. Agora expande para
+// registros: obras, fornecedores, equipamentos, funcionários, contratos,
+// imóveis. Encontrá-los exige três passos puros:
+//
+// 1. Normalizar o termo (acentos, espaços, caso).
+// 2. Classificar como acertou (código prefixo / código contém / nome prefixo /
+//    nome contém).
+// 3. Ordenar misturando seis entidades diferentes numa lista única.
+//
+// Puro = sem Supabase, sem I/O, sem "hoje". Estes três passos rodam igual
+// no cliente e no servidor. Divergência entre eles (um normaliza e o outro
+// não) mata a busca: "Imóveis" aparece, "Imóvel Centro" não. A assinatura
+// tem seu próprio módulo `busca.ts` porque não há meio-termo — ou o código
+// que acerta está aqui, ou está espalhado.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** As entidades que a busca cobre, na ordem fixa de desempate. */
+export const ENTIDADES = ["obra", "fornecedor", "equipamento", "funcionario", "contrato", "imovel"] as const;
+export type Entidade = (typeof ENTIDADES)[number];
+
+export type ResultadoBusca = {
+  entidade: Entidade;
+  id: string;
+  titulo: string;
+  /** Segunda linha do resultado: código, CPF, patrimônio — o que identifica. */
+  detalhe: string | null;
+  href: string;
+  /** Em qual campo o termo bateu, e como. Decide a ordem. */
+  acerto: Acerto;
+};
+
+export type Acerto = "codigo-prefixo" | "codigo-contem" | "nome-prefixo" | "nome-contem";
+
+export const TERMO_MINIMO = 2;
+
+/**
+ * Normaliza um termo de busca: acentos, espaços extras, maiúsculas.
+ *
+ * DECISÃO: Usar a mesma transformação que normalizar() em command-palette.tsx.
+ * Páginas são filtradas no cliente com essa função; registros são filtrados no
+ * servidor com normalizarBusca(). Se divergirem, "João" aparece num resultado
+ * e "João da Silva" não — e ninguém espera que um substring de um match deixe
+ * de casar. A transformação é NFD (decomposição) + remover diacríticos + caixa
+ * baixa + trim(). O trim() é adição desta função (a palette não precisa porque
+ * o input já vem limpo).
+ */
+export function normalizarBusca(s: string): string {
+  return s
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+/**
+ * Um termo com menos de TERMO_MINIMO caracteres não é válido.
+ *
+ * Uma letra casaria com quase tudo ("a" encontra Anderson, Andrade, etc.).
+ * Duas letras é o mínimo razoável.
+ */
+export function termoValido(s: string): boolean {
+  return normalizarBusca(s).length >= TERMO_MINIMO;
+}
+
+/**
+ * Classifica em qual campo o termo acertou e como.
+ *
+ * DECISÃO: Normalizar o termo E os campos antes de comparar. Códigos são
+ * checados primeiro (prefixo antes de contém), depois o nome (mesma ordem).
+ * Se um código bate, nenhum nome vence — quem digita "14L4594" sabe EXATAMENTE
+ * o que quer. Null em codigos[] é ignorado sem quebrar (cnpj, codigo,
+ * service_tag são todos anuláveis no banco).
+ */
+export function classificarAcerto(args: {
+  termo: string;
+  nome: string;
+  codigos: (string | null)[];
+}): Acerto | null {
+  const { termo, nome, codigos } = args;
+  const termoNorm = normalizarBusca(termo);
+
+  // Checar códigos: prefixo antes de contém.
+  for (const codigo of codigos) {
+    if (codigo === null) continue;
+    const codigoNorm = normalizarBusca(codigo);
+    if (codigoNorm.startsWith(termoNorm)) {
+      return "codigo-prefixo";
+    }
+  }
+
+  for (const codigo of codigos) {
+    if (codigo === null) continue;
+    const codigoNorm = normalizarBusca(codigo);
+    if (codigoNorm.includes(termoNorm)) {
+      return "codigo-contem";
+    }
+  }
+
+  // Checar nome: prefixo antes de contém.
+  const nomeNorm = normalizarBusca(nome);
+  if (nomeNorm.startsWith(termoNorm)) {
+    return "nome-prefixo";
+  }
+
+  if (nomeNorm.includes(termoNorm)) {
+    return "nome-contem";
+  }
+
+  return null;
+}
+
+/**
+ * Ordena resultados de busca por relevância.
+ *
+ * DECISÃO: Peso numérico por Acerto (código-prefixo < código-contem <
+ * nome-prefixo < nome-contem); em empate, índice da entidade em ENTIDADES.
+ * Usa [...rs].sort(...) para NÃO ordenar em lugar: o chamador não espera que
+ * a lista dele mude por baixo. Sorting in-place é o tipo de bug que aparece
+ * três arquivos de distância.
+ */
+export function ordenarResultados(rs: ResultadoBusca[]): ResultadoBusca[] {
+  const pesoAcerto: Record<Acerto, number> = {
+    "codigo-prefixo": 0,
+    "codigo-contem": 1,
+    "nome-prefixo": 2,
+    "nome-contem": 3,
+  };
+
+  return [...rs].sort((a, b) => {
+    // Comparar pelo peso do acerto.
+    const pesoA = pesoAcerto[a.acerto];
+    const pesoB = pesoAcerto[b.acerto];
+
+    if (pesoA !== pesoB) {
+      return pesoA - pesoB;
+    }
+
+    // Empate: desempatar pela ordem fixa das entidades.
+    const idxA = ENTIDADES.indexOf(a.entidade);
+    const idxB = ENTIDADES.indexOf(b.entidade);
+
+    return idxA - idxB;
+  });
+}
