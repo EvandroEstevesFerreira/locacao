@@ -144,6 +144,14 @@ export function CommandPalette({
     const termo = busca.trim();
     if (normalizar(termo).length < TERMO_MINIMO) {
       termoEmVoo.current = null;
+      // Reseta buscando fora do corpo síncrono do efeito (mesma forma que o
+      // `setBuscando(true)` abaixo, dentro do `setTimeout`): chamar setState
+      // direto no corpo do efeito é o que o eslint (react-hooks/set-state-in-
+      // effect) rejeita. Sem este reset, apagar o termo enquanto uma busca
+      // está em voo deixava `buscando` preso em `true` pelo resto da sessão
+      // — o `.finally()` da promise em voo nunca bate, porque compara com
+      // `termoEmVoo.current`, que este branch acabou de zerar.
+      queueMicrotask(() => setBuscando(false));
       return;
     }
 
@@ -181,6 +189,7 @@ export function CommandPalette({
       setBusca("");
       setIndiceAtivo(0);
       setResultadosServidor([]);
+      setBuscando(false);
     }
   }
 
