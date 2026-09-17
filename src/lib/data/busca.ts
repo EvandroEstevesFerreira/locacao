@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { logger, erroMeta } from "@/lib/logger";
 import {
   classificarAcerto,
+  normalizarBusca,
   ordenarResultados,
   termoValido,
   type Entidade,
@@ -23,8 +24,38 @@ export type GrupoBusca = {
   hrefTodos: string;
 };
 
+/** Um embed do PostgREST vem como objeto OU array conforme a cardinalidade. */
+function achatar<T>(v: T | T[] | null): T | null {
+  return Array.isArray(v) ? (v[0] ?? null) : v;
+}
+
 /** Quantos itens cada grupo mostra antes do "ver todos". */
 const MAX_ITENS_POR_GRUPO = 5;
+
+/**
+ * O "ver todos" de um grupo: a listagem, com `?q=` SÓ quando ela vai encontrar
+ * o mesmo que o palette encontrou.
+ *
+ * POR QUE A CONDIÇÃO. A busca casa sem acento, em memória (`normalizarBusca`);
+ * as telas de listagem filtram por `termoOr` (`src/lib/lista.ts`), que é um
+ * `ilike` cru, sensível a acento. Quando o termo digitado tem acento a remover,
+ * os dois discordam: "jose" mostra "Fornecedores (5 de 12)" e
+ * `/fornecedores?q=jose` responde "Nenhum fornecedor encontrado", porque todo
+ * mundo é "José". O usuário conclui que a busca mentiu.
+ *
+ * Então: mandamos o termo quando nada foi removido dele, e caímos na listagem
+ * crua quando foi. É a MESMA regra do grupo de funcionários, cujo destino
+ * (`/termos/funcionarios`) nunca lê `?q=` — nos dois casos o link só promete o
+ * recorte que a tela de destino entrega de verdade.
+ *
+ * Isto é remendo do lado da busca, não conserto: quem arruma de vez é fazer
+ * `termoOr` ignorar acento, e essa é outra frente.
+ */
+function hrefTodos(base: string, termo: string): string {
+  const semAcento = normalizarBusca(termo);
+  const cru = termo.toLowerCase().trim();
+  return semAcento === cru ? `${base}?q=${encodeURIComponent(termo)}` : base;
+}
 
 /**
  * Rótulo em PT-BR de cada entidade, no plural — texto visível ao usuário.
@@ -46,7 +77,7 @@ const ROTULOS: Record<Entidade, string> = {
 function montarGrupo(
   entidade: Entidade,
   resultados: ResultadoBusca[],
-  hrefTodos: string,
+  href: string,
 ): GrupoBusca | null {
   if (resultados.length === 0) return null;
   const ordenados = ordenarResultados(resultados);
@@ -55,7 +86,7 @@ function montarGrupo(
     rotulo: ROTULOS[entidade],
     itens: ordenados.slice(0, MAX_ITENS_POR_GRUPO),
     total: ordenados.length,
-    hrefTodos,
+    hrefTodos: href,
   };
 }
 
@@ -90,7 +121,7 @@ async function buscarObras(termo: string): Promise<GrupoBusca | null> {
       acerto,
     });
   }
-  return montarGrupo("obra", resultados, `/obras?q=${encodeURIComponent(termo)}`);
+  return montarGrupo("obra", resultados, hrefTodos("/obras", termo));
 }
 
 /**
@@ -125,7 +156,7 @@ async function buscarFornecedores(termo: string): Promise<GrupoBusca | null> {
       acerto,
     });
   }
-  return montarGrupo("fornecedor", resultados, `/fornecedores?q=${encodeURIComponent(termo)}`);
+  return montarGrupo("fornecedor", resultados, hrefTodos("/fornecedores", termo));
 }
 
 /**
@@ -133,12 +164,19 @@ async function buscarFornecedores(termo: string): Promise<GrupoBusca | null> {
  * `service_tag` entram como códigos (casam o termo) e também como `detalhe`
  * (o que identifica na segunda linha do resultado). `equipamento_unidade`
  * usa `ativo`, não `deleted_at` — mesmo caso de `fornecedor`.
+ *
+ * A DESCRIÇÃO DO MODELO entra junto, via `item:item_id(descricao)`. Sem ela,
+ * buscar "betoneira" não encontra betoneira nenhuma — só quem tenha digitado a
+ * palavra no patrimônio. O embed é por chave estrangeira obrigatória
+ * (`item_id`), então é um-para-um e NÃO muda a contagem de linhas; o mesmo
+ * embed já está em `listarFrota`. Ela casa no nível de NOME, não de código: é
+ * texto descritivo, e "14L4594" tem de continuar ganhando dela.
  */
 async function buscarEquipamentos(termo: string): Promise<GrupoBusca | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("equipamento_unidade")
-    .select("id, identificador, numero_serie, service_tag")
+    .select("id, identificador, numero_serie, service_tag, item:item_id(descricao)")
     .eq("ativo", true);
 
   if (error) {
@@ -151,16 +189,22 @@ async function buscarEquipamentos(termo: string): Promise<GrupoBusca | null> {
     identificador: string;
     numero_serie: string | null;
     service_tag: string | null;
+    // O PostgREST devolve embed como objeto OU array conforme a cardinalidade;
+    // achatamos aqui para que o tipo de retorno desta camada seja plano.
+    item: { descricao: string } | { descricao: string }[] | null;
   }[];
   const resultados: ResultadoBusca[] = [];
   for (const e of linhas) {
+    const item = achatar(e.item);
+    const descricao = item?.descricao ?? null;
     const acerto = classificarAcerto({
       termo,
-      nome: e.identificador,
+      nome: [e.identificador, descricao],
       codigos: [e.numero_serie, e.service_tag],
     });
     if (!acerto) continue;
-    const detalhe = [e.numero_serie, e.service_tag].filter(Boolean).join(" · ") || null;
+    const detalhe =
+      [descricao, e.numero_serie, e.service_tag].filter(Boolean).join(" · ") || null;
     resultados.push({
       entidade: "equipamento",
       id: e.id,
@@ -170,7 +214,7 @@ async function buscarEquipamentos(termo: string): Promise<GrupoBusca | null> {
       acerto,
     });
   }
-  return montarGrupo("equipamento", resultados, `/frota?q=${encodeURIComponent(termo)}`);
+  return montarGrupo("equipamento", resultados, hrefTodos("/frota", termo));
 }
 
 /**
@@ -253,7 +297,7 @@ async function buscarContratos(termo: string): Promise<GrupoBusca | null> {
       acerto,
     });
   }
-  return montarGrupo("contrato", resultados, `/contratos?q=${encodeURIComponent(termo)}`);
+  return montarGrupo("contrato", resultados, hrefTodos("/contratos", termo));
 }
 
 /**
@@ -278,12 +322,14 @@ async function buscarImoveis(termo: string): Promise<GrupoBusca | null> {
   }[];
   const resultados: ResultadoBusca[] = [];
   for (const i of linhas) {
-    // Imóvel não tem código próprio; o nome do proprietário é a única outra
-    // coisa que identifica, então entra como código (casa via classificarAcerto).
+    // Imóvel não tem código próprio. O nome do proprietário casa, mas no
+    // NÍVEL DE NOME, nunca como código: nome de pessoa não é identificador, e
+    // promovê-lo faria "cent" trazer a "Casa 12" do Vicente antes do imóvel
+    // cujo apelido é literalmente "Centro".
     const acerto = classificarAcerto({
       termo,
-      nome: i.apelido,
-      codigos: [i.proprietario_nome],
+      nome: [i.apelido, i.proprietario_nome],
+      codigos: [],
     });
     if (!acerto) continue;
     resultados.push({
@@ -295,7 +341,7 @@ async function buscarImoveis(termo: string): Promise<GrupoBusca | null> {
       acerto,
     });
   }
-  return montarGrupo("imovel", resultados, `/imoveis?q=${encodeURIComponent(termo)}`);
+  return montarGrupo("imovel", resultados, hrefTodos("/imoveis", termo));
 }
 
 /**

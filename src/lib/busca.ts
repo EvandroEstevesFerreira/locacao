@@ -99,13 +99,23 @@ export function termoValido(s: string): boolean {
  * Se um código bate, nenhum nome vence — quem digita "14L4594" sabe EXATAMENTE
  * o que quer. Null em codigos[] é ignorado sem quebrar (cnpj, codigo,
  * service_tag são todos anuláveis no banco).
+ *
+ * `nome` aceita uma LISTA porque há registro com mais de um campo de
+ * linguagem natural e nenhum deles é identificador: o imóvel tem apelido e
+ * nome do proprietário, o equipamento tem patrimônio e descrição do modelo.
+ * Tratar esses campos como "código" os promoveria acima de um prefixo de nome
+ * de verdade — buscar "cent" traria a casa do "Vicente" antes do imóvel que se
+ * chama "Centro". Nome de pessoa não é identificador. Null na lista é ignorado.
  */
 export function classificarAcerto(args: {
   termo: string;
-  nome: string;
+  nome: string | (string | null)[];
   codigos: (string | null)[];
 }): Acerto | null {
   const { termo, nome, codigos } = args;
+  const nomes = (Array.isArray(nome) ? nome : [nome]).filter(
+    (n): n is string => n !== null,
+  );
   const termoNorm = normalizarBusca(termo);
 
   // Checar códigos: prefixo antes de contém.
@@ -125,14 +135,18 @@ export function classificarAcerto(args: {
     }
   }
 
-  // Checar nome: prefixo antes de contém.
-  const nomeNorm = normalizarBusca(nome);
-  if (nomeNorm.startsWith(termoNorm)) {
-    return "nome-prefixo";
+  // Checar nome: prefixo antes de contém, e prefixo em QUALQUER dos nomes
+  // vence "contém" em todos eles.
+  for (const n of nomes) {
+    if (normalizarBusca(n).startsWith(termoNorm)) {
+      return "nome-prefixo";
+    }
   }
 
-  if (nomeNorm.includes(termoNorm)) {
-    return "nome-contem";
+  for (const n of nomes) {
+    if (normalizarBusca(n).includes(termoNorm)) {
+      return "nome-contem";
+    }
   }
 
   return null;
@@ -165,6 +179,13 @@ export function ordenarResultados(rs: ResultadoBusca[]): ResultadoBusca[] {
     }
 
     // Empate: desempatar pela ordem fixa das entidades.
+    //
+    // ESTE DESEMPATE NÃO DISPARA NA PRODUÇÃO DE HOJE, e é de propósito que ele
+    // fique. `montarGrupo` chama esta função uma vez por entidade, então o
+    // array sempre tem uma `entidade` só e a diferença dá zero. Ele existe
+    // para a lista única e ranqueada que a spec descreve — a renderização
+    // agrupada tornou a mistura desnecessária, não impossível. Sai daqui no
+    // dia em que a decisão de agrupar virar definitiva.
     const idxA = ENTIDADES.indexOf(a.entidade);
     const idxB = ENTIDADES.indexOf(b.entidade);
 

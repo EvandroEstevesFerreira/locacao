@@ -62,6 +62,36 @@ describe("classificarAcerto", () => {
     );
   });
 
+  it("nome extra casa no nível de NOME, nunca acima de um código", () => {
+    // NOME DE PESSOA NÃO É IDENTIFICADOR. Antes, `proprietario_nome` ia em
+    // `codigos` e a casa do "Vicente" passava na frente do imóvel cujo apelido
+    // é literalmente "Centro".
+    expect(
+      classificarAcerto({ termo: "cent", nome: ["Casa 12", "Vicente Souza"], codigos: [] }),
+    ).toBe("nome-contem");
+    expect(
+      classificarAcerto({ termo: "cent", nome: ["Centro", null], codigos: [] }),
+    ).toBe("nome-prefixo");
+    // E o identificador continua ganhando da descrição do modelo.
+    expect(
+      classificarAcerto({
+        termo: "14l",
+        nome: ["PAT-9", "Betoneira 14L"],
+        codigos: ["14L4594"],
+      }),
+    ).toBe("codigo-prefixo");
+  });
+
+  it("casa na descrição do modelo, que é o que a spec promete", () => {
+    expect(
+      classificarAcerto({
+        termo: "betoneira",
+        nome: ["PAT-9", "Betoneira 400L"],
+        codigos: ["14L4594"],
+      }),
+    ).toBe("nome-prefixo");
+  });
+
   it("devolve null quando não bate em nada", () => {
     expect(classificarAcerto({ termo: "zzz", nome: "Anderson", codigos: ["A1"] })).toBeNull();
   });

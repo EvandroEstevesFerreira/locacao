@@ -132,6 +132,19 @@ Não há relevância calculada. A ordem sai de três regras, nesta precedência:
 Ordenação estável vale mais que ordenação esperta: o usuário aprende onde as
 coisas caem, e a lista não dança entre uma busca e outra.
 
+**Correção de 17/09/2026, na implementação:** a tela NÃO mostra uma lista única
+ranqueada — mostra um grupo por entidade, e a ordenação roda dentro de cada
+grupo. A regra 3 fica no código, sem disparar: `ordenarResultados` recebe um
+array de uma entidade só. Ela permanece escrita, e comentada como tal, porque é
+o que a lista misturada precisaria; a regra 3 na prática virou a ordem em que
+os grupos aparecem, que é a mesma `ENTIDADES`.
+
+**E "código" é identificador, não texto.** Nome de proprietário e descrição de
+modelo casam no nível de NOME. Tratá-los como código faria a busca por "cent"
+trazer a casa do "Vicente" antes do imóvel chamado "Centro" — e um patrimônio
+digitado por inteiro tem de continuar ganhando de uma descrição que só contém
+o termo.
+
 ## Quando o termo casa com quarenta funcionários
 
 Cada entidade traz **no máximo 5**, e o cabeçalho do grupo mostra
@@ -139,6 +152,16 @@ Cada entidade traz **no máximo 5**, e o cabeçalho do grupo mostra
 
 O Ctrl+K não é tela de listagem — é atalho. Quem precisa de quarenta
 resultados precisa da tela de Funcionários, e a busca leva até ela.
+
+**O link só leva o termo quando a tela de destino acha o mesmo (17/09/2026).**
+As listagens filtram por `termoOr` (`src/lib/lista.ts`), um `ilike` sensível a
+acento, enquanto a busca casa sem acento. Digitar "jose" mostraria
+"Fornecedores (5 de 12)" e `/fornecedores?q=jose` responderia "Nenhum
+fornecedor encontrado", porque todo mundo é "José". Então: `?q=` só quando
+nenhum acento foi removido do termo; caso contrário o link vai para a listagem
+crua. É a mesma regra do grupo de Funcionários, cujo destino nunca lê `?q=` —
+o cabeçalho conta, mas o link não promete recorte que a tela não entrega. O
+conserto definitivo é `termoOr` ignorar acento, e é outra frente.
 
 ## A ordem dos grupos
 
