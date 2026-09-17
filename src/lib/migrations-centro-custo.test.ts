@@ -96,11 +96,42 @@ describe("a conversão do 800 é defensiva", () => {
     expect(conversao).toMatch(/Remova-os antes de converte-la em departamento/i);
   });
 
-  it("não inventa departamento nenhum", () => {
-    // Cada centro de custo tem um `codigo` que precisa bater com o Mega e com o
-    // People. Inventar '810' para o RH criaria uma segunda verdade, e a
-    // divergência apareceria num rateio, meses depois.
-    expect(conversao).not.toMatch(/insert into public\.obra/i);
+  it("não inventa código nenhum: só insere o que veio do mapa", () => {
+    // A migration PASSOU a inserir departamentos — as 11 "frentes" da obra 800
+    // que na verdade eram departamentos, descobertas rodando em produção. Mas
+    // o invariante que interessa é outro e continua valendo: nenhum `codigo`
+    // sai da cabeça da migration. Cada um vem de `tmp_promocao_800`, que um
+    // humano preenche com o código do Mega/People.
+    //
+    // O teste antigo dizia "não insere nada" e era um proxy para isto. Virou
+    // proxy errado quando a inserção passou a ser legítima; este cobra a
+    // propriedade de verdade.
+    const inserts = conversao.match(/insert into public\.obra[\s\S]*?;/gi) ?? [];
+    expect(inserts.length).toBeGreaterThan(0);
+    for (const ins of inserts) {
+      expect(ins).toMatch(/from tmp_filhos_800/i);
+    }
+  });
+
+  it("aborta se algum código do mapa estiver em branco", () => {
+    // Sem isto a migration criaria departamento com `codigo` nulo — e o código
+    // é justamente o que liga o centro de custo ao Mega e ao People.
+    expect(conversao).toMatch(/Preencha o codigo \(Mega\/People\)/i);
+  });
+
+  it("aborta se alguma frente da 800 ficar fora do mapa", () => {
+    // Frente sem par no mapa seria apagada sem virar nada: perda silenciosa de
+    // cadastro, que é o pior desfecho possível aqui.
+    expect(conversao).toMatch(/nao estao no mapa de promocao/i);
+  });
+
+  it("insere os filhos DEPOIS de o 800 virar departamento", () => {
+    // O trigger do bloco 3 exige que o pai já seja departamento. Inverter a
+    // ordem faz a migration recusar a si mesma.
+    const posConversao = conversao.indexOf("5b. Os filhos entram");
+    const posInsert = conversao.search(/insert into public\.obra[\s\S]*?from tmp_filhos_800/i);
+    expect(posConversao).toBeGreaterThan(0);
+    expect(posInsert).toBeGreaterThan(posConversao);
   });
 
   it("reabilita o trigger que desabilitou", () => {

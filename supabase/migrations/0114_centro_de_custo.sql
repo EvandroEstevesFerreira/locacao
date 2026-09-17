@@ -205,6 +205,132 @@ create trigger trg_fechamento_exige_obra
   for each row execute function public.exige_centro_custo_obra();
 
 -- ---------------------------------------------------------------------------
+-- 4b. As 11 "frentes" da obra 800 sao departamentos: valida e recolhe
+-- ---------------------------------------------------------------------------
+-- Descoberto ao rodar esta migration em producao, em 17/09/2026: a obra 800
+-- tem 11 frentes de servico chamadas Comercial, Deposito, Diretoria,
+-- Engenharia, Financeiro, Orcamentos, Planejamento, Projetos, RH, SMS e
+-- Suprimentos. Criadas todas no mesmo dia, nenhuma com avanco lancado.
+--
+-- Elas nao sao lixo: sao o MESMO workaround que esta onda veio aposentar.
+-- Alguem precisava de departamento, so tinha "frente de servico" dentro da
+-- obra administrativa, e usou o que havia. O bloco 5 se recusou a apaga-las em
+-- silencio -- e estava certo, porque apagar teria destruido a unica lista de
+-- departamentos que a empresa tinha.
+--
+-- Entao elas SOBEM em vez de sumir, e viram os primeiros filhos de verdade do
+-- `pai_id`.
+--
+-- POR QUE EM DUAS METADES, EM VOLTA DO BLOCO 5:
+--   - os filhos so podem ser inseridos DEPOIS que o 800 vira departamento,
+--     senao o trigger do bloco 3 recusa ("somente um departamento pode ser
+--     pai");
+--   - mas o bloco 5 so consegue converter o 800 DEPOIS que as frentes saem,
+--     porque frente pendurada e justamente o impedimento que ele checa.
+-- Recolher aqui, converter no 5, inserir no 5b. A tabela temporaria carrega a
+-- lista entre as duas metades.
+--
+-- ===========================================================================
+-- >>> PREENCHA O CODIGO DE CADA UM ANTES DE RODAR. <<<
+-- ===========================================================================
+-- O `codigo` precisa bater com o Mega e com o People, e o banco nao tem como
+-- saber qual e -- mesmo motivo pelo qual esta migration nao cria Engenharia e
+-- RH do nada. Inventar '810' aqui criaria uma segunda verdade, e a divergencia
+-- apareceria num rateio, meses depois.
+--
+-- Com qualquer codigo em branco a migration ABORTA dizendo quais faltam. Ela
+-- nao roda pela metade: ou os 11 sobem com codigo de verdade, ou nada sobe.
+-- Sem `on commit drop`: a migration do Supabase roda numa transacao so, mas o
+-- psql roda cada statement na sua -- e com `on commit drop` a tabela sumia
+-- entre um bloco e o outro, fazendo a validacao em banco local falhar por um
+-- motivo que nada tem a ver com a regra. O descarte e explicito no fim.
+drop table if exists tmp_promocao_800;
+create temp table tmp_promocao_800 (
+  nome   text primary key,
+  codigo text
+);
+
+insert into tmp_promocao_800 (nome, codigo) values
+  ('Comercial',    null),   -- <<< preencher
+  ('Deposito',     null),   -- <<< preencher
+  ('Diretoria',    null),   -- <<< preencher
+  ('Engenharia',   null),   -- <<< preencher
+  ('Financeiro',   null),   -- <<< preencher
+  ('Orcamentos',   null),   -- <<< preencher
+  ('Planejamento', null),   -- <<< preencher
+  ('Projetos',     null),   -- <<< preencher
+  ('RH',           null),   -- <<< preencher
+  ('SMS',          null),   -- <<< preencher
+  ('Suprimentos',  null);   -- <<< preencher
+
+-- Comparacao sem acento e sem caixa: o cadastro tem "Deposito" e "Depósito", e
+-- casar so por igualdade exata deixaria a frente de fora do mapa -- que o
+-- bloco abaixo trata como erro, mas por um motivo que confundiria quem le.
+create or replace function pg_temp.chave(t text) returns text
+language sql immutable as $$
+  select lower(btrim(translate(t,
+    'áàâãäéèêëíìîïóòôõöúùûüçÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇ',
+    'aaaaaeeeeiiiiooooouuuucAAAAAEEEEIIIIOOOOOUUUUC')))
+$$;
+
+do $$
+declare
+  v_obra800 uuid;
+  v_falta   text;
+begin
+  select id into v_obra800
+  from public.obra
+  where codigo = '800' and nome ilike 'administra%' and deleted_at is null;
+
+  if v_obra800 is null then
+    raise notice 'Sem obra 800; nada a promover.';
+    return;
+  end if;
+
+  -- Toda frente da 800 tem de ter par no mapa. Uma frente sem par seria
+  -- apagada mais adiante sem virar nada: perda silenciosa de cadastro.
+  select string_agg(f.nome, ', ' order by f.nome) into v_falta
+  from public.frente_obra f
+  where f.obra_id = v_obra800
+    and not exists (
+      select 1 from tmp_promocao_800 t where pg_temp.chave(t.nome) = pg_temp.chave(f.nome)
+    );
+
+  if v_falta is not null then
+    raise exception
+      'Estas frentes da obra 800 nao estao no mapa de promocao: %. '
+      'Acrescente-as com codigo, ou remova-as a mao.', v_falta;
+  end if;
+
+  select string_agg(nome, ', ' order by nome) into v_falta
+  from tmp_promocao_800
+  where exists (
+    select 1 from public.frente_obra f
+    where f.obra_id = v_obra800 and pg_temp.chave(f.nome) = pg_temp.chave(tmp_promocao_800.nome)
+  ) and (codigo is null or btrim(codigo) = '');
+
+  if v_falta is not null then
+    raise exception
+      'Preencha o codigo (Mega/People) destes departamentos antes de rodar: %. '
+      'Inventar codigo cria uma segunda verdade que so aparece num rateio.',
+      v_falta;
+  end if;
+
+  -- Recolhe org e nome antes de apagar, para o bloco 5b reinserir.
+  drop table if exists tmp_filhos_800;
+  create temp table tmp_filhos_800 as
+  select o.org_id, t.codigo, f.nome
+  from public.frente_obra f
+  join tmp_promocao_800 t on pg_temp.chave(t.nome) = pg_temp.chave(f.nome)
+  join public.obra o on o.id = v_obra800
+  where f.obra_id = v_obra800;
+
+  delete from public.frente_obra where obra_id = v_obra800;
+
+  raise notice '% frente(s) recolhida(s) para promocao.', (select count(*) from tmp_filhos_800);
+end $$;
+
+-- ---------------------------------------------------------------------------
 -- 5. As duas conversoes: o 800 e o 686 voltam a ser o que sempre foram
 -- ---------------------------------------------------------------------------
 -- `800 - Administracao` e o departamento administrativo. `686 - CPQ03
@@ -308,3 +434,39 @@ begin
 
   raise notice '% centro(s) de custo convertido(s) em departamento.', v_convertidos;
 end $$;
+
+-- ---------------------------------------------------------------------------
+-- 5b. Os filhos entram, agora que o 800 e departamento
+-- ---------------------------------------------------------------------------
+-- Segunda metade do bloco 4b. Roda aqui e nao la porque o trigger do bloco 3
+-- exige que o pai ja seja departamento -- e quem converte o 800 e o bloco 5,
+-- logo acima.
+do $$
+declare
+  v_obra800 uuid;
+  v_qtd     int := 0;
+begin
+  if to_regclass('pg_temp.tmp_filhos_800') is null then
+    return;
+  end if;
+
+  select id into v_obra800
+  from public.obra
+  where codigo = '800' and tipo = 'departamento' and deleted_at is null;
+
+  if v_obra800 is null then
+    raise exception
+      'O 800 nao virou departamento, entao os 11 setores ficariam orfaos. '
+      'A promocao depende da conversao do bloco 5.';
+  end if;
+
+  insert into public.obra (org_id, codigo, nome, tipo, pai_id, status)
+  select org_id, codigo, nome, 'departamento', v_obra800, 'ativa'
+  from tmp_filhos_800;
+
+  get diagnostics v_qtd = row_count;
+  raise notice '% setor(es) criado(s) sob o 800.', v_qtd;
+end $$;
+
+drop table if exists tmp_filhos_800;
+drop table if exists tmp_promocao_800;
