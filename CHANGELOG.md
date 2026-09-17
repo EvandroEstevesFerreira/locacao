@@ -7,6 +7,29 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.116.0] - 2026-09-16
+
+### Corrigido
+
+- Encerrar ou cancelar um termo deixa de amarrar a posse de volta ao termo que
+  acabou de ser encerrado: era o segundo produtor da anomalia que a 0.115.0
+  corrigiu em um só lugar. A varredura passa a cobrar a invariante em todas as
+  chamadas de `abrirCustodia`, e não uma função pelo nome (migration 0113).
+- A movimentação de uma peça que estava com uma pessoa direto para uma obra não
+  grava mais uma passagem de zero dia pelo almoxarifado.
+- Falha depois de um passo irreversível (termo já encerrado, posse já no livro)
+  passa a devolver sucesso com aviso, em vez de pedir que se repita o que não se
+  repete.
+
+### Alterado
+
+- O card "Situação da peça" oferece apenas as situações que uma pessoa decide
+  (`baixada`, `perdida` e a volta a `disponível`). `manutenção` passa a vir de
+  mover a peça ao fornecedor.
+- A peça em manutenção pode voltar direto para a obra. As recusas de peça
+  baixada ou perdida passam a dizer o caminho de volta.
+- A escolha "como ela volta" aparece em toda devolução ao almoxarifado.
+
 ## [0.115.0] - 2026-09-16
 
 ### Adicionado

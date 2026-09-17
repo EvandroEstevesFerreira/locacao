@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.115.0";
+export const APP_VERSION = "0.116.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,38 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.116.0",
+    data: "2026-09-16",
+    titulo: "A movimentação da peça, revisada de ponta a ponta",
+    mudancas: [
+      {
+        tipo: "correcao",
+        texto:
+          "Encerrar ou cancelar um termo deixa de amarrar a volta da peça ao documento que acabou de perder a validade — era o que produzia termo encerrado com a peça ainda constando em aberto.",
+      },
+      {
+        tipo: "correcao",
+        texto:
+          "Entregar uma peça que estava com uma pessoa direto para uma obra não registra mais uma passagem de menos de um dia pelo almoxarifado, que nunca aconteceu.",
+      },
+      {
+        tipo: "melhoria",
+        texto:
+          "O card \"Situação da peça\" passa a oferecer só o que uma pessoa decide: baixar, marcar como perdida e desfazer. \"Em manutenção\" agora vem de mandar a peça ao fornecedor pelo card \"Movimentar\", e não mais de digitar.",
+      },
+      {
+        tipo: "melhoria",
+        texto:
+          "A peça consertada pode voltar da oficina direto para a obra, num movimento só. E quando a movimentação é recusada, a mensagem diz o que fazer em vez de falar de um termo que você não mencionou.",
+      },
+      {
+        tipo: "melhoria",
+        texto:
+          "A pergunta \"como ela volta\" (disponível, baixada ou perdida) aparece em toda devolução ao almoxarifado, e não só quando a peça vinha de uma pessoa.",
+      },
+    ],
+  },
   {
     versao: "0.115.0",
     data: "2026-09-16",

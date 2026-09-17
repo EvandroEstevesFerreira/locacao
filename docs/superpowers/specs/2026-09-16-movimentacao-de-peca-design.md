@@ -198,18 +198,24 @@ estado atual.
 
 ## Estado da implementação
 
+> Atualizado em 16/09/2026, depois da revisão final do branch. A versão
+> anterior desta seção dizia 100% e "nada falta" — e naquele momento a
+> correção central da limpeza 1 estava pela metade no código e a promessa da
+> escolha na devolução valia para metade das devoluções.
+
 | Frente | O que foi feito | Falta | % concluído |
 | --- | --- | --- | --- |
-| Movimentação de peça | Porta única implementada (action, formulário, situação deduzida), rota antiga `/frota/[id]/transferir` removida, aviso na Observações herdadas da planilha, testes e ritual completo passando | Nada — escopo do plano encerrado | 100% |
+| Porta única (action e formulário) | Quatro destinos, devolução assinada, rota `/frota/[id]/transferir` removida, escolha "como ela volta" em TODA devolução ao almoxarifado, sem parada de zero dia, `ok: true` + aviso depois de passo irreversível | Teste de integração de `movimentarPeca` (hoje ela não tem nenhum) | 90% |
+| Situação deduzida | `situacaoDaPosse` grava as três deduzidas; `situacaoEhDeduzida` passou a sustentar `transicoesDeDecisao`, e o card "Situação da peça" só oferece decisões; `manutencao → em_uso` liberada por evento; recusas de `baixada`/`perdida` dizem o caminho | Cadastro de peça nova (`add-unidade-form`) ainda deixa escolher `manutencao` na criação | 90% |
+| A posse de devolução sem termo | `liberarPecas` e `moverPecasDoTermo` corrigidos; migrations 0112 e 0113; varredura cobrando a INVARIANTE em toda chamada de `abrirCustodia`, e não uma função pelo nome | Nada | 100% |
+| Observações herdadas da planilha | Aviso ao lado do rótulo | Nada (o resto é fora de escopo, abaixo) | 100% |
 
-Fora de escopo de propósito:
-- Reescrever `equipamento_unidade.observacoes` em coluna dedicada para o texto
-  da carga inicial: o campo é compartilhado com observações digitadas pelo
-  usuário no formulário de edição da peça, então relabelar destruiria a
-  semântica de um campo que as pessoas usam ativamente. A solução foi só um
-  aviso ao lado do rótulo existente.
-- Backfill ou limpeza dos textos importados da planilha: são dado de origem
-  (source-of-record da carga inicial) e não são apagados nem reescritos.
+Fora de escopo, e por quê:
+- **Coluna dedicada para o texto da carga inicial.** `equipamento_unidade.observacoes` é compartilhado com o que o usuário digita na edição da peça; relabelar destruiria a semântica de um campo em uso.
+- **Backfill ou limpeza dos textos importados.** São dado de origem.
+- **`baixada` e `perdida` deduzidas.** Não se deduzem de posse nenhuma.
+- **O furo de termo aberto em `mudarSituacao`.** A mesma guarda barraria a reversão de um `baixada` digitado por engano, que é o único caminho de volta que existe.
+- **`d.observacoes` servindo a dois fatos** (a observação da devolução e a da posse nova) e o gatilho do `superRefine` em `estado_devolucao` sozinho: ambos documentados no lugar, nenhum produz estado errado hoje.
+- **A guarda de "mesma pessoa" ser só de tela.**
 
-Próximo passo único: nenhum — a frente está fechada; próxima ação é normal de
-backlog, não desta spec.
+Próximo passo único: escrever o teste de integração de `movimentarPeca`, começando pelo caminho pessoa → obra, que é o que concentrou três dos quatro defeitos desta revisão.
