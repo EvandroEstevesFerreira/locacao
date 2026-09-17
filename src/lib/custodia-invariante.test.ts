@@ -116,17 +116,30 @@ describe("devolução não pertence ao termo da entrega", () => {
   // de almoxarifado carregando termo. Arquivo novo entra por existir.
   const todos = arquivos();
 
-  it("nenhuma chamada abre posse de almoxarifado com termo", () => {
+  it("só a posse de FUNCIONÁRIO pode carregar termo", () => {
     const infratores: string[] = [];
 
     for (const caminho of todos) {
       const texto = readFileSync(caminho, "utf8");
       if (!texto.includes("abrirCustodia")) continue;
       for (const argumentos of chamadas(texto)) {
-        const ehAlmoxarifado = /tipo:\s*["']almoxarifado["']/.test(argumentos);
         // `termoId: null` é explícito e honesto, e passa.
         const levaTermo = /\btermoId\b\s*:\s*(?!null\b)/.test(argumentos);
-        if (ehAlmoxarifado && levaTermo) {
+        if (!levaTermo) continue;
+        // A REGRA É PELO LADO DE CÁ, e não "reprove quem for almoxarifado".
+        //
+        // A versão anterior procurava `tipo: "almoxarifado"` literal e por isso
+        // tinha um buraco justamente no arquivo que esta onda mais mexeu:
+        // `movimentarPeca` passa `tipo: posseFinal`, uma variável que vale
+        // "almoxarifado" em dois dos quatro destinos. Acrescentar `termoId` ali
+        // deixaria o teste verde.
+        //
+        // Invertida, a regra não depende de adivinhar o valor: só a ENTREGA
+        // amarra posse a termo, e entrega é posse de funcionário, escrita
+        // literalmente (o check `custodia_funcionario_exige_termo` cobra o par).
+        // Qualquer outro `tipo` — literal ou calculado — com termo é infração.
+        const ehFuncionarioLiteral = /tipo:\s*["']funcionario["']/.test(argumentos);
+        if (!ehFuncionarioLiteral) {
           infratores.push(caminho.replace(RAIZ, "src").replace(/\\/g, "/"));
         }
       }
@@ -134,21 +147,37 @@ describe("devolução não pertence ao termo da entrega", () => {
 
     expect(
       infratores,
-      "Posse de ALMOXARIFADO nascendo amarrada a um termo. A peça volta ao " +
-        "almoxarifado justamente quando o termo deixa de valer — encerrado ou " +
-        "cancelado — e a posse aberta ficaria apontando para o documento que " +
-        "diz o contrário dela (anomalia 14L4594 / TRM-2026-0040).\nSó a ENTREGA " +
-        'amarra posse a termo. Na volta, `origem: "termo"` já diz por que a peça voltou.\n' +
+      "Posse que NÃO é de funcionário nascendo amarrada a um termo. A peça " +
+        "volta ao almoxarifado justamente quando o termo deixa de valer — " +
+        "encerrado ou cancelado — e a posse aberta ficaria apontando para o " +
+        "documento que diz o contrário dela (anomalia 14L4594 / TRM-2026-0040).\n" +
+        'Só a ENTREGA amarra posse a termo. Na volta, `origem: "termo"` já diz ' +
+        "por que a peça voltou.\n" +
         infratores.join("\n"),
     ).toEqual([]);
   });
 
-  it("a varredura enxerga as chamadas que existem", () => {
-    // Sem isto, um erro no extrator de argumentos deixaria o teste acima
-    // passando por vacuidade — verde sem ter olhado para nada.
-    const comChamada = todos.filter((c) =>
-      readFileSync(c, "utf8").includes("abrirCustodia("),
-    );
-    expect(comChamada.length).toBeGreaterThanOrEqual(3);
+  it("o extrator realmente extrai — a varredura não passa por vacuidade", () => {
+    // CONTAR ARQUIVOS NÃO SERVE: um extrator quebrado devolvendo `[]` deixaria
+    // o teste acima verde, e a contagem de arquivos que mencionam o nome
+    // continuaria igual. Então conta-se o que o extrator DEVOLVEU, e exige-se
+    // que cada trecho tenha o formato de uma chamada de verdade.
+    const extraidas = todos.flatMap((c) => chamadas(readFileSync(c, "utf8")));
+    expect(extraidas.length).toBeGreaterThanOrEqual(3);
+    for (const a of extraidas) {
+      expect(a.startsWith("(")).toBe(true);
+      expect(a.endsWith(")")).toBe(true);
+      // Vale para a definição da função e para toda chamada dela.
+      expect(a).toContain("supabase");
+    }
+    // As CHAMADAS, sem a assinatura da própria função: são elas que a regra
+    // acima precisa ter visto.
+    const invocacoes = extraidas.filter((a) => a.includes("unidadeId"));
+    expect(invocacoes.length).toBeGreaterThanOrEqual(3);
+    // Pelo menos uma amarra termo (a entrega) e pelo menos uma não (a volta):
+    // sem os dois lados, a regra acima não teria sido exercida.
+    const comTermo = extraidas.filter((a) => /\btermoId\b/.test(a));
+    expect(comTermo.length).toBeGreaterThanOrEqual(1);
+    expect(extraidas.length - comTermo.length).toBeGreaterThanOrEqual(1);
   });
 });

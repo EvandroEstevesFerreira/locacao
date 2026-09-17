@@ -88,7 +88,14 @@ export function PecaMover({
       // devolução foi assinada aqui, a entrega é assinada no termo, que pede
       // CPF, previsão e a assinatura da empresa. O que esta tela resolve é a
       // pessoa não precisar mais descobrir sozinha qual botão apertar.
-      if (tipo === "funcionario") {
+      //
+      // COM AVISO, NAO NAVEGA. O aviso quer dizer que algum passo do caminho
+      // nao se completou — o termo anterior pode nao ter sido encerrado. Levar
+      // para /termos/novo assim mesmo convida a emitir um segundo termo sobre a
+      // mesma peca: duas pessoas respondendo no papel por uma maquina so, e
+      // `temTermoEmAberto` barrando toda movimentacao seguinte ate alguem
+      // desfazer isso a mao. A pessoa le o alerta, confere a ficha e decide.
+      if (tipo === "funcionario" && !r.aviso) {
         router.push(`/termos/novo?peca=${unidadeId}&funcionario=${funcionarioId}`);
         return;
       }

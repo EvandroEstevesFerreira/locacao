@@ -869,7 +869,23 @@ export async function emitirTermo(
  * `moverPecasDoTermo`: a devolução já foi gravada quando se chega aqui, e quem
  * chama decide se a falha do livro vira mensagem.
  */
-async function liberarPecas(termoId: string, itemIds: string[]): Promise<string | null> {
+async function liberarPecas(
+  termoId: string,
+  itemIds: string[],
+  // ABRIR A POSSE DE VOLTA E O PADRAO, e e o certo em toda devolucao registrada
+  // pela tela do termo: a peca volta mesmo para a prateleira.
+  //
+  // `false` existe para UM chamador, `movimentarPeca`, e so quando ele ja sabe
+  // que a peca NAO para no almoxarifado — vai da pessoa direto para a obra ou
+  // para o fornecedor. Abrir a posse de almoxarifado ali e fecha-la no mesmo
+  // instante deixaria no livro "Almoxarifado central — menos de 1 dia", uma
+  // parada que nao houve. E o livro e somente-inclusao: linha errada nao se
+  // apaga depois, entao ela nao pode ser escrita.
+  //
+  // Quem passa `false` fica OBRIGADO a abrir a posse de destino em seguida: a
+  // posse de funcionario continua aberta ate la.
+  { abrirPosseDeVolta = true }: { abrirPosseDeVolta?: boolean } = {},
+): Promise<string | null> {
   if (itemIds.length === 0) return null;
   const supabase = await createClient();
   const perfil = await getCurrentPerfil();
@@ -922,6 +938,7 @@ async function liberarPecas(termoId: string, itemIds: string[]): Promise<string 
     // está sendo encerrado neste instante, e amarrar a posse a ele produz um
     // termo encerrado com posse aberta. Foi a única anomalia do banco em 144
     // posses (peça 14L4594 / TRM-2026-0040), corrigida na migration 0112.
+    if (!abrirPosseDeVolta) continue;
     const r = await abrirCustodia(supabase, {
       orgId: perfil.org_id,
       unidadeId: l.unidade_id,
@@ -953,6 +970,8 @@ export async function registrarDevolucao(
     estado_devolucao: string;
     observacoes?: string;
   }[],
+  // Repassado a `liberarPecas`. Ver la por que existe.
+  opcoes: { abrirPosseDeVolta?: boolean } = {},
 ): Promise<ActionResult> {
   const perfil = await getCurrentPerfil();
   if (!perfil?.org_id || !podeOperar(perfil.papel)) {
@@ -983,7 +1002,7 @@ export async function registrarDevolucao(
     devolvidos.push(r.data.item_id);
   }
 
-  const problemaNoLivro = await liberarPecas(termoId, devolvidos);
+  const problemaNoLivro = await liberarPecas(termoId, devolvidos, opcoes);
 
   revalidatePath(`/termos/${termoId}`);
   revalidatePath("/termos");

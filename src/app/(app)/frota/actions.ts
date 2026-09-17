@@ -17,11 +17,7 @@ import {
   editarPecaSchema,
   podeEncerrarDevolucao,
 } from "@/lib/custodia";
-import {
-  abrirCustodia,
-  descartarPassagemDeZeroDia,
-  type Cliente,
-} from "@/lib/custodia-servidor";
+import { abrirCustodia, type Cliente } from "@/lib/custodia-servidor";
 import {
   amarrarPecaSchema,
   podeTransicionar,
@@ -188,6 +184,13 @@ export async function movimentarPeca(raw: unknown): Promise<ActionResult> {
       unidadeId: d.unidade_id,
       termoId: posseAtual.termo_id,
       data: d.data,
+      // A PARADA DE ZERO DIA SE EVITA NA ORIGEM, porque o livro e
+      // somente-inclusao: a linha errada nao se apaga depois (sem policy de
+      // DELETE, e a trigger `trg_custodia_imutavel` recusaria de todo jeito).
+      // Quando a peca vai da pessoa direto para a obra ou para o fornecedor, a
+      // devolucao NAO abre a posse de almoxarifado — a posse da pessoa fica
+      // aberta ate o `abrirCustodia` logo abaixo, que e quem a fecha.
+      abrirPosseDeVolta: posseFinal === "almoxarifado",
       estado: d.estado_devolucao,
       observacoes: d.observacoes,
       // O nome de quem devolve sai do SERVIDOR, da própria posse. Vindo da
@@ -218,14 +221,17 @@ export async function movimentarPeca(raw: unknown): Promise<ActionResult> {
   }
 
   // ── 4. A POSSE NOVA ──────────────────────────────────────────────────────
-  // Pulada só quando a peça JÁ está no almoxarifado e é para lá que ela vai —
-  // caso do destino `funcionario` logo após a devolução, que `liberarPecas`
-  // acabou de deixar ali. Abrir de novo fecharia e reabriria a mesma posse no
-  // mesmo dia, deixando no livro uma linha de zero dia que não conta nada.
+  // Pulada quando a peça JÁ está no almoxarifado e é para lá que ela vai: ou
+  // porque a devolução acabou de deixá-la ali, ou porque ela já estava. Abrir
+  // de novo fecharia e reabriria a mesma posse no mesmo dia, deixando no livro
+  // uma linha de zero dia que não conta nada — e que não se apaga depois.
+  //
+  // NÃO depende mais do destino ser `funcionario`. Com essa condição a mais,
+  // "pessoa → almoxarifado" caía no ramo de baixo e produzia exatamente a linha
+  // de zero dia que este trecho existe para evitar.
   const jaEstaOndeVai =
     posseFinal === "almoxarifado" &&
-    (saiDePessoa || posseAtual?.tipo === "almoxarifado") &&
-    d.tipo === "funcionario";
+    (saiDePessoa || posseAtual?.tipo === "almoxarifado");
   if (!jaEstaOndeVai) {
     const r = await abrirCustodia(supabase, {
       orgId: perfil.org_id,
@@ -248,24 +254,6 @@ export async function movimentarPeca(raw: unknown): Promise<ActionResult> {
       return { ok: true, id: d.unidade_id, aviso: r.erro };
     }
 
-    // A PASSAGEM DE ZERO DIA PELO ALMOXARIFADO NÃO VAI PARA O LIVRO.
-    //
-    // Quando a peça sai de uma pessoa e vai para qualquer lugar que não seja o
-    // almoxarifado, `liberarPecas` já abriu — necessariamente — uma posse de
-    // almoxarifado na data de hoje, e o `abrirCustodia` acima acabou de
-    // fechá-la com `fim = inicio`. Sem esta limpeza a ficha da peça passa a
-    // mostrar "Almoxarifado central — menos de 1 dia" por uma parada que não
-    // houve. É a mesma preocupação das guardas de `moverPecasDoTermo`.
-    //
-    // DEPOIS de abrir a posse nova, nunca antes: se a abertura falhar, a peça
-    // continua com uma posse aberta no almoxarifado, que é onde a devolução a
-    // deixou — e não sem posse nenhuma.
-    if (saiDePessoa && posseFinal !== "almoxarifado") {
-      await descartarPassagemDeZeroDia(supabase, {
-        unidadeId: d.unidade_id,
-        dia: d.data,
-      });
-    }
   }
 
   // ── 5. A SITUAÇÃO ────────────────────────────────────────────────────────
@@ -384,6 +372,8 @@ async function devolverDaPessoa(
     data: string;
     estado: string | null;
     observacoes: string | null;
+    /** Ver `liberarPecas`: `false` quando a peça não para no almoxarifado. */
+    abrirPosseDeVolta: boolean;
     assinante: string;
     assinatura: string | null;
     motivoSemAssinatura: string | null;
@@ -435,6 +425,7 @@ async function devolverDaPessoa(
       // aceita para "sem observação".
       observacoes: e.observacoes ?? undefined,
     })),
+    { abrirPosseDeVolta: e.abrirPosseDeVolta },
   );
   if (!rDev.ok) return recusa(rDev.erro);
 

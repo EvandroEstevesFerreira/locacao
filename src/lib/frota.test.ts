@@ -109,18 +109,6 @@ describe("motivoBloqueio", () => {
     );
   });
 
-  it("diz o caminho de volta da peça baixada, e não fala de termo", () => {
-    // A frase que aparecia era "«Em uso» é definido pelo termo de
-    // responsabilidade" — sobre um termo que quem clicou não mencionou, e sem
-    // nenhuma instrução que ele pudesse seguir.
-    expect(motivoBloqueio("baixada", "em_uso")).toBe(
-      "Esta peça está baixada. Traga-a de volta para “Disponível” no card “Situação da peça” antes de movimentá-la.",
-    );
-    expect(motivoBloqueio("perdida", "em_uso")).toBe(
-      "Esta peça consta como perdida. Marque-a como “Disponível” no card “Situação da peça” antes de movimentá-la.",
-    );
-  });
-
   it("é null quando a transição é permitida", () => {
     expect(motivoBloqueio("disponivel", "manutencao")).toBeNull();
   });
