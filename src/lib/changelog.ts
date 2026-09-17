@@ -39,6 +39,11 @@ export const CHANGELOG: Release[] = [
           "A tela de Obras agora se chama Centros de custo e aceita os departamentos da empresa — Engenharia, Comercial, Financeiro, RH, TI e os demais —, além das obras. Cada um tem sua própria coluna Tipo na lista.",
       },
       {
+        tipo: "melhoria",
+        texto:
+          "“800 — Administração” e “686 — CPQ03 Manutenção” passam a constar como departamentos: nenhum dos dois é obra com prazo, e os campos de avanço físico e fechamento mensal deixam de aparecer para eles.",
+      },
+      {
         tipo: "novo",
         texto:
           "Um departamento pode ficar abaixo de outro (o RH dentro do Administrativo, por exemplo), e a lista mostra o setor recuado sob o seu departamento.",

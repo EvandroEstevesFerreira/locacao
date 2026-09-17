@@ -2,7 +2,7 @@
 
 **Data:** 2026-09-17
 **Branch:** `feat/centros-de-custo`
-**Estado:** desenho aprovado, implementação em andamento
+**Estado:** implementado, validado em banco, premissas confirmadas
 
 ---
 
@@ -118,16 +118,24 @@ contrato parou; um departamento não pausa — ele existe ou foi extinto.
 Departamento fica restrito a `ativa | encerrada`, por CHECK. O enum não muda
 (mudar enum em uso é migration cara e desnecessária aqui).
 
-> **Premissa a confirmar.** Esta foi a pergunta (b) feita ao Evandro e ainda sem
-> resposta. Se ele quiser os três status para departamento, a correção é apagar
-> uma linha de CHECK na migration — e nada mais depende disso.
+**Confirmado com o Evandro em 17/09/2026.**
 
-### A migration converte uma linha e não inventa nenhuma
+### A migration converte duas linhas e não inventa nenhuma
 
-A migration faz **uma** conversão: `800 — Administração` vira departamento.
-E é defensiva — só converte se encontrar exatamente uma linha com
-`codigo = '800'` cujo nome comece com "Administra". Se encontrar zero ou mais de
-uma, aborta com mensagem, em vez de adivinhar.
+**Confirmado com o Evandro em 17/09/2026:** `800 — Administração` e
+`686 — CPQ03 Manutenção` viram departamento. O 686 é manutenção contínua, não
+obra com prazo. As outras seis são obras de verdade.
+
+A lista é **explícita**, e não um padrão ("todo código 8xx"): a regra por padrão
+converteria sozinha a próxima obra que nascesse com código parecido, e o erro só
+apareceria num relatório faltando linha.
+
+Cada conversão é defensiva — só acontece se encontrar exatamente uma linha com
+aquele código e nome. Zero ou mais de uma, aborta com mensagem em vez de
+adivinhar. E aborta também se a linha já tiver frente, avanço, orçamento ou
+fechamento gravado: **o 686 é o caso em que isso pode disparar de verdade**, já
+que ele é obra hoje. Apagar histórico por conta própria não é decisão de
+migration.
 
 **A migration não cria Engenharia, Comercial, RH e os demais.** Isso é
 deliberado: cada centro de custo tem um `codigo` que precisa bater com o Mega e
@@ -138,9 +146,8 @@ apareceria meses depois, num rateio.
 Os departamentos são cadastrados na tela, por quem sabe os códigos — que é
 exatamente a funcionalidade que este trabalho entrega.
 
-> **Premissa a confirmar.** Esta foi a pergunta (a). Se houver outras linhas
-> entre as oito que já são departamento disfarçado, acrescentá-las é uma linha
-> na migration.
+Se aparecerem outras linhas disfarçadas depois, acrescentá-las é uma linha na
+lista `values` do bloco 5.
 
 ---
 

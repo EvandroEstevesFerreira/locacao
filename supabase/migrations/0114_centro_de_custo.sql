@@ -205,12 +205,17 @@ create trigger trg_fechamento_exige_obra
   for each row execute function public.exige_centro_custo_obra();
 
 -- ---------------------------------------------------------------------------
--- 5. A unica conversao: o 800 volta a ser o que sempre foi
+-- 5. As duas conversoes: o 800 e o 686 voltam a ser o que sempre foram
 -- ---------------------------------------------------------------------------
--- Defensiva de proposito. Se encontrar zero ou mais de uma candidata, ABORTA
--- com mensagem em vez de adivinhar: converter a obra errada colocaria uma obra
--- de verdade fora do avanco fisico e do fechamento, e o sintoma apareceria
--- semanas depois como relatorio faltando linha.
+-- `800 - Administracao` e o departamento administrativo. `686 - CPQ03
+-- Manutencao` e manutencao continua, e nao obra com prazo -- confirmado com o
+-- Evandro em 17/09/2026. Os dois sao centros de custo sem avanco fisico, e
+-- mante-los como obra e o que lhes da prazo, frente, orcamento e fechamento
+-- mensal que nao significam nada para eles.
+--
+-- A lista e explicita, e nao um padrao ("todo codigo 8xx"): a regra por padrao
+-- converteria sozinha a proxima obra que nascesse com codigo parecido, e o
+-- erro so apareceria num relatorio faltando linha.
 --
 -- E ela NAO cria Engenharia, Comercial, RH e os demais. Cada centro de custo
 -- tem um `codigo` que precisa bater com o Mega e com o People, e esse codigo e
@@ -218,62 +223,83 @@ create trigger trg_fechamento_exige_obra
 -- criaria uma segunda verdade, e a divergencia apareceria num rateio, meses
 -- depois. Os departamentos sao cadastrados na tela por quem sabe os codigos --
 -- que e a funcionalidade que este trabalho entrega.
+--
+-- Defensiva de proposito, e ABORTA em vez de adivinhar: converter a obra errada
+-- a tiraria do avanco fisico e do fechamento, e o sintoma apareceria semanas
+-- depois como relatorio faltando linha.
 do $$
 declare
+  v_alvo record;
   v_qtd  int;
   v_id   uuid;
   v_impedimento text;
+  v_convertidos int := 0;
 begin
-  select count(*) into v_qtd
-  from public.obra
-  where codigo = '800' and nome ilike 'administra%' and deleted_at is null;
+  for v_alvo in
+    select * from (values
+      ('800', 'administra%'),   -- Administracao
+      ('686', 'cpq03%')         -- CPQ03 - Manutencao
+    ) as t(codigo, nome_like)
+  loop
+    select count(*) into v_qtd
+    from public.obra
+    where codigo = v_alvo.codigo and nome ilike v_alvo.nome_like and deleted_at is null;
 
-  if v_qtd = 0 then
-    raise notice 'Nenhuma obra 800/Administracao encontrada; nada a converter.';
-    return;
-  end if;
+    if v_qtd = 0 then
+      raise notice 'Nenhuma obra %/% encontrada; nada a converter.',
+        v_alvo.codigo, v_alvo.nome_like;
+      continue;
+    end if;
 
-  if v_qtd > 1 then
-    raise exception
-      'Ha % linhas com codigo 800 e nome "Administra..."; converta a mao.', v_qtd;
-  end if;
+    if v_qtd > 1 then
+      raise exception
+        'Ha % linhas com codigo % e nome "%"; converta a mao.',
+        v_qtd, v_alvo.codigo, v_alvo.nome_like;
+    end if;
 
-  select id into v_id
-  from public.obra
-  where codigo = '800' and nome ilike 'administra%' and deleted_at is null;
+    select id into v_id
+    from public.obra
+    where codigo = v_alvo.codigo and nome ilike v_alvo.nome_like and deleted_at is null;
 
-  -- Se o 800 ja tem frente, avanco, orcamento ou fechamento gravado, a
-  -- conversao tornaria esses registros invalidos pela regra do bloco 4 --
-  -- orfanando dado que ja existe. Melhor abortar e decidir a mao.
-  select string_agg(t, ', ') into v_impedimento from (
-    select 'frente de servico' t from public.frente_obra   where obra_id = v_id
-    union all
-    select 'avanco'             from public.avanco_obra     where obra_id = v_id
-    union all
-    select 'orcamento'          from public.orcamento_locacao where obra_id = v_id
-    union all
-    select 'fechamento mensal'  from public.fechamento_mensal where obra_id = v_id
-  ) x;
+    -- Se ja tem frente, avanco, orcamento ou fechamento gravado, a conversao
+    -- tornaria esses registros invalidos pela regra do bloco 4 -- orfanando
+    -- dado que ja existe. Melhor abortar e decidir a mao.
+    --
+    -- O 686 e o caso em que isto pode disparar de verdade: ele e obra hoje, e
+    -- se alguem ja lancou avanco nele, a migration para e avisa em vez de
+    -- apagar historico por conta propria.
+    select string_agg(t, ', ') into v_impedimento from (
+      select 'frente de servico' t from public.frente_obra      where obra_id = v_id
+      union all
+      select 'avanco'              from public.avanco_obra        where obra_id = v_id
+      union all
+      select 'orcamento'           from public.orcamento_locacao  where obra_id = v_id
+      union all
+      select 'fechamento mensal'   from public.fechamento_mensal  where obra_id = v_id
+    ) x;
 
-  if v_impedimento is not null then
-    raise exception
-      'A obra 800 ja tem % gravado(s). Remova-os antes de converte-la em departamento.',
-      v_impedimento;
-  end if;
+    if v_impedimento is not null then
+      raise exception
+        'A obra % ja tem % gravado(s). Remova-os antes de converte-la em departamento.',
+        v_alvo.codigo, v_impedimento;
+    end if;
 
-  -- Sem o `alter ... disable`, o trigger do bloco 3 recusaria esta propria
-  -- conversao -- ele existe justamente para impedi-la em runtime.
-  alter table public.obra disable trigger trg_obra_centro_custo;
+    -- Sem o `alter ... disable`, o trigger do bloco 3 recusaria esta propria
+    -- conversao -- ele existe justamente para impedi-la em runtime.
+    alter table public.obra disable trigger trg_obra_centro_custo;
 
-  update public.obra
-  set tipo              = 'departamento',
-      status            = case when status = 'pausada' then 'ativa' else status end,
-      data_inicio       = null,
-      data_fim_prevista = null,
-      data_fim_real     = null
-  where id = v_id;
+    update public.obra
+    set tipo              = 'departamento',
+        status            = case when status = 'pausada' then 'ativa' else status end,
+        data_inicio       = null,
+        data_fim_prevista = null,
+        data_fim_real     = null
+    where id = v_id;
 
-  alter table public.obra enable trigger trg_obra_centro_custo;
+    alter table public.obra enable trigger trg_obra_centro_custo;
 
-  raise notice 'Centro de custo 800 convertido em departamento.';
+    v_convertidos := v_convertidos + 1;
+  end loop;
+
+  raise notice '% centro(s) de custo convertido(s) em departamento.', v_convertidos;
 end $$;

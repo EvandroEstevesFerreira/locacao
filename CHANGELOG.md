@@ -21,6 +21,10 @@ Obra e departamento passam a ser o mesmo conceito com naturezas diferentes: um
 
 ### Adicionado
 
+- `800 — Administração` e `686 — CPQ03 Manutenção` convertidos em departamento
+  (confirmado com o dono do processo em 17/09/2026). A conversão aborta se a
+  linha já tiver frente, avanço, orçamento ou fechamento gravado — apagar
+  histórico por conta própria não é decisão de migration.
 - Coluna `tipo` (obra | departamento) e `pai_id` em `obra`, com hierarquia de
   dois níveis (migration `0114`).
 - Filtro por tipo e indentação de setor sob o seu departamento na lista.
