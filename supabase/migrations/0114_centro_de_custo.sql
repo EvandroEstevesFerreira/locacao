@@ -34,7 +34,13 @@
 do $$
 begin
   if not exists (select 1 from pg_type where typname = 'tipo_centro_custo') then
-    create type public.tipo_centro_custo as enum ('obra', 'departamento');
+    -- Tres naturezas, e a terceira nasceu de olhar o Mega de verdade:
+    -- `38 Sistenge`, `20 Custo Direto Operacional` e `21 Contratos de
+    -- Manutencao` nao sao obra nem departamento -- sao os agrupadores sob os
+    -- quais os dois vivem. Sem `grupo`, ou eles virariam departamentos falsos
+    -- (e o RH apareceria como irmao da Sistenge inteira), ou a arvore do Loca
+    -- deixaria de espelhar a do ERP logo no primeiro nivel.
+    create type public.tipo_centro_custo as enum ('obra', 'departamento', 'grupo');
   end if;
 end $$;
 
@@ -56,6 +62,21 @@ comment on column public.obra.pai_id is
   'O limite elimina ciclo por construcao: sem ele, a trava exigiria WITH '
   'RECURSIVE e toda soma de custo por area seria consulta recursiva.';
 
+-- O Mega e a ADP numeram os MESMOS centros de custo de formas diferentes:
+-- Administracao e `6` no Mega e `800` na ADP. O `codigo` do Loca segue a ADP,
+-- que e o que ja esta na tela e nas 8 obras cadastradas; o do ERP vem aqui, ao
+-- lado do `codigo_people` que a 0094 ja criou pelo mesmo motivo.
+--
+-- Nulo e legitimo e vai acontecer: `803` da ADP cobre Comercial E Orcamentos,
+-- que no Mega sao `8` e `9` -- dois codigos para uma linha. Guardar "8,9" aqui
+-- seria inventar um formato que nenhum dos dois sistemas usa; melhor o campo
+-- vazio e a conciliacao a mao do que uma chave que nao casa com nada.
+alter table public.obra
+  add column if not exists codigo_mega text;
+
+create unique index if not exists idx_obra_codigo_mega
+  on public.obra (org_id, codigo_mega) where codigo_mega is not null;
+
 create index if not exists idx_obra_pai
   on public.obra (pai_id) where pai_id is not null;
 create index if not exists idx_obra_tipo
@@ -64,11 +85,18 @@ create index if not exists idx_obra_tipo
 -- ---------------------------------------------------------------------------
 -- 2. As travas que cabem em CHECK
 -- ---------------------------------------------------------------------------
--- Obra nao tem pai. A hierarquia e administrativa; obra filha de obra seria
--- uma segunda forma de agrupar custo, concorrendo com `frente_obra`.
+-- Grupo nao tem pai -- ele E o topo. Obra e departamento podem ter.
+--
+-- ISTO JA FOI O CONTRARIO, e o erro vale registro: a primeira versao desta
+-- migration proibia obra de ter pai, raciocinando que a hierarquia seria so
+-- administrativa. No Mega, obra e filha de `20` (Custo Direto Operacional) ou
+-- de `21` (Contratos de Manutencao). A inferencia estava correta sobre a
+-- evidencia que havia -- e a evidencia que faltava era toda externa ao
+-- sistema: nada no Loca, no codigo ou no banco dizia isso.
 alter table public.obra drop constraint if exists obra_pai_so_departamento;
-alter table public.obra add constraint obra_pai_so_departamento check (
-  tipo = 'departamento' or pai_id is null
+alter table public.obra drop constraint if exists obra_grupo_sem_pai;
+alter table public.obra add constraint obra_grupo_sem_pai check (
+  tipo <> 'grupo' or pai_id is null
 );
 
 -- Departamento nao tem prazo. Um departamento nao "atrasa", e `percentualPrazo`
@@ -78,6 +106,7 @@ alter table public.obra add constraint obra_departamento_sem_prazo check (
   tipo = 'obra'
   or (data_inicio is null and data_fim_prevista is null and data_fim_real is null)
 );
+-- (o CHECK acima ja cobre `grupo` junto com `departamento`: so obra tem prazo)
 
 -- Departamento nao pausa: existe ou foi extinto. "Pausada" descreve obra cujo
 -- contrato parou. O enum nao muda -- mexer em enum em uso e migration cara, e
@@ -131,8 +160,13 @@ begin
     raise exception 'O centro de custo pai pertence a outra organizacao.';
   end if;
 
-  if v_pai.tipo <> 'departamento' then
-    raise exception 'Somente um departamento pode ser pai de outro centro de custo.';
+  -- O pai e sempre um GRUPO. Departamento dentro de departamento e obra dentro
+  -- de obra seriam uma segunda forma de agrupar custo, concorrendo com a que o
+  -- ERP ja define -- e duas arvores de custo divergem na primeira reorganizacao.
+  if v_pai.tipo <> 'grupo' then
+    raise exception
+      'O centro de custo pai tem de ser um grupo (como "38 Sistenge" ou '
+      '"20 Custo Direto Operacional"), e "%" nao e.', v_pai.nome;
   end if;
 
   -- Dois niveis. Barrar o neto e o que torna o ciclo impossivel: para haver
@@ -205,7 +239,30 @@ create trigger trg_fechamento_exige_obra
   for each row execute function public.exige_centro_custo_obra();
 
 -- ---------------------------------------------------------------------------
--- 4b. As 11 "frentes" da obra 800 sao departamentos: valida e recolhe
+-- 4b. A arvore do Mega: tres grupos de topo
+-- ---------------------------------------------------------------------------
+-- Estrutura confirmada com o Evandro em 17/09/2026. No Mega o custo se divide
+-- em tres, e so depois em projeto:
+--
+--   38 Sistenge                    -> a sede e os custos dos departamentos
+--   20 Custo Direto Operacional    -> as obras
+--   21 Contratos de Manutencao     -> os contratos de manutencao continua
+--
+-- Os grupos usam o codigo do MEGA no `codigo` porque a ADP nao os tem: ela
+-- numera departamento, nao agrupador. Onde os dois existem, o `codigo` e o da
+-- ADP e o do ERP vai em `codigo_mega`.
+insert into public.obra (org_id, codigo, nome, tipo, codigo_mega, status)
+select o.org_id, v.codigo, v.nome, 'grupo', v.codigo, 'ativa'
+from (select distinct org_id from public.obra) o
+cross join (values
+  ('38', 'Sistenge'),
+  ('20', 'Alocacao de Custo Direto Operacional'),
+  ('21', 'Alocacao de Custo Direto com Contratos de Manutencao')
+) as v(codigo, nome)
+on conflict (org_id, codigo) do nothing;
+
+-- ---------------------------------------------------------------------------
+-- 4c. As 11 "frentes" da obra 800 sao departamentos: valida e recolhe
 -- ---------------------------------------------------------------------------
 -- Descoberto ao rodar esta migration em producao, em 17/09/2026: a obra 800
 -- tem 11 frentes de servico chamadas Comercial, Deposito, Diretoria,
@@ -218,56 +275,47 @@ create trigger trg_fechamento_exige_obra
 -- silencio -- e estava certo, porque apagar teria destruido a unica lista de
 -- departamentos que a empresa tinha.
 --
--- Entao elas SOBEM em vez de sumir, e viram os primeiros filhos de verdade do
--- `pai_id`.
+-- ELAS VIRAM 6 LINHAS, NAO 11, porque a ADP AGRUPA: `801` cobre Engenharia,
+-- Suprimentos e Projetos; `803` cobre Comercial e Orcamentos. Onze linhas
+-- disputariam `codigo` repetido e bateriam em `idx_obra_codigo`, que e
+-- `unique (org_id, codigo)` desde a 0001 -- e bateriam no MEIO desta migration,
+-- depois de as frentes ja terem sido apagadas.
 --
 -- POR QUE EM DUAS METADES, EM VOLTA DO BLOCO 5:
---   - os filhos so podem ser inseridos DEPOIS que o 800 vira departamento,
---     senao o trigger do bloco 3 recusa ("somente um departamento pode ser
---     pai");
---   - mas o bloco 5 so consegue converter o 800 DEPOIS que as frentes saem,
---     porque frente pendurada e justamente o impedimento que ele checa.
--- Recolher aqui, converter no 5, inserir no 5b. A tabela temporaria carrega a
--- lista entre as duas metades.
---
--- ===========================================================================
--- >>> PREENCHA O CODIGO DE CADA UM ANTES DE RODAR. <<<
--- ===========================================================================
--- O `codigo` precisa bater com o Mega e com o People, e o banco nao tem como
--- saber qual e -- mesmo motivo pelo qual esta migration nao cria Engenharia e
--- RH do nada. Inventar '810' aqui criaria uma segunda verdade, e a divergencia
--- apareceria num rateio, meses depois.
---
--- Com qualquer codigo em branco a migration ABORTA dizendo quais faltam. Ela
--- nao roda pela metade: ou os 11 sobem com codigo de verdade, ou nada sobe.
--- Sem `on commit drop`: a migration do Supabase roda numa transacao so, mas o
--- psql roda cada statement na sua -- e com `on commit drop` a tabela sumia
--- entre um bloco e o outro, fazendo a validacao em banco local falhar por um
--- motivo que nada tem a ver com a regra. O descarte e explicito no fim.
+--   - os filhos so entram DEPOIS que o 800 vira departamento (o trigger exige
+--     pai grupo, e o 800 so entra sob o 38 no bloco 5);
+--   - mas o bloco 5 so converte o 800 DEPOIS que as frentes saem, porque
+--     frente pendurada e justamente o impedimento que ele checa.
 drop table if exists tmp_promocao_800;
 create temp table tmp_promocao_800 (
-  nome   text primary key,
-  codigo text
+  frente      text primary key,
+  codigo_adp  text,
+  nome        text,
+  codigo_mega text
 );
 
-insert into tmp_promocao_800 (nome, codigo) values
-  ('Comercial',    null),   -- <<< preencher
-  ('Deposito',     null),   -- <<< preencher
-  ('Diretoria',    null),   -- <<< preencher
-  ('Engenharia',   null),   -- <<< preencher
-  ('Financeiro',   null),   -- <<< preencher
-  ('Orcamentos',   null),   -- <<< preencher
-  ('Planejamento', null),   -- <<< preencher
-  ('Projetos',     null),   -- <<< preencher
-  ('RH',           null),   -- <<< preencher
-  ('SMS',          null),   -- <<< preencher
-  ('Suprimentos',  null);   -- <<< preencher
+-- >>> Duas linhas estao com codigo NULO de proposito: PLANEJAMENTO e SMS. <<<
+-- Nao esta claro em qual centro de custo da ADP elas caem, e chutar coloca
+-- custo no departamento errado -- erro que so aparece num rateio, meses
+-- depois. Com qualquer uma em branco a migration ABORTA dizendo qual falta.
+insert into tmp_promocao_800 (frente, codigo_adp, nome, codigo_mega) values
+  ('Comercial',    '803', 'Comercial / Orcamentos',              null),
+  ('Orcamentos',   '803', 'Comercial / Orcamentos',              null),
+  ('Engenharia',   '801', 'Engenharia / Suprimentos / Projetos', '7'),
+  ('Suprimentos',  '801', 'Engenharia / Suprimentos / Projetos', '7'),
+  ('Projetos',     '801', 'Engenharia / Suprimentos / Projetos', '7'),
+  ('Diretoria',    '802', 'Diretoria',                           '5'),
+  ('Deposito',     '805', 'Deposito',                            null),
+  ('Financeiro',   '800', 'Administracao',                       '6'),
+  ('RH',           '800', 'Administracao',                       '6'),
+  ('Planejamento', null,  null,                                  null),  -- <<< preencher
+  ('SMS',          null,  null,                                  null);  -- <<< preencher
 
--- Comparacao sem acento e sem caixa: o cadastro tem "Deposito" e "Depósito", e
--- casar so por igualdade exata deixaria a frente de fora do mapa -- que o
--- bloco abaixo trata como erro, mas por um motivo que confundiria quem le.
 create or replace function pg_temp.chave(t text) returns text
 language sql immutable as $$
+  -- O cadastro tem "Deposito" e "Depósito", "Orcamentos" e "Orçamentos". Casar
+  -- so por igualdade exata deixa a frente de fora do mapa -- e o bloco acima
+  -- trata isso como erro, com uma mensagem que confundiria quem le.
   select lower(btrim(translate(t,
     'áàâãäéèêëíìîïóòôõöúùûüçÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇ',
     'aaaaaeeeeiiiiooooouuuucAAAAAEEEEIIIIOOOOOUUUUC')))
@@ -293,7 +341,8 @@ begin
   from public.frente_obra f
   where f.obra_id = v_obra800
     and not exists (
-      select 1 from tmp_promocao_800 t where pg_temp.chave(t.nome) = pg_temp.chave(f.nome)
+      select 1 from tmp_promocao_800 t
+      where pg_temp.chave(t.frente) = pg_temp.chave(f.nome)
     );
 
   if v_falta is not null then
@@ -302,32 +351,35 @@ begin
       'Acrescente-as com codigo, ou remova-as a mao.', v_falta;
   end if;
 
-  select string_agg(nome, ', ' order by nome) into v_falta
+  select string_agg(frente, ', ' order by frente) into v_falta
   from tmp_promocao_800
-  where exists (
-    select 1 from public.frente_obra f
-    where f.obra_id = v_obra800 and pg_temp.chave(f.nome) = pg_temp.chave(tmp_promocao_800.nome)
-  ) and (codigo is null or btrim(codigo) = '');
+  where (codigo_adp is null or btrim(codigo_adp) = '')
+    and exists (
+      select 1 from public.frente_obra f
+      where f.obra_id = v_obra800
+        and pg_temp.chave(f.nome) = pg_temp.chave(tmp_promocao_800.frente)
+    );
 
   if v_falta is not null then
     raise exception
-      'Preencha o codigo (Mega/People) destes departamentos antes de rodar: %. '
-      'Inventar codigo cria uma segunda verdade que so aparece num rateio.',
-      v_falta;
+      'Estas frentes nao tem centro de custo da ADP definido: %. '
+      'Chutar coloca custo no departamento errado, e o erro so aparece num '
+      'rateio meses depois.', v_falta;
   end if;
 
-  -- Recolhe org e nome antes de apagar, para o bloco 5b reinserir.
+  -- Recolhe os DISTINTOS (6 linhas, nao 11) antes de apagar as frentes.
   drop table if exists tmp_filhos_800;
   create temp table tmp_filhos_800 as
-  select o.org_id, t.codigo, f.nome
+  select distinct o.org_id, t.codigo_adp as codigo, t.nome, t.codigo_mega
   from public.frente_obra f
-  join tmp_promocao_800 t on pg_temp.chave(t.nome) = pg_temp.chave(f.nome)
+  join tmp_promocao_800 t on pg_temp.chave(t.frente) = pg_temp.chave(f.nome)
   join public.obra o on o.id = v_obra800
   where f.obra_id = v_obra800;
 
   delete from public.frente_obra where obra_id = v_obra800;
 
-  raise notice '% frente(s) recolhida(s) para promocao.', (select count(*) from tmp_filhos_800);
+  raise notice '% frente(s) recolhida(s), viram % departamento(s).',
+    11, (select count(*) from tmp_filhos_800);
 end $$;
 
 -- ---------------------------------------------------------------------------
@@ -436,36 +488,59 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------------
--- 5b. Os filhos entram, agora que o 800 e departamento
+-- 5b. A arvore se monta: cada um sob o seu grupo
 -- ---------------------------------------------------------------------------
--- Segunda metade do bloco 4b. Roda aqui e nao la porque o trigger do bloco 3
--- exige que o pai ja seja departamento -- e quem converte o 800 e o bloco 5,
--- logo acima.
+-- Segunda metade do bloco 4c, e roda aqui porque o trigger do bloco 3 exige
+-- que o pai ja seja um grupo -- e os grupos so passam a existir depois que o
+-- bloco 4b os cria e o bloco 5 converte o 800.
 do $$
 declare
+  v_38      uuid;
+  v_20      uuid;
   v_obra800 uuid;
   v_qtd     int := 0;
 begin
-  if to_regclass('pg_temp.tmp_filhos_800') is null then
-    return;
+  select id into v_38 from public.obra where codigo = '38' and tipo = 'grupo';
+  select id into v_20 from public.obra where codigo = '20' and tipo = 'grupo';
+
+  if v_38 is null or v_20 is null then
+    raise exception 'Os grupos 38 e 20 deveriam existir (bloco 4b).';
   end if;
 
+  -- 1. Os departamentos que vieram das frentes, sob o 38.
+  if to_regclass('pg_temp.tmp_filhos_800') is not null then
+    insert into public.obra (org_id, codigo, nome, tipo, pai_id, codigo_mega, status)
+    select org_id, codigo, nome, 'departamento', v_38, codigo_mega, 'ativa'
+    from tmp_filhos_800
+    -- `800 Administracao` ja existe: e a propria linha que o bloco 5 converteu.
+    -- Recria-la aqui esbarraria no unique (org_id, codigo) e derrubaria a
+    -- migration inteira no ultimo passo.
+    on conflict (org_id, codigo) do nothing;
+    get diagnostics v_qtd = row_count;
+    raise notice '% departamento(s) criado(s) sob o 38.', v_qtd;
+  end if;
+
+  -- 2. O 800, que ja era departamento, tambem e filho do 38 -- e ganha o
+  --    codigo do Mega, que a ADP nao tem como dar.
   select id into v_obra800
-  from public.obra
-  where codigo = '800' and tipo = 'departamento' and deleted_at is null;
+  from public.obra where codigo = '800' and tipo = 'departamento' and deleted_at is null;
 
-  if v_obra800 is null then
-    raise exception
-      'O 800 nao virou departamento, entao os 11 setores ficariam orfaos. '
-      'A promocao depende da conversao do bloco 5.';
+  if v_obra800 is not null then
+    update public.obra
+    set pai_id = v_38, codigo_mega = coalesce(codigo_mega, '6')
+    where id = v_obra800;
   end if;
 
-  insert into public.obra (org_id, codigo, nome, tipo, pai_id, status)
-  select org_id, codigo, nome, 'departamento', v_obra800, 'ativa'
-  from tmp_filhos_800;
-
+  -- 3. As obras, sob o 20. `21` (contratos de manutencao) fica de fora de
+  --    proposito: quais obras sao contrato de manutencao e dado que so o dono
+  --    do processo tem, e pendurar no grupo errado poe custo de obra na conta
+  --    da manutencao -- erro que aparece no relatorio, nao na tela.
+  update public.obra
+  set pai_id = v_20,
+      codigo_mega = coalesce(codigo_mega, codigo)
+  where tipo = 'obra' and pai_id is null and deleted_at is null;
   get diagnostics v_qtd = row_count;
-  raise notice '% setor(es) criado(s) sob o 800.', v_qtd;
+  raise notice '% obra(s) penduradas no grupo 20.', v_qtd;
 end $$;
 
 drop table if exists tmp_filhos_800;

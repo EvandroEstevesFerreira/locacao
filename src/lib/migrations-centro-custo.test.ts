@@ -46,10 +46,12 @@ describe("as colunas do centro de custo existem", () => {
 
 describe("as sete travas", () => {
   const travas: [string, RegExp][] = [
-    ["obra não tem pai", /constraint obra_pai_so_departamento check/i],
+    ["grupo não tem pai — ele é o topo", /constraint obra_grupo_sem_pai check/i],
     ["departamento não tem prazo", /constraint obra_departamento_sem_prazo check/i],
     ["departamento não pausa", /constraint obra_departamento_sem_pausa check/i],
-    ["pai é departamento, de raiz, da mesma organização", /function public\.obra_centro_custo_valido/i],
+    ["pai é grupo, de raiz, da mesma organização", /function public\.obra_centro_custo_valido/i],
+    ["o pai tem de ser um grupo", /pai tem de ser um grupo/i],
+    ["o código do Mega tem campo próprio", /add column if not exists codigo_mega text/i],
     ["tipo é imutável", /nao pode ser alterado/i],
     ["departamento não recebe controle de obra", /function public\.exige_centro_custo_obra/i],
   ];
@@ -96,6 +98,21 @@ describe("a conversão do 800 é defensiva", () => {
     expect(conversao).toMatch(/Remova-os antes de converte-la em departamento/i);
   });
 
+  it("as 11 frentes viram 6 departamentos, não 11 — o índice único exige", () => {
+    // `801` cobre Engenharia, Suprimentos e Projetos; `803` cobre Comercial e
+    // Orçamentos. Onze linhas disputariam o mesmo `codigo` e bateriam em
+    // `idx_obra_codigo` (unique desde a 0001) NO MEIO da migration, depois de
+    // as frentes já terem sido apagadas.
+    expect(conversao).toMatch(/select distinct[\s\S]{0,120}t\.codigo_adp as codigo/i);
+  });
+
+  it("deixa Planejamento e SMS sem código, de propósito", () => {
+    // Não está claro em qual centro de custo da ADP elas caem, e chutar põe
+    // custo no departamento errado — erro que só aparece num rateio.
+    expect(conversao).toMatch(/\('Planejamento', null/);
+    expect(conversao).toMatch(/\('SMS', *null/);
+  });
+
   it("não inventa código nenhum: só insere o que veio do mapa", () => {
     // A migration PASSOU a inserir departamentos — as 11 "frentes" da obra 800
     // que na verdade eram departamentos, descobertas rodando em produção. Mas
@@ -109,14 +126,17 @@ describe("a conversão do 800 é defensiva", () => {
     const inserts = conversao.match(/insert into public\.obra[\s\S]*?;/gi) ?? [];
     expect(inserts.length).toBeGreaterThan(0);
     for (const ins of inserts) {
-      expect(ins).toMatch(/from tmp_filhos_800/i);
+      // Ou vem do mapa preenchido à mão (`tmp_filhos_800`), ou são os três
+      // grupos do Mega, cujos códigos (38, 20, 21) estão literalmente na
+      // estrutura que o dono do processo descreveu — não inventados aqui.
+      expect(ins).toMatch(/from tmp_filhos_800|'38', 'Sistenge'/i);
     }
   });
 
   it("aborta se algum código do mapa estiver em branco", () => {
     // Sem isto a migration criaria departamento com `codigo` nulo — e o código
     // é justamente o que liga o centro de custo ao Mega e ao People.
-    expect(conversao).toMatch(/Preencha o codigo \(Mega\/People\)/i);
+    expect(conversao).toMatch(/nao tem centro de custo da ADP definido/i);
   });
 
   it("aborta se alguma frente da 800 ficar fora do mapa", () => {
@@ -125,11 +145,13 @@ describe("a conversão do 800 é defensiva", () => {
     expect(conversao).toMatch(/nao estao no mapa de promocao/i);
   });
 
-  it("insere os filhos DEPOIS de o 800 virar departamento", () => {
-    // O trigger do bloco 3 exige que o pai já seja departamento. Inverter a
-    // ordem faz a migration recusar a si mesma.
-    const posConversao = conversao.indexOf("5b. Os filhos entram");
-    const posInsert = conversao.search(/insert into public\.obra[\s\S]*?from tmp_filhos_800/i);
+  it("insere os filhos DEPOIS de os grupos existirem", () => {
+    // O trigger do bloco 3 exige que o pai já seja um grupo. Inverter a ordem
+    // faz a migration recusar a si mesma.
+    const posConversao = conversao.indexOf("5b. A arvore se monta");
+    // `indexOf` e não regex com `[\s\S]*?`: o coringa atravessa blocos e casava
+    // com o insert dos grupos, muito antes, dando um falso verde invertido.
+    const posInsert = conversao.indexOf("'departamento', v_38");
     expect(posConversao).toBeGreaterThan(0);
     expect(posInsert).toBeGreaterThan(posConversao);
   });
