@@ -268,15 +268,20 @@ begin
     -- O 686 e o caso em que isto pode disparar de verdade: ele e obra hoje, e
     -- se alguem ja lancou avanco nele, a migration para e avisa em vez de
     -- apagar historico por conta propria.
-    select string_agg(t, ', ') into v_impedimento from (
-      select 'frente de servico' t from public.frente_obra      where obra_id = v_id
+    -- `count(*)` por tipo, e nao uma linha por registro: com `union all` cru, 11
+    -- frentes viravam "frente de servico, frente de servico, ..." onze vezes na
+    -- mensagem. Quem le precisa saber QUANTAS sao -- foi o que aconteceu ao
+    -- rodar em producao, e a mensagem atrapalhou em vez de ajudar.
+    select string_agg(format('%s %s', n, t), ', ' order by t) into v_impedimento
+    from (
+      select 'frente(s) de servico' t, count(*) n from public.frente_obra      where obra_id = v_id
       union all
-      select 'avanco'              from public.avanco_obra        where obra_id = v_id
+      select 'avanco(s)',             count(*)   from public.avanco_obra       where obra_id = v_id
       union all
-      select 'orcamento'           from public.orcamento_locacao  where obra_id = v_id
+      select 'orcamento(s)',          count(*)   from public.orcamento_locacao where obra_id = v_id
       union all
-      select 'fechamento mensal'   from public.fechamento_mensal  where obra_id = v_id
-    ) x;
+      select 'fechamento(s) mensal',  count(*)   from public.fechamento_mensal where obra_id = v_id
+    ) x where n > 0;
 
     if v_impedimento is not null then
       raise exception
