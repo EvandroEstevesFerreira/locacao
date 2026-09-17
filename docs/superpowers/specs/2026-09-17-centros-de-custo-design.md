@@ -334,6 +334,25 @@ nomeia esta mudança, e esta nomeia `src/lib/data/busca.ts`.
 | As 7 travas da migration | `src/lib/migrations-centro-custo.test.ts` | varredura do SQL, no molde de `migrations-seguranca.test.ts` — sem lista de nomes a manter |
 | `security_invoker` | `src/lib/migrations-seguranca.test.ts` | já existe; continua cobrindo |
 
+### Validação em banco real
+
+A varredura do SQL prova que a trava está **escrita**; não prova que ela
+**funciona**. A 0114 foi aplicada a um Postgres 15 descartável, sobre um
+esqueleto mínimo de `obra` + as quatro tabelas de controle:
+
+- **12 operações que devem falhar falharam**, cada uma com a mensagem prevista:
+  obra com pai, pai que é obra, pai de outra organização, três níveis,
+  departamento com prazo, departamento pausado, troca de `tipo`, as quatro
+  inserções de controle de obra em departamento, e a exclusão de um pai que tem
+  setor.
+- **As duas operações legítimas passaram**: avanço e fechamento na obra 605.
+- **Os dois caminhos de aborto da conversão do 800** abortaram com a frase
+  certa: mais de uma candidata, e 800 com avanço já gravado.
+
+O teste em banco achou um defeito que nenhuma leitura pegaria: a mensagem de
+três níveis imprimia o **UUID** do pai em vez do nome. Quem esbarra numa
+mensagem assim não tem como saber de qual departamento se trata. Corrigido.
+
 ---
 
 ## Fora de escopo, de propósito
@@ -356,7 +375,7 @@ nomeia esta mudança, e esta nomeia `src/lib/data/busca.ts`.
 
 | Frente | O que foi feito | Falta | % concluído |
 | --- | --- | --- | --- |
-| Centros de custo | Spec, migration 0114 com as 7 travas, domínio puro testado, schema, camada de leitura, lista com tipo e hierarquia, formulário condicional, action, 3 consumidores de avanço filtrados, rota-atalho, menu. Suíte em 1488 testes | Confirmar as 2 premissas com o Evandro; cadastrar os departamentos reais na tela; rotular `busca.ts` quando as branches se encontrarem | 85% |
+| Centros de custo | Spec, migration 0114 com as 7 travas **validadas contra um Postgres real**, domínio puro testado, schema, camada de leitura, lista com tipo e hierarquia, formulário condicional, action, 3 consumidores de avanço filtrados, rota-atalho, menu, v0.117.0. Ritual completo verde, suíte em 1491 testes | Confirmar as 2 premissas com o Evandro; rodar a migration no banco; cadastrar os departamentos reais na tela; revisar e mergear; rotular `busca.ts` quando as branches se encontrarem | 90% |
 
 **Próximo passo:** o Evandro confirmar as duas premissas — quais linhas viram
 departamento e se departamento aceita "pausada" — e cadastrar os departamentos
