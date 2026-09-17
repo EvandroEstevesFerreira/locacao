@@ -205,11 +205,12 @@ async function buscarFuncionarios(termo: string): Promise<GrupoBusca | null> {
       acerto,
     });
   }
-  return montarGrupo(
-    "funcionario",
-    resultados,
-    `/termos/funcionarios?q=${encodeURIComponent(termo)}`,
-  );
+  // SEM `?q=` aqui: `/termos/funcionarios` não filtra por termo nenhum (não
+  // tem `ListSearch`, não lê `sp.q`) — mandar o parâmetro faria a busca
+  // parecer que jogou fora o que o usuário digitou. O link fica na listagem
+  // crua, que é o fallback que o brief já previa para quando a tela de
+  // destino não aceita busca.
+  return montarGrupo("funcionario", resultados, "/termos/funcionarios");
 }
 
 /**
