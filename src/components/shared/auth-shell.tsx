@@ -39,9 +39,21 @@ export function AuthShell({
   const ano = hojeISOSaoPaulo().slice(0, 4);
 
   return (
+    // FUNDO OPACO, E ISSO É A DEFESA DO PARÁGRAFO ACIMA, NÃO ESTILO.
+    //
+    // `bg-muted/40` desfazia o tema forçado sem tocar nele: os tokens de dentro
+    // viravam claros, mas 40% de opacidade deixa a tela do navegador atravessar
+    // — e ela é escura para quem tem o sistema em modo escuro, porque o
+    // `next-themes` do layout raiz põe `class="dark"` no `<html>`. O cartão,
+    // opaco, ficava branco; o resto ficava escuro, com o subtítulo e o rodapé
+    // em cinza de tema claro sobre fundo escuro, ilegíveis.
+    //
+    // Quem for "suavizar" esta cor com `/40`, `/60` ou qualquer alfa reintroduz
+    // exatamente o bug: aqui a opacidade não clareia, ela revela o que está
+    // atrás.
     <main
       data-theme="light"
-      className="flex min-h-dvh flex-col items-center justify-center bg-muted/40 px-6 py-12"
+      className="flex min-h-dvh flex-col items-center justify-center bg-muted px-6 py-12"
     >
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center text-center">
