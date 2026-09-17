@@ -51,9 +51,18 @@ export function AuthShell({
     // Quem for "suavizar" esta cor com `/40`, `/60` ou qualquer alfa reintroduz
     // exatamente o bug: aqui a opacidade não clareia, ela revela o que está
     // atrás.
+    //
+    // E `text-foreground` AQUI, não só nos filhos, pela segunda metade do mesmo
+    // problema. `data-theme="light"` redefine as VARIÁVEIS, mas cor herdada é
+    // valor já computado, não referência a variável: um elemento que não
+    // declara a própria cor continua com a que o `<body>` computou sob o tema
+    // escuro. Era o caso do `<h1>Loca`, que saía quase branco sobre o fundo
+    // claro enquanto o logo e os parágrafos, que declaram a sua, saíam certos.
+    // Declarar a cor no topo fecha a classe inteira do defeito em vez de um
+    // elemento por vez.
     <main
       data-theme="light"
-      className="flex min-h-dvh flex-col items-center justify-center bg-muted px-6 py-12"
+      className="flex min-h-dvh flex-col items-center justify-center bg-muted px-6 py-12 text-foreground"
     >
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center text-center">

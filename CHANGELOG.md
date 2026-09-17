@@ -7,6 +7,27 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.116.2] - 2026-09-17
+
+A 0.116.1 consertou o fundo da tela de entrada e deixou passar a outra metade
+do mesmo problema.
+
+### Corrigido
+
+- **A cor do texto era herdada, e herança não segue `data-theme`.**
+  `data-theme="light"` redefine as VARIÁVEIS de cor, mas cor herdada é valor já
+  computado: um elemento que não declara a própria cor mantém a que o `<body>`
+  computou sob o tema escuro. O `<h1>Loca` saía quase branco sobre o fundo
+  claro, enquanto o logo e os parágrafos — que declaram a sua — saíam certos.
+  A raiz da `AuthShell` passa a declarar `text-foreground`, o que fecha a
+  classe inteira do defeito em vez de um elemento por vez.
+
+### Adicionado
+
+- `src/components/shared/auth-shell.test.ts` — varredura cobrando as duas
+  promessas que o `data-theme` sozinho não garante: fundo sem opacidade e cor
+  declarada na raiz. As duas já quebraram em produção, uma em seguida da outra.
+
 ## [0.116.1] - 2026-09-17
 
 A tela de entrada renderizava escura para quem tem o sistema operacional em
