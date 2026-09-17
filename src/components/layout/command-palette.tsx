@@ -22,8 +22,13 @@
 // `unaccent` sobre coluna dentro de um `.or()`, então "joao" só encontra
 // "João" filtrando em memória do lado de cá (ver `buscarGlobal` em
 // `src/lib/data/busca.ts`). O palette chama esse servidor por uma server
-// action (`buscarGlobalAction`) com debounce; a permissão de ver cada
-// registro vem da RLS por trás da consulta, não de checagem alguma aqui.
+// action (`buscarGlobalAction`) com debounce.
+//
+// A permissão de ver cada registro é resolvida LÁ, não aqui: RLS para
+// organização e obra, e `perfil.modulos` aplicado pela própria ponte (ver
+// `busca-global-action.ts`). Filtrar por módulo neste arquivo seria enfeite —
+// uma server action é endpoint público. Assim os registros passam a respeitar
+// módulo do mesmo jeito que as oito ações rápidas sempre respeitaram.
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -74,7 +79,15 @@ export function CommandPalette({
   const [busca, setBusca] = useState("");
   const [indiceAtivo, setIndiceAtivo] = useState(0);
   const [resultadosServidor, setResultadosServidor] = useState<GrupoBusca[]>([]);
-  const [buscando, setBuscando] = useState(false);
+  // Para QUAL termo `resultadosServidor` é a resposta. Guardar o termo, e não
+  // um booleano "buscando", resolve duas coisas de uma vez: a lista só desenha
+  // registros do termo que está escrito agora (editar no meio — colar por cima
+  // de uma seleção, ou `anderson` → `an` → `zz` — não deixa mais o resultado
+  // velho na tela), e "Nada encontrado" só pode ser dito quando existe resposta
+  // PARA ESTE termo. Um booleano não distingue "ainda não perguntei" de "já
+  // respondeu vazio", e era por isso que o palette afirmava o negativo durante
+  // o debounce.
+  const [termoRespondido, setTermoRespondido] = useState<string | null>(null);
   const router = useRouter();
   // Guarda o termo que originou a chamada em curso, para descartar respostas
   // fora de ordem: se "and" voltar depois de o usuário já ter digitado
@@ -114,11 +127,19 @@ export function CommandPalette({
 
   const termoValidoAtual = normalizar(busca.trim()).length >= TERMO_MINIMO;
 
+  // "Nada encontrado" é uma AFIRMAÇÃO, e durante o debounce mais a ida e volta
+  // o servidor ainda não respondeu. Digitar "joao" (que não casa com rótulo de
+  // menu nenhum) fazia o palette dizer "Nada encontrado para 'joao'." com
+  // "Buscando…" logo abaixo: o negativo primeiro, e errado. Enquanto não há
+  // resposta PARA ESTE termo, o estado é pendente e é isso que a tela mostra.
+  const respondeuAoTermoAtual = termoRespondido === busca.trim();
+  const pendente = termoValidoAtual && !respondeuAoTermoAtual;
+
   const gruposPorEntidade = useMemo(() => {
-    if (!termoValidoAtual) return [];
+    if (!termoValidoAtual || !respondeuAoTermoAtual) return [];
     const mapa = new Map(resultadosServidor.map((g) => [g.entidade, g]));
     return ENTIDADES.map((e) => mapa.get(e)).filter((g): g is GrupoBusca => g !== undefined);
-  }, [resultadosServidor, termoValidoAtual]);
+  }, [resultadosServidor, termoValidoAtual, respondeuAoTermoAtual]);
 
   const resultados = useMemo(() => {
     const termo = normalizar(busca.trim());
@@ -143,28 +164,33 @@ export function CommandPalette({
   useEffect(() => {
     const termo = busca.trim();
     if (normalizar(termo).length < TERMO_MINIMO) {
+      // Termo curto demais para consultar. Zera o que veio do servidor: sem
+      // isto os registros do termo anterior continuariam desenhados.
       termoEmVoo.current = null;
-      // Reseta buscando fora do corpo síncrono do efeito (mesma forma que o
-      // `setBuscando(true)` abaixo, dentro do `setTimeout`): chamar setState
-      // direto no corpo do efeito é o que o eslint (react-hooks/set-state-in-
-      // effect) rejeita. Sem este reset, apagar o termo enquanto uma busca
-      // está em voo deixava `buscando` preso em `true` pelo resto da sessão
-      // — o `.finally()` da promise em voo nunca bate, porque compara com
-      // `termoEmVoo.current`, que este branch acabou de zerar.
-      queueMicrotask(() => setBuscando(false));
+      // setState fora do corpo síncrono do efeito — é o que o eslint
+      // (react-hooks/set-state-in-effect) cobra, e a mesma forma usada abaixo.
+      queueMicrotask(() => {
+        setResultadosServidor([]);
+        setTermoRespondido(null);
+      });
       return;
     }
 
     const timer = setTimeout(() => {
       termoEmVoo.current = termo;
-      setBuscando(true);
       buscarGlobalAction(termo)
         .then((grupos) => {
           if (termoEmVoo.current !== termo) return; // resposta velha, descarta
           setResultadosServidor(grupos);
+          setTermoRespondido(termo);
         })
-        .finally(() => {
-          if (termoEmVoo.current === termo) setBuscando(false);
+        .catch(() => {
+          // A falha também é uma resposta: sem marcar o termo como respondido,
+          // a tela ficaria em "Buscando…" para sempre. As seis consultas já
+          // logam do lado do servidor; aqui o resultado honesto é vazio.
+          if (termoEmVoo.current !== termo) return;
+          setResultadosServidor([]);
+          setTermoRespondido(termo);
         });
     }, 200);
 
@@ -189,7 +215,7 @@ export function CommandPalette({
       setBusca("");
       setIndiceAtivo(0);
       setResultadosServidor([]);
-      setBuscando(false);
+      setTermoRespondido(null);
     }
   }
 
@@ -265,9 +291,15 @@ export function CommandPalette({
 
           <div className="max-h-80 overflow-y-auto p-1">
             {resultados.length === 0 ? (
-              <p className="px-3 py-6 text-center text-sm text-muted-foreground">
-                Nada encontrado para “{busca}”.
-              </p>
+              pendente ? (
+                <p className="px-3 py-6 text-center text-sm text-muted-foreground">
+                  Buscando…
+                </p>
+              ) : (
+                <p className="px-3 py-6 text-center text-sm text-muted-foreground">
+                  Nada encontrado para “{busca}”.
+                </p>
+              )
             ) : (
               resultados.map((e, i) => {
                 const novoGrupo = e.grupo !== grupoAnterior;
@@ -328,7 +360,7 @@ export function CommandPalette({
                 );
               })
             )}
-            {buscando && gruposPorEntidade.length === 0 ? (
+            {resultados.length > 0 && pendente ? (
               <p className="px-3 py-2 text-center text-xs text-muted-foreground">Buscando…</p>
             ) : null}
           </div>
