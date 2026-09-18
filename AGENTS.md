@@ -207,11 +207,28 @@ AP 33162 | FATURA | doc 42824002 | venc 15/09/2026 | R$ 2.038,53 | saldo 2.038,5
   aparecem, e `AP | parcela` **não é chave única**. A chave é
   `AP | parcela | agente | tipoDoc | numDoc | vencimento | valor`.
 
-## Duas correções ao guia do Mega
+## O guia do Mega, e duas correções a ele
 
-O guia completo está em
-`C:\Users\evandro.ferreira\Projects\Financeiro\docs\CONEXAO-MEGA-API.md`.
-Duas coisas foram medidas aqui e divergem dele:
+O guia completo vive **neste repositório**, em
+[`docs/CONEXAO-MEGA-API.md`](docs/CONEXAO-MEGA-API.md): rotas, as duas
+dimensões de custo (centro de custo e projeto são independentes), volume
+medido, e as armadilhas de autenticação. Ele é portátil de propósito — não tem
+nada específico do Loca, porque o projeto de ERP novo usa o mesmo arquivo.
+
+O caminho que estava aqui antes
+(`C:\Users\evandro.ferreira\Projects\Financeiro\docs\`) **não existe nesta
+máquina**, e apontar para um arquivo inexistente é pior que não apontar: quem
+segue o caminho conclui que não há guia.
+
+**A credencial (`mega_cred.txt`) está em
+`C:\#MS\OneDrive - SISTENGE\Arquivos de Chat do Microsoft Teams\`.** É pasta
+de anexo de Teams sincronizada na nuvem, que não é lugar para credencial —
+está sinalizado ao Evandro. Se o arquivo mudar de lugar,
+`scripts\mega-pagamentos.ps1` (que lê de `C:\temp\mega_cred.txt`) e este
+parágrafo mudam junto, ou volta a haver duas verdades.
+
+Duas coisas foram medidas aqui e divergem da documentação original do
+fornecedor:
 
 1. **A rota de contas a pagar quer o código CRU** (`2630`), não `1-2630`. Com o
    prefixo, a API responde `The value '1-2630' is not valid`. O formato
