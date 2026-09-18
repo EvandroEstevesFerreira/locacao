@@ -146,3 +146,48 @@ create policy "atribuicao_servico_update" on public.atribuicao_servico
 create policy "atribuicao_servico_delete" on public.atribuicao_servico
   for delete to authenticated
   using (org_id = public.current_org_id() and public.pode_gerir_cadastros());
+
+-- ---------------------------------------------------------------------------
+-- `soft_delete` passa a conhecer o contrato de servico
+-- ---------------------------------------------------------------------------
+-- A funcao da 0041 tem uma LISTA FECHADA de entidades e levanta "Entidade
+-- invalida" para o que nao esta nela. Sem este bloco, o botao de excluir da
+-- tela de servicos falharia com uma mensagem que nao diz nada ao usuario --
+-- e so em producao, porque nenhum teste de tipo pega uma string passada por
+-- RPC.
+--
+-- Exclusao de servico e CADASTRO (`pode_gerir_cadastros`), e nao critica como
+-- contrato de locacao e lancamento financeiro: um contrato de assinatura
+-- excluido por engano se recadastra em um minuto, sem perder historico
+-- financeiro de ninguem.
+--
+-- `security definer` e `search_path = ''` sao copiados da 0041 de proposito:
+-- a funcao roda com os privilegios do dono, e sem o search_path vazio um
+-- schema malicioso no caminho poderia sequestrar as chamadas.
+create or replace function public.soft_delete_servico(p_id uuid)
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_org    uuid := public.current_org_id();
+  v_linhas int;
+begin
+  if v_org is null or p_id is null then
+    raise exception 'Sessao invalida.' using errcode = '42501';
+  end if;
+
+  if not public.pode_gerir_cadastros() then
+    raise exception 'Sem permissao para excluir servicos.' using errcode = '42501';
+  end if;
+
+  update public.contrato_servico set deleted_at = now()
+    where id = p_id and org_id = v_org and deleted_at is null;
+
+  get diagnostics v_linhas = row_count;
+  return v_linhas > 0;
+end $$;
+
+revoke all on function public.soft_delete_servico(uuid) from public;
+grant execute on function public.soft_delete_servico(uuid) to authenticated;
