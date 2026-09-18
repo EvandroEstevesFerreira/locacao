@@ -353,6 +353,31 @@ dois lados, mas no receber quem prorroga é o **cliente**, não o seu financeiro
 Mesma estrutura, dono diferente — confirme a regra de negócio antes de
 reaproveitar a lógica do pagar.
 
+### A rota NÃO filtra filial — e o que ela devolve diz muito da empresa
+
+Medido na mesma janela de 12 meses:
+
+| | registros | agentes distintos | filiais | tipos de documento |
+| --- | --- | --- | --- | --- |
+| pagar | 8.102 | 885 | `3` (7.932), `10` (166), `100` (4) | NF MAT, NF, BOLETO, RECIBO, GUIA… |
+| receber | 141 | 26 | `3` (141) | NFS (97), NFE (44) |
+
+**O pagar devolve três filiais**, logo a rota entrega o universo e não um
+recorte silencioso. Se o receber traz uma filial só, isso é característica do
+dado, não da consulta — vale testar isso cedo em qualquer integração nova,
+porque uma rota que filtra sem dizer transforma "o universo" em "o que eu vi".
+
+**O receber só conhece nota fiscal.** Dois tipos, NFS e NFE, ambos fiscais —
+contra a casa toda de instrumentos do pagar. Onde essa assimetria aparecer,
+desconfie de que o ERP não é o sistema de faturamento: ele registra a nota já
+emitida, e o que decide **quando** faturar (medição, empenho, marco físico) vive
+fora dele. Isso muda um projeto de migração de "substituir o que existe" para
+"construir o que hoje é planilha".
+
+**Filial com pouquíssimos lançamentos merece pergunta, não suposição.** A `100`
+tem 4 títulos num ano: ou é empresa recém-criada, ou desativada, ou erro de
+cadastro que ninguém olhou. As três importam para quem modela filial.
+
 ### Formato de data: `dd/MM/yyyy`, não ISO
 
 As respostas trazem `01/10/2025`. Um parser que assume ISO ou month-first
