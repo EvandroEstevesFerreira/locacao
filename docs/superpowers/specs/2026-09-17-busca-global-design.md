@@ -341,3 +341,39 @@ mais velho que qualquer uma destas ondas.**
 
 Próximo passo único: decidir a ordem de merge com a branch que disputa o mesmo
 número de versão, e então bumpar `APP_VERSION`, `CHANGELOG.md` e `package.json`.
+
+---
+
+## Atualização de 17/09/2026 — o rótulo por tipo, depois da v0.119.0
+
+Escrito pela sessão de centros de custo, a pedido da sessão que escreveu esta
+spec e que encerrou antes da migration sair. O commit do rótulo (`1dbaaee`) foi
+revertido em `fd67b5d` porque a busca foi para produção lendo `obra.tipo` numa
+base onde a coluna ainda não existia. Ele volta — mas o desenho mudou desde
+então, e reaplicá-lo como estava daria o rótulo errado.
+
+**O que está na `main` a partir de `a5301cd` (v0.119.0):**
+
+1. **`obra.tipo` tem TRÊS valores**, não dois: `obra`, `departamento` e
+   **`grupo`**. O terceiro nasceu de medir o Mega — `38 Sistenge`, `20 Custo
+   Direto Operacional` e `21 Contratos de Manutenção` são agrupadores. Um
+   rótulo que só conheça dois deixa o grupo sem nome ou com o nome errado.
+2. **Não existe `codigo_mega`.** São duas colunas, `mega_projeto` e
+   `mega_centro_custo`, porque o Mega tem duas dimensões independentes (33
+   centros de custo e 162 projetos, medidos na API). `38` é **projeto**, não
+   centro de custo, e os códigos das obras (605, 686, 691) também são projeto.
+   Se a busca for indexar código, hoje são quatro campos: `codigo` (que segue a
+   ADP), `mega_projeto`, `mega_centro_custo` e o `codigo_people` da 0094.
+3. **`TIPO_CENTRO_CUSTO_INFO`**, em `src/lib/centro-custo.ts`, é client-safe e
+   já traz os três rótulos. Não crie um segundo dicionário.
+
+**A migration 0114 ainda não rodou em produção.** Enquanto não rodar, `tipo`
+não existe no banco e o rótulo continua tendo de ficar fora — foi exatamente
+este o erro que gerou o revert.
+
+Uma lição que as duas sessões pagaram, cada uma à sua maneira, e que vale
+escrita: **o código e a migration não são evidência de que a coluna existe no
+banco.** A busca leu `tipo` porque a viu na migration; a migration pôs `unique`
+em `mega_projeto` porque parecia identidade, e quebrou no último passo — todos
+os departamentos dividem o projeto 38. Nos dois casos quem corrigiu foi o
+banco, e em nenhum dos dois a leitura teria bastado.
