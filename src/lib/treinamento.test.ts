@@ -433,6 +433,7 @@ describe("o conteúdo real do grupo Equipamento", () => {
       "imoveis",
       "financeiro",
       "relatorios",
+      "servicos",
     ]);
   });
 
@@ -485,6 +486,7 @@ describe("o conteúdo real do grupo Equipamento", () => {
       imoveis: "imoveis",
       financeiro: "financeiro",
       relatorios: "relatorios",
+      servicos: "servicos",
     });
   });
 

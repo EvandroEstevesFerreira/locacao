@@ -21,6 +21,7 @@ import {
   FileText,
   GraduationCap,
   HardHat,
+  KeyRound,
   LayoutDashboard,
   Package,
   Scale,
@@ -38,6 +39,7 @@ import type { NavIconName } from "@/lib/nav";
 const ICONES: Record<NavIconName, LucideIcon> = {
   "layout-dashboard": LayoutDashboard,
   "hard-hat": HardHat,
+  "key-round": KeyRound,
   "trending-up": TrendingUp,
   truck: Truck,
   package: Package,

@@ -4,6 +4,7 @@
 
 export type ModuloKey =
   | "obras"
+  | "servicos"
   | "avanco"
   | "fornecedores"
   | "itens"
@@ -27,7 +28,7 @@ export type ModuloKey =
  * desmarcar um apagasse outro, produziria permissão que ninguém consegue
  * auditar depois.
  */
-export type GrupoModulo = "Obra" | "Equipamento" | "Imóveis" | "Financeiro";
+export type GrupoModulo = "Obra" | "Equipamento" | "Imóveis" | "Financeiro" | "TI";
 
 /** Módulos que o Master pode liberar/bloquear por usuário. */
 export const MODULOS: {
@@ -37,6 +38,7 @@ export const MODULOS: {
   grupo: GrupoModulo;
 }[] = [
   { grupo: "Obra", chave: "obras", label: "Centros de custo", href: "/obras" },
+  { grupo: "TI", chave: "servicos", label: "Serviços e licenças", href: "/servicos" },
   { grupo: "Obra", chave: "avanco", label: "Avanço", href: "/avanco" },
   { grupo: "Equipamento", chave: "fornecedores", label: "Fornecedores", href: "/fornecedores" },
   { grupo: "Equipamento", chave: "itens", label: "Itens", href: "/itens" },
@@ -137,6 +139,7 @@ export const GRUPOS_MODULO: GrupoModulo[] = [
   "Equipamento",
   "Imóveis",
   "Financeiro",
+  "TI",
 ];
 
 export function modulosDoGrupo(grupo: GrupoModulo): ModuloKey[] {

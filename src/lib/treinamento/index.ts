@@ -3,6 +3,7 @@
 import type { Trilha } from "./tipos";
 import { PRIMEIROS_PASSOS } from "./primeiros-passos";
 import { OBRAS } from "./obras";
+import { SERVICOS } from "./servicos";
 import { AVANCO } from "./avanco";
 import { CATALOGO } from "./catalogo";
 import { FROTA } from "./frota";
@@ -52,6 +53,7 @@ export const TRILHAS: Trilha[] = [
   IMOVEIS,
   FINANCEIRO,
   RELATORIOS,
+  SERVICOS,
 ];
 
 export function trilhaPorChave(chave: string): Trilha | undefined {
