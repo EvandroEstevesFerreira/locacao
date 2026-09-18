@@ -62,20 +62,44 @@ comment on column public.obra.pai_id is
   'O limite elimina ciclo por construcao: sem ele, a trava exigiria WITH '
   'RECURSIVE e toda soma de custo por area seria consulta recursiva.';
 
--- O Mega e a ADP numeram os MESMOS centros de custo de formas diferentes:
--- Administracao e `6` no Mega e `800` na ADP. O `codigo` do Loca segue a ADP,
--- que e o que ja esta na tela e nas 8 obras cadastradas; o do ERP vem aqui, ao
--- lado do `codigo_people` que a 0094 ja criou pelo mesmo motivo.
+-- O `codigo` do Loca segue a ADP (800, 801...), que e o que ja esta na tela e
+-- nas 8 obras cadastradas. Os codigos do ERP vao nas colunas abaixo, ao lado do
+-- `codigo_people` que a 0094 criou pelo mesmo motivo.
+-- DUAS colunas, porque o Mega tem DUAS dimensoes -- medido na API em
+-- 17/09/2026, com /api/global/CentroCusto (33 registros) e /api/global/Projeto
+-- (162). O dono do processo descreveu "dividido por centro de custo e depois
+-- por projetos", e os numeros que circulam pertencem as duas, misturados:
 --
--- Nulo e legitimo e vai acontecer: `803` da ADP cobre Comercial E Orcamentos,
--- que no Mega sao `8` e `9` -- dois codigos para uma linha. Guardar "8,9" aqui
--- seria inventar um formato que nenhum dos dois sistemas usa; melhor o campo
--- vazio e a conciliacao a mao do que uma chave que nao casa com nada.
+--   CENTRO DE CUSTO  5 Diretoria, 6 Administrativo, 7 Engenharia, 8 Comercial,
+--                    9 Orcamento, 10 Suprimentos, 12 Deposito,
+--                    13 Ociosidade Obra, 20 Custo Direto Operacional,
+--                    21 Contrato de Manutencao
+--   PROJETO          605, 608, 659, 680, 686, 691, 695 ... e 38 SISTENGE
+--
+-- `38 - Sistenge` NAO e centro de custo: e PROJETO, sob "8 SISTENGE - ADM".
+-- E os codigos das 8 obras do Loca sao PROJETO -- 605 e "FATOR TOWERS - UNIMED
+-- MACEIO", 691 e "RACIONAL - PROJETO ADA GAROA", 686 e "MICROSOFT CPQ03 -
+-- MANUTENCAO". Sete das oito batem exatamente.
+--
+-- Uma coluna so significaria coisas diferentes conforme o tipo da linha -- e e
+-- assim que uma chave de conciliacao casa com a tabela errada sem ninguem
+-- notar.
 alter table public.obra
-  add column if not exists codigo_mega text;
+  add column if not exists mega_projeto      text,
+  add column if not exists mega_centro_custo text;
 
-create unique index if not exists idx_obra_codigo_mega
-  on public.obra (org_id, codigo_mega) where codigo_mega is not null;
+-- NENHUM dos dois e unico, e a descoberta foi o banco recusando o indice:
+-- TODOS os departamentos dividem o projeto `38` (o da sede), e varias obras
+-- dividem o centro de custo `20`. O projeto so identifica sozinho quando a
+-- linha e obra -- e uma unicidade que vale para metade das linhas nao e
+-- unicidade, e cobra-la quebraria a migration no ultimo passo.
+create index if not exists idx_obra_mega_projeto
+  on public.obra (org_id, mega_projeto) where mega_projeto is not null;
+
+-- `mega_centro_custo` NAO e unico: varias obras dividem o `20` e varios
+-- departamentos dividem o `6`. E classificacao, nao identidade.
+create index if not exists idx_obra_mega_centro_custo
+  on public.obra (org_id, mega_centro_custo) where mega_centro_custo is not null;
 
 create index if not exists idx_obra_pai
   on public.obra (pai_id) where pai_id is not null;
@@ -248,17 +272,22 @@ create trigger trg_fechamento_exige_obra
 --   20 Custo Direto Operacional    -> as obras
 --   21 Contratos de Manutencao     -> os contratos de manutencao continua
 --
--- Os grupos usam o codigo do MEGA no `codigo` porque a ADP nao os tem: ela
--- numera departamento, nao agrupador. Onde os dois existem, o `codigo` e o da
--- ADP e o do ERP vai em `codigo_mega`.
-insert into public.obra (org_id, codigo, nome, tipo, codigo_mega, status)
-select o.org_id, v.codigo, v.nome, 'grupo', v.codigo, 'ativa'
+-- Os grupos usam o numero do MEGA no `codigo` porque a ADP nao os tem: ela
+-- numera departamento, nao agrupador.
+-- Cada grupo carrega SO a dimensao a que ele pertence no Mega:
+--   38 e PROJETO (extenso 8001, sob "8 SISTENGE - ADM"), nao centro de custo;
+--   20 e 21 sao CENTRO DE CUSTO (extenso 221 e 222, sob "22 Alocacao de Custo
+--   Direto de Producao"), nao projetos.
+-- Preencher os dois campos em ambos seria inventar uma correspondencia que o
+-- ERP nao tem.
+insert into public.obra (org_id, codigo, nome, tipo, mega_projeto, mega_centro_custo, status)
+select o.org_id, v.codigo, v.nome, 'grupo', v.proj, v.cc, 'ativa'
 from (select distinct org_id from public.obra) o
 cross join (values
-  ('38', 'Sistenge'),
-  ('20', 'Alocacao de Custo Direto Operacional'),
-  ('21', 'Alocacao de Custo Direto com Contratos de Manutencao')
-) as v(codigo, nome)
+  ('38', 'Sistenge',                                             '38', null),
+  ('20', 'Alocacao de Custo Direto Operacional',                 null, '20'),
+  ('21', 'Alocacao de Custo Direto com Contratos de Manutencao', null, '21')
+) as v(codigo, nome, proj, cc)
 on conflict (org_id, codigo) do nothing;
 
 -- ---------------------------------------------------------------------------
@@ -291,7 +320,7 @@ create temp table tmp_promocao_800 (
   frente      text primary key,
   codigo_adp  text,
   nome        text,
-  codigo_mega text
+  mega_cc     text
 );
 
 -- Planejamento e SMS ficaram sem centro de custo ate 17/09/2026: a migration
@@ -300,18 +329,23 @@ create temp table tmp_promocao_800 (
 -- A trava fica: qualquer frente nova sem codigo aborta a migration do mesmo
 -- jeito. Chutar poe custo no departamento errado, e o erro nao aparece na
 -- tela -- aparece num rateio, meses depois, como numero que ninguem explica.
-insert into tmp_promocao_800 (frente, codigo_adp, nome, codigo_mega) values
-  ('Comercial',    '803', 'Comercial / Orcamentos',              null),
+-- `mega_cc` fica NULO onde o codigo da ADP cobre DOIS centros de custo do
+-- Mega: `801` e Engenharia (7) E Suprimentos (10); `803` e Comercial (8) E
+-- Orcamento (9). Uma coluna nao guarda dois valores, e gravar "7,10" inventa um
+-- formato que nenhum dos dois sistemas le. Campo vazio com conciliacao a mao e
+-- melhor que uma chave que nao casa com nada.
+insert into tmp_promocao_800 (frente, codigo_adp, nome, mega_cc) values
+  ('Comercial',    '803', 'Comercial / Orcamentos',              null),  -- Mega 8 E 9
   ('Orcamentos',   '803', 'Comercial / Orcamentos',              null),
-  ('Engenharia',   '801', 'Engenharia / Suprimentos / Projetos', '7'),
-  ('Suprimentos',  '801', 'Engenharia / Suprimentos / Projetos', '7'),
-  ('Projetos',     '801', 'Engenharia / Suprimentos / Projetos', '7'),
+  ('Engenharia',   '801', 'Engenharia / Suprimentos / Projetos', null),  -- Mega 7 E 10
+  ('Suprimentos',  '801', 'Engenharia / Suprimentos / Projetos', null),
+  ('Projetos',     '801', 'Engenharia / Suprimentos / Projetos', null),
+  ('Planejamento', '801', 'Engenharia / Suprimentos / Projetos', null),
+  ('SMS',          '801', 'Engenharia / Suprimentos / Projetos', null),
   ('Diretoria',    '802', 'Diretoria',                           '5'),
-  ('Deposito',     '805', 'Deposito',                            null),
+  ('Deposito',     '805', 'Deposito',                            '12'),
   ('Financeiro',   '800', 'Administracao',                       '6'),
-  ('RH',           '800', 'Administracao',                       '6'),
-  ('Planejamento', '801', 'Engenharia / Suprimentos / Projetos', '7'),
-  ('SMS',          '801', 'Engenharia / Suprimentos / Projetos', '7');
+  ('RH',           '800', 'Administracao',                       '6');
 
 create or replace function pg_temp.chave(t text) returns text
 language sql immutable as $$
@@ -372,7 +406,7 @@ begin
   -- Recolhe os DISTINTOS (6 linhas, nao 11) antes de apagar as frentes.
   drop table if exists tmp_filhos_800;
   create temp table tmp_filhos_800 as
-  select distinct o.org_id, t.codigo_adp as codigo, t.nome, t.codigo_mega
+  select distinct o.org_id, t.codigo_adp as codigo, t.nome, t.mega_cc
   from public.frente_obra f
   join tmp_promocao_800 t on pg_temp.chave(t.frente) = pg_temp.chave(f.nome)
   join public.obra o on o.id = v_obra800
@@ -515,8 +549,11 @@ begin
 
   -- 1. Os departamentos que vieram das frentes, sob o 38.
   if to_regclass('pg_temp.tmp_filhos_800') is not null then
-    insert into public.obra (org_id, codigo, nome, tipo, pai_id, codigo_mega, status)
-    select org_id, codigo, nome, 'departamento', v_38, codigo_mega, 'ativa'
+    -- `mega_projeto` = 38 para TODO departamento: no Mega o custo da sede e
+    -- lancado no projeto SISTENGE, e o que distingue um departamento do outro
+    -- e o centro de custo, nao o projeto.
+    insert into public.obra (org_id, codigo, nome, tipo, pai_id, mega_projeto, mega_centro_custo, status)
+    select org_id, codigo, nome, 'departamento', v_38, '38', mega_cc, 'ativa'
     from tmp_filhos_800
     -- `800 Administracao` ja existe: e a propria linha que o bloco 5 converteu.
     -- Recria-la aqui esbarraria no unique (org_id, codigo) e derrubaria a
@@ -533,7 +570,9 @@ begin
 
   if v_obra800 is not null then
     update public.obra
-    set pai_id = v_38, codigo_mega = coalesce(codigo_mega, '6')
+    set pai_id = v_38,
+        mega_projeto      = coalesce(mega_projeto, '38'),
+        mega_centro_custo = coalesce(mega_centro_custo, '6')
     where id = v_obra800;
   end if;
 
@@ -545,7 +584,10 @@ begin
 
   update public.obra
   set pai_id = v_21,
-      codigo_mega = coalesce(codigo_mega, codigo)
+      -- O codigo da obra no Loca JA E o `reduzido` do projeto no Mega: 686 e
+      -- "MICROSOFT CPQ03 - MANUTENCAO", medido na API.
+      mega_projeto      = coalesce(mega_projeto, codigo),
+      mega_centro_custo = coalesce(mega_centro_custo, '21')
   where tipo = 'obra' and pai_id is null and deleted_at is null
     and codigo in ('686');   -- acrescente aqui os proximos (705 e afins)
   get diagnostics v_qtd = row_count;
@@ -554,7 +596,8 @@ begin
   -- 4. Todas as demais obras, sob o 20.
   update public.obra
   set pai_id = v_20,
-      codigo_mega = coalesce(codigo_mega, codigo)
+      mega_projeto      = coalesce(mega_projeto, codigo),
+      mega_centro_custo = coalesce(mega_centro_custo, '20')
   where tipo = 'obra' and pai_id is null and deleted_at is null;
   get diagnostics v_qtd = row_count;
   raise notice '% obra(s) pendurada(s) no grupo 20.', v_qtd;

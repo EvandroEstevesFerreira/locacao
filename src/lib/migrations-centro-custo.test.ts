@@ -51,7 +51,10 @@ describe("as sete travas", () => {
     ["departamento não pausa", /constraint obra_departamento_sem_pausa check/i],
     ["pai é grupo, de raiz, da mesma organização", /function public\.obra_centro_custo_valido/i],
     ["o pai tem de ser um grupo", /pai tem de ser um grupo/i],
-    ["o código do Mega tem campo próprio", /add column if not exists codigo_mega text/i],
+    ["o projeto e o centro de custo do Mega são campos SEPARADOS",
+      /add column if not exists mega_projeto[\s\S]{0,80}add column if not exists mega_centro_custo/i],
+    ["nenhuma das duas colunas do Mega é única",
+      /create index if not exists idx_obra_mega_projeto[\s\S]{0,400}create index if not exists idx_obra_mega_centro_custo/i],
     ["tipo é imutável", /nao pode ser alterado/i],
     ["departamento não recebe controle de obra", /function public\.exige_centro_custo_obra/i],
   ];
