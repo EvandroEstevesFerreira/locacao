@@ -314,12 +314,59 @@ Uso:
 
 ---
 
-## 9. O que ainda não foi medido
+## 9. Volume e paginação — medido
+
+**Não existe paginação. A API devolve tudo de uma vez.** Medido em 17/09/2026,
+janela de 12 meses (2025-10-01 a 2026-09-30):
+
+| Rota | Registros | Tamanho | Tempo |
+| --- | --- | --- | --- |
+| `FaturaPagar/Saldo` | 8.102 | 3.415 KB | 5,7 s |
+| `FaturaReceber/Saldo` | 141 | 57 KB | 0,2 s |
+
+Nenhum header de `page`, `total`, `count` ou `link`. O que o filtro de data
+pede é o que vem, inteiro.
+
+**O risco não é paginação — é tamanho de resposta.** 3,4 MB numa chamada. Numa
+função serverless com teto de memória isso pesa mais que o tempo. Se você for
+ler janelas anuais, planeje janelas menores por conta própria; a API não vai
+obrigar, e é justamente por isso que ninguém percebe até estourar.
+
+**Pagar e receber têm ordens de grandeza diferentes** — 57 para 1 nesta
+empresa. Tratar os dois com a mesma estratégia super-dimensiona um e
+sub-dimensiona o outro.
+
+**Atenção à taxa mensal.** Uma medição de um mês específico deu ≈458 parcelas;
+os 12 meses deram ~675/mês. Um mês não é taxa.
+
+### Os campos das duas rotas são idênticos
+
+```
+Filial, Agente, TipoDocumento, NumeroDocumento, NumeroParcela,
+DataVencimento, DataProrrogado, ValorParcela, SaldoAtual
+```
+
+O campo do valor é **`ValorParcela`**, não `Valor`.
+
+**A simetria é estrutural, não semântica.** `DataProrrogado` existe e adia dos
+dois lados, mas no receber quem prorroga é o **cliente**, não o seu financeiro.
+Mesma estrutura, dono diferente — confirme a regra de negócio antes de
+reaproveitar a lógica do pagar.
+
+### Formato de data: `dd/MM/yyyy`, não ISO
+
+As respostas trazem `01/10/2025`. Um parser que assume ISO ou month-first
+estoura no dia 13 do mês — e passa despercebido nos doze primeiros.
+
+---
+
+## 10. O que ainda não foi medido
 
 Honestidade sobre os limites deste guia:
 
-- Paginação: as duas rotas globais devolveram tudo de uma vez (33 e 162
-  registros). Não se sabe o comportamento com volume grande.
-- Escrita: tudo aqui é leitura. Nenhum `POST`/`PUT` de dado foi exercitado.
-- Rate limit: não há número conhecido. As regras acima são conservadoras
-  porque o custo de descobrir o limite é o bloqueio da conta.
+- **Escrita:** tudo aqui é leitura. Nenhum `POST`/`PUT` de dado foi exercitado.
+- **Rate limit:** não há número conhecido. As regras deste guia são
+  conservadoras porque o custo de descobrir o limite é o bloqueio de uma conta
+  que costuma ser compartilhada entre projetos.
+- **Contabilidade:** doze nomes testados, todos 404 (ver seção 3). Isso prova
+  que os nomes chutados estão errados, não que o recurso não exista.
