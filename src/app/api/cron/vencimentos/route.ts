@@ -1,3 +1,4 @@
+import { fraseDoAviso, servicosParaAvisar } from "@/lib/servicos/vencimento";
 import { NextResponse } from "next/server";
 import { addDays, differenceInCalendarDays, format } from "date-fns";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -99,6 +100,7 @@ export async function GET(request: Request) {
       imovelContratos,
       imoveisAtivos,
       certificados,
+      servicosTI,
       obrasDoOrg,
     ] = await Promise.all([
         supabase
@@ -145,6 +147,18 @@ export async function GET(request: Request) {
           .from("certificado_pendencia")
           .select("unidade_id, identificador, obra_id, modelo, tipo, especie, certificado_id, vence_em")
           .eq("org_id", cfg.org_id),
+        // Serviços recorrentes de TI: assinatura, licença, link de internet.
+        //
+        // Sem filtro de data AQUI: `data_fim` nulo é vigência indeterminada, e
+        // um `.lte(...)` o descartaria em silêncio junto com os que já
+        // venceram. Quem separa os dois casos é `servicosParaAvisar`, que é
+        // pura e tem teste na borda da janela.
+        supabase
+          .from("contrato_servico")
+          .select("id, nome, data_fim, renova_automaticamente")
+          .eq("org_id", cfg.org_id)
+          .eq("status", "ativo")
+          .is("deleted_at", null),
         // As obras, só para o rótulo dos candidatos de certificado: a view não
         // tem FK que o PostgREST possa seguir até `obra`, e são 8 linhas.
         supabase
@@ -306,6 +320,43 @@ export async function GET(request: Request) {
 
     for (const c of deCertificado) {
       if (c.dias === null) brutos.push(paraCand(c));
+    }
+
+    // Serviços de TI: NO CRON QUE JÁ EXISTE, e não num segundo.
+    //
+    // Um cron de aviso próprio seria a segunda cópia do escalonamento
+    // 30 → 15 → 3 e do `notificacao_log`, e as duas divergiriam na primeira
+    // vez que alguém mexesse numa delas — mandando dois e-mails com regras
+    // diferentes sobre a mesma data.
+    //
+    // Serviço não tem obra: o custo é rateado entre vários centros de custo,
+    // então `obra_id` fica nulo e o alerta vai para quem recebe o resumo da
+    // organização — o mesmo tratamento que imóvel sem obra já recebe.
+    for (const sv of servicosParaAvisar(
+      (servicosTI.data ?? []) as unknown as {
+        id: string;
+        nome: string;
+        data_fim: string | null;
+        renova_automaticamente: boolean;
+      }[],
+      hoje,
+      limite,
+    )) {
+      brutos.push({
+        tipo: "servico_renovacao",
+        referencia_id: sv.id,
+        data_referencia: sv.data_fim as string,
+        obra_id: null,
+        obra_rotulo: null,
+        linha: {
+          categoria: "Serviço de TI",
+          descricao: fraseDoAviso({
+            nome: sv.nome,
+            renovaAutomaticamente: sv.renova_automaticamente,
+          }),
+          data: formatarData(sv.data_fim as string),
+        },
+      });
     }
 
     // Anexa o marco (dias) a cada candidato; descarta o que não está
