@@ -7,6 +7,51 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.119.0] - 2026-09-17
+
+A tela de Obras tinha oito linhas, e uma delas — `800 — Administração` — não era
+uma obra: era o departamento administrativo disfarçado. Dentro dele, outras 11
+“frentes de serviço” eram os demais departamentos, feitas com a única
+ferramenta que havia. O disfarçe dava a todos prazo, avanço físico, orçamento e
+fechamento mensal — quatro números que entram em relatório financeiro
+parecendo legítimos.
+
+Obra e departamento passam a ser o mesmo conceito com naturezas diferentes: um
+**centro de custo**, na árvore que o Mega já usa.
+
+### Adicionado
+
+- `tipo` (obra | departamento | grupo) e `pai_id` em `obra`, com hierarquia de
+  dois níveis (migration `0114`).
+- Os três grupos do Mega: `38 Sistenge`, `20 Custo Direto Operacional` e
+  `21 Contratos de Manutenção`.
+- `mega_projeto` e `mega_centro_custo` — duas colunas, porque são duas
+  dimensões independentes no ERP. Medido na API: 33 centros de custo e 162
+  projetos. `38` é projeto, não centro de custo; os códigos das obras (605,
+  686, 691…) também são projeto.
+- As 11 frentes da obra 800 promovidas a 6 departamentos, agrupadas como a
+  folha agrupa. A migration **aborta** se alguma ficar sem código ou fora do
+  mapa — apagar cadastro em silêncio seria o pior desfecho.
+- Filtro por tipo e indentação de filho sob o seu grupo na lista.
+- `/centros-custo` como atalho para `/obras`.
+
+### Alterado
+
+- Os 17 seletores de obra do sistema passam a listar obra e departamento.
+- Avanço, painel e o cron de avanço passam a ler **só obra**.
+- `686 CPQ03 Manutenção` continua obra, sob o grupo 21 — no Mega ele é custo
+  direto, irmão das obras e não dos departamentos.
+
+### Segurança
+
+- Travas **no banco**, não na tela: departamento não recebe frente, avanço,
+  orçamento nem fechamento mensal; não tem prazo; não pausa; o pai tem de ser
+  um grupo da mesma organização; e `tipo` é imutável. Esconder o bloco no React
+  não fecha a server action.
+- Nenhuma policy de RLS mudou: `is_member_of_obra` é indiferente ao tipo da
+  linha, e departamento entra no mesmo regime de vínculo que a obra — sem
+  herança pelo pai.
+
 ## [0.118.0] - 2026-09-17
 
 O Ctrl+K deixa de ser um atalho de menu e vira busca.

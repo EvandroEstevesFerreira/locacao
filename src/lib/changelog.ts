@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.118.0";
+export const APP_VERSION = "0.119.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,53 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.119.0",
+    data: "2026-09-17",
+    titulo: "Os departamentos entram, e o Loca passa a falar a lingua do Mega",
+    mudancas: [
+      {
+        tipo: "novo",
+        texto:
+          "A tela de Obras agora se chama Centros de custo e aceita os departamentos da empresa \u2014 Diretoria, Engenharia, Comercial, Dep\u00f3sito e Administra\u00e7\u00e3o \u2014, al\u00e9m das obras.",
+      },
+      {
+        tipo: "novo",
+        texto:
+          "As 11 \u201cfrentes de servi\u00e7o\u201d que estavam dentro da obra 800 viram departamentos de verdade, agrupadas nos 6 centros de custo que a folha usa. Nenhum cadastro foi perdido.",
+      },
+      {
+        tipo: "novo",
+        texto:
+          "Obras e departamentos passam a ficar sob os tr\u00eas grupos do Mega: Sistenge, Custo Direto Operacional e Contratos de Manuten\u00e7\u00e3o. A lista mostra cada um recuado sob o seu grupo.",
+      },
+      {
+        tipo: "novo",
+        texto:
+          "Cada centro de custo guarda o n\u00famero do projeto e o do centro de custo do Mega em campos separados \u2014 s\u00e3o duas classifica\u00e7\u00f5es diferentes l\u00e1, e agora s\u00e3o duas aqui tamb\u00e9m.",
+      },
+      {
+        tipo: "novo",
+        texto:
+          "Equipamento, contrato, termo de responsabilidade, im\u00f3vel, estoque e lan\u00e7amento financeiro j\u00e1 podem ser vinculados a um departamento. O notebook do RH finalmente tem onde ficar.",
+      },
+      {
+        tipo: "melhoria",
+        texto:
+          "Departamento n\u00e3o tem prazo, avan\u00e7o f\u00edsico, frente de servi\u00e7o, or\u00e7amento nem fechamento mensal \u2014 esses campos n\u00e3o aparecem para ele, e o sistema n\u00e3o os aceita por nenhum caminho.",
+      },
+      {
+        tipo: "melhoria",
+        texto:
+          "O aviso semanal de avan\u00e7o por e-mail passa a cobrar apenas as obras. Antes, um departamento cadastrado como obra receberia cobran\u00e7a de percentual toda semana.",
+      },
+      {
+        tipo: "melhoria",
+        texto:
+          "Quem tinha o link antigo continua chegando: /obras segue funcionando, e /centros-custo leva para a mesma tela.",
+      },
+    ],
+  },
   {
     versao: "0.118.0",
     data: "2026-09-17",
