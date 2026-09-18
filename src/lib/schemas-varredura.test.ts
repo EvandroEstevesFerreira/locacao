@@ -24,6 +24,7 @@ import * as permissoes from "./permissoes";
 import * as devolucao from "./devolucao";
 import * as recebimento from "./recebimento";
 import * as reparo from "./reparo";
+import * as servicos from "./servicos";
 import * as termo from "./termo";
 import * as treinamento from "./treinamento";
 
@@ -74,6 +75,7 @@ const MODULOS: Record<string, Record<string, unknown>> = {
   devolucao,
   recebimento,
   reparo,
+  servicos,
   termo,
   treinamento,
 };
@@ -89,6 +91,18 @@ const MODULOS: Record<string, Record<string, unknown>> = {
 const UUID = "11111111-1111-4111-8111-111111111111";
 
 const AMOSTRAS: Record<string, unknown> = {
+  servicoSchema: {
+    nome: "Microsoft 365 Business Premium",
+    fornecedor_id: UUID,
+    quantidade: 50,
+    valor_unitario_centavos: 7000,
+    data_inicio: "2026-01-01",
+  },
+  atribuicaoSchema: {
+    contrato_id: UUID,
+    funcionario_id: UUID,
+    atribuido_em: "2026-01-05",
+  },
   imovelSchema: {
     tipo: "casa",
     apelido: "Casa 1",

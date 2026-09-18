@@ -105,16 +105,44 @@ create policy "contrato_servico_select" on public.contrato_servico
   for select to authenticated
   using (org_id = public.current_org_id() and deleted_at is null);
 
+-- `deleted_at is null` NO `using`, e nunca no `with check`.
+--
+-- Uma policy `for all` INCLUI SELECT, e policies permissivas sao OR'd: sem esta
+-- condicao, quem passa no teste de papel enxergaria por esta policy o que a
+-- `_select` acima esconde -- e veria contrato excluido como se estivesse vivo.
+--
+-- No `with check` a condicao abortaria a propria exclusao suave, porque o
+-- Postgres aplica o WITH CHECK a linha NOVA de um UPDATE, e a linha nova de um
+-- soft delete tem `deleted_at` preenchido. Foi o incidente da 0.19.4.
 create policy "contrato_servico_manage" on public.contrato_servico
   for all to authenticated
-  using (org_id = public.current_org_id() and public.pode_gerir_cadastros())
+  using (
+    org_id = public.current_org_id()
+    and public.pode_gerir_cadastros()
+    and deleted_at is null
+  )
   with check (org_id = public.current_org_id() and public.pode_gerir_cadastros());
 
 create policy "atribuicao_servico_select" on public.atribuicao_servico
   for select to authenticated
   using (org_id = public.current_org_id());
 
-create policy "atribuicao_servico_manage" on public.atribuicao_servico
-  for all to authenticated
+-- `atribuicao_servico` NAO tem exclusao suave -- a devolucao de licenca e
+-- `removido_em`, que e historico e continua visivel de proposito. Entao aqui as
+-- policies de escrita sao EXPLICITAS por comando, e nao um `for all`.
+--
+-- Nao e contorno de teste: um `for all` nesta tabela concederia SELECT uma
+-- segunda vez, por um caminho diferente do da policy de leitura acima. Duas
+-- portas para a mesma sala e como uma delas fica aberta sem ninguem notar.
+create policy "atribuicao_servico_insert" on public.atribuicao_servico
+  for insert to authenticated
+  with check (org_id = public.current_org_id() and public.pode_gerir_cadastros());
+
+create policy "atribuicao_servico_update" on public.atribuicao_servico
+  for update to authenticated
   using (org_id = public.current_org_id() and public.pode_gerir_cadastros())
   with check (org_id = public.current_org_id() and public.pode_gerir_cadastros());
+
+create policy "atribuicao_servico_delete" on public.atribuicao_servico
+  for delete to authenticated
+  using (org_id = public.current_org_id() and public.pode_gerir_cadastros());
