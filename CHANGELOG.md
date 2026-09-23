@@ -7,6 +7,15 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.120.1] - 2026-09-23
+
+### Corrigido
+
+- A busca global rotulava todo centro de custo como “Obra”. Passa a ler
+  `obra.tipo` e rotular cada resultado — possível agora que a migration `0114`
+  entrou no banco. O acesso ao rótulo é opcional: um valor novo no enum
+  derrubaria o Ctrl+K inteiro por causa de um texto.
+
 ## [0.120.0] - 2026-09-17
 
 O Loca sabia o que a empresa aluga e não sabia o que ela assina. Microsoft 365,

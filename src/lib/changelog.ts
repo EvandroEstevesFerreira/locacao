@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.120.0";
+export const APP_VERSION = "0.120.1";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,18 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.120.1",
+    data: "2026-09-23",
+    titulo: "A busca do Ctrl+K deixa de chamar todo centro de custo de “Obra”",
+    mudancas: [
+      {
+        tipo: "correcao",
+        texto:
+          "Na busca rápida (Ctrl+K), departamentos e grupos apareciam sob o rótulo “Obras”. Agora cada resultado diz o que é: Obra, Departamento ou Grupo.",
+      },
+    ],
+  },
   {
     versao: "0.120.0",
     data: "2026-09-17",
