@@ -1,0 +1,21 @@
+-- ============================================================================
+-- `soft_delete_servico` nao pode ser chamada por quem nao entrou
+-- ============================================================================
+--
+-- A 0115 revogou de `public` e concedeu a `authenticated`, e isso NAO BASTA.
+-- O advisor de seguranca do Supabase, rodado logo depois de aplicar a 0115,
+-- mostrou a funcao executavel pelo `anon` via
+-- /rest/v1/rpc/soft_delete_servico: no Supabase o papel `anon` recebe EXECUTE
+-- por conta propria, e revogar de `public` nao o alcanca.
+--
+-- E o mesmo motivo pelo qual a 0042 e a 0089 existem -- as duas revogam de
+-- `public, anon` explicitamente, para as outras funcoes de soft delete. Eu nao
+-- segui o padrao delas ao escrever a 0115.
+--
+-- Registro do que isso teria custado se passasse: qualquer pessoa com a URL do
+-- projeto poderia excluir contrato de servico sem sessao. A funcao ainda checa
+-- `current_org_id()` e `pode_gerir_cadastros()` -- que devolveriam nulo/falso
+-- para o anon e a chamada falharia --, mas depender disso e depender de uma
+-- segunda trava para cobrir a ausencia da primeira.
+revoke execute on function public.soft_delete_servico(uuid) from public, anon;
+grant  execute on function public.soft_delete_servico(uuid) to authenticated;
