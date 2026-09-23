@@ -10,7 +10,10 @@ import {
   type Entidade,
   type ResultadoBusca,
 } from "@/lib/busca";
-import { TIPO_CENTRO_CUSTO_INFO } from "@/lib/centro-custo";
+import {
+  TIPO_CENTRO_CUSTO_INFO,
+  type TipoCentroCusto,
+} from "@/lib/centro-custo";
 
 /**
  * Um grupo de resultados por entidade, pronto para a UI do Ctrl+K.
@@ -62,12 +65,13 @@ function hrefTodos(base: string, termo: string): string {
  * Rótulo em PT-BR de cada entidade, no plural — texto visível ao usuário.
  *
  * "obra" virou "Centros de custo" porque a tabela `obra` deixou de conter só
- * obra: ganhou `tipo` (obra | departamento) e a tela é "Centros de custo".
+ * obra: ganhou `tipo` (obra | departamento | grupo) e a tela se chama
+ * "Centros de custo".
  * Rotular o grupo inteiro de "Obras" ficaria errado sempre que ele trouxer um
  * departamento — hoje já são dois (800 — Administração, 686 — CPQ03
  * Manutenção). O `GrupoBusca` só tem UM rótulo para o grupo inteiro (é o que
  * vira o cabeçalho no palette, ver `command-palette.tsx`), e um grupo pode
- * misturar os dois tipos — então o rótulo do grupo fica neutro, e QUEM
+ * misturar os três tipos — então o rótulo do grupo fica neutro, e QUEM
  * diferencia cada linha é o `detalhe`, que passa a levar
  * `TIPO_CENTRO_CUSTO_INFO[tipo].label` (ver `buscarObras` abaixo). Dividir em
  * dois grupos foi cogitado e descartado: exigiria duas entidades em
@@ -122,7 +126,7 @@ async function buscarObras(termo: string): Promise<GrupoBusca | null> {
     id: string;
     nome: string;
     codigo: string;
-    tipo: "obra" | "departamento";
+    tipo: TipoCentroCusto;
   }[];
   const resultados: ResultadoBusca[] = [];
   for (const o of linhas) {
@@ -135,7 +139,10 @@ async function buscarObras(termo: string): Promise<GrupoBusca | null> {
       entidade: "obra",
       id: o.id,
       titulo: o.nome,
-      detalhe: `${TIPO_CENTRO_CUSTO_INFO[o.tipo].label} · ${o.codigo}`,
+      // `?? ` porque um valor novo no enum do banco chegaria aqui antes de
+      // existir no `TIPO_CENTRO_CUSTO_INFO`, e um `undefined.label` derruba
+      // o Ctrl+K inteiro — caro demais para um rótulo.
+      detalhe: `${TIPO_CENTRO_CUSTO_INFO[o.tipo]?.label ?? "Centro de custo"} · ${o.codigo}`,
       href: `/obras/${o.id}`,
       acerto,
     });
