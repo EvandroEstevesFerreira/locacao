@@ -7,6 +7,36 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.120.0] - 2026-09-17
+
+O Loca sabia o que a empresa aluga e não sabia o que ela assina. Microsoft 365,
+antivírus e link de internet não têm peça física, não recebem termo de
+responsabilidade e não voltam avariados — e por isso não cabiam em
+`contrato_locacao`, cujo `obra_id` é NOT NULL e sustenta o escopo por obra de
+todo o sistema.
+
+### Adicionado
+
+- `contrato_servico` e `atribuicao_servico` (migration `0115`), com escopo por
+  organização — exceção consciente: um contrato rateado entre seis centros de
+  custo não pertence a nenhum.
+- Rateio **por cabeça atribuída**, calculado e nunca gravado. A soma das partes
+  bate com o total ao centavo, com teste rodando 200 combinações quaisquer.
+- Licenças ociosas numa linha própria, sem dono.
+- `conferido_em`, com aviso após 90 dias.
+- Grupo **TI** no menu, e trilha de treinamento com 5 aulas e 5 perguntas.
+- Aviso de renovação no cron de vencimentos que já existe — não nasce cron
+  novo, porque a segunda cópia do escalonamento 30/15/3 divergiria da primeira.
+
+### Segurança
+
+- `soft_delete_servico`, com `security definer` e `search_path = ''`: a função
+  genérica da 0041 tem lista fechada de entidades e levantaria "Entidade
+  inválida" só em produção.
+- As policies de escrita de `atribuicao_servico` são explícitas por comando, e
+  não `for all`: um `for all` concederia SELECT por um segundo caminho, além
+  da policy de leitura.
+
 ## [0.119.0] - 2026-09-17
 
 A tela de Obras tinha oito linhas, e uma delas — `800 — Administração` — não era

@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.119.0";
+export const APP_VERSION = "0.120.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,43 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.120.0",
+    data: "2026-09-17",
+    titulo: "Servi\u00e7os e licen\u00e7as de TI, com rateio por centro de custo",
+    mudancas: [
+      {
+        tipo: "novo",
+        texto:
+          "Nova tela Servi\u00e7os e licen\u00e7as, no grupo TI: assinaturas, licen\u00e7as de software, link de internet e antiv\u00edrus \u2014 tudo que a empresa paga todo m\u00eas e n\u00e3o \u00e9 equipamento.",
+      },
+      {
+        tipo: "novo",
+        texto:
+          "Cada licen\u00e7a \u00e9 atribu\u00edda a uma pessoa, e o custo cai no centro de custo em que ela est\u00e1 lotada. Se a pessoa muda de departamento, o custo acompanha sozinho.",
+      },
+      {
+        tipo: "novo",
+        texto:
+          "As licen\u00e7as que ningu\u00e9m usa aparecem numa linha pr\u00f3pria, em destaque, com quanto custam por m\u00eas. Elas n\u00e3o s\u00e3o diluídas entre os departamentos \u2014 diluídas, ningu\u00e9m as veria.",
+      },
+      {
+        tipo: "novo",
+        texto:
+          "O aviso semanal por e-mail passa a incluir renova\u00e7\u00e3o de servi\u00e7o. Quando o contrato renova automaticamente, ele avisa para voc\u00ea decidir se cancela; quando n\u00e3o renova, avisa para voc\u00ea decidir se renova.",
+      },
+      {
+        tipo: "melhoria",
+        texto:
+          "A tela mostra quando foi a \u00faltima confer\u00eancia contra o provedor e avisa depois de 90 dias. Um n\u00famero de licen\u00e7as ociosas desatualizado \u00e9 pior que nenhum \u2014 algu\u00e9m cancela assinatura em cima dele.",
+      },
+      {
+        tipo: "novo",
+        texto:
+          "Trilha de treinamento nova, com cinco aulas e question\u00e1rio, cobrindo desde o cadastro at\u00e9 a leitura do rateio.",
+      },
+    ],
+  },
   {
     versao: "0.119.0",
     data: "2026-09-17",
