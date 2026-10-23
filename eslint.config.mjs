@@ -32,6 +32,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Ferramental de agente, nao codigo do produto: `.claude/helpers/*.cjs` usa
+    // `require()` e reprovava `npm run lint` inteiro sem ter relacao com o app.
+    ".claude/**",
   ]),
 ]);
 

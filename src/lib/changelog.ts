@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.120.1";
+export const APP_VERSION = "0.120.2";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,18 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.120.2",
+    data: "2026-10-23",
+    titulo: "A cobrança automática de assinatura foi pausada",
+    mudancas: [
+      {
+        tipo: "correcao",
+        texto:
+          "O aviso diário de termos sem assinatura estava disparando dezenas de e-mails por manhã, porque 94 termos venceram o prazo ao mesmo tempo. A cobrança automática foi pausada até a fila ser resolvida — a tela de termos continua mostrando quais estão pendentes.",
+      },
+    ],
+  },
   {
     versao: "0.120.1",
     data: "2026-09-23",

@@ -22,10 +22,6 @@
       "schedule": "30 7 * * *"
     },
     {
-      "path": "/api/cron/termos-sem-assinatura",
-      "schedule": "40 8 * * *"
-    },
-    {
       "path": "/api/cron/mega",
       "schedule": "30 10 * * *"
     }

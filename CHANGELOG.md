@@ -7,6 +7,17 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.120.2] - 2026-10-23
+
+### Corrigido
+
+- O cron `/api/cron/termos-sem-assinatura` saiu do `vercel.json`. Com 94 termos
+  pendentes e nenhum aviso anterior gravado, a regra de "a cada 3 dias por
+  termo" disparou a fila inteira na primeira manhã. A rota continua
+  funcionando sob `CRON_SECRET`; o que saiu foi o agendamento.
+- `.claude/**` entra nos ignores do ESLint: o ferramental de agente usa
+  `require()` e reprovava `npm run lint` inteiro sem ter relação com o app.
+
 ## [0.120.1] - 2026-09-23
 
 ### Corrigido

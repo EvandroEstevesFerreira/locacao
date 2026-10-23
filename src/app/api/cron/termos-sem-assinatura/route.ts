@@ -1,5 +1,19 @@
 // Cobrança da assinatura pendente.
 //
+// ⚠️ DESAGENDADA EM 23/10/2026. A rota continua funcionando e pode ser chamada
+// à mão com o `CRON_SECRET`; o que saiu foi a entrada no `vercel.json`.
+//
+// Motivo: 94 termos estavam pendentes de assinatura ao mesmo tempo. Como a
+// regra é "a cada 3 dias POR TERMO" e nenhum tinha aviso anterior, o primeiro
+// dia disparou a fila inteira de uma vez — e com `EMAIL_MODO_TESTE` ligado
+// todos caíram na mesma caixa, dezenas por manhã.
+//
+// Repare que a trava de teste FUNCIONOU: nenhum funcionário recebeu nada. O
+// que faltou foi um teto por rodada.
+//
+// Para religar, resolva antes a represa — ou acrescente um limite de envios
+// por execução. Religar como está repete a enxurrada no dia seguinte.
+//
 // A assinatura do funcionário passou a ser OPCIONAL na emissão (v0.96.0): o
 // equipamento sai hoje e o traço vem depois, pelo link no celular. Sem cobrança,
 // "depois" é "nunca" — e o termo fica valendo com um papel que se anuncia como
