@@ -34,6 +34,27 @@ import {
 type ObraRef = { id: string; codigo: string; nome: string } | null;
 const nomeObra = (o: ObraRef) => (o ? `${o.codigo} — ${o.nome}` : undefined);
 
+/**
+ * QUAIS ALERTAS SAEM POR E-MAIL.
+ *
+ * Decidido com o Evandro em 23/10/2026: por ora, so os de IMOVEL. O cron
+ * continua montando os sete tipos -- o `/api/dev/emails` e o log seguem
+ * mostrando todos --, mas apenas estes viram e-mail.
+ *
+ * Por que lista branca e nao variavel de ambiente: o estado fica no git, onde
+ * o proximo a ler o arquivo o encontra. Uma env var na Vercel e invisivel para
+ * quem le o codigo, e foi exatamente o `EMAIL_MODO_TESTE` esquecido ligado que
+ * encheu a caixa de e-mail em outubro.
+ *
+ * Para reativar um tipo, acrescente-o aqui. Para reativar todos, apague a
+ * constante e o `filter` que a usa.
+ */
+const TIPOS_ATIVOS = new Set([
+  "imovel_contrato_fim",
+  "imovel_reajuste",
+  "imovel_sem_contrato",
+]);
+
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
@@ -362,7 +383,7 @@ export async function GET(request: Request) {
     // Anexa o marco (dias) a cada candidato; descarta o que não está
     // dentro de nenhum prazo configurado.
     const candidatos: Cand[] = [];
-    for (const b of brutos) {
+    for (const b of brutos.filter((x) => TIPOS_ATIVOS.has(x.tipo))) {
       const diasRestantes = differenceInCalendarDays(
         new Date(`${b.data_referencia}T00:00:00`),
         agora,

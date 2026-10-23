@@ -14,7 +14,7 @@ export type Release = {
 };
 
 /** Versão atual do sistema (mantenha em sincronia com package.json). */
-export const APP_VERSION = "0.120.2";
+export const APP_VERSION = "0.121.0";
 
 export const TIPO_MUDANCA_INFO: Record<
   TipoMudanca,
@@ -28,6 +28,23 @@ export const TIPO_MUDANCA_INFO: Record<
 
 /** Releases, do mais recente para o mais antigo. */
 export const CHANGELOG: Release[] = [
+  {
+    versao: "0.121.0",
+    data: "2026-10-23",
+    titulo: "Por ora, só os avisos de imóveis saem por e-mail",
+    mudancas: [
+      {
+        tipo: "melhoria",
+        texto:
+          "Dos sete tipos de aviso, apenas os três de imóveis continuam sendo enviados: fim de contrato, reajuste e imóvel sem contrato vigente. Devolução, fim de contrato de equipamento, pagamento, certificado e renovação de serviço seguem aparecendo nas telas, mas não geram e-mail.",
+      },
+      {
+        tipo: "melhoria",
+        texto:
+          "O relatório diário, o aviso semanal de avanço e os indicadores quinzenais deixaram de ser enviados automaticamente.",
+      },
+    ],
+  },
   {
     versao: "0.120.2",
     data: "2026-10-23",

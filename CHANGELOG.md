@@ -7,6 +7,21 @@ segue [SemVer](https://semver.org/lang/pt-BR/).
 > Fonte única para a tela **Novidades**: [`src/lib/changelog.ts`](src/lib/changelog.ts).
 > Ao concluir uma alteração, atualize **os dois** (ver processo em `AGENTS.md`).
 
+## [0.121.0] - 2026-10-23
+
+### Alterado
+
+- `TIPOS_ATIVOS` no cron de vencimentos: dos sete tipos de alerta, só
+  `imovel_contrato_fim`, `imovel_reajuste` e `imovel_sem_contrato` viram
+  e-mail. Os outros continuam sendo montados — `/api/dev/emails` e o log
+  seguem mostrando todos.
+- Saem do `vercel.json` os crons `relatorio-email`, `avanco` e `indicadores`.
+  Ficam `vencimentos`, `people` e `mega` — os dois últimos sincronizam e não
+  enviam e-mail.
+- Lista branca em vez de variável de ambiente: o estado fica no git, onde quem
+  lê o arquivo o encontra. Foi um `EMAIL_MODO_TESTE` esquecido ligado na
+  Vercel que encheu a caixa de e-mail em outubro.
+
 ## [0.120.2] - 2026-10-23
 
 ### Corrigido

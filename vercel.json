@@ -6,18 +6,6 @@
       "schedule": "0 8 * * *"
     },
     {
-      "path": "/api/cron/relatorio-email",
-      "schedule": "10 8 * * *"
-    },
-    {
-      "path": "/api/cron/avanco",
-      "schedule": "20 8 * * 1"
-    },
-    {
-      "path": "/api/cron/indicadores",
-      "schedule": "0 7 1,16 * *"
-    },
-    {
       "path": "/api/cron/people",
       "schedule": "30 7 * * *"
     },
